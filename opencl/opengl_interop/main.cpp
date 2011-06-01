@@ -16,10 +16,8 @@ subject to the following restrictions:
 ///original author: Erwin Coumans
 
 ///
-/// Basic OpenGL GLSL testbed to render many instances of textured/lit cubes using glDrawElementsInstanced
-/// 
-/// It uses OpenGL Buffers for vec4 position and vec4 quaternion orientation
-/// The idea is to update those transforms either from CPU or on GPU using OpenCL (for physics demos etc)
+/// OpenCL - OpenGL interop example. Updating transforms of many cubes on GPU, without going through main memory/using the PCIe bus
+/// Create all OpenGL resources AFTER create OpenCL context!
 ///
 
 #include <GL/glew.h>
