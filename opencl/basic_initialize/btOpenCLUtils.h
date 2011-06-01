@@ -19,23 +19,8 @@ subject to the following restrictions:
 #ifndef BT_OPENCL_UTILS_H
 #define BT_OPENCL_UTILS_H
 
-#ifdef __APPLE__
-#ifdef USE_MINICL
-#include <MiniCL/cl.h>
-#else
-#include <OpenCL/cl.h>
-#endif
-#else
-#ifdef USE_MINICL
-#include <MiniCL/cl.h>
-#else
-#include <CL/cl.h>
-#endif
-#endif //__APPLE__
+#include "btOpenCLInclude.h"
 
-#include <assert.h>
-#include <stdio.h>
-#define oclCHECKERROR(a, b) if((a)!=(b)) { printf("OCL Error : %d\n", (a)); assert((a) == (b)); }
 
 #define BT_MAX_STRING_LENGTH 1024
 
@@ -92,6 +77,8 @@ public:
 	static cl_device_id getDevice(cl_context cxMainContext, int nr);
 	static void getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info);
 	static void printDeviceInfo(cl_device_id device);
+
+	static cl_kernel compileCLKernelFromString( cl_context clContext,const char* kernelSource, const char* kernelName, const char* additionalMacros = "" );
 
 };
 

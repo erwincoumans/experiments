@@ -294,3 +294,69 @@ void btOpenCLUtils::getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info)
     clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &info.m_vecWidthFloat, NULL);
     clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &info.m_vecWidthDouble, NULL);
 }
+
+
+cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, const char* kernelSource, const char* kernelName, const char* additionalMacros )
+{
+	printf("compiling kernelName: %s ",kernelName);
+	cl_kernel kernel;
+	cl_int ciErrNum;
+	size_t program_length = strlen(kernelSource);
+
+	cl_program m_cpProgram = clCreateProgramWithSource(clContext, 1, (const char**)&kernelSource, &program_length, &ciErrNum);
+//	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		
+    // Build the program with 'mad' Optimization option
+
+	
+#ifdef MAC
+	char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
+#else
+	//const char* flags = "-DGUID_ARG= -fno-alias";
+	const char* flags = "-DGUID_ARG= ";
+#endif
+
+	char* compileFlags = new char[strlen(additionalMacros) + strlen(flags) + 5];
+	sprintf(compileFlags, "%s %s", flags, additionalMacros);
+    ciErrNum = clBuildProgram(m_cpProgram, 0, NULL, compileFlags, NULL, NULL);
+    if (ciErrNum != CL_SUCCESS)
+    {
+		size_t numDevices;
+		clGetProgramInfo( m_cpProgram, CL_PROGRAM_DEVICES, 0, 0, &numDevices );
+		cl_device_id *devices = new cl_device_id[numDevices];
+		clGetProgramInfo( m_cpProgram, CL_PROGRAM_DEVICES, numDevices, devices, &numDevices );
+        for( int i = 0; i < 2; ++i )
+		{
+			char *build_log;
+			size_t ret_val_size;
+			clGetProgramBuildInfo(m_cpProgram, devices[i], CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
+			build_log = new char[ret_val_size+1];
+			clGetProgramBuildInfo(m_cpProgram, devices[i], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+    
+			// to be carefully, terminate with \0
+			// there's no information in the reference whether the string is 0 terminated or not
+			build_log[ret_val_size] = '\0';
+        
+
+			printf("Error in clBuildProgram, Line %u in file %s, Log: \n%s\n !!!\n\n", __LINE__, __FILE__, build_log);
+			delete[] build_log;
+		}
+		assert(0);
+        exit(0);
+    }
+	
+	
+    // Create the kernel
+    kernel = clCreateKernel(m_cpProgram, kernelName, &ciErrNum);
+    if (ciErrNum != CL_SUCCESS)
+    {
+        printf("Error in clCreateKernel, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
+		assert(0);
+		exit(0);
+    }
+
+	printf("ready. \n");
+	delete [] compileFlags;
+	return kernel;
+
+}
