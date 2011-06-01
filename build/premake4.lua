@@ -1,6 +1,6 @@
 solution "0MySolution"
 
-	configurations {"Debug", "Release"}
+	configurations {"Release", "Debug"}
 	configuration "Release"
 		flags { "Optimize", "StaticRuntime", "NoRTTI", "NoExceptions"}
 	configuration "Debug"
@@ -24,7 +24,7 @@ solution "0MySolution"
 		configuration {}
 		local amdopenclpath = os.getenv("AMDAPPSDKROOT")
 		if (amdopenclpath) then
-			defines { "ADL_ENABLE_CL" }
+			defines { "ADL_ENABLE_CL" , "CL_PLATFORM_AMD"}
 			includedirs {
 				"$(AMDAPPSDKROOT)/include"				
 			}
@@ -33,13 +33,15 @@ solution "0MySolution"
 			configuration "x64"
 				libdirs {"$(AMDAPPSDKROOT)/lib/x86_64"}
 			configuration {}
+	
+			links {"OpenCL"}
 			return true
 		end
 
 		configuration {}
 		local nvidiaopenclpath = os.getenv("CUDA_PATH")
 		if (nvidiaopenclpath) then
-			defines { "ADL_ENABLE_CL" }
+			defines { "ADL_ENABLE_CL" , "CL_PLATFORM_NVIDIA"}
 			includedirs {
 				"$(CUDA_PATH)/include"				
 			}
@@ -48,6 +50,9 @@ solution "0MySolution"
 			configuration "x64"
 				libdirs {"$(CUDA_PATH)/lib/x64"}
 			configuration {}
+
+			links {"OpenCL"}
+
 			return true
 		end
 
@@ -61,4 +66,6 @@ solution "0MySolution"
 	location "build"
 	targetdir "bin"
 
+	include "../opencl/basic_initialize"
 	include "../rendering/GLSL_Instancing"
+

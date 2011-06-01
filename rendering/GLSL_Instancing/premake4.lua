@@ -7,7 +7,6 @@
 	{
 		"../GlutGlewWindows",
 		"../BulletMath"
-	
 	}
 	libdirs {"../GlutGlewWindows"}
 
