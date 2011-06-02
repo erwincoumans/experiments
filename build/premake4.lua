@@ -66,7 +66,7 @@ solution "0MySolution"
 	location "build"
 	targetdir "bin"
 
-	include "../opencl/basic_initialize"
 	include "../opencl/opengl_interop"
+	include "../opencl/basic_initialize"
 	include "../rendering/GLSL_Instancing"
 

@@ -75,13 +75,29 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 			}
             platform = platforms[i];            
 			if(!strcmp(pbuf, spPlatformVendor))             
-			{                
+			{               
 				break;            
 			}        
 		}        
 		delete[] platforms;    
 	}
-    /*     
+
+	if (platform)
+	{
+		printf("Found platform\n");
+		char pbuf[128];            
+		ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VENDOR,sizeof(pbuf),pbuf,NULL);
+		oclCHECKERROR(ciErrNum,CL_SUCCESS);
+		printf("CL_PLATFORM_VENDOR=%s\n",pbuf);
+		ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_NAME,sizeof(pbuf),pbuf,NULL);
+		oclCHECKERROR(ciErrNum,CL_SUCCESS);
+		printf("CL_PLATFORM_NAME=%s\n",pbuf);
+		ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VERSION,sizeof(pbuf),pbuf,NULL);
+		oclCHECKERROR(ciErrNum,CL_SUCCESS);
+		printf("CL_PLATFORM_VERSION=%s\n",pbuf);
+
+	}
+	/*     
 	 * If we could find our platform, use it. Otherwise pass a NULL and get whatever the     
 	 * implementation thinks we should be using.     
 	 */

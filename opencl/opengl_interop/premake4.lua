@@ -27,7 +27,9 @@
 			"../basic_initialize/btOpenCLUtils.cpp",
 			"../basic_initialize/btOpenCLUtils.h",
 			"btOpenCLGLInteropBuffer.cpp",
-			"btOpenCLGLInteropBuffer.h"
+			"btOpenCLGLInteropBuffer.h",
+			"btStopwatch.cpp",
+			"btStopwatch.h"
 		}
 		
 	end

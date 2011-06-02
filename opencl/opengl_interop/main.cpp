@@ -24,6 +24,7 @@ subject to the following restrictions:
 #include <stdio.h>
 
 #include "btGlutInclude.h"
+#include "btStopwatch.h"
 
 
 #include <assert.h>
@@ -46,13 +47,14 @@ btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_interopKernel;
 
 bool useCPU = false;
-
+bool printStats = true;
+bool runOpenCLKernels = true;
 
 #define MSTRINGIFY(A) #A
 static char* interopKernelString =
 #include "interopKernel.cl"
 
-
+btStopwatch gStopwatch;
 int m_glutScreenWidth = 640;
 int m_glutScreenHeight= 480;
 
@@ -636,59 +638,62 @@ void updatePos()
 
 	if (useCPU)
 	{
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
-	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+		glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+		char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);
 
-	float* positions = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors));
-	float* orientations = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors)+ POSITION_BUFFER_SIZE);
-//	glFinish();
-//	positions[0]+=0.001f;
+		float* positions = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors));
+		float* orientations = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors)+ POSITION_BUFFER_SIZE);
+	//	glFinish();
+	//	positions[0]+=0.001f;
 
-	static int offset=0;
-	//offset++;
+		static int offset=0;
+		//offset++;
 
-	static btVector3 axis(1,0,0);
-	angle += 0.01f;
-	int index=0;
-	btQuaternion orn(axis,angle);
-	for (int i=0;i<NUM_OBJECTS_X;i++)
-		for (int j=0;j<NUM_OBJECTS_Y;j++)
-			for (int k=0;k<NUM_OBJECTS_Z;k++)
-			{
-				//if (!((index+offset)%15))
+		static btVector3 axis(1,0,0);
+		angle += 0.01f;
+		int index=0;
+		btQuaternion orn(axis,angle);
+		for (int i=0;i<NUM_OBJECTS_X;i++)
+			for (int j=0;j<NUM_OBJECTS_Y;j++)
+				for (int k=0;k<NUM_OBJECTS_Z;k++)
 				{
-				positions[index*4+1]-=.01f;
-				orientations[index*4] = orn[0];
-				orientations[index*4+1] = orn[1];
-				orientations[index*4+2] = orn[2];
-				orientations[index*4+3] = orn[3];
+					//if (!((index+offset)%15))
+					{
+					positions[index*4+1]-=.01f;
+					orientations[index*4] = orn[0];
+					orientations[index*4+1] = orn[1];
+					orientations[index*4+2] = orn[2];
+					orientations[index*4+3] = orn[3];
+					}
+	//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
+					index++;
 				}
-//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
-				index++;
-			}
 
-	glUnmapBuffer( GL_ARRAY_BUFFER);
-	} else
+		glUnmapBuffer( GL_ARRAY_BUFFER);
+	} 
+	else
 	{
 
 //		glBindBuffer(GL_ARRAY_BUFFER,0);
 
 		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
 
+		glFinish();
 		cl_int ciErrNum = CL_SUCCESS;
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
-		int numObjects = NUM_OBJECTS;
-		int offset = (sizeof(cube_vertices) + sizeof(instance_colors))/4;
+		if (runOpenCLKernels)
+		{
+			int numObjects = NUM_OBJECTS;
+			int offset = (sizeof(cube_vertices) + sizeof(instance_colors))/4;
 
-		ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
-		ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
-		ciErrNum = clSetKernelArg(g_interopKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
-
-		size_t	numWorkItems = workGroupSize*((NUM_OBJECTS + (workGroupSize-1)) / workGroupSize);
-		ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_interopKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
-
-//		clFinish(g_cqCommandQue);
+			ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(g_interopKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+			size_t	numWorkItems = workGroupSize*((NUM_OBJECTS + (workGroupSize-1)) / workGroupSize);
+			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_interopKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		}
 		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		clFinish(g_cqCommandQue);
@@ -731,9 +736,22 @@ void RenderScene(void)
 	glEnd();
 
 
+	float start = gStopwatch.getTimeMilliseconds();
 
 	updatePos();
 
+	float stop = gStopwatch.getTimeMilliseconds();
+	gStopwatch.reset();
+	if (printStats)
+	{
+		if (useCPU)
+		{
+			printf("updatePos=%f ms CPU\n",stop-start);
+		} else
+		{
+			printf("updatePos=%f ms OpenCL\n",stop-start);
+		}
+	}
 	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
 
     glBindVertexArray(square_vao);
@@ -819,6 +837,18 @@ void Keyboard(unsigned char key, int x, int y)
 					printf("using OpenCL\n");
 				break;
 			}
+		case 's':
+		case 'S':
+			{
+				printStats = !printStats;
+				break;
+			}
+		case 'k':
+		case 'K':
+			{
+				runOpenCLKernels=!runOpenCLKernels;
+				break;
+			}
         default:
             break;
     }
@@ -881,8 +911,8 @@ void* glDC = 0;
 	{
 		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
 		btOpenCLDeviceInfo clInfo;
-//		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
-//		btOpenCLUtils::printDeviceInfo(g_device);
+		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
+		btOpenCLUtils::printDeviceInfo(g_device);
 		// create a command-queue
 		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
