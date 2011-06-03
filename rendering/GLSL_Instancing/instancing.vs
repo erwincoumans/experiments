@@ -12,6 +12,9 @@ layout (location = 5) in vec3 vertexnormal;
 
 
 uniform float angle = 0.0;
+uniform mat4 ModelViewMatrix;
+uniform mat4 ProjectionMatrix;
+uniform mat3 NormalMatrix;
 
 out Fragment
 {
@@ -62,16 +65,16 @@ void main(void)
 	ambient = vec3(0.2,0.2,0.2);
 		
 		
-	vec3 local_normal = (quatRotate3( vertexnormal,q)).xyz;
+	vec4 local_normal = (quatRotate3( vertexnormal,q));
 	vec3 light_pos = vec3(1000,1000,1000);
-	normal = normalize(gl_NormalMatrix * local_normal);
+	normal = normalize(ModelViewMatrix * local_normal).xyz;
 
 	lightDir = normalize(light_pos);//gl_LightSource[0].position.xyz));
 //	lightDir = normalize(vec3(gl_LightSource[0].position));
 		
 	vec4 axis = vec4(1,1,1,0);
 	vec4 localcoord = quatRotate3( position.xyz,q);
-	vec4 vertexPos = gl_ModelViewProjectionMatrix *(instance_position+localcoord);
+	vec4 vertexPos = ProjectionMatrix * ModelViewMatrix *(instance_position+localcoord);
 
 	gl_Position = vertexPos;
 	

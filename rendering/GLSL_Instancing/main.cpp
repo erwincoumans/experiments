@@ -33,6 +33,10 @@ static bool                 done = false;
 static GLint                angle_loc = 0;
 static GLint                uniform_texture_diffuse = 0;
 
+static GLint ModelViewMatrix;
+static GLint ProjectionMatrix;
+static GLint NormalMatrix;
+
 #define MAX_SHADER_LENGTH   8192
 
 static GLubyte shaderText[MAX_SHADER_LENGTH];
@@ -52,6 +56,9 @@ static const char* vertexShader= \
 "\n"
 "\n"
 "uniform float angle = 0.0;\n"
+"uniform mat4 ModelViewMatrix;\n"
+"uniform mat4 ProjectionMatrix;\n"
+"uniform mat3 NormalMatrix;\n"
 "\n"
 "out Fragment\n"
 "{\n"
@@ -102,16 +109,16 @@ static const char* vertexShader= \
 "	ambient = vec3(0.2,0.2,0.2);\n"
 "		\n"
 "		\n"
-"	vec3 local_normal = (quatRotate3( vertexnormal,q)).xyz;\n"
+"	vec4 local_normal = (quatRotate3( vertexnormal,q));\n"
 "	vec3 light_pos = vec3(1000,1000,1000);\n"
-"	normal = normalize(gl_NormalMatrix * local_normal);\n"
+"	normal = normalize(ModelViewMatrix * local_normal).xyz;\n"
 "\n"
 "	lightDir = normalize(light_pos);//gl_LightSource[0].position.xyz));\n"
 "//	lightDir = normalize(vec3(gl_LightSource[0].position));\n"
 "		\n"
 "	vec4 axis = vec4(1,1,1,0);\n"
 "	vec4 localcoord = quatRotate3( position.xyz,q);\n"
-"	vec4 vertexPos = gl_ModelViewProjectionMatrix *(instance_position+localcoord);\n"
+"	vec4 vertexPos = ProjectionMatrix * ModelViewMatrix *(instance_position+localcoord);\n"
 "\n"
 "	gl_Position = vertexPos;\n"
 "	\n"
@@ -119,6 +126,7 @@ static const char* vertexShader= \
 "	vert.texcoord = uvcoords;\n"
 "}\n"
 ;
+
 
 static const char* fragmentShader= \
 "#version 330\n"
@@ -135,6 +143,8 @@ static const char* fragmentShader= \
 "} vert;\n"
 "\n"
 "uniform sampler2D Diffuse;\n"
+"uniform float diffuse_alpha;\n"
+"\n"
 "varying vec3 lightDir,normal,ambient;\n"
 "\n"
 "out vec4 color;\n"
@@ -150,8 +160,8 @@ static const char* fragmentShader= \
 "	vec3 ct,cf;\n"
 "	float intensity,at,af;\n"
 "	intensity = max(dot(lightDir,normalize(normal)),0.0);\n"
-"	cf = intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;\n"
-"	af = gl_FrontMaterial.diffuse.a;\n"
+"	cf = intensity*vec3(1.0,1.0,1.0);//intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;\n"
+"	af = diffuse_alpha;\n"
 "		\n"
 "	ct = texel.rgb;\n"
 "	at = texel.a;\n"
@@ -160,6 +170,7 @@ static const char* fragmentShader= \
 "//	color  = vec4(ct * cf, at * af);	\n"
 "}\n"
 ;
+
 
 
 // Load the shader from the source text
@@ -373,6 +384,10 @@ void SetupRC()
     glLinkProgram(instancingShader);
     glUseProgram(instancingShader);
     angle_loc = glGetUniformLocation(instancingShader, "angle");
+
+	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
+	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
+	NormalMatrix = glGetUniformLocation(instancingShader, "NormalMatrix");
 	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
 
     GLuint offset = 0;
@@ -693,6 +708,16 @@ void RenderScene(void)
 	glUseProgram(instancingShader);
     glBindVertexArray(square_vao);
     glUniform1f(angle_loc, 0);
+
+
+	GLfloat pm[16];
+	glGetFloatv(GL_PROJECTION_MATRIX, pm);
+	glUniformMatrix4fv(ProjectionMatrix, 1, false, &pm[0]);
+
+	GLfloat mvm[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, mvm);
+	glUniformMatrix4fv(ModelViewMatrix, 1, false, &mvm[0]);
+
    	glUniform1i(uniform_texture_diffuse, 0);
 	
 	int numInstances = NUM_OBJECTS;

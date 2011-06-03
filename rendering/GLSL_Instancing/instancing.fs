@@ -12,6 +12,8 @@ in Vert
 } vert;
 
 uniform sampler2D Diffuse;
+uniform float diffuse_alpha;
+
 varying vec3 lightDir,normal,ambient;
 
 out vec4 color;
@@ -27,8 +29,8 @@ void main(void)
 	vec3 ct,cf;
 	float intensity,at,af;
 	intensity = max(dot(lightDir,normalize(normal)),0.0);
-	cf = intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;
-	af = gl_FrontMaterial.diffuse.a;
+	cf = intensity*vec3(1.0,1.0,1.0);//intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;
+	af = diffuse_alpha;
 		
 	ct = texel.rgb;
 	at = texel.a;
