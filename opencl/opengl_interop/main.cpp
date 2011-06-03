@@ -47,7 +47,7 @@ btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_interopKernel;
 
 bool useCPU = false;
-bool printStats = true;
+bool printStats = false;
 bool runOpenCLKernels = true;
 
 #define MSTRINGIFY(A) #A
@@ -70,12 +70,12 @@ static bool                 done = false;
 static GLint                angle_loc = 0;
 static GLint ModelViewMatrix;
 static GLint ProjectionMatrix;
-static GLint NormalMatrix;
+
 
 static GLint                uniform_texture_diffuse = 0;
 
+//used for dynamic loading from disk (default switched off)
 #define MAX_SHADER_LENGTH   8192
-
 static GLubyte shaderText[MAX_SHADER_LENGTH];
 
 static const char* vertexShader= \
@@ -95,7 +95,6 @@ static const char* vertexShader= \
 "uniform float angle = 0.0;\n"
 "uniform mat4 ModelViewMatrix;\n"
 "uniform mat4 ProjectionMatrix;\n"
-"uniform mat3 NormalMatrix;\n"
 "\n"
 "out Fragment\n"
 "{\n"
@@ -180,7 +179,6 @@ static const char* fragmentShader= \
 "} vert;\n"
 "\n"
 "uniform sampler2D Diffuse;\n"
-"uniform float diffuse_alpha;\n"
 "\n"
 "varying vec3 lightDir,normal,ambient;\n"
 "\n"
@@ -198,7 +196,7 @@ static const char* fragmentShader= \
 "	float intensity,at,af;\n"
 "	intensity = max(dot(lightDir,normalize(normal)),0.0);\n"
 "	cf = intensity*vec3(1.0,1.0,1.0);//intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;\n"
-"	af = diffuse_alpha;\n"
+"	af = 1.0;\n"
 "		\n"
 "	ct = texel.rgb;\n"
 "	at = texel.a;\n"
@@ -257,6 +255,7 @@ bool gltLoadShaderFile(const char *szFile, GLuint shader)
     else
         return false;    
 	
+//	printf(shaderText);
     // Load the string
     gltLoadShaderSrc((const char *)shaderText, shader);
     
@@ -396,9 +395,9 @@ static const GLfloat instance_colors[] =
     1.0f, 1.0f, 0.0f, 1.0f
 };
 
-#define NUM_OBJECTS_X 100
-#define NUM_OBJECTS_Y 100
-#define NUM_OBJECTS_Z 100
+#define NUM_OBJECTS_X 50//100
+#define NUM_OBJECTS_Y 50//100
+#define NUM_OBJECTS_Z 50//100
 
 
 #define NUM_OBJECTS (NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z)
@@ -462,15 +461,16 @@ void SetupRC()
 
 	
 
-//	glBindBuffer(GL_ARRAY_BUFFER,0);
+
 
 	glGenBuffers(1, &index_vbo);
 	int indexBufferSize = sizeof(cube_indices);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0,indexBufferSize,cube_indices);
-//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	
+	glBindBuffer(GL_ARRAY_BUFFER,0);
 	glBindVertexArray(0);
 
 }
@@ -651,12 +651,13 @@ void updatePos()
 
 	if (useCPU)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
-		char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+
+
+		glFlush();
+		char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
 
 		float* positions = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors));
 		float* orientations = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors)+ POSITION_BUFFER_SIZE);
-	//	glFinish();
 	//	positions[0]+=0.001f;
 
 		static int offset=0;
@@ -683,15 +684,16 @@ void updatePos()
 				}
 
 		glUnmapBuffer( GL_ARRAY_BUFFER);
+		//if this glFinish is removed, the animation is not always working/blocks
+		//@todo: figure out why
+		glFlush();
+
 	} 
 	else
 	{
 
-//		glBindBuffer(GL_ARRAY_BUFFER,0);
-
 		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
 
-		glFinish();
 		cl_int ciErrNum = CL_SUCCESS;
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
@@ -731,8 +733,6 @@ void RenderScene(void)
 	
 	updateCamera();
 
-//    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-//    glClear(GL_COLOR_BUFFER_BIT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 //render coordinate system
@@ -748,13 +748,19 @@ void RenderScene(void)
 	glVertex3f(0,0,1);
 	glEnd();
 
+	//do a finish, to make sure timings are clean
+//	glFinish();
 
 	float start = gStopwatch.getTimeMilliseconds();
 
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glFlush();
 	updatePos();
 
 	float stop = gStopwatch.getTimeMilliseconds();
 	gStopwatch.reset();
+	
 	if (printStats)
 	{
 		printf("updatePos=%f ms on ",stop-start);
@@ -772,7 +778,6 @@ void RenderScene(void)
 			printf("\n");
 		}
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
 
     glBindVertexArray(square_vao);
 
@@ -810,7 +815,8 @@ void RenderScene(void)
 	glUniformMatrix4fv(ModelViewMatrix, 1, false, &mvm[0]);
 
    	glUniform1i(uniform_texture_diffuse, 0);
-	
+
+	glFlush();
 	int numInstances = NUM_OBJECTS;
 	int indexCount = sizeof(cube_indices);
 	int indexOffset = 0;
@@ -826,6 +832,10 @@ void RenderScene(void)
 	glutSwapBuffers();
 	glFinish();
 	glutPostRedisplay();
+
+	GLint err = glGetError();
+	assert(err==GL_NO_ERROR);
+
 }
 
 
@@ -877,6 +887,9 @@ void Keyboard(unsigned char key, int x, int y)
 				runOpenCLKernels=!runOpenCLKernels;
 				break;
 			}
+		case 'q':
+		case 'Q':
+			exit(0);
         default:
             break;
     }
@@ -891,20 +904,19 @@ void ShutdownRC(void)
 
 int main(int argc, char* argv[])
 {
-	printf("vertexShader = \n%s\n",vertexShader);
-	printf("fragmentShader = \n%s\n",fragmentShader);
+//	printf("vertexShader = \n%s\n",vertexShader);
+//	printf("fragmentShader = \n%s\n",fragmentShader);
 
     glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     
+
 	glutInitWindowSize(m_glutScreenWidth, m_glutScreenHeight);
 	char buf[1024];
 	sprintf(buf,"OpenCL - OpenGL interop, updating transforms of %d cubes using glDrawElementsInstanced", NUM_OBJECTS);
     glutCreateWindow(buf);
     
-	ChangeSize(m_glutScreenWidth,m_glutScreenHeight);
-
 	glutReshapeFunc(ChangeSize);
 
     glutKeyboardFunc(Keyboard);
@@ -917,6 +929,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
     }
 
+	ChangeSize(m_glutScreenWidth,m_glutScreenHeight);
 
 void* glCtx=0;
 void* glDC = 0;

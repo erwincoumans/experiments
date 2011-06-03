@@ -5,6 +5,8 @@
 
 		project "OpenCL_intialize"
 
+		initOpenCL()
+	
 		language "C++"
 				
 		kind "ConsoleApp"

@@ -5,6 +5,8 @@
 
 		project "OpenCL_GL_interop"
 
+		initOpenCL()
+	
 		language "C++"
 				
 		kind "ConsoleApp"

@@ -18,6 +18,18 @@ solution "0MySolution"
 
 
 	function findOpenCL()
+		local amdopenclpath = os.getenv("AMDAPPSDKROOT")
+		if (amdopenclpath) then
+			return true
+		end
+		local nvidiaopenclpath = os.getenv("CUDA_PATH")
+		if (nvidiaopenclpath) then
+			return true
+		end
+		return false
+	end
+			
+	function initOpenCL()
 	-- todo: add Apple and Intel OpenCL environment vars
 	-- todo: allow multiple SDKs
 	
