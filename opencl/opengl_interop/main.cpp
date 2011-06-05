@@ -1,24 +1,26 @@
-/*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
 
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
+//starts crashing when more than 32700 objects on my Geforce 260, unless _USE_SUB_DATA is defined (still unstable though)
+//runs fine with fewer objects
 
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
-*/
+#define NUM_OBJECTS_X 327
+#define NUM_OBJECTS_Y 10
+#define NUM_OBJECTS_Z 10
+//#define NUM_OBJECTS_Z 20
 
-///original author: Erwin Coumans
+//#define _USE_SUB_DATA
+
+//#define NUM_OBJECTS_X 100
+//#define NUM_OBJECTS_Y 100
+//#define NUM_OBJECTS_Z 100
+
+///RECREATE_CL_AND_SHADERS_ON_RESIZE will delete and re-create OpenCL and GLSL shaders/buffers at each resize
+//#define RECREATE_CL_AND_SHADERS_ON_RESIZE
 
 ///
 /// OpenCL - OpenGL interop example. Updating transforms of many cubes on GPU, without going through main memory/using the PCIe bus
 /// Create all OpenGL resources AFTER create OpenCL context!
 ///
+
 
 #include <GL/glew.h>
 #include <stdio.h>
@@ -26,6 +28,11 @@ subject to the following restrictions:
 #include "btGlutInclude.h"
 #include "btStopwatch.h"
 
+
+#include "btVector3.h"
+#include "btQuaternion.h"
+#include "btMatrix3x3.h"
+static float angle(0);
 
 #include <assert.h>
 
@@ -85,11 +92,10 @@ static const char* vertexShader= \
 "\n"
 "\n"
 "layout (location = 0) in vec4 position;\n"
-"layout (location = 1) in vec4 instance_color;\n"
-"layout (location = 2) in vec4 instance_position;\n"
-"layout (location = 3) in vec4 instance_quaternion;\n"
-"layout (location = 4) in vec2 uvcoords;\n"
-"layout (location = 5) in vec3 vertexnormal;\n"
+"layout (location = 1) in vec4 instance_position;\n"
+"layout (location = 2) in vec4 instance_quaternion;\n"
+"layout (location = 3) in vec2 uvcoords;\n"
+"layout (location = 4) in vec3 vertexnormal;\n"
 "\n"
 "\n"
 "uniform float angle = 0.0;\n"
@@ -209,58 +215,58 @@ static const char* fragmentShader= \
 
 // Load the shader from the source text
 void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
-	{
-    GLchar *fsStringPtr[1];
+{
+	GLchar *fsStringPtr[1];
 
-    fsStringPtr[0] = (GLchar *)szShaderSrc;
-    glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
-	}
+	fsStringPtr[0] = (GLchar *)szShaderSrc;
+	glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
+}
 
 
 ////////////////////////////////////////////////////////////////
 // Load the shader from the specified file. Returns false if the
 // shader could not be loaded
 bool gltLoadShaderFile(const char *szFile, GLuint shader)
+{
+	GLint shaderLength = 0;
+	FILE *fp;
+
+	// Open the shader file
+	fp = fopen(szFile, "r");
+	if(fp != NULL)
 	{
-    GLint shaderLength = 0;
-    FILE *fp;
-	
-    // Open the shader file
-    fp = fopen(szFile, "r");
-    if(fp != NULL)
+		// See how long the file is
+		while (fgetc(fp) != EOF)
+			shaderLength++;
+
+		// Allocate a block of memory to send in the shader
+		assert(shaderLength < MAX_SHADER_LENGTH);   // make me bigger!
+		if(shaderLength > MAX_SHADER_LENGTH)
 		{
-        // See how long the file is
-        while (fgetc(fp) != EOF)
-            shaderLength++;
-		
-        // Allocate a block of memory to send in the shader
-        assert(shaderLength < MAX_SHADER_LENGTH);   // make me bigger!
-        if(shaderLength > MAX_SHADER_LENGTH)
-			{
-            fclose(fp);
-            return false;
-			}
-		
-        // Go back to beginning of file
-        rewind(fp);
-		
-        // Read the whole file in
-        if (shaderText != NULL)
-            fread(shaderText, 1, shaderLength, fp);
-		
-        // Make sure it is null terminated and close the file
-        shaderText[shaderLength] = '\0';
-        fclose(fp);
+			fclose(fp);
+			return false;
 		}
-    else
-        return false;    
-	
-//	printf(shaderText);
-    // Load the string
-    gltLoadShaderSrc((const char *)shaderText, shader);
-    
-    return true;
-	}   
+
+		// Go back to beginning of file
+		rewind(fp);
+
+		// Read the whole file in
+		if (shaderText != NULL)
+			fread(shaderText, 1, shaderLength, fp);
+
+		// Make sure it is null terminated and close the file
+		shaderText[shaderLength] = '\0';
+		fclose(fp);
+	}
+	else
+		return false;    
+
+	//	printf(shaderText);
+	// Load the string
+	gltLoadShaderSrc((const char *)shaderText, shader);
+
+	return true;
+}   
 
 
 /////////////////////////////////////////////////////////////////
@@ -281,19 +287,19 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 
 	if (loadFromFile)
 	{
-	
-	if(gltLoadShaderFile(szVertexProg, hVertexShader) == false)
+
+		if(gltLoadShaderFile(szVertexProg, hVertexShader) == false)
 		{
-		glDeleteShader(hVertexShader);
-		glDeleteShader(hFragmentShader);
-		return (GLuint)NULL;
+			glDeleteShader(hVertexShader);
+			glDeleteShader(hFragmentShader);
+			return (GLuint)NULL;
 		}
 
-	if(gltLoadShaderFile(szFragmentProg, hFragmentShader) == false)
+		if(gltLoadShaderFile(szFragmentProg, hFragmentShader) == false)
 		{
-		glDeleteShader(hVertexShader);
-		glDeleteShader(hFragmentShader);
-		return (GLuint)NULL;
+			glDeleteShader(hVertexShader);
+			glDeleteShader(hFragmentShader);
+			return (GLuint)NULL;
 		}
 	} else
 	{
@@ -307,19 +313,19 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	// Check for errors
 	glGetShaderiv(hVertexShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
-		{
+	{
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
 		return (GLuint)NULL;
-		}
+	}
 
 	glGetShaderiv(hFragmentShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
-		{
+	{
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
 		return (GLuint)NULL;
-		}
+	}
 
 	// Link them - assuming it works...
 	hReturn = glCreateProgram();
@@ -335,10 +341,10 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	// Make sure link worked too
 	glGetProgramiv(hReturn, GL_LINK_STATUS, &testVal);
 	if(testVal == GL_FALSE)
-		{
+	{
 		glDeleteProgram(hReturn);
 		return (GLuint)NULL;
-		}
+	}
 
 	return hReturn;  
 }   
@@ -346,35 +352,35 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 ///position xyz, unused w, normal, uv
 static const GLfloat cube_vertices[] =
 {
-    -1.0f, -1.0f, 1.0f, 0.0f,	0,0,1,	0,0,//0
-     1.0f, -1.0f, 1.0f, 0.0f,	0,0,1,	1,0,//1
-     1.0f,  1.0f, 1.0f, 0.0f,	0,0,1,	1,1,//2
-    -1.0f,  1.0f, 1.0f, 0.0f,	0,0,1,	0,1	,//3
+	-1.0f, -1.0f, 1.0f, 0.0f,	0,0,1,	0,0,//0
+	1.0f, -1.0f, 1.0f, 0.0f,	0,0,1,	1,0,//1
+	1.0f,  1.0f, 1.0f, 0.0f,	0,0,1,	1,1,//2
+	-1.0f,  1.0f, 1.0f, 0.0f,	0,0,1,	0,1	,//3
 
 	-1.0f, -1.0f, -1.0f, 1.0f,	0,0,-1,	0,0,//4
-     1.0f, -1.0f, -1.0f, 1.0f,	0,0,-1,	1,0,//5
-     1.0f,  1.0f, -1.0f, 1.0f,	0,0,-1,	1,1,//6
-    -1.0f,  1.0f, -1.0f, 1.0f,	0,0,-1,	0,1,//7
+	1.0f, -1.0f, -1.0f, 1.0f,	0,0,-1,	1,0,//5
+	1.0f,  1.0f, -1.0f, 1.0f,	0,0,-1,	1,1,//6
+	-1.0f,  1.0f, -1.0f, 1.0f,	0,0,-1,	0,1,//7
 
-    -1.0f, -1.0f, -1.0f, 1.0f,	-1,0,0,	0,0,
-    -1.0f, 1.0f, -1.0f, 1.0f,	-1,0,0,	1,0,
-    -1.0f,  1.0f, 1.0f, 1.0f,	-1,0,0,	1,1,
-    -1.0f,  -1.0f, 1.0f, 1.0f,	-1,0,0,	0,1,
+	-1.0f, -1.0f, -1.0f, 1.0f,	-1,0,0,	0,0,
+	-1.0f, 1.0f, -1.0f, 1.0f,	-1,0,0,	1,0,
+	-1.0f,  1.0f, 1.0f, 1.0f,	-1,0,0,	1,1,
+	-1.0f,  -1.0f, 1.0f, 1.0f,	-1,0,0,	0,1,
 
 	1.0f, -1.0f, -1.0f, 1.0f,	1,0,0,	0,0,
-    1.0f, 1.0f, -1.0f, 1.0f,	1,0,0,	1,0,
-    1.0f,  1.0f, 1.0f, 1.0f,	1,0,0,	1,1,
-    1.0f,  -1.0f, 1.0f, 1.0f,	1,0,0,	0,1,
+	1.0f, 1.0f, -1.0f, 1.0f,	1,0,0,	1,0,
+	1.0f,  1.0f, 1.0f, 1.0f,	1,0,0,	1,1,
+	1.0f,  -1.0f, 1.0f, 1.0f,	1,0,0,	0,1,
 
 	-1.0f, -1.0f,  -1.0f, 1.0f,	0,-1,0,	0,0,
-    -1.0f, -1.0f, 1.0f, 1.0f,	0,-1,0,	1,0,
-    1.0f, -1.0f,  1.0f, 1.0f,	0,-1,0,	1,1,
-    1.0f,-1.0f,  -1.0f,  1.0f,	0,-1,0,	0,1,
+	-1.0f, -1.0f, 1.0f, 1.0f,	0,-1,0,	1,0,
+	1.0f, -1.0f,  1.0f, 1.0f,	0,-1,0,	1,1,
+	1.0f,-1.0f,  -1.0f,  1.0f,	0,-1,0,	0,1,
 
 	-1.0f, 1.0f,  -1.0f, 1.0f,	0,1,0,	0,0,
-    -1.0f, 1.0f, 1.0f, 1.0f,	0,1,0,	1,0,
-    1.0f, 1.0f,  1.0f, 1.0f,	0,1,0,	1,1,
-    1.0f,1.0f,  -1.0f,  1.0f,	0,1,0,	0,1,
+	-1.0f, 1.0f, 1.0f, 1.0f,	0,1,0,	1,0,
+	1.0f, 1.0f,  1.0f, 1.0f,	0,1,0,	1,1,
+	1.0f,1.0f,  -1.0f,  1.0f,	0,1,0,	0,1,
 };
 
 static const int cube_indices[]=
@@ -387,18 +393,50 @@ static const int cube_indices[]=
 	20,21,22,20,22,23
 };
 
-static const GLfloat instance_colors[] =
+
+
+
+
+void DeleteCL()
 {
-    1.0f, 0.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 0.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f
-};
+	clReleaseContext(g_cxMainContext);
+	clReleaseCommandQueue(g_cqCommandQue);
+}
 
-#define NUM_OBJECTS_X 50//100
-#define NUM_OBJECTS_Y 50//100
-#define NUM_OBJECTS_Z 50//100
+void InitCL()
+{
+	void* glCtx=0;
+	void* glDC = 0;
 
+#ifdef _WIN32
+	glCtx = wglGetCurrentContext();
+#else //!_WIN32
+	GLXContext glCtx = glXGetCurrentContext();
+#endif //!_WIN32
+	glDC = wglGetCurrentDC();
+
+	int ciErrNum = 0;
+	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
+	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
+	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
+	int numDev = btOpenCLUtils::getNumDevices(g_cxMainContext);
+
+	if (numDev>0)
+	{
+		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
+		btOpenCLDeviceInfo clInfo;
+		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
+		btOpenCLUtils::printDeviceInfo(g_device);
+		// create a command-queue
+		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		//normally you would create and execute kernels using this command queue
+
+	}
+
+
+}
 
 #define NUM_OBJECTS (NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z)
 #define POSITION_BUFFER_SIZE (NUM_OBJECTS*sizeof(float)*4)
@@ -408,76 +446,151 @@ static const GLfloat instance_colors[] =
 GLfloat* instance_positions_ptr = 0;
 GLfloat* instance_quaternion_ptr = 0;
 
+void DeleteShaders()
+{
+	glDeleteVertexArrays(1, &square_vao);
+	glDeleteBuffers(1,&index_vbo);
+	glDeleteBuffers(1,&square_vbo);
+	glDeleteProgram(instancingShader);
+}
+
+void writeTransforms()
+{
 
 
-void SetupRC()
+	glFlush();
+	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
+
+	float* positions = (float*)(bla+sizeof(cube_vertices));
+	float* orientations = (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE);
+	//	positions[0]+=0.001f;
+
+	static int offset=0;
+	//offset++;
+
+	static btVector3 axis(1,0,0);
+	angle += 0.01f;
+	int index=0;
+	btQuaternion orn(axis,angle);
+	for (int i=0;i<NUM_OBJECTS_X;i++)
+	{
+		for (int j=0;j<NUM_OBJECTS_Y;j++)
+		{
+			for (int k=0;k<NUM_OBJECTS_Z;k++)
+			{
+				//if (!((index+offset)%15))
+				{
+					instance_positions_ptr[index*4+1]-=0.01f;
+					positions[index*4]=instance_positions_ptr[index*4];
+					positions[index*4+1]=instance_positions_ptr[index*4+1];
+					positions[index*4+2]=instance_positions_ptr[index*4+2];
+					positions[index*4+3]=instance_positions_ptr[index*4+3];
+
+					orientations[index*4] = orn[0];
+					orientations[index*4+1] = orn[1];
+					orientations[index*4+2] = orn[2];
+					orientations[index*4+3] = orn[3];
+				}
+				//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
+				index++;
+			}
+		}
+	}
+
+	glUnmapBuffer( GL_ARRAY_BUFFER);
+	//if this glFinish is removed, the animation is not always working/blocks
+	//@todo: figure out why
+	glFlush();
+}
+
+void InitShaders()
 {
 	bool loadFromFile = false;
-    instancingShader = gltLoadShaderPair("instancing.vs",
-                                         "instancing.fs",
-										 loadFromFile);
-    glLinkProgram(instancingShader);
-    glUseProgram(instancingShader);
-    angle_loc = glGetUniformLocation(instancingShader, "angle");
+	instancingShader = gltLoadShaderPair("instancing.vs","instancing.fs", loadFromFile);
+
+	glLinkProgram(instancingShader);
+	glUseProgram(instancingShader);
+	angle_loc = glGetUniformLocation(instancingShader, "angle");
 	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
 	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
-
 	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
 
-    GLuint offset = 0;
+	GLuint offset = 0;
 
-    glGenVertexArrays(1, &square_vao);
-    glGenBuffers(1, &square_vbo);
-    glBindVertexArray(square_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+
+	glGenBuffers(1, &square_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
 
 	instance_positions_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
 	instance_quaternion_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
 	int index=0;
 	for (int i=0;i<NUM_OBJECTS_X;i++)
+	{
 		for (int j=0;j<NUM_OBJECTS_Y;j++)
-			for (int k=0;k<NUM_OBJECTS_Z;k++)
 		{
-			instance_positions_ptr[index*4]=-(i-NUM_OBJECTS_X/2)*10;
-			instance_positions_ptr[index*4+1]=-(j-NUM_OBJECTS_Y/2)*10;
-			instance_positions_ptr[index*4+2]=-k*10;
-			instance_positions_ptr[index*4+3]=1;
+			for (int k=0;k<NUM_OBJECTS_Z;k++)
+			{
+				instance_positions_ptr[index*4]=-(i-NUM_OBJECTS_X/2)*10;
+				instance_positions_ptr[index*4+1]=-(j-NUM_OBJECTS_Y/2)*10;
+				instance_positions_ptr[index*4+2]=-k*10;
+				instance_positions_ptr[index*4+3]=1;
 
-			instance_quaternion_ptr[index*4]=0;
-			instance_quaternion_ptr[index*4+1]=0;
-			instance_quaternion_ptr[index*4+2]=0;
-			instance_quaternion_ptr[index*4+3]=1;
-			index++;
+				instance_quaternion_ptr[index*4]=0;
+				instance_quaternion_ptr[index*4+1]=0;
+				instance_quaternion_ptr[index*4+2]=0;
+				instance_quaternion_ptr[index*4+3]=1;
+				index++;
+			}
 		}
+	}
 
-	int size = sizeof(cube_vertices) + sizeof(instance_colors) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE;
-	glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW);
+	int size = sizeof(cube_vertices)  + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE;
+
+	char* bla = (char*)malloc(size);
+	int szc = sizeof(cube_vertices);
+	memcpy(bla,&cube_vertices[0],szc);
+	memcpy(bla+sizeof(cube_vertices),instance_positions_ptr,POSITION_BUFFER_SIZE);
+	memcpy(bla+sizeof(cube_vertices)+POSITION_BUFFER_SIZE,instance_quaternion_ptr,ORIENTATION_BUFFER_SIZE);
+
+	glBufferData(GL_ARRAY_BUFFER, size, bla, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW);
 
 	///initialize parts of the buffer
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(cube_vertices), cube_vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices), sizeof(instance_colors), instance_colors);
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices) + sizeof(instance_colors), POSITION_BUFFER_SIZE, instance_positions_ptr);
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices) + sizeof(instance_colors)+POSITION_BUFFER_SIZE,ORIENTATION_BUFFER_SIZE , instance_quaternion_ptr);
+#ifdef _USE_SUB_DATA
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(cube_vertices)+ 16384, bla);//cube_vertices);
+#endif
 
-	
+	char* dest=  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);//GL_WRITE_ONLY
+	memcpy(dest,cube_vertices,sizeof(cube_vertices));
+	//memcpy(dest+sizeof(cube_vertices),instance_colors,sizeof(instance_colors));
+	glUnmapBuffer( GL_ARRAY_BUFFER);
 
 
+
+	writeTransforms();
+
+	/*
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices) + sizeof(instance_colors), POSITION_BUFFER_SIZE, instance_positions_ptr);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices) + sizeof(instance_colors)+POSITION_BUFFER_SIZE,ORIENTATION_BUFFER_SIZE , instance_quaternion_ptr);
+	*/
+
+	glGenVertexArrays(1, &square_vao);
+	glBindVertexArray(square_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glBindVertexArray(0);
 
 	glGenBuffers(1, &index_vbo);
 	int indexBufferSize = sizeof(cube_indices);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
+
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0,indexBufferSize,cube_indices);
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 	glBindVertexArray(0);
 
 }
 
-#include "btVector3.h"
-#include "btQuaternion.h"
-#include "btMatrix3x3.h"
 
 
 void updateCamera() {
@@ -515,7 +628,7 @@ void updateCamera() {
 		extents.setValue(1.0f, aspect*1.f,0);
 	}
 
-	
+
 	if (m_ortho)
 	{
 		// reset matrix
@@ -524,7 +637,7 @@ void updateCamera() {
 		btVector3 lower = m_cameraTargetPosition - extents;
 		btVector3 upper = m_cameraTargetPosition + extents;
 		glOrtho(lower.getX(), upper.getX(), lower.getY(), upper.getY(),-1000,1000);
-		
+
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 	} else
@@ -550,8 +663,8 @@ void updateCamera() {
 void myinit()
 {
 
-	
-//	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
+
+	//	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
 	GLfloat light_ambient[] = { btScalar(1.0), btScalar(1.2), btScalar(0.2), btScalar(1.0) };
 
 	GLfloat light_diffuse[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0) };
@@ -575,7 +688,7 @@ void myinit()
 	glEnable(GL_LIGHT1);
 
 
-//	glShadeModel(GL_FLAT);//GL_SMOOTH);
+	//	glShadeModel(GL_FLAT);//GL_SMOOTH);
 	glShadeModel(GL_SMOOTH);
 
 	glEnable(GL_DEPTH_TEST);
@@ -590,103 +703,82 @@ void myinit()
 	static bool m_textureinitialized = false;
 
 
-		if(m_textureenabled)
+	if(m_textureenabled)
+	{
+		if(!m_textureinitialized)
 		{
-			if(!m_textureinitialized)
+			glActiveTexture(GL_TEXTURE0);
+
+			GLubyte*	image=new GLubyte[256*256*3];
+			for(int y=0;y<256;++y)
 			{
-				glActiveTexture(GL_TEXTURE0);
-
-				GLubyte*	image=new GLubyte[256*256*3];
-				for(int y=0;y<256;++y)
+				const int	t=y>>5;
+				GLubyte*	pi=image+y*256*3;
+				for(int x=0;x<256;++x)
 				{
-					const int	t=y>>5;
-					GLubyte*	pi=image+y*256*3;
-					for(int x=0;x<256;++x)
-					{
-						const int		s=x>>5;
-						const GLubyte	b=180;					
-						GLubyte			c=b+((s+t&1)&1)*(255-b);
-						pi[0]=255;
-						pi[1]=c;
-						pi[2]=c;
-						pi+=3;
-					}
+					const int		s=x>>5;
+					const GLubyte	b=180;					
+					GLubyte			c=b+((s+t&1)&1)*(255-b);
+					pi[0]=255;
+					pi[1]=c;
+					pi[2]=c;
+					pi+=3;
 				}
-
-				glGenTextures(1,(GLuint*)&m_texturehandle);
-				glBindTexture(GL_TEXTURE_2D,m_texturehandle);
-				glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-				gluBuild2DMipmaps(GL_TEXTURE_2D,3,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
-				delete[] image;
-				m_textureinitialized=true;
 			}
-	//		glMatrixMode(GL_TEXTURE);
-	//		glLoadIdentity();
-	//		glMatrixMode(GL_MODELVIEW);
 
-			glEnable(GL_TEXTURE_2D);
+			glGenTextures(1,(GLuint*)&m_texturehandle);
 			glBindTexture(GL_TEXTURE_2D,m_texturehandle);
-
-		} else
-		{
-			glDisable(GL_TEXTURE_2D);
+			glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+			gluBuild2DMipmaps(GL_TEXTURE_2D,3,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
+			delete[] image;
+			m_textureinitialized=true;
 		}
+		//		glMatrixMode(GL_TEXTURE);
+		//		glLoadIdentity();
+		//		glMatrixMode(GL_MODELVIEW);
 
-		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+
+	} else
+	{
+		glDisable(GL_TEXTURE_2D);
+	}
+
+	glEnable(GL_COLOR_MATERIAL);
 
 
-//	  glEnable(GL_CULL_FACE);
-//	  glCullFace(GL_BACK);
+	//	  glEnable(GL_CULL_FACE);
+	//	  glCullFace(GL_BACK);
 }
 
 //#pragma optimize( "g", off )
 
 void updatePos()
 {
-	static float angle(0);
+
 
 	if (useCPU)
 	{
-
-
-		glFlush();
-		char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
-
-		float* positions = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors));
-		float* orientations = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors)+ POSITION_BUFFER_SIZE);
-	//	positions[0]+=0.001f;
-
-		static int offset=0;
-		//offset++;
-
-		static btVector3 axis(1,0,0);
-		angle += 0.01f;
 		int index=0;
-		btQuaternion orn(axis,angle);
 		for (int i=0;i<NUM_OBJECTS_X;i++)
+		{
 			for (int j=0;j<NUM_OBJECTS_Y;j++)
+			{
 				for (int k=0;k<NUM_OBJECTS_Z;k++)
 				{
 					//if (!((index+offset)%15))
 					{
-					positions[index*4+1]-=.01f;
-					orientations[index*4] = orn[0];
-					orientations[index*4+1] = orn[1];
-					orientations[index*4+2] = orn[2];
-					orientations[index*4+3] = orn[3];
+						instance_positions_ptr[index*4+1]-=0.01f;
 					}
-	//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
-					index++;
 				}
-
-		glUnmapBuffer( GL_ARRAY_BUFFER);
-		//if this glFinish is removed, the animation is not always working/blocks
-		//@todo: figure out why
-		glFlush();
+			}
+		}
+		writeTransforms();
 
 	} 
 	else
@@ -700,7 +792,7 @@ void updatePos()
 		if (runOpenCLKernels)
 		{
 			int numObjects = NUM_OBJECTS;
-			int offset = (sizeof(cube_vertices) + sizeof(instance_colors))/4;
+			int offset = (sizeof(cube_vertices) )/4;
 
 			ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
 			ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
@@ -730,12 +822,12 @@ void RenderScene(void)
 #endif
 
 	myinit();
-	
+
 	updateCamera();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
-//render coordinate system
+	//render coordinate system
 	glBegin(GL_LINES);
 	glColor3f(1,0,0);
 	glVertex3f(0,0,0);
@@ -749,18 +841,18 @@ void RenderScene(void)
 	glEnd();
 
 	//do a finish, to make sure timings are clean
-//	glFinish();
+	//	glFinish();
 
 	float start = gStopwatch.getTimeMilliseconds();
 
-//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
 	glFlush();
 	updatePos();
 
 	float stop = gStopwatch.getTimeMilliseconds();
 	gStopwatch.reset();
-	
+
 	if (printStats)
 	{
 		printf("updatePos=%f ms on ",stop-start);
@@ -779,33 +871,30 @@ void RenderScene(void)
 		}
 	}
 
-    glBindVertexArray(square_vao);
+	glBindVertexArray(square_vao);
 
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 9*sizeof(float), 0);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)sizeof(cube_vertices));
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices) + sizeof(instance_colors)));
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices) + sizeof(instance_colors)+POSITION_BUFFER_SIZE));
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices)));
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices)+POSITION_BUFFER_SIZE));
 	int uvoffset = 7*sizeof(float);
 	int normaloffset = 4*sizeof(float);
 
-	glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)uvoffset);
-	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)normaloffset);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)uvoffset);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)normaloffset);
 
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
-    glEnableVertexAttribArray(4);
-    glEnableVertexAttribArray(5);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glEnableVertexAttribArray(3);
+	glEnableVertexAttribArray(4);
 
-    glVertexAttribDivisor(1, 1);
-    glVertexAttribDivisor(2, 1);
-    glVertexAttribDivisor(3, 1);
-    glVertexAttribDivisor(4, 0);
-    glVertexAttribDivisor(5, 0);
+	glVertexAttribDivisor(1, 1);
+	glVertexAttribDivisor(2, 1);
+	glVertexAttribDivisor(3, 0);
+	glVertexAttribDivisor(4, 0);
 
 	glUseProgram(instancingShader);
-    glUniform1f(angle_loc, 0);
+	glUniform1f(angle_loc, 0);
 	GLfloat pm[16];
 	glGetFloatv(GL_PROJECTION_MATRIX, pm);
 	glUniformMatrix4fv(ProjectionMatrix, 1, false, &pm[0]);
@@ -814,7 +903,7 @@ void RenderScene(void)
 	glGetFloatv(GL_MODELVIEW_MATRIX, mvm);
 	glUniformMatrix4fv(ModelViewMatrix, 1, false, &mvm[0]);
 
-   	glUniform1i(uniform_texture_diffuse, 0);
+	glUniform1i(uniform_texture_diffuse, 0);
 
 	glFlush();
 	int numInstances = NUM_OBJECTS;
@@ -822,7 +911,6 @@ void RenderScene(void)
 	int indexOffset = 0;
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
-
 	glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, numInstances);
 
 	glUseProgram(0);
@@ -830,12 +918,10 @@ void RenderScene(void)
 	glBindVertexArray(0);
 
 	glutSwapBuffers();
-	glFinish();
 	glutPostRedisplay();
 
 	GLint err = glGetError();
 	assert(err==GL_NO_ERROR);
-
 }
 
 
@@ -844,137 +930,119 @@ void ChangeSize(int w, int h)
 	m_glutScreenWidth = w;
 	m_glutScreenHeight = h;
 
-    // Prevent a divide by zero
-    if(h == 0)
-        h = 1;
+#ifdef RECREATE_CL_AND_SHADERS_ON_RESIZE
+	delete g_interopBuffer;
+	clReleaseKernel(g_interopKernel);
+	DeleteCL();
+	DeleteShaders();
+#endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
 
-    // Set Viewport to window dimensions
-    glViewport(0, 0, w, h);
+	// Set Viewport to window dimensions
+	glViewport(0, 0, w, h);
+
+#ifdef RECREATE_CL_AND_SHADERS_ON_RESIZE
+	InitCL();
+	InitShaders();
+	
+	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,square_vbo);
+	clFinish(g_cqCommandQue);
+	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
+#endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
+
 }
 
 void Keyboard(unsigned char key, int x, int y)
 {
-    switch (key)
-    {
-        case 27:
-            done = true;
-            break;
-		case 'O':
-		case 'o':
-			{
-				m_ortho = !m_ortho;
-				break;
-			}
-		case 'c':
-		case 'C':
-			{
-				useCPU = !useCPU;
-				if (useCPU)
-					printf("using CPU\n");
-				else
-					printf("using OpenCL\n");
-				break;
-			}
-		case 's':
-		case 'S':
-			{
-				printStats = !printStats;
-				break;
-			}
-		case 'k':
-		case 'K':
-			{
-				runOpenCLKernels=!runOpenCLKernels;
-				break;
-			}
-		case 'q':
-		case 'Q':
-			exit(0);
-        default:
-            break;
-    }
+	switch (key)
+	{
+	case 27:
+		done = true;
+		break;
+	case 'O':
+	case 'o':
+		{
+			m_ortho = !m_ortho;
+			break;
+		}
+	case 'c':
+	case 'C':
+		{
+			useCPU = !useCPU;
+			if (useCPU)
+				printf("using CPU\n");
+			else
+				printf("using OpenCL\n");
+			break;
+		}
+	case 's':
+	case 'S':
+		{
+			printStats = !printStats;
+			break;
+		}
+	case 'k':
+	case 'K':
+		{
+			runOpenCLKernels=!runOpenCLKernels;
+			break;
+		}
+	case 'q':
+	case 'Q':
+		exit(0);
+	default:
+		break;
+	}
 }
 
 // Cleanup
 void ShutdownRC(void)
 {
-    glDeleteBuffers(1, &square_vbo);
-    glDeleteVertexArrays(1, &square_vao);
+	glDeleteBuffers(1, &square_vbo);
+	glDeleteVertexArrays(1, &square_vao);
 }
 
 int main(int argc, char* argv[])
 {
-//	printf("vertexShader = \n%s\n",vertexShader);
-//	printf("fragmentShader = \n%s\n",fragmentShader);
+	//	printf("vertexShader = \n%s\n",vertexShader);
+	//	printf("fragmentShader = \n%s\n",fragmentShader);
 
-    glutInit(&argc, argv);
+	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    
+
 
 	glutInitWindowSize(m_glutScreenWidth, m_glutScreenHeight);
 	char buf[1024];
-	sprintf(buf,"OpenCL - OpenGL interop, updating transforms of %d cubes using glDrawElementsInstanced", NUM_OBJECTS);
-    glutCreateWindow(buf);
-    
+	sprintf(buf,"OpenCL - OpenGL interop, transforms %d cubes on the GPU (use c to toggle CPU/CL)", NUM_OBJECTS);
+	glutCreateWindow(buf);
+
 	glutReshapeFunc(ChangeSize);
 
-    glutKeyboardFunc(Keyboard);
-    glutDisplayFunc(RenderScene);
+	glutKeyboardFunc(Keyboard);
+	glutDisplayFunc(RenderScene);
 
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-        /* Problem: glewInit failed, something is seriously wrong. */
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-    }
-
-	ChangeSize(m_glutScreenWidth,m_glutScreenHeight);
-
-void* glCtx=0;
-void* glDC = 0;
-
-#ifdef _WIN32
-    glCtx = wglGetCurrentContext();
-#else //!_WIN32
-    GLXContext glCtx = glXGetCurrentContext();
-#endif //!_WIN32
-	glDC = wglGetCurrentDC();
-
-		int ciErrNum = 0;
-	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
-	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
-	oclCHECKERROR(ciErrNum, CL_SUCCESS);
-
-	int numDev = btOpenCLUtils::getNumDevices(g_cxMainContext);
-
-	if (numDev>0)
+	GLenum err = glewInit();
+	if (GLEW_OK != err)
 	{
-		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
-		btOpenCLDeviceInfo clInfo;
-		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
-		btOpenCLUtils::printDeviceInfo(g_device);
-		// create a command-queue
-		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
-		oclCHECKERROR(ciErrNum, CL_SUCCESS);
-		//normally you would create and execute kernels using this command queue
-
+		/* Problem: glewInit failed, something is seriously wrong. */
+		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	}
 
-	    SetupRC();
+	//ChangeSize(m_glutScreenWidth,m_glutScreenHeight);
 
+	InitCL();
+	
+
+	InitShaders();
+	
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,square_vbo);
 	clFinish(g_cqCommandQue);
-
-	//cl_mem clBuffer = g_interopBuffer->getCLBUffer();
-//	ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
-//	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
 
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
 
-    glutMainLoop();
-    ShutdownRC();
+	glutMainLoop();
+	ShutdownRC();
 
-    return 0;
+	return 0;
 }
