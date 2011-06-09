@@ -16,6 +16,8 @@
 //#include <GL/freeglut_ext.h>
 #endif
 
+#include <math.h>
+
 #include <assert.h>
 
 int m_glutScreenWidth = 320;
@@ -36,6 +38,15 @@ static GLint                uniform_texture_diffuse = 0;
 static GLint ModelViewMatrix;
 static GLint ProjectionMatrix;
 static GLint NormalMatrix;
+
+
+#include "btVector3.h"
+#include "btQuaternion.h"
+#include "btMatrix3x3.h"
+
+
+static GLfloat projectionMatrix[16];
+static GLfloat modelviewMatrix[16];
 
 #define MAX_SHADER_LENGTH   8192
 
@@ -171,6 +182,61 @@ static const char* fragmentShader= \
 "}\n"
 ;
 
+void	btCreateFrustum(
+		float left, 
+		float right, 
+		float bottom, 
+		float top, 
+		float nearVal, 
+		float farVal,
+		float frustum[16])
+{
+	
+		frustum[0*4+0] = (float(2) * nearVal) / (right - left);
+		frustum[0*4+1] = float(0);
+		frustum[0*4+2] = float(0);
+		frustum[0*4+3] = float(0);
+
+		frustum[1*4+0] = float(0);
+		frustum[1*4+1] = (float(2) * nearVal) / (top - bottom);
+		frustum[1*4+2] = float(0);
+		frustum[1*4+3] = float(0);
+
+		frustum[2*4+0] = (right + left) / (right - left);
+		frustum[2*4+1] = (top + bottom) / (top - bottom);
+		frustum[2*4+2] = -(farVal + nearVal) / (farVal - nearVal);
+		frustum[2*4+3] = float(-1);
+
+		frustum[3*4+0] = float(0);
+		frustum[3*4+1] = float(0);
+		frustum[3*4+2] = -(float(2) * farVal * nearVal) / (farVal - nearVal);
+		frustum[3*4+3] = float(0);
+
+}
+
+void	btCreateLookAt(const btVector3& eye, const btVector3& center,const btVector3& up, GLfloat result[16])
+{
+        btVector3 f = (center - eye).normalized();
+        btVector3 u = up.normalized();
+				btVector3 s = (f.cross(u)).normalized();
+        u = s.cross(f);
+
+
+        result[0*4+0] = s.x();
+        result[1*4+0] = s.y();
+        result[2*4+0] = s.z();
+        result[0*4+1] = u.x();
+        result[1*4+1] = u.y();
+        result[2*4+1] = u.z();
+        result[0*4+2] =-f.x();
+        result[1*4+2] =-f.y();
+        result[2*4+2] =-f.z();
+
+		result[3*4+0] = -s.dot(eye);
+		result[3*4+1] = -u.dot(eye);
+		result[3*4+2] = f.dot(eye);
+		result[3*4+3] = 1.f;
+}
 
 
 // Load the shader from the source text
@@ -438,9 +504,6 @@ void SetupRC()
 
 }
 
-#include "btVector3.h"
-#include "btQuaternion.h"
-#include "btMatrix3x3.h"
 
 
 void updateCamera() {
@@ -495,16 +558,21 @@ void updateCamera() {
 		if (m_glutScreenWidth > m_glutScreenHeight) 
 		{
 			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+			btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
 		} else 
 		{
 			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+			btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
 		}
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2], 
 			m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2], 
 			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
+
+		btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,modelviewMatrix);
 	}
+
 
 }
 
@@ -649,13 +717,6 @@ void updatePos()
 
 void RenderScene(void)
 {
-#if 0
-	float modelview[20]={0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
-	// get the current modelview matrix
-	glGetFloatv(GL_MODELVIEW_MATRIX , modelview);
-	float projection[20]={0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
-	glGetFloatv(GL_PROJECTION_MATRIX, projection);
-#endif
 
 	myinit();
 	
@@ -712,11 +773,9 @@ void RenderScene(void)
 
 	GLfloat pm[16];
 	glGetFloatv(GL_PROJECTION_MATRIX, pm);
-	glUniformMatrix4fv(ProjectionMatrix, 1, false, &pm[0]);
+	glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
 
-	GLfloat mvm[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, mvm);
-	glUniformMatrix4fv(ModelViewMatrix, 1, false, &mvm[0]);
+	glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
 
    	glUniform1i(uniform_texture_diffuse, 0);
 	
