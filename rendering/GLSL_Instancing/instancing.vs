@@ -1,5 +1,4 @@
 #version 330
-precision highp float;
 
 
 
@@ -18,7 +17,7 @@ uniform mat3 NormalMatrix;
 
 out Fragment
 {
-    flat vec4 color;
+    vec4 color;
 } fragment;
 
 out Vert
@@ -57,7 +56,7 @@ vec4 quatRotate ( in vec4 p, in vec4 q )
     return quatMul ( temp, vec4 ( -q.x, -q.y, -q.z, q.w ) );
 }
 
-varying vec3 lightDir,normal,ambient;
+out vec3 lightDir,normal,ambient;
 
 void main(void)
 {

@@ -1,9 +1,9 @@
 #version 330
-precision highp float;
+
 
 in Fragment
 {
-    flat vec4 color;
+    vec4 color;
 } fragment;
 
 in Vert
@@ -14,7 +14,7 @@ in Vert
 uniform sampler2D Diffuse;
 uniform float diffuse_alpha;
 
-varying vec3 lightDir,normal,ambient;
+in vec3 lightDir,normal,ambient;
 
 out vec4 color;
 

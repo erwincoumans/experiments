@@ -32,7 +32,6 @@ static GLuint               index_vbo;
 static GLuint				m_texturehandle;
 
 static bool                 done = false;
-static GLint                angle_loc = 0;
 static GLint                uniform_texture_diffuse = 0;
 
 static GLint ModelViewMatrix;
@@ -52,10 +51,13 @@ static GLfloat modelviewMatrix[16];
 
 static GLubyte shaderText[MAX_SHADER_LENGTH];
 
+
 static const char* vertexShader= \
 "#version 330\n"
-"precision highp float;\n"
 "\n"
+"uniform mat4 ModelViewMatrix;\n"
+"uniform mat4 ProjectionMatrix;\n"
+"uniform mat3 NormalMatrix;\n"
 "\n"
 "\n"
 "layout (location = 0) in vec4 position;\n"
@@ -66,14 +68,10 @@ static const char* vertexShader= \
 "layout (location = 5) in vec3 vertexnormal;\n"
 "\n"
 "\n"
-"uniform float angle = 0.0;\n"
-"uniform mat4 ModelViewMatrix;\n"
-"uniform mat4 ProjectionMatrix;\n"
-"uniform mat3 NormalMatrix;\n"
 "\n"
 "out Fragment\n"
 "{\n"
-"    flat vec4 color;\n"
+"    vec4 color;\n"
 "} fragment;\n"
 "\n"
 "out Vert\n"
@@ -112,7 +110,7 @@ static const char* vertexShader= \
 "    return quatMul ( temp, vec4 ( -q.x, -q.y, -q.z, q.w ) );\n"
 "}\n"
 "\n"
-"varying vec3 lightDir,normal,ambient;\n"
+"out vec3 lightDir,normal,ambient;\n"
 "\n"
 "void main(void)\n"
 "{\n"
@@ -141,11 +139,10 @@ static const char* vertexShader= \
 
 static const char* fragmentShader= \
 "#version 330\n"
-"precision highp float;\n"
 "\n"
 "in Fragment\n"
 "{\n"
-"    flat vec4 color;\n"
+"    vec4 color;\n"
 "} fragment;\n"
 "\n"
 "in Vert\n"
@@ -156,7 +153,7 @@ static const char* fragmentShader= \
 "uniform sampler2D Diffuse;\n"
 "uniform float diffuse_alpha;\n"
 "\n"
-"varying vec3 lightDir,normal,ambient;\n"
+"in vec3 lightDir,normal,ambient;\n"
 "\n"
 "out vec4 color;\n"
 "\n"
@@ -177,8 +174,7 @@ static const char* fragmentShader= \
 "	ct = texel.rgb;\n"
 "	at = texel.a;\n"
 "		\n"
-"	gl_FragColor = vec4(ct * cf, at * af);	\n"
-"//	color  = vec4(ct * cf, at * af);	\n"
+"	color  = vec4(ct * cf, at * af);	\n"
 "}\n"
 ;
 
@@ -317,6 +313,7 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 		{
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
+		exit(0);
 		return (GLuint)NULL;
 		}
 
@@ -324,6 +321,7 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 		{
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
+		exit(0);
 		return (GLuint)NULL;
 		}
 	} else
@@ -334,21 +332,33 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	// Compile them
 	glCompileShader(hVertexShader);
 	glCompileShader(hFragmentShader);
+	GLint err = glGetError();
+	assert(err==GL_NO_ERROR);
 
 	// Check for errors
 	glGetShaderiv(hVertexShader, GL_COMPILE_STATUS, &testVal);
-	if(testVal == GL_FALSE)
-		{
-		glDeleteShader(hVertexShader);
-		glDeleteShader(hFragmentShader);
-		return (GLuint)NULL;
-		}
+
+	  // check if shader compiled
+  
+    if (!testVal)
+    {
+        char temp[256] = "";
+        glGetShaderInfoLog( hVertexShader, 256, NULL, temp);
+        fprintf( stderr, "Compile failed:\n%s\n", temp);
+        glDeleteShader( hVertexShader);
+        return 0;
+    }
 
 	glGetShaderiv(hFragmentShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
 		{
+			 char temp[256] = "";
+			glGetShaderInfoLog( hFragmentShader, 256, NULL, temp);
+			fprintf( stderr, "Compile failed:\n%s\n", temp);
+
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
+		exit(0);
 		return (GLuint)NULL;
 		}
 
@@ -362,7 +372,8 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	// These are no longer needed
 	glDeleteShader(hVertexShader);
 	glDeleteShader(hFragmentShader);  
-
+	err = glGetError();
+	assert(err==GL_NO_ERROR);
 	// Make sure link worked too
 	glGetProgramiv(hReturn, GL_LINK_STATUS, &testVal);
 	if(testVal == GL_FALSE)
@@ -449,8 +460,9 @@ void SetupRC()
 										 loadFromFile);
     glLinkProgram(instancingShader);
     glUseProgram(instancingShader);
-    angle_loc = glGetUniformLocation(instancingShader, "angle");
+	glFinish();
 
+  
 	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
 	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
 	NormalMatrix = glGetUniformLocation(instancingShader, "NormalMatrix");
@@ -768,12 +780,15 @@ void RenderScene(void)
 
 	glUseProgram(instancingShader);
     glBindVertexArray(square_vao);
-    glUniform1f(angle_loc, 0);
+	GLint err = glGetError();
+	assert(err==GL_NO_ERROR);
 
 
-	GLfloat pm[16];
-	glGetFloatv(GL_PROJECTION_MATRIX, pm);
 	glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
+
+		err = glGetError();
+	assert(err==GL_NO_ERROR);
+
 
 	glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
 
