@@ -371,6 +371,7 @@ cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, const c
 		exit(0);
     }
 
+	clReleaseProgram(m_cpProgram);
 	printf("ready. \n");
 	delete [] compileFlags;
 	return kernel;

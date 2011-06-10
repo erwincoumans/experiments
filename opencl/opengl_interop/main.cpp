@@ -104,7 +104,7 @@ static const char* vertexShader= \
 "\n"
 "out Fragment\n"
 "{\n"
-"    flat vec4 color;\n"
+"     vec4 color;\n"
 "} fragment;\n"
 "\n"
 "out Vert\n"
@@ -143,7 +143,7 @@ static const char* vertexShader= \
 "    return quatMul ( temp, vec4 ( -q.x, -q.y, -q.z, q.w ) );\n"
 "}\n"
 "\n"
-"varying vec3 lightDir,normal,ambient;\n"
+"out vec3 lightDir,normal,ambient;\n"
 "\n"
 "void main(void)\n"
 "{\n"
@@ -176,7 +176,7 @@ static const char* fragmentShader= \
 "\n"
 "in Fragment\n"
 "{\n"
-"    flat vec4 color;\n"
+"     vec4 color;\n"
 "} fragment;\n"
 "\n"
 "in Vert\n"
@@ -186,7 +186,7 @@ static const char* fragmentShader= \
 "\n"
 "uniform sampler2D Diffuse;\n"
 "\n"
-"varying vec3 lightDir,normal,ambient;\n"
+"in vec3 lightDir,normal,ambient;\n"
 "\n"
 "out vec4 color;\n"
 "\n"
@@ -207,8 +207,7 @@ static const char* fragmentShader= \
 "	ct = texel.rgb;\n"
 "	at = texel.a;\n"
 "		\n"
-"	gl_FragColor = vec4(ct * cf, at * af);	\n"
-"//	color  = vec4(ct * cf, at * af);	\n"
+"	color  = vec4(ct * cf, at * af);	\n"
 "}\n"
 ;
 
@@ -314,6 +313,11 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	glGetShaderiv(hVertexShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
 	{
+			 char temp[256] = "";
+			glGetShaderInfoLog( hVertexShader, 256, NULL, temp);
+			fprintf( stderr, "Compile failed:\n%s\n", temp);
+			assert(0);
+			exit(0);
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
 		return (GLuint)NULL;
@@ -322,6 +326,11 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg, b
 	glGetShaderiv(hFragmentShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
 	{
+		 char temp[256] = "";
+			glGetShaderInfoLog( hFragmentShader, 256, NULL, temp);
+			fprintf( stderr, "Compile failed:\n%s\n", temp);
+			assert(0);
+			exit(0);
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
 		return (GLuint)NULL;
