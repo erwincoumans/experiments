@@ -68,8 +68,8 @@ int m_glutScreenHeight= 480;
 bool m_ortho = false;
 
 static GLuint               instancingShader;        // The instancing renderer
-static GLuint               square_vao;
-static GLuint               square_vbo;
+static GLuint               cube_vao;
+static GLuint               cube_vbo;
 static GLuint               index_vbo;
 static GLuint				m_texturehandle;
 
@@ -457,9 +457,9 @@ GLfloat* instance_quaternion_ptr = 0;
 
 void DeleteShaders()
 {
-	glDeleteVertexArrays(1, &square_vao);
+	glDeleteVertexArrays(1, &cube_vao);
 	glDeleteBuffers(1,&index_vbo);
-	glDeleteBuffers(1,&square_vbo);
+	glDeleteBuffers(1,&cube_vbo);
 	glDeleteProgram(instancingShader);
 }
 
@@ -527,8 +527,8 @@ void InitShaders()
 	GLuint offset = 0;
 
 
-	glGenBuffers(1, &square_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glGenBuffers(1, &cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 
 	instance_positions_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
 	instance_quaternion_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
@@ -582,9 +582,9 @@ void InitShaders()
 	glBufferSubData(GL_ARRAY_BUFFER, sizeof(cube_vertices) + sizeof(instance_colors)+POSITION_BUFFER_SIZE,ORIENTATION_BUFFER_SIZE , instance_quaternion_ptr);
 	*/
 
-	glGenVertexArrays(1, &square_vao);
-	glBindVertexArray(square_vao);
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glGenVertexArrays(1, &cube_vao);
+	glBindVertexArray(cube_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	glBindVertexArray(0);
 
 	glGenBuffers(1, &index_vbo);
@@ -793,8 +793,8 @@ void updatePos()
 	else
 	{
 
+		glFinish();
 		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
-
 		cl_int ciErrNum = CL_SUCCESS;
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
@@ -855,7 +855,7 @@ void RenderScene(void)
 	float start = gStopwatch.getTimeMilliseconds();
 
 	//	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	glFlush();
 	updatePos();
 
@@ -880,7 +880,7 @@ void RenderScene(void)
 		}
 	}
 
-	glBindVertexArray(square_vao);
+	glBindVertexArray(cube_vao);
 
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 9*sizeof(float), 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices)));
@@ -953,7 +953,7 @@ void ChangeSize(int w, int h)
 	InitCL();
 	InitShaders();
 	
-	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,square_vbo);
+	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
@@ -1006,8 +1006,8 @@ void Keyboard(unsigned char key, int x, int y)
 // Cleanup
 void ShutdownRC(void)
 {
-	glDeleteBuffers(1, &square_vbo);
-	glDeleteVertexArrays(1, &square_vao);
+	glDeleteBuffers(1, &cube_vbo);
+	glDeleteVertexArrays(1, &cube_vao);
 }
 
 int main(int argc, char* argv[])
@@ -1044,7 +1044,7 @@ int main(int argc, char* argv[])
 
 	InitShaders();
 	
-	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,square_vbo);
+	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
 
 
