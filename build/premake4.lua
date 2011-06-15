@@ -20,17 +20,17 @@ solution "0MySolution"
 	dofile ("findOpenCL.lua")
 	dofile ("findDirectX11.lua")
 	
-
-
 	language "C++"
 	location "build"
 	targetdir "bin"
 
 	include "../opencl/opengl_interop"
+	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
 
 	include "../opencl/basic_initialize"
 	include "../rendering/GLSL_Instancing"
+
 
 
 

@@ -4,7 +4,7 @@
 	
 	if (hasCL) then
 
-		project "gpu_research_unit_test"
+		project "OpenCL_DX11_primitives_test"
 
 		initOpenCL()
 
@@ -16,7 +16,7 @@
 				
 		kind "ConsoleApp"
 		targetdir "../../../bin"
-		includedirs {"../../../include/gpu_research"}
+		includedirs {".."}
 		
 		links {
 		"OpenCL"
