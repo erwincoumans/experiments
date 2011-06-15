@@ -101,30 +101,14 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 	 * If we could find our platform, use it. Otherwise pass a NULL and get whatever the     
 	 * implementation thinks we should be using.     
 	 */
-    cl_context_properties cps[7] =     
-	{        
-		CL_CONTEXT_PLATFORM,         
-		(cl_context_properties)platform, 
-		0,
-		0,
-		0,
-		0,
-		0
-	};    
-#ifndef CL_PLATFORM_MINI_CL
-#ifdef _WIN32
-	// If we have a gl context then enable interop
-	if( pGLContext )
-	{
-		cps[2] = CL_GL_CONTEXT_KHR;
-		cps[3] = (cl_context_properties)pGLContext;
-		cps[4] = CL_WGL_HDC_KHR;
-		cps[5] = (cl_context_properties)pGLDC;
-	}
-#endif
-#endif //CL_PLATFORM_MINI_CL
+	cl_context_properties cps[7] = {0,0,0,0,0,0,0};
+	cps[0] = CL_CONTEXT_PLATFORM;
+	cps[1] = (cl_context_properties)platform;
+	cps[2] = CL_GL_CONTEXT_KHR;
+	cps[3] = (cl_context_properties)pGLContext;
+	cps[4] = CL_WGL_HDC_KHR;
+	cps[5] = (cl_context_properties)pGLDC;
 
-	/* Use NULL for backward compatibility */    
 	cl_context_properties* cprops = (NULL == platform) ? NULL : cps;
     cl_context retContext = clCreateContextFromType(cprops, 
 													deviceType,                  

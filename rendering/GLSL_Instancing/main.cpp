@@ -26,8 +26,8 @@ int m_glutScreenHeight= 320;
 bool m_ortho = false;
 
 static GLuint               instancingShader;        // The instancing renderer
-static GLuint               square_vao;
-static GLuint               square_vbo;
+static GLuint               cube_vao;
+static GLuint               cube_vbo;
 static GLuint               index_vbo;
 static GLuint				m_texturehandle;
 
@@ -470,10 +470,10 @@ void SetupRC()
 
     GLuint offset = 0;
 
-    glGenVertexArrays(1, &square_vao);
-    glGenBuffers(1, &square_vbo);
-    glBindVertexArray(square_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+    glGenVertexArrays(1, &cube_vao);
+    glGenBuffers(1, &cube_vbo);
+    glBindVertexArray(cube_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 
 	instance_positions_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
 	instance_quaternion_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
@@ -690,7 +690,7 @@ void myinit()
 
 void updatePos()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);
 
 	float* positions = (float*)(bla+sizeof(cube_vertices) + sizeof(instance_colors));
@@ -752,7 +752,7 @@ void RenderScene(void)
 	glEnd();
 
 
-	glBindBuffer(GL_ARRAY_BUFFER, square_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	updatePos();
 
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 9*sizeof(float), 0);
@@ -779,7 +779,7 @@ void RenderScene(void)
     glVertexAttribDivisor(5, 0);
 
 	glUseProgram(instancingShader);
-    glBindVertexArray(square_vao);
+    glBindVertexArray(cube_vao);
 	GLint err = glGetError();
 	assert(err==GL_NO_ERROR);
 
@@ -846,8 +846,8 @@ void Keyboard(unsigned char key, int x, int y)
 // Cleanup
 void ShutdownRC(void)
 {
-    glDeleteBuffers(1, &square_vbo);
-    glDeleteVertexArrays(1, &square_vao);
+    glDeleteBuffers(1, &cube_vbo);
+    glDeleteVertexArrays(1, &cube_vao);
 }
 
 int main(int argc, char* argv[])
