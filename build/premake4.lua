@@ -28,9 +28,6 @@ solution "0MySolution"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
 
-	include "../opencl/basic_initialize"
 	include "../rendering/GLSL_Instancing"
 
-
-
-
+	include "../opencl/basic_initialize"

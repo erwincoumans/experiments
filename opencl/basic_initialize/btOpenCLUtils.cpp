@@ -31,6 +31,8 @@ static char* spPlatformVendor =
 "Advanced Micro Devices, Inc.";
 #elif defined(CL_PLATFORM_NVIDIA)
 "NVIDIA Corporation";
+#elif defined(CL_PLATFORM_INTEL)
+"Intel(R) Corporation";
 #else
 "Unknown Vendor";
 #endif
@@ -104,10 +106,13 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 	cl_context_properties cps[7] = {0,0,0,0,0,0,0};
 	cps[0] = CL_CONTEXT_PLATFORM;
 	cps[1] = (cl_context_properties)platform;
-	cps[2] = CL_GL_CONTEXT_KHR;
-	cps[3] = (cl_context_properties)pGLContext;
-	cps[4] = CL_WGL_HDC_KHR;
-	cps[5] = (cl_context_properties)pGLDC;
+	if (pGLContext && pGLDC)
+	{
+		cps[2] = CL_GL_CONTEXT_KHR;
+		cps[3] = (cl_context_properties)pGLContext;
+		cps[4] = CL_WGL_HDC_KHR;
+		cps[5] = (cl_context_properties)pGLDC;
+	}
 
 	cl_context_properties* cprops = (NULL == platform) ? NULL : cps;
     cl_context retContext = clCreateContextFromType(cprops, 

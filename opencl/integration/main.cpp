@@ -3,8 +3,8 @@
 //runs fine with fewer objects
 
 #define NUM_OBJECTS_X 327
-#define NUM_OBJECTS_Y 10
-#define NUM_OBJECTS_Z 10
+#define NUM_OBJECTS_Y 20
+#define NUM_OBJECTS_Z 20
 //#define NUM_OBJECTS_Z 20
 
 //#define _USE_SUB_DATA
@@ -48,10 +48,19 @@ cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
 cl_device_id		g_device;
 static const size_t workGroupSize = 128;
+cl_mem				gLinVelMem;
+cl_mem				gAngVelMem;
 
 
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_interopKernel;
+
+////for Adl
+#include <Adl/Adl.h>
+
+DeviceCL* g_deviceCL=0;
+
+
 
 bool useCPU = false;
 bool printStats = false;
@@ -59,7 +68,7 @@ bool runOpenCLKernels = true;
 
 #define MSTRINGIFY(A) #A
 static char* interopKernelString =
-#include "../opengl_interop/interopKernel.cl"
+#include "integrateKernel.cl"
 
 btStopwatch gStopwatch;
 int m_glutScreenWidth = 640;
@@ -425,7 +434,7 @@ void InitCL()
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
+	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//GPU;
 	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
@@ -794,6 +803,7 @@ void updatePos()
 	{
 
 		glFinish();
+
 		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
 		cl_int ciErrNum = CL_SUCCESS;
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
@@ -806,10 +816,15 @@ void updatePos()
 			ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
 			ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
 			ciErrNum = clSetKernelArg(g_interopKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+
+			ciErrNum = clSetKernelArg(g_interopKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
+			ciErrNum = clSetKernelArg(g_interopKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
+		
 			size_t	numWorkItems = workGroupSize*((NUM_OBJECTS + (workGroupSize-1)) / workGroupSize);
 			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_interopKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		}
+	
 		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		clFinish(g_cqCommandQue);
@@ -1041,7 +1056,42 @@ int main(int argc, char* argv[])
 
 	InitCL();
 	
+	AdlAllocate();
 
+#define CUSTOM_CL_INITIALIZATION
+#ifdef CUSTOM_CL_INITIALIZATION
+	g_deviceCL = new DeviceCL();
+	g_deviceCL->m_deviceIdx = 0;
+	g_deviceCL->m_context = g_cxMainContext;
+	g_deviceCL->m_commandQueue = g_cqCommandQue;
+
+#else
+	DeviceUtils::Config cfg;
+	cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
+	g_deviceCL = DeviceUtils::allocate( TYPE_CL, cfg );
+#endif
+
+	int size = NUM_OBJECTS;
+	Buffer<btVector3> linvelBuf( g_deviceCL, size );
+	Buffer<btVector3> angvelBuf( g_deviceCL, size );
+	
+	gLinVelMem = (cl_mem)linvelBuf.m_ptr;
+	gAngVelMem = (cl_mem)angvelBuf.m_ptr;
+
+	btVector3* linVelHost= new btVector3[size];
+	btVector3* angVelHost = new btVector3[size];
+
+	for (int i=0;i<NUM_OBJECTS;i++)
+	{
+		linVelHost[i].setValue(0,0,0);
+		angVelHost[i].setValue(1,0,0);
+	}
+
+	linvelBuf.write(linVelHost,NUM_OBJECTS);
+	angvelBuf.write(angVelHost,NUM_OBJECTS);
+
+	DeviceUtils::waitForCompletion( g_deviceCL );
+	
 	InitShaders();
 	
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);

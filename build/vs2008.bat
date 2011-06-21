@@ -1,4 +1,4 @@
-rmdir /s /q vc2008
+rmdir /s /q vs2008
 rmdir /s /q build
 premake4 clean
 
