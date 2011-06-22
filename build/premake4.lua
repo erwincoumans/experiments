@@ -30,11 +30,6 @@ solution "0MySolution"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
 
---	include "../wxwidgets/wxWidgetsGLTest"
---	include "../wxwidgets/treectrl"
--- for Visual Studio 2008 you don't need to build wxAll, it is already precompiled
-
---	include "../wxwidgets/wxWidgets-2.9.1/wxCMake/wxAll"
 	
 	
 	
