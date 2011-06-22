@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     26.07.99
-// RCS-ID:      $Id: ctrlcmn.cpp 58811 2009-02-09 13:16:42Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +35,7 @@
     #include "wx/statbmp.h"
     #include "wx/bitmap.h"
     #include "wx/utils.h"       // for wxStripMenuCodes()
+    #include "wx/settings.h"
 #endif
 
 const char wxControlNameStr[] = "control";
@@ -85,13 +86,6 @@ bool wxControlBase::CreateControl(wxWindowBase *parent,
     parent->AddChild(this);
 
     return true;
-}
-
-/* static */
-wxString wxControlBase::GetLabelText(const wxString& label)
-{
-    // we don't want strip the TABs here, just the mnemonics
-    return wxStripMenuCodes(label, wxStrip_Mnemonics);
 }
 
 void wxControlBase::Command(wxCommandEvent& event)
@@ -154,8 +148,16 @@ void wxControlBase::DoUpdateWindowUI(wxUpdateUIEvent& event)
 }
 
 /* static */
+wxString wxControlBase::GetLabelText(const wxString& label)
+{
+    // we don't want strip the TABs here, just the mnemonics
+    return wxStripMenuCodes(label, wxStrip_Mnemonics);
+}
+
+/* static */
 wxString wxControlBase::RemoveMnemonics(const wxString& str)
 {
+    // we don't want strip the TABs here, just the mnemonics
     return wxStripMenuCodes(str, wxStrip_Mnemonics);
 }
 
@@ -173,7 +175,7 @@ int wxControlBase::FindAccelIndex(const wxString& label, wxString *labelOnly)
     // the character following MNEMONIC_PREFIX is the accelerator for this
     // control unless it is MNEMONIC_PREFIX too - this allows to insert
     // literal MNEMONIC_PREFIX chars into the label
-    static const wxChar MNEMONIC_PREFIX = _T('&');
+    static const wxChar MNEMONIC_PREFIX = wxT('&');
 
     if ( labelOnly )
     {
@@ -198,7 +200,7 @@ int wxControlBase::FindAccelIndex(const wxString& label, wxString *labelOnly)
                 }
                 else
                 {
-                    wxFAIL_MSG(_T("duplicate accel char in control label"));
+                    wxFAIL_MSG(wxT("duplicate accel char in control label"));
                 }
             }
         }
@@ -217,149 +219,192 @@ wxBorder wxControlBase::GetDefaultBorder() const
     return wxBORDER_THEME;
 }
 
+/* static */ wxVisualAttributes
+wxControlBase::GetCompositeControlsDefaultAttributes(wxWindowVariant WXUNUSED(variant))
+{
+    wxVisualAttributes attrs;
+    attrs.font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+    attrs.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    attrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+
+    return attrs;
+}
+
 // ----------------------------------------------------------------------------
 // wxControlBase - ellipsization code
 // ----------------------------------------------------------------------------
 
-#define wxELLIPSE_REPLACEMENT       wxT("...")
+#define wxELLIPSE_REPLACEMENT       wxS("...")
 
 /* static and protected */
 wxString wxControlBase::DoEllipsizeSingleLine(const wxString& curLine, const wxDC& dc,
-                                              wxEllipsizeMode mode, int maxFinalWidth,
-                                              int replacementWidth, int marginWidth)
+                                              wxEllipsizeMode mode, int maxFinalWidthPx,
+                                              int replacementWidthPx, int marginWidthPx)
 {
-    wxASSERT_MSG(replacementWidth > 0 && marginWidth > 0,
+    wxASSERT_MSG(replacementWidthPx > 0 && marginWidthPx > 0,
                  "Invalid parameters");
-    wxASSERT_MSG(!curLine.Contains('\n'),
-                 "Use Ellipsize() instead!");
+    wxASSERT_LEVEL_2_MSG(!curLine.Contains('\n'),
+                         "Use Ellipsize() instead!");
+
+    wxASSERT_MSG( mode != wxELLIPSIZE_NONE, "shouldn't be called at all then" );
 
     // NOTE: this function assumes that any mnemonic/tab character has already
     //       been handled if it was necessary to handle them (see Ellipsize())
 
-    if (maxFinalWidth <= 0)
+    if (maxFinalWidthPx <= 0)
         return wxEmptyString;
 
-    wxArrayInt charOffsets;
+    wxArrayInt charOffsetsPx;
     size_t len = curLine.length();
     if (len == 0 ||
-        !dc.GetPartialTextExtents(curLine, charOffsets))
+        !dc.GetPartialTextExtents(curLine, charOffsetsPx))
         return curLine;
 
-    wxASSERT(charOffsets.GetCount() == len);
+    wxASSERT(charOffsetsPx.GetCount() == len);
 
-    size_t totalWidth = charOffsets.Last();
-    if ( totalWidth <= (size_t)maxFinalWidth )
+    // NOTE: charOffsetsPx[n] is the width in pixels of the first n characters (with the last one INCLUDED)
+    //       thus charOffsetsPx[len-1] is the total width of the string
+    size_t totalWidthPx = charOffsetsPx.Last();
+    if ( totalWidthPx <= (size_t)maxFinalWidthPx )
         return curLine;     // we don't need to do any ellipsization!
 
-    int excessPixels = totalWidth - maxFinalWidth +
-                       replacementWidth +
-                       marginWidth;     // security margin (NEEDED!)
-    wxASSERT(excessPixels>0);
+    int excessPx = wxMin(totalWidthPx - maxFinalWidthPx +
+                         replacementWidthPx +
+                         marginWidthPx,     // security margin
+                         totalWidthPx);
+    wxASSERT(excessPx>0);       // excessPx should be in the [1;totalWidthPx] range
 
-    // remove characters in excess
-    size_t initialChar,     // index of first char to erase
-           nChars;          // how many chars do we need to erase?
+    // REMEMBER: indexes inside the string have a valid range of [0;len-1] if not otherwise constrained
+    //           lengths/counts of characters (e.g. nCharsToRemove) have a valid range of [0;len] if not otherwise constrained
+    // NOTE: since this point we know we have for sure a non-empty string from which we need
+    //       to remove _at least_ one character (thus nCharsToRemove below is constrained to be >= 1)
 
+    size_t initialCharToRemove,     // index of first character to erase, valid range is [0;len-1]
+           nCharsToRemove;          // how many chars do we need to erase? valid range is [1;len-initialCharToRemove]
+
+    // let's compute the range of characters to remove depending on the ellipsization mode:
     switch (mode)
     {
         case wxELLIPSIZE_START:
-            initialChar = 0;
-            for ( nChars=0;
-                  nChars < len && charOffsets[nChars] < excessPixels;
-                  nChars++ )
+            initialCharToRemove = 0;
+            for ( nCharsToRemove = 1;
+                  nCharsToRemove < len && charOffsetsPx[nCharsToRemove-1] < excessPx;
+                  nCharsToRemove++ )
                 ;
             break;
 
         case wxELLIPSIZE_MIDDLE:
             {
-                // the start & end of the removed span of chars
-                initialChar = len/2;
-                size_t endChar = len/2;
+                // NOTE: the following piece of code works also when len == 1
 
-                int removed = 0;
-                for ( ; removed < excessPixels; )
+                // start the removal process from the middle of the string
+                // i.e. separe the string in three parts: 
+                // - the first one to preserve, valid range [0;initialCharToRemove-1] or the empty range if initialCharToRemove==0
+                // - the second one to remove, valid range [initialCharToRemove;endCharToRemove]
+                // - the third one to preserve, valid range [endCharToRemove+1;len-1] or the empty range if endCharToRemove==len-1
+                // NOTE: empty range != range [0;0] since the range [0;0] contains 1 character (the zero-th one)!
+                initialCharToRemove = len/2;
+                size_t endCharToRemove = len/2;     // index of the last character to remove; valid range is [0;len-1]
+
+                int removedPx = 0;
+                for ( ; removedPx < excessPx; )
                 {
-                    if (initialChar > 0)
+                    // try to remove the last character of the first part of the string
+                    if (initialCharToRemove > 0)
                     {
-                        // width of the initialChar-th character
-                        int width = charOffsets[initialChar] -
-                                    charOffsets[initialChar-1];
+                        // width of the (initialCharToRemove-1)-th character
+                        int widthPx;
+                        if (initialCharToRemove >= 2)
+                            widthPx = charOffsetsPx[initialCharToRemove-1] - charOffsetsPx[initialCharToRemove-2];
+                        else
+                            widthPx = charOffsetsPx[initialCharToRemove-1];     
+                                // the (initialCharToRemove-1)-th character is the first char of the string
+                        
+                        wxASSERT(widthPx >= 0);     // widthPx is zero for e.g. tab characters
 
-                        // remove the initialChar-th character
-                        removed += width;
-                        initialChar--;
+                        // mark the (initialCharToRemove-1)-th character as removable
+                        initialCharToRemove--;
+                        removedPx += widthPx;
                     }
 
-                    if (endChar < len - 1 &&
-                        removed < excessPixels)
+                    // try to remove the first character of the last part of the string
+                    if (endCharToRemove < len - 1 &&
+                        removedPx < excessPx)
                     {
-                        // width of the (endChar+1)-th character
-                        int width = charOffsets[endChar+1] -
-                                    charOffsets[endChar];
+                        // width of the (endCharToRemove+1)-th character
+                        int widthPx = charOffsetsPx[endCharToRemove+1] -
+                                      charOffsetsPx[endCharToRemove];
 
-                        // remove the endChar-th character
-                        removed += width;
-                        endChar++;
+                        wxASSERT(widthPx >= 0);     // widthPx is zero for e.g. tab characters
+
+                        // mark the (endCharToRemove+1)-th character as removable
+                        endCharToRemove++;
+                        removedPx += widthPx;
                     }
 
-                    if (initialChar == 0 && endChar == len-1)
+                    if (initialCharToRemove == 0 && endCharToRemove == len-1)
                     {
-                        nChars = len+1;
+                        // we need to remove all the characters of the string!
                         break;
                     }
                 }
 
-                initialChar++;
-                nChars = endChar - initialChar + 1;
+                nCharsToRemove = endCharToRemove - initialCharToRemove + 1;
             }
             break;
 
         case wxELLIPSIZE_END:
             {
-                wxASSERT(len > 0);
+                int maxWidthPx = totalWidthPx - excessPx;
 
-                int maxWidth = totalWidth - excessPixels;
-                for ( initialChar = 0;
-                      initialChar < len && charOffsets[initialChar] < maxWidth;
-                      initialChar++ )
+                // go backward from the end of the string toward the start
+                for ( initialCharToRemove = len-1;
+                      initialCharToRemove > 0 && charOffsetsPx[initialCharToRemove-1] > maxWidthPx;
+                      initialCharToRemove-- )
                     ;
-
-                if (initialChar == 0)
-                {
-                    nChars = len;
-                }
-                else
-                {
-                    //initialChar--;      // go back one character
-                    nChars = len - initialChar;
-                }
+                nCharsToRemove = len - initialCharToRemove;
             }
             break;
 
+        case wxELLIPSIZE_NONE:
         default:
             wxFAIL_MSG("invalid ellipsize mode");
             return curLine;
     }
 
-    wxString ret(curLine);
-    if (nChars >= len)
-    {
-        // need to remove the entire row!
-        ret.clear();
-    }
-    else
-    {
-        // erase nChars characters after initialChar (included):
-        ret.erase(initialChar, nChars+1);
+#ifdef __VMS
+#pragma message disable unscomzer
+   // suppress warnings on comparison of unsigned numbers
+#endif
+   wxASSERT(initialCharToRemove >= 0 && initialCharToRemove <= len-1);  // see valid range for initialCharToRemove above
+#ifdef __VMS
+#pragma message enable unscomzer
+   // suppress warnings on comparison of unsigned numbers
+#endif
+    wxASSERT(nCharsToRemove >= 1 && nCharsToRemove <= len-initialCharToRemove);  // see valid range for nCharsToRemove above
 
-        // if there is space for the replacement dots, add them
-        if (maxFinalWidth > replacementWidth)
-            ret.insert(initialChar, wxELLIPSE_REPLACEMENT);
-    }
+    // erase nCharsToRemove characters after initialCharToRemove (included);
+    // e.g. if we have the string "foobar" (len = 6)
+    //                               ^
+    //                               \--- initialCharToRemove = 2
+    //      and nCharsToRemove = 2, then we get "foar"
+    wxString ret(curLine);
+    ret.erase(initialCharToRemove, nCharsToRemove);
+
+    int removedPx;
+    if (initialCharToRemove >= 1)
+        removedPx = charOffsetsPx[initialCharToRemove+nCharsToRemove-1] - charOffsetsPx[initialCharToRemove-1];
+    else 
+        removedPx = charOffsetsPx[initialCharToRemove+nCharsToRemove-1];
+    wxASSERT(removedPx >= excessPx);
+
+    // if there is space for the replacement dots, add them
+    if ((int)totalWidthPx-removedPx+replacementWidthPx < maxFinalWidthPx)
+        ret.insert(initialCharToRemove, wxELLIPSE_REPLACEMENT);
 
     // if everything was ok, we should have shortened this line
-    // enough to make it fit in maxFinalWidth:
-    wxASSERT(dc.GetTextExtent(ret).GetWidth() < maxFinalWidth);
+    // enough to make it fit in maxFinalWidthPx:
+    wxASSERT_LEVEL_2(dc.GetTextExtent(ret).GetWidth() <= maxFinalWidthPx);
 
     return ret;
 }
@@ -400,7 +445,7 @@ wxString wxControlBase::Ellipsize(const wxString& label, const wxDC& dc,
             }
         }
         // we need to remove mnemonics from the label for correct calculations
-        else if ( *pc == wxS('&') && (flags & wxELLIPSIZE_PROCESS_MNEMONICS) != 0 )
+        else if ( *pc == wxS('&') && (flags & wxELLIPSIZE_FLAGS_PROCESS_MNEMONICS) )
         {
             // pc+1 is safe: at worst we'll be at end()
             wxString::const_iterator next = pc + 1;
@@ -409,7 +454,7 @@ wxString wxControlBase::Ellipsize(const wxString& label, const wxDC& dc,
             //else: remove this ampersand
         }
         // we need also to expand tabs to properly calc their size
-        else if ( *pc == wxS('\t') && (flags & wxELLIPSIZE_EXPAND_TAB) != 0 )
+        else if ( *pc == wxS('\t') && (flags & wxELLIPSIZE_FLAGS_EXPAND_TABS) )
         {
             // Windows natively expands the TABs to 6 spaces. Do the same:
             curLine += wxS("      ");

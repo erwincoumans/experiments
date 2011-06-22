@@ -3,7 +3,7 @@
 // Purpose:     xlocale wrappers/impl to provide some xlocale wrappers
 // Author:      Brian Vanderburg II, Vadim Zeitlin
 // Created:     2008-01-07
-// RCS-ID:      $Id: xlocale.cpp 59972 2009-04-01 15:20:42Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Brian Vanderburg II
 //                  2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
@@ -32,6 +32,7 @@
 #include "wx/xlocale.h"
 
 #include <errno.h>
+#include <locale.h>
 
 // ----------------------------------------------------------------------------
 // module globals
@@ -153,7 +154,7 @@ void wxXLocale::Init(const char *loc)
             m_locale = newlocale(LC_ALL_MASK, buf2.c_str(), NULL);
         }
     }
-    
+
     // TODO: wxLocale performs many more manipulations of the given locale
     //       string in the attempt to set a valid locale; reusing that code
     //       (changing it to take a generic wxTryLocale callback) would be nice
@@ -194,7 +195,7 @@ void wxXLocale::Free()
 #define CTYPE_UPPER 0x0200
 #define CTYPE_XDIGIT 0x0400
 
-static unsigned int gs_lookup[] =
+static const unsigned int gs_lookup[] =
 {
     0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004,
     0x0004, 0x0104, 0x0104, 0x0104, 0x0104, 0x0104, 0x0004, 0x0004,
@@ -282,13 +283,12 @@ int wxToupper_l(const wxUniChar& c, const wxXLocale& loc)
 #define IMPLEMENT_STRTOX_L_START                                \
     wxCHECK(loc.IsOk(), 0);                                     \
                                                                 \
-    /* (Try to) temporary set the locale to 'C' */              \
-    const char *oldLocale = wxSetlocale(LC_NUMERIC, NULL);      \
-    const char *tmp = wxSetlocale(LC_NUMERIC, "C");             \
-    if ( !tmp )                                                 \
+    /* (Try to) temporary set the 'C' locale */                 \
+    const char *oldLocale = wxSetlocale(LC_NUMERIC, "C");       \
+    if ( !oldLocale )                                           \
     {                                                           \
-        /* restore the original locale */                       \
-        wxSetlocale(LC_NUMERIC, oldLocale);                     \
+        /* the current locale was not changed; no need to */    \
+        /* restore the previous one... */                       \
         errno = EINVAL;                                         \
             /* signal an error (better than nothing) */         \
         return 0;                                               \
@@ -314,7 +314,7 @@ double wxStrtod_l(const char* str, char **endptr, const wxXLocale& loc)
 }
 
 long wxStrtol_l(const wchar_t* str, wchar_t **endptr, int base, const wxXLocale& loc)
-{ 
+{
     IMPLEMENT_STRTOX_L_START
     long ret = wxStrtol(str, endptr, base);
     IMPLEMENT_STRTOX_L_END

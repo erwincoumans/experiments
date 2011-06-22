@@ -3,7 +3,7 @@
 // Purpose:     XML resource handler for wxComboBox
 // Author:      Jaakko Salli
 // Created:     2009/01/25
-// RCS-ID:      $Id: xh_comboctrl.h 59648 2009-03-20 18:25:13Z RD $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2009 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

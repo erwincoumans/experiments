@@ -4,7 +4,7 @@
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden and Vaclav Slavik
-// RCS-ID:      $Id: helpwnd.cpp 59343 2009-03-05 15:54:50Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Harm van der Heijden and Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -184,7 +184,7 @@ void wxHtmlHelpWindow::UpdateMergedIndex()
     for (size_t i = 0; i < len; i++)
     {
         const wxHtmlHelpDataItem& item = items[i];
-        wxASSERT_MSG( item.level < 128, _T("nested index entries too deep") );
+        wxASSERT_MSG( item.level < 128, wxT("nested index entries too deep") );
 
         if (history[item.level] &&
             history[item.level]->items[0]->name == item.name)
@@ -273,8 +273,10 @@ void wxHtmlHelpWindow::Init(wxHtmlHelpData* data)
 
     m_mergedIndex = NULL;
 
+#if wxUSE_CONFIG
     m_Config = NULL;
     m_ConfigRoot = wxEmptyString;
+#endif // wxUSE_CONFIG
 
     m_Cfg.x = m_Cfg.y = wxDefaultCoord;
     m_Cfg.w = 700;
@@ -315,10 +317,12 @@ bool wxHtmlHelpWindow::Create(wxWindow* parent, wxWindowID id,
 {
     m_hfStyle = helpStyle;
 
+#if wxUSE_CONFIG
     // Do the config in two steps. We read the HtmlWindow customization after we
     // create the window.
     if (m_Config)
         ReadCustomization(m_Config, m_ConfigRoot);
+#endif // wxUSE_CONFIG
 
     wxWindow::Create(parent, id, pos, size, style, wxT("wxHtmlHelp"));
 
@@ -364,7 +368,12 @@ bool wxHtmlHelpWindow::Create(wxWindow* parent, wxWindowID id,
     {
         // traditional help controller; splitter window with html page on the
         // right and a notebook containing various pages on the left
-        m_Splitter = new wxSplitterWindow(this);
+        long splitterStyle = wxSP_3D;
+        // Drawing moving sash can cause problems on wxMac
+#ifdef __WXMAC__
+        splitterStyle |= wxSP_LIVE_UPDATE;
+#endif
+        m_Splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, splitterStyle);
 
         topWindowSizer->Add(m_Splitter, 1, wxEXPAND);
 
@@ -388,8 +397,10 @@ bool wxHtmlHelpWindow::Create(wxWindow* parent, wxWindowID id,
         topWindowSizer->Add(m_HtmlWin, 1, wxEXPAND);
     }
 
+#if wxUSE_CONFIG
     if ( m_Config )
         m_HtmlWin->ReadCustomization(m_Config, m_ConfigRoot);
+#endif // wxUSE_CONFIG
 
     // contents tree panel?
     if ( helpStyle & wxHF_CONTENTS )
@@ -905,7 +916,7 @@ bool wxHtmlHelpWindow::KeywordSearch(const wxString& keyword,
         switch ( mode )
         {
             default:
-                wxFAIL_MSG( _T("unknown help search mode") );
+                wxFAIL_MSG( wxT("unknown help search mode") );
                 // fall back
 
             case wxHELP_SEARCH_ALL:
@@ -1064,6 +1075,7 @@ void wxHtmlHelpWindow::RefreshLists()
     CreateSearch();
 }
 
+#if wxUSE_CONFIG
 void wxHtmlHelpWindow::ReadCustomization(wxConfigBase *cfg, const wxString& path)
 {
     wxString oldpath;
@@ -1072,7 +1084,7 @@ void wxHtmlHelpWindow::ReadCustomization(wxConfigBase *cfg, const wxString& path
     if (path != wxEmptyString)
     {
         oldpath = cfg->GetPath();
-        cfg->SetPath(_T("/") + path);
+        cfg->SetPath(wxT("/") + path);
     }
 
     m_Cfg.navig_on = cfg->Read(wxT("hcNavigPanel"), m_Cfg.navig_on) != 0;
@@ -1130,7 +1142,7 @@ void wxHtmlHelpWindow::WriteCustomization(wxConfigBase *cfg, const wxString& pat
     if (path != wxEmptyString)
     {
         oldpath = cfg->GetPath();
-        cfg->SetPath(_T("/") + path);
+        cfg->SetPath(wxT("/") + path);
     }
 
     cfg->Write(wxT("hcNavigPanel"), m_Cfg.navig_on);
@@ -1169,6 +1181,7 @@ void wxHtmlHelpWindow::WriteCustomization(wxConfigBase *cfg, const wxString& pat
     if (path != wxEmptyString)
         cfg->SetPath(oldpath);
 }
+#endif // wxUSE_CONFIG
 
 static void SetFontsToHtmlWin(wxHtmlWindow *win, const wxString& scalf, const wxString& fixf, int size)
 {
@@ -1210,7 +1223,7 @@ public:
                       0, NULL, wxCB_DROPDOWN | wxCB_READONLY));
 
         sizer->Add(FontSize = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
-                      wxDefaultSize, wxSP_ARROW_KEYS, 2, 100, 2, _T("wxSpinCtrl")));
+                      wxDefaultSize, wxSP_ARROW_KEYS, 2, 100, 2, wxT("wxSpinCtrl")));
 
         topsizer->Add(sizer, 0, wxLEFT|wxRIGHT|wxTOP, 10);
 
@@ -1246,25 +1259,25 @@ public:
 
         wxString content(_("font size"));
 
-        content = _T("<font size=-2>") + content + _T(" -2</font><br>")
-                  _T("<font size=-1>") + content + _T(" -1</font><br>")
-                  _T("<font size=+0>") + content + _T(" +0</font><br>")
-                  _T("<font size=+1>") + content + _T(" +1</font><br>")
-                  _T("<font size=+2>") + content + _T(" +2</font><br>")
-                  _T("<font size=+3>") + content + _T(" +3</font><br>")
-                  _T("<font size=+4>") + content + _T(" +4</font><br>") ;
+        content = wxT("<font size=-2>") + content + wxT(" -2</font><br>")
+                  wxT("<font size=-1>") + content + wxT(" -1</font><br>")
+                  wxT("<font size=+0>") + content + wxT(" +0</font><br>")
+                  wxT("<font size=+1>") + content + wxT(" +1</font><br>")
+                  wxT("<font size=+2>") + content + wxT(" +2</font><br>")
+                  wxT("<font size=+3>") + content + wxT(" +3</font><br>")
+                  wxT("<font size=+4>") + content + wxT(" +4</font><br>") ;
 
-        content = wxString( _T("<html><body><table><tr><td>") ) +
+        content = wxString( wxT("<html><body><table><tr><td>") ) +
                   _("Normal face<br>and <u>underlined</u>. ") +
                   _("<i>Italic face.</i> ") +
                   _("<b>Bold face.</b> ") +
                   _("<b><i>Bold italic face.</i></b><br>") +
                   content +
-                  wxString( _T("</td><td><tt>") ) +
+                  wxString( wxT("</td><td><tt>") ) +
                   _("Fixed size face.<br> <b>bold</b> <i>italic</i> ") +
                   _("<b><i>bold italic <u>underlined</u></i></b><br>") +
                   content +
-                  _T("</tt></td></tr></table></body></html>");
+                  wxT("</tt></td></tr></table></body></html>");
 
         TestWin->SetPage( content );
     }
@@ -1524,9 +1537,13 @@ void wxHtmlHelpWindow::OnToolbar(wxCommandEvent& event)
                 if (m_Printer == NULL)
                     m_Printer = new wxHtmlEasyPrinting(_("Help Printing"), this);
                 if (!m_HtmlWin->GetOpenedPage())
+                {
                     wxLogWarning(_("Cannot print empty page."));
+                }
                 else
+                {
                     m_Printer->PrintFile(m_HtmlWin->GetOpenedPage());
+                }
             }
             break;
 #endif
@@ -1551,11 +1568,11 @@ void wxHtmlHelpWindow::OnToolbar(wxCommandEvent& event)
                 if (!s.empty())
                 {
                     wxString ext = s.Right(4).Lower();
-                    if (ext == _T(".zip") || ext == _T(".htb") ||
+                    if (ext == wxT(".zip") || ext == wxT(".htb") ||
 #if wxUSE_LIBMSPACK
-                        ext == _T(".chm") ||
+                        ext == wxT(".chm") ||
 #endif
-                        ext == _T(".hhp"))
+                        ext == wxT(".hhp"))
                     {
                         wxBusyCursor bcur;
                         m_Data->AddBook(s);

@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     02/04/05
-// RCS-ID:      $Id: mediactrl.cpp 57540 2008-12-25 12:41:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004-2005 Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -304,7 +304,7 @@ static gint gtk_window_realize_callback(GtkWidget* widget,
                                         wxGStreamerMediaBackend* be)
 {
     gdk_flush();
-    
+
     GdkWindow *window = widget->window;
     wxASSERT(window);
 
@@ -709,7 +709,7 @@ void wxGStreamerMediaBackend::SetupXOverlay()
     else
     {
         gdk_flush();
-    
+
         GdkWindow *window = m_ctrl->m_wxwindow->window;
         wxASSERT(window);
 #endif

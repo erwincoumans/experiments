@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: bitmap.h 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -166,9 +166,13 @@ public:
     // returns a CGImageRef which must released after usage with CGImageRelease
     CGImageRef CreateCGImage() const ;
 
-#if wxOSX_USE_COCOA_OR_IPHONE
+#if wxOSX_USE_COCOA
     // returns an autoreleased version of the image
     WX_NSImage GetNSImage() const;
+#endif
+#if wxOSX_USE_IPHONE
+    // returns an autoreleased version of the image
+    WX_UIImage GetUIImage() const;
 #endif
     // returns a IconRef which must be retained before and released after usage
     IconRef GetIconRef() const;

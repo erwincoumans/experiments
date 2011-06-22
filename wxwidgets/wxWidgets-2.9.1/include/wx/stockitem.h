@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2004-08-15
-// RCS-ID:      $Id: stockitem.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik, 2004
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,15 @@ enum wxStockLabelQueryFlag
     wxSTOCK_NOFLAGS = 0,
 
     wxSTOCK_WITH_MNEMONIC = 1,
-    wxSTOCK_WITH_ACCELERATOR = 2
+    wxSTOCK_WITH_ACCELERATOR = 2,
+
+    // by default, stock items text is returned with ellipsis, if appropriate,
+    // this flag allows to avoid having it
+    wxSTOCK_WITHOUT_ELLIPSIS = 4,
+
+    // return label for button, not menu item: buttons should always use
+    // mnemonics and never use ellipsis
+    wxSTOCK_FOR_BUTTON = wxSTOCK_WITHOUT_ELLIPSIS | wxSTOCK_WITH_MNEMONIC
 };
 
 // Returns label that should be used for given stock UI element (e.g. "&OK"

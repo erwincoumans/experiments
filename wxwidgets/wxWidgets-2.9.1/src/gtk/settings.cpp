@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Modified by: Mart Raudsepp (GetMetric)
-// Id:          $Id: settings.cpp 59820 2009-03-24 23:13:02Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -228,7 +228,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
 
         case wxSYS_COLOUR_MAX:
         default:
-            wxFAIL_MSG( _T("unknown system colour index") );
+            wxFAIL_MSG( wxT("unknown system colour index") );
             color = *wxWHITE;
             break;
     }
@@ -257,13 +257,15 @@ wxFont wxSystemSettingsNative::GetFont( wxSystemFont index )
                 wxNativeFontInfo info;
                 info.description = ButtonStyle()->font_desc;
                 gs_fontSystem = wxFont(info);
-                
+
+#if wxUSE_FONTENUM
                 // (try to) heal the default font (on some common systems e.g. Ubuntu
                 // it's "Sans Serif" but the real font is called "Sans"):
                 if (!wxFontEnumerator::IsValidFacename(gs_fontSystem.GetFaceName()) &&
                     gs_fontSystem.GetFaceName() == "Sans Serif")
                     gs_fontSystem.SetFaceName("Sans");
-                
+#endif // wxUSE_FONTENUM
+
                 info.description = NULL;
             }
             font = gs_fontSystem;
@@ -273,7 +275,7 @@ wxFont wxSystemSettingsNative::GetFont( wxSystemFont index )
             break;
     }
 
-    wxASSERT(font.IsOk() && wxFontEnumerator::IsValidFacename(font.GetFaceName()));
+    wxASSERT( font.IsOk() );
 
     return font;
 }

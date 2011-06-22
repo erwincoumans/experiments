@@ -1,8 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/private/fileback.h
+// Name:        wx/private/fileback.h
 // Purpose:     Back an input stream with memory or a file
 // Author:      Mike Wetherell
-// RCS-ID:      $Id: fileback.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Mike Wetherell
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,7 @@ public:
     // backing file is never created and the backing is done with memory.
     wxBackingFile(wxInputStream *stream,
                   size_t bufsize = DefaultBufSize,
-                  const wxString& prefix = _T("wxbf"));
+                  const wxString& prefix = wxT("wxbf"));
 
     wxBackingFile() : m_impl(NULL) { }
     ~wxBackingFile();

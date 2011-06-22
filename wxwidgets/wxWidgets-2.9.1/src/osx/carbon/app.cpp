@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: app.cpp 59777 2009-03-23 15:24:04Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -249,18 +249,13 @@ short wxApp::MacHandleAEOApp(const WXEVENTREF WXUNUSED(event) , WXEVENTREF WXUNU
 
 short wxApp::MacHandleAEQuit(const WXEVENTREF WXUNUSED(event) , WXEVENTREF WXUNUSED(reply))
 {
-    wxWindow* win = GetTopWindow() ;
-    if ( win )
+    wxCloseEvent event;
+    wxTheApp->OnQueryEndSession(event);
+    if ( !event.GetVeto() )
     {
-        wxCommandEvent exitEvent(wxEVT_COMMAND_MENU_SELECTED, s_macExitMenuItemId);
-        if (!win->GetEventHandler()->ProcessEvent(exitEvent))
-            win->Close(true) ;
+        wxCloseEvent event;
+        wxTheApp->OnEndSession(event);
     }
-    else
-    {
-        ExitMainLoop() ;
-    }
-
     return noErr ;
 }
 
@@ -508,12 +503,12 @@ wxMenu* wxFindMenuFromMacCommand( const HICommand &command , wxMenuItem* &item )
         }
         else
         {
-            URefCon refCon = NULL ;
+            URefCon refCon = 0 ;
 
             GetMenuItemRefCon( command.menu.menuRef , command.menu.menuItemIndex , &refCon ) ;
             itemMenu = wxFindMenuFromMacMenu( command.menu.menuRef ) ;
             if ( itemMenu != NULL && refCon != 0)
-                item = ((wxMenuItemImpl*) refCon)->GetWXPeer() ;
+                item = (wxMenuItem*) refCon;
         }
     }
 #endif
@@ -780,11 +775,6 @@ wxMacAssertOutputHandler(OSType WXUNUSED(componentSignature),
 
 #endif // wxDEBUG_LEVEL
 
-extern "C" void macPostedEventCallback(void *WXUNUSED(unused))
-{
-    wxTheApp->ProcessPendingEvents();
-}
-
 bool wxApp::Initialize(int& argc, wxChar **argv)
 {
     // Mac-specific
@@ -799,7 +789,7 @@ bool wxApp::Initialize(int& argc, wxChar **argv)
     // application (otherwise applications would need to handle it)
     if ( argc > 1 )
     {
-        static const wxChar *ARG_PSN = _T("-psn_");
+        static const wxChar *ARG_PSN = wxT("-psn_");
         if ( wxStrncmp(argv[1], ARG_PSN, wxStrlen(ARG_PSN)) == 0 )
         {
             // remove this argument
@@ -828,24 +818,16 @@ bool wxApp::Initialize(int& argc, wxChar **argv)
         wxSetWorkingDirectory( cwd ) ;
     }
 
-    /* connect posted events to common-mode run loop so that wxPostEvent events
-       are handled even while we're in the menu or on a scrollbar */
-       /*
-    CFRunLoopSourceContext event_posted_context = {0};
-    event_posted_context.perform = macPostedEventCallback;
-    m_macEventPosted = CFRunLoopSourceCreate(NULL,0,&event_posted_context);
-    CFRunLoopAddSource(CFRunLoopGetCurrent(), m_macEventPosted, kCFRunLoopCommonModes);
-	// run loop takes ownership
-	CFRelease(m_macEventPosted);
-        */
     return true;
 }
 
+#if wxOSX_USE_COCOA_OR_CARBON
 bool wxApp::CallOnInit()
 {
     wxMacAutoreleasePool autoreleasepool;
     return OnInit();
 }
+#endif
 
 bool wxApp::OnInitGui()
 {
@@ -862,6 +844,12 @@ bool wxApp::ProcessIdle()
 {
     wxMacAutoreleasePool autoreleasepool;
     return wxAppBase::ProcessIdle();
+}
+
+int wxApp::OnRun()
+{
+    wxMacAutoreleasePool pool;
+    return wxAppBase::OnRun();
 }
 
 #if wxOSX_USE_CARBON
@@ -937,15 +925,10 @@ void wxApp::DoCleanUp()
 
 void wxApp::CleanUp()
 {
+    wxMacAutoreleasePool autoreleasepool;
 #if wxUSE_TOOLTIPS
     wxToolTip::RemoveToolTips() ;
 #endif
-
-    if (m_macEventPosted)
-	{
-		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), m_macEventPosted, kCFRunLoopCommonModes);
-		m_macEventPosted = NULL;
-	}
 
     DoCleanUp();
 
@@ -1054,7 +1037,13 @@ wxApp::wxApp()
 
     m_macCurrentEvent = NULL ;
     m_macCurrentEventHandlerCallRef = NULL ;
-    m_macEventPosted = NULL ;
+    m_macPool = new wxMacAutoreleasePool();
+}
+
+wxApp::~wxApp()
+{
+    if (m_macPool)
+        delete m_macPool;
 }
 
 CFMutableArrayRef GetAutoReleaseArray()
@@ -1068,6 +1057,13 @@ CFMutableArrayRef GetAutoReleaseArray()
 void wxApp::MacAddToAutorelease( void* cfrefobj )
 {
     CFArrayAppendValue( GetAutoReleaseArray(), cfrefobj );
+}
+
+void wxApp::MacReleaseAutoreleasePool()
+{
+    if (m_macPool)
+        delete m_macPool;
+    m_macPool = new wxMacAutoreleasePool();
 }
 
 void wxApp::OnIdle(wxIdleEvent& WXUNUSED(event))
@@ -1086,12 +1082,10 @@ void wxApp::OnIdle(wxIdleEvent& WXUNUSED(event))
 
 void wxApp::WakeUpIdle()
 {
-    if (m_macEventPosted)
-    {
-        CFRunLoopSourceSignal(m_macEventPosted);
-    }
+    wxEventLoopBase * const loop = wxEventLoopBase::GetActive();
 
-    wxMacWakeUp() ;
+    if ( loop )
+        loop->WakeUp();
 }
 
 void wxApp::OnEndSession(wxCloseEvent& WXUNUSED(event))
@@ -1104,10 +1098,17 @@ void wxApp::OnEndSession(wxCloseEvent& WXUNUSED(event))
 // user can veto the close, and therefore the end session.
 void wxApp::OnQueryEndSession(wxCloseEvent& event)
 {
-    if (GetTopWindow())
+    if ( !wxDialog::OSXHasModalDialogsOpen() )
     {
-        if (!GetTopWindow()->Close(!event.CanVeto()))
-            event.Veto(true);
+        if (GetTopWindow())
+        {
+            if (!GetTopWindow()->Close(!event.CanVeto()))
+                event.Veto(true);
+        }
+    }
+    else
+    {
+        event.Veto(true);
     }
 }
 
@@ -1292,6 +1293,12 @@ int wxMacKeyCodeToModifier(wxKeyCode key)
 }
 #endif
 
+#if wxOSX_USE_COCOA && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_6
+
+// defined in utils.mm
+
+#elif wxOSX_USE_COCOA_OR_CARBON
+
 wxMouseState wxGetMouseState()
 {
     wxMouseState ms;
@@ -1300,7 +1307,6 @@ wxMouseState wxGetMouseState()
     ms.SetX(pt.x);
     ms.SetY(pt.y);
 
-#if wxOSX_USE_CARBON
     UInt32 buttons = GetCurrentButtonState();
     ms.SetLeftDown( (buttons & 0x01) != 0 );
     ms.SetMiddleDown( (buttons & 0x04) != 0 );
@@ -1311,11 +1317,11 @@ wxMouseState wxGetMouseState()
     ms.SetShiftDown(modifiers & shiftKey);
     ms.SetAltDown(modifiers & optionKey);
     ms.SetMetaDown(modifiers & cmdKey);
-#else
-    // TODO
-#endif
+
     return ms;
 }
+
+#endif
 
 // TODO : once the new key/char handling is tested, move all the code to wxWindow
 
@@ -1443,7 +1449,7 @@ void wxApp::MacCreateKeyEvent( wxKeyEvent& event, wxWindow* focus , long keymess
         // control interferes with some built-in keys like pgdown, return etc. therefore we remove the controlKey modifier
         // and look at the character after
 #ifdef __LP64__
-		// TODO new implementation using TextInputSources
+        // TODO new implementation using TextInputSources
 #else
         UInt32 state = 0;
         UInt32 keyInfo = KeyTranslate((Ptr)GetScriptManagerVariable(smKCHRCache), ( modifiers & (~(controlKey | shiftKey | optionKey))) | keycode, &state);

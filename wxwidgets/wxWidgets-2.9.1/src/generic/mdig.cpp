@@ -4,7 +4,7 @@
 // Author:      Hans Van Leemputten
 // Modified by: 2008-10-31 Vadim Zeitlin: derive from the base classes
 // Created:     29/07/2002
-// RCS-ID:      $Id: mdig.cpp 59164 2009-02-26 16:16:31Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 Hans Van Leemputten
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -74,11 +74,7 @@ wxGenericMDIParentFrame::~wxGenericMDIParentFrame()
     wxDELETE(m_clientWindow);
 
 #if wxUSE_MENUS
-    if (m_pMyMenuBar)
-    {
-        delete m_pMyMenuBar;
-        m_pMyMenuBar = NULL;
-    }
+    wxDELETE(m_pMyMenuBar);
 
     RemoveWindowMenu(GetMenuBar());
 #endif // wxUSE_MENUS

@@ -1,9 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/srchctrl.h
+// Name:        wx/osx/srchctrl.h
 // Purpose:     mac carbon wxSearchCtrl class
 // Author:      Vince Harron
 // Created:     2006-02-19
-// RCS-ID:      $Id: srchctrl.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   Vince Harron
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ protected:
     void Init();
 
     wxMenu *m_menu;
-    
+
     wxString m_descriptiveText;
 
 private:

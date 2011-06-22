@@ -4,7 +4,7 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     15/04/2006
-// Id:          $Id: fontpicker.cpp 55288 2008-08-26 16:19:23Z PC $
+// Id:          $Id$
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,7 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
 
-#if wxUSE_FONTPICKERCTRL 
+#if wxUSE_FONTPICKERCTRL
 
 #include "wx/fontpicker.h"
 

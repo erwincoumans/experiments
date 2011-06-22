@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: control.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ bool wxControl::MSWCreateControl(const wxChar *classname,
     {
         wxLogLastError(wxString::Format
                        (
-                        _T("CreateWindowEx(\"%s\", flags=%08lx, ex=%08lx)"),
+                        wxT("CreateWindowEx(\"%s\", flags=%08lx, ex=%08lx)"),
                         classname, style, exstyle
                        ));
 
@@ -245,7 +245,7 @@ wxSize wxControl::DoGetBestSize() const
 {
     if (m_windowSizer)
        return wxControlBase::DoGetBestSize();
-       
+
     return wxSize(DEFAULT_ITEM_WIDTH, DEFAULT_ITEM_HEIGHT);
 }
 
@@ -299,18 +299,6 @@ wxControl::GetClassDefaultAttributes(wxWindowVariant WXUNUSED(variant))
     // GetCompositeControlsDefaultAttributes() from their versions)
     attrs.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNTEXT);
     attrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
-
-    return attrs;
-}
-
-// another version for the "composite", i.e. non simple controls
-/* static */ wxVisualAttributes
-wxControl::GetCompositeControlsDefaultAttributes(wxWindowVariant WXUNUSED(variant))
-{
-    wxVisualAttributes attrs;
-    attrs.font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-    attrs.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-    attrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
 
     return attrs;
 }
@@ -375,15 +363,12 @@ bool wxControl::MSWOnNotify(int idCtrl,
 WXHBRUSH wxControl::DoMSWControlColor(WXHDC pDC, wxColour colBg, WXHWND hWnd)
 {
     HDC hdc = (HDC)pDC;
-    if ( m_hasFgCol )
-    {
-        ::SetTextColor(hdc, wxColourToRGB(GetForegroundColour()));
-    }
 
     WXHBRUSH hbr = 0;
     if ( !colBg.Ok() )
     {
-        hbr = MSWGetBgBrush(pDC, hWnd);
+        if ( wxWindow *win = wxFindWinFromHandle(hWnd) )
+            hbr = win->MSWGetBgBrush(pDC);
 
         // if the control doesn't have any bg colour, foreground colour will be
         // ignored as the return value would be 0 -- so forcefully give it a
@@ -392,37 +377,47 @@ WXHBRUSH wxControl::DoMSWControlColor(WXHDC pDC, wxColour colBg, WXHWND hWnd)
             colBg = GetBackgroundColour();
     }
 
-    // use the background colour override if a valid colour is given
+    // use the background colour override if a valid colour is given: this is
+    // used when the control is disabled to grey it out and also if colBg was
+    // set just above
     if ( colBg.Ok() )
     {
-        ::SetBkColor(hdc, wxColourToRGB(colBg));
-
-        // draw children with the same colour as the parent
-        wxBrush *brush = wxTheBrushList->FindOrCreateBrush(colBg,
-                                                           wxBRUSHSTYLE_SOLID);
+        wxBrush *brush = wxTheBrushList->FindOrCreateBrush(colBg);
         hbr = (WXHBRUSH)brush->GetResourceHandle();
     }
 
-    // if we use custom background, we should set foreground ourselves too
-    if ( hbr && !m_hasFgCol )
+    // always set the foreground colour if we changed the background, whether
+    // m_hasFgCol is true or not: if it true, we must do it, of course, but
+    // even if it isn't, we must set the default foreground explicitly as by
+    // default just the simple black is used
+    if ( hbr )
     {
-        ::SetTextColor(hdc, ::GetSysColor(COLOR_WINDOWTEXT));
+        ::SetTextColor(hdc, wxColourToRGB(GetForegroundColour()));
     }
-    //else: already set above
+
+    // finally also set the background colour for text drawing: without this,
+    // the text in an edit control is drawn using the default background even
+    // if we return a valid brush
+    if ( colBg.IsOk() || m_hasBgCol )
+    {
+        if ( !colBg.IsOk() )
+            colBg = GetBackgroundColour();
+
+        ::SetBkColor(hdc, wxColourToRGB(colBg));
+    }
 
     return hbr;
 }
 
 WXHBRUSH wxControl::MSWControlColor(WXHDC pDC, WXHWND hWnd)
 {
-    wxColour colBg;
-
     if ( HasTransparentBackground() )
         ::SetBkMode((HDC)pDC, TRANSPARENT);
-    else // if the control is opaque it shouldn't use the parents background
-        colBg = GetBackgroundColour();
 
-    return DoMSWControlColor(pDC, colBg, hWnd);
+    // don't pass any background colour to DoMSWControlColor(), our own
+    // background colour will be used by it only if it is set, otherwise the
+    // defaults will be used
+    return DoMSWControlColor(pDC, wxColour(), hWnd);
 }
 
 WXHBRUSH wxControl::MSWControlColorDisabled(WXHDC pDC)

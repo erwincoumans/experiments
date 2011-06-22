@@ -3,7 +3,7 @@
 // Purpose:     wxCheckListBox class
 // Author:      Robert Roebling
 // Modified by:
-// RCS-ID:      $Id: checklst.h 42469 2006-10-26 20:29:02Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -18,10 +18,10 @@
 // there is no "right" choice of the checkbox indicators, so allow the user to
 // define them himself if he wants
 #ifndef wxCHECKLBOX_CHECKED
-    #define wxCHECKLBOX_CHECKED   _T('x')
-    #define wxCHECKLBOX_UNCHECKED _T(' ')
+    #define wxCHECKLBOX_CHECKED   wxT('x')
+    #define wxCHECKLBOX_UNCHECKED wxT(' ')
 
-    #define wxCHECKLBOX_STRING    _T("[ ] ")
+    #define wxCHECKLBOX_STRING    wxT("[ ] ")
 #endif
 
 //-----------------------------------------------------------------------------

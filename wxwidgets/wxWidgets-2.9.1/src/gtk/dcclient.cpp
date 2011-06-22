@@ -2,7 +2,7 @@
 // Name:        src/gtk/dcclient.cpp
 // Purpose:     wxWindowDCImpl implementation
 // Author:      Robert Roebling
-// RCS-ID:      $Id: dcclient.cpp 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling, Chris Breeze
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -269,6 +269,7 @@ wxWindowDCImpl::wxWindowDCImpl( wxDC *owner, wxWindow *window ) :
     m_font = window->GetFont();
 
     GtkWidget *widget = window->m_wxwindow;
+    m_gdkwindow = window->GTKGetDrawingWindow();
 
     // Some controls don't have m_wxwindow - like wxStaticBox, but the user
     // code should still be able to create wxClientDCs for them
@@ -278,6 +279,7 @@ wxWindowDCImpl::wxWindowDCImpl( wxDC *owner, wxWindow *window ) :
 
         wxCHECK_RET(widget, "DC needs a widget");
 
+        m_gdkwindow = widget->window;
         if (GTK_WIDGET_NO_WINDOW(widget))
             SetDeviceLocalOrigin(widget->allocation.x, widget->allocation.y);
     }
@@ -285,8 +287,6 @@ wxWindowDCImpl::wxWindowDCImpl( wxDC *owner, wxWindow *window ) :
     m_context = window->GTKGetPangoDefaultContext();
     m_layout = pango_layout_new( m_context );
     m_fontdesc = pango_font_description_copy( widget->style->font_desc );
-
-    m_gdkwindow = widget->window;
 
     // Window not realized ?
     if (!m_gdkwindow)
@@ -419,7 +419,7 @@ void wxWindowDCImpl::SetUpDC( bool isMemDC )
 
 void wxWindowDCImpl::DoGetSize( int* width, int* height ) const
 {
-    wxCHECK_RET( m_window, _T("GetSize() doesn't work without window") );
+    wxCHECK_RET( m_window, wxT("GetSize() doesn't work without window") );
 
     m_window->GetSize(width, height);
 }
@@ -793,9 +793,8 @@ void wxWindowDCImpl::DoDrawRectangle( wxCoord x, wxCoord y, wxCoord width, wxCoo
                 gdk_gc_set_ts_origin(gc, 0, 0);
         }
 
-        if (m_pen.GetStyle() != wxPENSTYLE_TRANSPARENT)
+        if ( m_pen.IsOk() && m_pen.GetStyle() != wxPENSTYLE_TRANSPARENT )
         {
-#if 1
             if ((m_pen.GetWidth() == 2) && (m_pen.GetCap() == wxCAP_ROUND) &&
                 (m_pen.GetJoin() == wxJOIN_ROUND) && (m_pen.GetStyle() == wxPENSTYLE_SOLID))
             {
@@ -818,7 +817,6 @@ void wxWindowDCImpl::DoDrawRectangle( wxCoord x, wxCoord y, wxCoord width, wxCoo
                 gdk_gc_set_line_attributes( m_penGC, 2, GDK_LINE_SOLID, GDK_CAP_ROUND, GDK_JOIN_ROUND );
             }
             else
-#endif
             {
                 // Just use X11 for other cases
                 gdk_draw_rectangle( m_gdkwindow, m_penGC, FALSE, xx, yy, ww-1, hh-1 );
@@ -1059,8 +1057,11 @@ void wxWindowDCImpl::DoDrawBitmap( const wxBitmap &bitmap,
     const int w = bitmap.GetWidth();
     const int h = bitmap.GetHeight();
 
+    // notice that as the bitmap is not drawn upside down (or right to left)
+    // even if the corresponding axis direction is inversed, we need to take it
+    // into account when calculating its bounding box
     CalcBoundingBox(x, y);
-    CalcBoundingBox(x + w, y + h);
+    CalcBoundingBox(x + m_signX*w, y + m_signY*h);
 
     // device coords
     int xx = LogicalToDeviceX(x);
@@ -1335,7 +1336,9 @@ bool wxWindowDCImpl::DoBlit( wxCoord xdest, wxCoord ydest,
     return true;
 }
 
-void wxWindowDCImpl::DoDrawText( const wxString &text, wxCoord x, wxCoord y )
+void wxWindowDCImpl::DoDrawText(const wxString& text,
+                                wxCoord xLogical,
+                                wxCoord yLogical)
 {
     wxCHECK_RET( IsOk(), wxT("invalid window dc") );
 
@@ -1343,8 +1346,8 @@ void wxWindowDCImpl::DoDrawText( const wxString &text, wxCoord x, wxCoord y )
 
     if (text.empty()) return;
 
-    x = XLOG2DEV(x);
-    y = YLOG2DEV(y);
+    wxCoord x = XLOG2DEV(xLogical),
+            y = YLOG2DEV(yLogical);
 
     wxCHECK_RET( m_context, wxT("no Pango context") );
     wxCHECK_RET( m_layout, wxT("no Pango layout") );
@@ -1459,8 +1462,8 @@ void wxWindowDCImpl::DoDrawText( const wxString &text, wxCoord x, wxCoord y )
         pango_layout_set_attributes(m_layout, NULL);
     }
 
-    CalcBoundingBox(x + int(w / m_scaleX), y + int(h / m_scaleY));
-    CalcBoundingBox(x, y);
+    CalcBoundingBox(xLogical + int(w / m_scaleX), yLogical + int(h / m_scaleY));
+    CalcBoundingBox(xLogical, yLogical);
 }
 
 // TODO: When GTK2.6 is required, merge DoDrawText and DoDrawRotatedText to
@@ -1778,7 +1781,7 @@ wxCoord wxWindowDCImpl::GetCharWidth() const
 wxCoord wxWindowDCImpl::GetCharHeight() const
 {
     PangoFontMetrics *metrics = pango_context_get_metrics (m_context, m_fontdesc, pango_context_get_language(m_context));
-    wxCHECK_MSG( metrics, -1, _T("failed to get pango font metrics") );
+    wxCHECK_MSG( metrics, -1, wxT("failed to get pango font metrics") );
 
     wxCoord h = PANGO_PIXELS (pango_font_metrics_get_descent (metrics) +
                               pango_font_metrics_get_ascent (metrics));
@@ -2299,7 +2302,7 @@ wxClientDCImpl::wxClientDCImpl( wxDC *owner )
 wxClientDCImpl::wxClientDCImpl( wxDC *owner, wxWindow *win )
           : wxWindowDCImpl( owner, win )
 {
-    wxCHECK_RET( win, _T("NULL window in wxClientDCImpl::wxClientDC") );
+    wxCHECK_RET( win, wxT("NULL window in wxClientDCImpl::wxClientDC") );
 
 #ifdef __WXUNIVERSAL__
     wxPoint ptOrigin = win->GetClientAreaOrigin();
@@ -2312,7 +2315,7 @@ wxClientDCImpl::wxClientDCImpl( wxDC *owner, wxWindow *win )
 
 void wxClientDCImpl::DoGetSize(int *width, int *height) const
 {
-    wxCHECK_RET( m_window, _T("GetSize() doesn't work without window") );
+    wxCHECK_RET( m_window, wxT("GetSize() doesn't work without window") );
 
     m_window->GetClientSize( width, height );
 }

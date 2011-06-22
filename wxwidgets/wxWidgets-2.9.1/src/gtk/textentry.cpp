@@ -3,7 +3,7 @@
 // Purpose:     wxTextEntry implementation for wxGTK
 // Author:      Vadim Zeitlin
 // Created:     2007-09-24
-// RCS-ID:      $Id: textentry.cpp 59492 2009-03-12 12:14:14Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ wx_gtk_insert_text_callback(GtkEditable *editable,
     // we should only be called if we have a max len limit at all
     GtkEntry *entry = GTK_ENTRY (editable);
 
-    wxCHECK_RET( entry->text_max_length, _T("shouldn't be called") );
+    wxCHECK_RET( entry->text_max_length, wxT("shouldn't be called") );
 
     // check that we don't overflow the max length limit
     //
@@ -324,6 +324,82 @@ void wxTextEntry::SendMaxLenEvent()
     event.SetEventObject(win);
     event.SetString(GetValue());
     win->HandleWindowEvent(event);
+}
+
+// ----------------------------------------------------------------------------
+// margins support
+// ----------------------------------------------------------------------------
+
+bool wxTextEntry::DoSetMargins(const wxPoint& margins)
+{
+#if GTK_CHECK_VERSION(2,10,0)
+    GtkEntry* entry = GetEntry();
+
+    if ( !entry )
+        return false;
+
+    const GtkBorder* oldBorder = gtk_entry_get_inner_border(entry);
+    GtkBorder* newBorder;
+
+    if ( oldBorder )
+    {
+        newBorder = gtk_border_copy(oldBorder);
+    }
+    else
+    {
+    #if GTK_CHECK_VERSION(2,14,0)
+        newBorder = gtk_border_new();
+    #else
+        newBorder = g_slice_new0(GtkBorder);
+    #endif
+        // Use some reasonable defaults for initial margins
+        newBorder->left = 2;
+        newBorder->right = 2;
+
+        // These numbers seem to let the text remain vertically centered
+        // in common use scenarios when margins.y == -1.
+        newBorder->top = 3;
+        newBorder->bottom = 3;
+    }
+
+    if ( margins.x != -1 )
+        newBorder->left = (gint) margins.x;
+
+    if ( margins.y != -1 )
+        newBorder->top = (gint) margins.y;
+
+    gtk_entry_set_inner_border(entry, newBorder);
+
+#if GTK_CHECK_VERSION(2,14,0)
+    gtk_border_free(newBorder);
+#else
+    g_slice_free(GtkBorder, newBorder);
+#endif
+
+    return true;
+#else
+    wxUnusedVar(margins);
+    return false;
+#endif
+}
+
+wxPoint wxTextEntry::DoGetMargins() const
+{
+#if GTK_CHECK_VERSION(2,10,0)
+    GtkEntry* entry = GetEntry();
+
+    if ( !entry )
+        return wxPoint(-1, -1);
+
+    const GtkBorder* border = gtk_entry_get_inner_border(entry);
+
+    if ( !border )
+        return wxPoint(-1, -1);
+
+    return wxPoint((wxCoord) border->left, (wxCoord) border->top);
+#else
+    return wxPoint(-1, -1);
+#endif
 }
 
 #endif // wxUSE_TEXTCTRL || wxUSE_COMBOBOX

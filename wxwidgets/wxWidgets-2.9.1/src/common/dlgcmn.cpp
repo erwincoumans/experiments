@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     28.06.99
-// RCS-ID:      $Id: dlgcmn.cpp 58255 2009-01-21 11:48:53Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,9 +40,9 @@
 #include "wx/statline.h"
 #include "wx/sysopt.h"
 #include "wx/module.h"
-#include "wx/private/stattext.h"
 #include "wx/bookctrl.h"
 #include "wx/scrolwin.h"
+#include "wx/textwrapper.h"
 
 #if wxUSE_DISPLAY
 #include "wx/display.h"
@@ -78,32 +78,65 @@ void wxDialogBase::Init()
     SetExtraStyle(GetExtraStyle() | wxWS_EX_BLOCK_EVENTS);
 }
 
-// helper of GetParentForModalDialog()
-static bool CanBeUsedAsParent(wxWindow *parent)
+wxWindow *wxDialogBase::CheckIfCanBeUsedAsParent(wxWindow *parent) const
 {
-    extern WXDLLIMPEXP_DATA_CORE(wxList) wxPendingDelete;
+    if ( !parent )
+        return NULL;
 
-    return !parent->HasExtraStyle(wxWS_EX_TRANSIENT) &&
-                parent->IsShownOnScreen() &&
-                    !wxPendingDelete.Member(parent) &&
-                        !parent->IsBeingDeleted();
+    extern WXDLLIMPEXP_DATA_BASE(wxList) wxPendingDelete;
+    if ( wxPendingDelete.Member(parent) || parent->IsBeingDeleted() )
+    {
+        // this window is being deleted and we shouldn't create any children
+        // under it
+        return NULL;
+    }
+
+    if ( parent->HasExtraStyle(wxWS_EX_TRANSIENT) )
+    {
+        // this window is not being deleted yet but it's going to disappear
+        // soon so still don't parent this window under it
+        return NULL;
+    }
+
+    if ( !parent->IsShownOnScreen() )
+    {
+        // using hidden parent won't work correctly neither
+        return NULL;
+    }
+
+    // FIXME-VC6: this compiler requires an explicit const cast or it fails
+    //            with error C2446
+    if ( const_cast<const wxWindow *>(parent) == this )
+    {
+        // not sure if this can really happen but it doesn't hurt to guard
+        // against this clearly invalid situation
+        return NULL;
+    }
+
+    return parent;
 }
 
-wxWindow *wxDialogBase::GetParentForModalDialog(wxWindow *parent) const
+wxWindow *
+wxDialogBase::GetParentForModalDialog(wxWindow *parent, long style) const
 {
     // creating a parent-less modal dialog will result (under e.g. wxGTK2)
-    // in an unfocused dialog, so try to find a valid parent for it:
+    // in an unfocused dialog, so try to find a valid parent for it unless we
+    // were explicitly asked not to
+    if ( style & wxDIALOG_NO_PARENT )
+        return NULL;
+
+    // first try the given parent
     if ( parent )
-        parent = wxGetTopLevelParent(parent);
+        parent = CheckIfCanBeUsedAsParent(wxGetTopLevelParent(parent));
 
-    if ( !parent || !CanBeUsedAsParent(parent) )
-        parent = wxTheApp->GetTopWindow();
+    // then the currently active window
+    if ( !parent )
+        parent = CheckIfCanBeUsedAsParent(
+                    wxGetTopLevelParent(wxGetActiveWindow()));
 
-    if ( parent && !CanBeUsedAsParent(parent) )
-    {
-        // can't use this one, it's going to disappear
-        parent = NULL;
-    }
+    // and finally the application main window
+    if ( !parent )
+        parent = CheckIfCanBeUsedAsParent(wxTheApp->GetTopWindow());
 
     return parent;
 }
@@ -163,7 +196,7 @@ wxSizer *wxDialogBase::CreateTextSizer(const wxString& message)
     // the static messages created by CreateTextSizer() (used by wxMessageBox,
     // for example), we don't want this special meaning, so we need to quote it
     wxString text(message);
-    text.Replace(_T("&"), _T("&&"));
+    text.Replace(wxT("&"), wxT("&&"));
 
     wxTextSizerWrapper wrapper(this);
 
@@ -433,6 +466,41 @@ void wxDialogBase::OnButton(wxCommandEvent& event)
 }
 
 // ----------------------------------------------------------------------------
+// compatibility methods for supporting the modality API
+// ----------------------------------------------------------------------------
+
+wxDEFINE_EVENT( wxEVT_WINDOW_MODAL_DIALOG_CLOSED , wxWindowModalDialogEvent  );
+
+IMPLEMENT_DYNAMIC_CLASS(wxWindowModalDialogEvent, wxCommandEvent)
+
+void wxDialogBase::ShowWindowModal ()
+{
+    ShowModal();
+    SendWindowModalDialogEvent ( wxEVT_WINDOW_MODAL_DIALOG_CLOSED  );
+}
+
+void wxDialogBase::SendWindowModalDialogEvent ( wxEventType type )
+{
+    wxWindowModalDialogEvent event ( type, GetId());
+    event.SetEventObject(this);
+
+    if ( !GetEventHandler()->ProcessEvent(event) )
+    {
+        // the event is not propagated upwards to the parent automatically
+        // because the dialog is a top level window, so do it manually as
+        // in 9 cases of 10 the message must be processed by the dialog
+        // owner and not the dialog itself
+        (void)GetParent()->GetEventHandler()->ProcessEvent(event);
+    }
+}
+
+
+wxDialogModality wxDialogBase::GetModality() const
+{
+    return IsModal() ? wxDIALOG_MODALITY_APP_MODAL : wxDIALOG_MODALITY_NONE;
+}
+
+// ----------------------------------------------------------------------------
 // other event handlers
 // ----------------------------------------------------------------------------
 
@@ -450,6 +518,12 @@ void wxDialogBase::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
     // destroy the dialog. The default OnCancel (above) simply ends a modal
     // dialog, and hides a modeless dialog.
 
+    int idCancel = GetEscapeId();
+    if ( idCancel == wxID_NONE )
+        return;
+    if ( idCancel == wxID_ANY )
+        idCancel = wxID_CANCEL;
+
     // VZ: this is horrible and MT-unsafe. Can't we reuse some of these global
     //     lists here? don't dare to change it now, but should be done later!
     static wxList closing;
@@ -459,7 +533,7 @@ void wxDialogBase::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
 
     closing.Append(this);
 
-    wxCommandEvent cancelEvent(wxEVT_COMMAND_BUTTON_CLICKED, wxID_CANCEL);
+    wxCommandEvent cancelEvent(wxEVT_COMMAND_BUTTON_CLICKED, idCancel);
     cancelEvent.SetEventObject( this );
     GetEventHandler()->ProcessEvent(cancelEvent); // This may close the dialog
 
@@ -606,8 +680,7 @@ bool wxStandardDialogLayoutAdapter::DoLayoutAdaptation(wxDialog* dialog)
                     stdButtonSizer->Realize();
                 else
                 {
-                    delete buttonSizer;
-                    buttonSizer = NULL;
+                    wxDELETE(buttonSizer);
                 }
             }
 

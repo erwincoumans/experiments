@@ -5,7 +5,7 @@
 // Author:      Joel Farley, Ove Kaaven
 // Modified by: Vadim Zeitlin, Robert Roebling, Ron Lee, Vaclav Slavik
 // Created:     1998/06/12
-// RCS-ID:      $Id: wxcrt.h 60422 2009-04-28 07:36:54Z CE $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998-2006 wxWidgets dev team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,26 +39,16 @@ inline bool wxIsEmpty(const wxCStrData& s) { return s.AsString().empty(); }
 
 /* multibyte to wide char conversion functions and macros */
 
-#if wxUSE_WCHAR_T
-    /* multibyte<->widechar conversion */
-    WXDLLIMPEXP_BASE size_t wxMB2WC(wchar_t *buf, const char *psz, size_t n);
-    WXDLLIMPEXP_BASE size_t wxWC2MB(char *buf, const wchar_t *psz, size_t n);
+/* multibyte<->widechar conversion */
+WXDLLIMPEXP_BASE size_t wxMB2WC(wchar_t *buf, const char *psz, size_t n);
+WXDLLIMPEXP_BASE size_t wxWC2MB(char *buf, const wchar_t *psz, size_t n);
 
-    #if wxUSE_UNICODE
-        #define wxMB2WX wxMB2WC
-        #define wxWX2MB wxWC2MB
-        #define wxWC2WX wxStrncpy
-        #define wxWX2WC wxStrncpy
-    #else
-        #define wxMB2WX wxStrncpy
-        #define wxWX2MB wxStrncpy
-        #define wxWC2WX wxWC2MB
-        #define wxWX2WC wxMB2WC
-    #endif
-#else /* !wxUSE_UNICODE */
-    /* No wxUSE_WCHAR_T: we have to do something (JACS) */
-    #define wxMB2WC wxStrncpy
-    #define wxWC2MB wxStrncpy
+#if wxUSE_UNICODE
+    #define wxMB2WX wxMB2WC
+    #define wxWX2MB wxWC2MB
+    #define wxWC2WX wxStrncpy
+    #define wxWX2WC wxStrncpy
+#else
     #define wxMB2WX wxStrncpy
     #define wxWX2MB wxStrncpy
     #define wxWC2WX wxWC2MB
@@ -82,7 +72,7 @@ inline bool wxIsEmpty(const wxCStrData& s) { return s.AsString().empty(); }
         for(;l && *s != c;--l, ++s) {}
 
         if(l)
-            return (wxChar*)s;
+            return const_cast<wxChar*>(s);
         return NULL;
     }
 
@@ -471,17 +461,21 @@ WX_STRCMP_FUNC(wxStricmp, wxCRT_StricmpA, wxCRT_StricmpW, wxStricmp_String)
 
 #if defined(wxCRT_StrcollA) && defined(wxCRT_StrcollW)
 
-// GCC 3.3 and other compilers have a bug that causes it to fail compilation if
+// GCC 3.4 and other compilers have a bug that causes it to fail compilation if
 // the template's implementation uses overloaded function declared later (see
 // the wxStrcoll() call in wxStrcoll_String<T>()), so we have to
 // forward-declare the template and implement it below WX_STRCMP_FUNC. OTOH,
 // this fails to compile with VC6, so don't do it for VC. It also causes
 // problems with GCC visibility in newer GCC versions.
-#if !(defined(__VISUALC__) || wxCHECK_GCC_VERSION(3,4))
+#if !(defined(__VISUALC__) || wxCHECK_GCC_VERSION(3,5))
+    #define wxNEEDS_DECL_BEFORE_TEMPLATE
+#endif
+
+#ifdef wxNEEDS_DECL_BEFORE_TEMPLATE
 template<typename T>
 inline int wxStrcoll_String(const wxString& s1, const T& s2);
 WX_STRCMP_FUNC(wxStrcoll, wxCRT_StrcollA, wxCRT_StrcollW, wxStrcoll_String)
-#endif // !__VISUALC__
+#endif // wxNEEDS_DECL_BEFORE_TEMPLATE
 
 template<typename T>
 inline int wxStrcoll_String(const wxString& s1, const T& s2)
@@ -497,8 +491,9 @@ inline int wxStrcoll_String(const wxString& s1, const T& s2)
 #endif
 }
 
-#if defined(__VISUALC__) || wxCHECK_GCC_VERSION(3,4)
-// this is exactly the same WX_STRCMP_FUNC line as above wxStrcoll_String<>
+#ifndef wxNEEDS_DECL_BEFORE_TEMPLATE
+// this is exactly the same WX_STRCMP_FUNC line as above, insde the
+// wxNEEDS_DECL_BEFORE_TEMPLATE case
 WX_STRCMP_FUNC(wxStrcoll, wxCRT_StrcollA, wxCRT_StrcollW, wxStrcoll_String)
 #endif
 
@@ -611,20 +606,20 @@ inline const char *wxStrrchr(const char *s, char c)
     { return wxCRT_StrrchrA(s, c); }
 inline const wchar_t *wxStrrchr(const wchar_t *s, wchar_t c)
     { return wxCRT_StrrchrW(s, c); }
-inline const char *wxStrchr(const char *s, const wxUniChar& c)
-    { return wxCRT_StrchrA(s, (char)c); }
+inline const char *wxStrchr(const char *s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s, c) : NULL; }
 inline const wchar_t *wxStrchr(const wchar_t *s, const wxUniChar& c)
     { return wxCRT_StrchrW(s, (wchar_t)c); }
-inline const char *wxStrrchr(const char *s, const wxUniChar& c)
-    { return wxCRT_StrrchrA(s, (char)c); }
+inline const char *wxStrrchr(const char *s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s, c) : NULL; }
 inline const wchar_t *wxStrrchr(const wchar_t *s, const wxUniChar& c)
     { return wxCRT_StrrchrW(s, (wchar_t)c); }
-inline const char *wxStrchr(const char *s, const wxUniCharRef& c)
-    { return wxCRT_StrchrA(s, (char)c); }
+inline const char *wxStrchr(const char *s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s, c) : NULL; }
 inline const wchar_t *wxStrchr(const wchar_t *s, const wxUniCharRef& c)
     { return wxCRT_StrchrW(s, (wchar_t)c); }
-inline const char *wxStrrchr(const char *s, const wxUniCharRef& c)
-    { return wxCRT_StrrchrA(s, (char)c); }
+inline const char *wxStrrchr(const char *s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s, c) : NULL; }
 inline const wchar_t *wxStrrchr(const wchar_t *s, const wxUniCharRef& c)
     { return wxCRT_StrrchrW(s, (wchar_t)c); }
 template<typename T>
@@ -655,14 +650,14 @@ inline const char* wxStrchr(const wxString& s, int c)
     { return wxCRT_StrchrA((const char*)s.c_str(), c); }
 inline const char* wxStrrchr(const wxString& s, int c)
     { return wxCRT_StrrchrA((const char*)s.c_str(), c); }
-inline const char* wxStrchr(const wxString& s, const wxUniChar& c)
-    { return wxCRT_StrchrA((const char*)s.c_str(), (char)c); }
-inline const char* wxStrrchr(const wxString& s, const wxUniChar& c)
-    { return wxCRT_StrrchrA((const char*)s.c_str(), (char)c); }
-inline const char* wxStrchr(const wxString& s, const wxUniCharRef& c)
-    { return wxCRT_StrchrA((const char*)s.c_str(), (char)c); }
-inline const char* wxStrrchr(const wxString& s, const wxUniCharRef& c)
-    { return wxCRT_StrrchrA((const char*)s.c_str(), (char)c); }
+inline const char* wxStrchr(const wxString& s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s.c_str(), c) : NULL; }
+inline const char* wxStrrchr(const wxString& s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s.c_str(), c) : NULL; }
+inline const char* wxStrchr(const wxString& s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s.c_str(), c) : NULL; }
+inline const char* wxStrrchr(const wxString& s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s.c_str(), c) : NULL; }
 inline const wchar_t* wxStrchr(const wxString& s, wchar_t c)
     { return wxCRT_StrchrW((const wchar_t*)s.c_str(), c); }
 inline const wchar_t* wxStrrchr(const wxString& s, wchar_t c)
@@ -675,14 +670,14 @@ inline const char* wxStrchr(const wxCStrData& s, int c)
     { return wxCRT_StrchrA(s.AsChar(), c); }
 inline const char* wxStrrchr(const wxCStrData& s, int c)
     { return wxCRT_StrrchrA(s.AsChar(), c); }
-inline const char* wxStrchr(const wxCStrData& s, const wxUniChar& c)
-    { return wxCRT_StrchrA(s.AsChar(), (char)c); }
-inline const char* wxStrrchr(const wxCStrData& s, const wxUniChar& c)
-    { return wxCRT_StrrchrA(s.AsChar(), (char)c); }
-inline const char* wxStrchr(const wxCStrData& s, const wxUniCharRef& c)
-    { return wxCRT_StrchrA(s.AsChar(), (char)c); }
-inline const char* wxStrrchr(const wxCStrData& s, const wxUniCharRef& c)
-    { return wxCRT_StrrchrA(s.AsChar(), (char)c); }
+inline const char* wxStrchr(const wxCStrData& s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s, c) : NULL; }
+inline const char* wxStrrchr(const wxCStrData& s, const wxUniChar& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s, c) : NULL; }
+inline const char* wxStrchr(const wxCStrData& s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrchrA(s, c) : NULL; }
+inline const char* wxStrrchr(const wxCStrData& s, const wxUniCharRef& uc)
+    { char c; return uc.GetAsChar(&c) ? wxCRT_StrrchrA(s, c) : NULL; }
 inline const wchar_t* wxStrchr(const wxCStrData& s, wchar_t c)
     { return wxCRT_StrchrW(s.AsWChar(), c); }
 inline const wchar_t* wxStrrchr(const wxCStrData& s, wchar_t c)
@@ -724,30 +719,30 @@ inline const T *wxStrpbrk(const S& s, const wxScopedCharTypeBuffer<T>& accept)
 /* inlined non-const versions */
 template <typename T>
 inline char *wxStrstr(char *haystack, T needle)
-    { return (char *)wxStrstr((const char *)haystack, needle); }
+    { return const_cast<char*>(wxStrstr(const_cast<const char*>(haystack), needle)); }
 template <typename T>
 inline wchar_t *wxStrstr(wchar_t *haystack, T needle)
-    { return (wchar_t *)wxStrstr((const wchar_t *)haystack, needle); }
+    { return const_cast<wchar_t*>(wxStrstr(const_cast<const wchar_t*>(haystack), needle)); }
 
 template <typename T>
 inline char * wxStrchr(char *s, T c)
-    { return (char *)wxStrchr((const char *)s, c); }
+    { return const_cast<char*>(wxStrchr(const_cast<const char*>(s), c)); }
 template <typename T>
 inline wchar_t * wxStrchr(wchar_t *s, T c)
     { return (wchar_t *)wxStrchr((const wchar_t *)s, c); }
 template <typename T>
 inline char * wxStrrchr(char *s, T c)
-    { return (char *)wxStrrchr((const char *)s, c); }
+    { return const_cast<char*>(wxStrrchr(const_cast<const char*>(s), c)); }
 template <typename T>
 inline wchar_t * wxStrrchr(wchar_t *s, T c)
-    { return (wchar_t *)wxStrrchr((const wchar_t *)s, c); }
+    { return const_cast<wchar_t*>(wxStrrchr(const_cast<const wchar_t*>(s), c)); }
 
 template <typename T>
 inline char * wxStrpbrk(char *s, T accept)
-    { return (char *)wxStrpbrk((const char *)s, accept); }
+    { return const_cast<char*>(wxStrpbrk(const_cast<const char*>(s), accept)); }
 template <typename T>
 inline wchar_t * wxStrpbrk(wchar_t *s, T accept)
-    { return (wchar_t *)wxStrpbrk((const wchar_t *)s, accept); }
+    { return const_cast<wchar_t*>(wxStrpbrk(const_cast<const wchar_t*>(s), accept)); }
 
 
 // ----------------------------------------------------------------------------
@@ -986,5 +981,7 @@ inline wxUniChar wxToupper(const wxUniChar& c) { return wxCRT_ToupperW(c); }
 wxDEPRECATED( inline int wxIsctrl(const wxUniChar& c) );
 inline int wxIsctrl(const wxUniChar& c) { return wxIscntrl(c); }
 #endif // WXWIN_COMPATIBILITY_2_8
+
+inline bool wxIsascii(const wxUniChar& c) { return c.IsAscii(); }
 
 #endif /* _WX_WXCRT_H_ */

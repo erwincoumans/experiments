@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxHeaderCtrl for wxMSW
 // Author:      Vadim Zeitlin
 // Created:     2008-12-01
-// RCS-ID:      $Id: headerctrl.cpp 59355 2009-03-05 21:47:59Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ bool wxHeaderCtrl::Create(wxWindow *parent,
     if ( !CreateControl(parent, id, pos, size, style, wxDefaultValidator, name) )
         return false;
 
-    if ( !MSWCreateControl(WC_HEADER, _T(""), pos, size) )
+    if ( !MSWCreateControl(WC_HEADER, wxT(""), pos, size) )
         return false;
 
     // special hack for margins when using comctl32.dll v6 or later: the
@@ -156,7 +156,7 @@ wxSize wxHeaderCtrl::DoGetBestSize() const
     HDLAYOUT layout = { &rc, &wpos };
     if ( !Header_Layout(GetHwnd(), &layout) )
     {
-        wxLogLastError(_T("Header_Layout"));
+        wxLogLastError(wxT("Header_Layout"));
         return wxControl::DoGetBestSize();
     }
 
@@ -196,7 +196,7 @@ void wxHeaderCtrl::DoSetCount(unsigned int count)
     {
         if ( !Header_DeleteItem(GetHwnd(), 0) )
         {
-            wxLogLastError(_T("Header_DeleteItem"));
+            wxLogLastError(wxT("Header_DeleteItem"));
         }
     }
 
@@ -285,6 +285,7 @@ void wxHeaderCtrl::DoInsertItem(const wxHeaderColumn& col, unsigned int idx)
             if ( !m_imageList )
             {
                 m_imageList = new wxImageList(bmpWidth, bmpHeight);
+                (void) // suppress mingw32 warning about unused computed value
                 Header_SetImageList(GetHwnd(), GetHimagelistOf(m_imageList));
             }
             else // already have an image list
@@ -348,7 +349,7 @@ void wxHeaderCtrl::DoInsertItem(const wxHeaderColumn& col, unsigned int idx)
     if ( ::SendMessage(GetHwnd(), HDM_INSERTITEM,
                        MSWToNativeIdx(idx), (LPARAM)&hdi) == -1 )
     {
-        wxLogLastError(_T("Header_InsertItem()"));
+        wxLogLastError(wxT("Header_InsertItem()"));
     }
 }
 
@@ -366,7 +367,7 @@ void wxHeaderCtrl::DoSetColumnsOrder(const wxArrayInt& order)
 
     if ( !Header_SetOrderArray(GetHwnd(), orderShown.size(), &orderShown[0]) )
     {
-        wxLogLastError(_T("Header_GetOrderArray"));
+        wxLogLastError(wxT("Header_GetOrderArray"));
     }
 
     m_colIndices = order;
@@ -656,22 +657,24 @@ bool wxHeaderCtrl::MSWOnNotify(int idCtrl, WXLPARAM lParam, WXLPARAM *result)
         if ( order != -1 )
             event.SetNewOrder(order);
 
-        if ( GetEventHandler()->ProcessEvent(event) )
-        {
-            if ( event.IsAllowed() )
-                return true;    // skip default message handling below
+        const bool processed = GetEventHandler()->ProcessEvent(event);
 
-            // we need to veto the default handling of this message, don't
-            // return to execute the code in the "if veto" branch below
+        if ( processed && !event.IsAllowed() )
             veto = true;
-        }
-        else // not processed
+
+        if ( !veto )
         {
             // special post-processing for HDN_ENDDRAG: we need to update the
             // internal column indices array if this is allowed to go ahead as
             // the native control is going to reorder its columns now
             if ( evtType == wxEVT_COMMAND_HEADER_END_REORDER )
                 MoveColumnInOrderArray(m_colIndices, idx, order);
+
+            if ( processed )
+            {
+                // skip default processing below
+                return true;
+            }
         }
     }
 

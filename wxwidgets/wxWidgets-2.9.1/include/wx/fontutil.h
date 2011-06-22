@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     05.11.99
-// RCS-ID:      $Id: fontutil.h 59804 2009-03-24 07:56:17Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -152,11 +152,8 @@ public:
 
     void Free();
     void EnsureValid();
-    
+
     bool m_descriptorValid;
-#if wxOSX_USE_CORE_TEXT
-    CTFontDescriptorRef m_ctFontDescriptor;
-#endif
 
 #if wxOSX_USE_ATSU_TEXT
     bool            m_atsuFontValid;
@@ -168,13 +165,6 @@ public:
     wxInt16         m_qdFontFamily;
     wxInt16         m_qdFontStyle;
 #endif
-#endif
-
-#if wxOSX_USE_COCOA
-    WX_NSFontDescriptor m_nsFontDescriptor;
-    void            OSXValidateNSFontDescriptor();
-#endif
-#if wxOSX_USE_IPHONE
 #endif
 
     int           m_pointSize;

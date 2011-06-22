@@ -3,7 +3,7 @@
 // Purpose:     wxXmlDocument - XML parser & data holder class
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xml.h 52919 2008-03-30 10:27:19Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -265,8 +265,8 @@ public:
                       const wxString& encoding = wxT("UTF-8"), int flags = wxXMLDOC_NONE);
 
     // Saves document as .xml file.
-    virtual bool Save(const wxString& filename, int indentstep = 1) const;
-    virtual bool Save(wxOutputStream& stream, int indentstep = 1) const;
+    virtual bool Save(const wxString& filename, int indentstep = 2) const;
+    virtual bool Save(wxOutputStream& stream, int indentstep = 2) const;
 
     bool IsOk() const { return m_root != NULL; }
 

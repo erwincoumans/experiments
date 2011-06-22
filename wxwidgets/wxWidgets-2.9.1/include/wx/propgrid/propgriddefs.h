@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2008-08-31
-// RCS-ID:      $Id: propgriddefs.h 59374 2009-03-06 17:32:28Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_PROPGRID_PROPGRIDDEFS_H_
@@ -18,6 +18,7 @@
 #include "wx/vector.h"
 #include "wx/hashmap.h"
 #include "wx/variant.h"
+#include "wx/any.h"
 #include "wx/longlong.h"
 #include "wx/clntdata.h"
 
@@ -28,17 +29,12 @@
 // NOTE: More in propertygrid.cpp
 //
 
-#ifndef SWIG
-
 #if defined(__WXMSW__)
 
     // space between vertical line and value text
     #define wxPG_XBEFORETEXT            4
     // space between vertical line and value editor control
     #define wxPG_XBEFOREWIDGET          1
-
-    // x position adjustment for wxTextCtrl (and like)
-    #define wxPG_TEXTCTRLXADJUST        3
 
     // comment to use bitmap buttons
     #define wxPG_ICON_WIDTH             9
@@ -53,10 +49,6 @@
 
     // width of optional bitmap/image in front of property
     #define wxPG_CUSTOM_IMAGE_WIDTH     20
-
-    // 1 to create controls out of sight, hide them, and then move them into
-    // correct position
-    #define wxPG_CREATE_CONTROLS_HIDDEN 0
 
     // 1 if splitter drag detect margin and control cannot overlap
     #define wxPG_NO_CHILD_EVT_MOTION    0
@@ -79,7 +71,9 @@
     #define wxPG_XBEFOREWIDGET          1
 
     // x position adjustment for wxTextCtrl (and like)
-    #define wxPG_TEXTCTRLXADJUST        3
+    // NB: Only define wxPG_TEXTCTRLXADJUST for platforms that do not
+    //     (yet) support wxTextEntry::SetMargins() for the left margin.
+    //#define wxPG_TEXTCTRLXADJUST        3
 
     // comment to use bitmap buttons
     #define wxPG_ICON_WIDTH             9
@@ -94,10 +88,6 @@
 
     // width of optional bitmap/image in front of property
     #define wxPG_CUSTOM_IMAGE_WIDTH     20
-
-    // 1 to create controls out of sight, hide them, and then move them into
-    // correct position
-    #define wxPG_CREATE_CONTROLS_HIDDEN 0
 
     // 1 if splitter drag detect margin and control cannot overlap
     #define wxPG_NO_CHILD_EVT_MOTION    1
@@ -136,10 +126,6 @@
     // width of optional bitmap/image in front of property
     #define wxPG_CUSTOM_IMAGE_WIDTH     20
 
-    // 1 to create controls out of sight, hide them, and then move them into
-    // correct position
-    #define wxPG_CREATE_CONTROLS_HIDDEN 0
-
     // 1 if splitter drag detect margin and control cannot overlap
     #define wxPG_NO_CHILD_EVT_MOTION    0
 
@@ -176,10 +162,6 @@
 
     // width of optional bitmap/image in front of property
     #define wxPG_CUSTOM_IMAGE_WIDTH     20
-
-    // 1 to create controls out of sight, hide them, and then move them into
-    // correct position
-    #define wxPG_CREATE_CONTROLS_HIDDEN 0
 
     // 1 if splitter drag detect margin and control cannot overlap
     #define wxPG_NO_CHILD_EVT_MOTION    1
@@ -226,7 +208,6 @@
     #define wxPG_SMALL_SCREEN       0
 #endif
 
-#endif // #ifndef SWIG
 
 // Undefine wxPG_ICON_WIDTH to use supplied xpm bitmaps instead
 // (for tree buttons)
@@ -281,17 +262,13 @@ class wxPGValidationInfo;
     @{
 */
 
-#ifndef SWIG
-    // Used to tell wxPGProperty to use label as name as well
-    #define wxPG_LABEL              (*wxPGProperty::sm_wxPG_LABEL)
-    // This is the value placed in wxPGProperty::sm_wxPG_LABEL
-    #define wxPG_LABEL_STRING       wxS("@!")
-    #define wxPG_NULL_BITMAP        wxNullBitmap
-    #define wxPG_COLOUR_BLACK       (*wxBLACK)
-#else
-    #define wxPG_NULL_BITMAP        wxBitmap_NULL
-    #define wxPG_COLOUR_BLACK       wxColour_BLACK
-#endif // #ifndef SWIG
+// Used to tell wxPGProperty to use label as name as well
+#define wxPG_LABEL              (*wxPGProperty::sm_wxPG_LABEL)
+
+// This is the value placed in wxPGProperty::sm_wxPG_LABEL
+#define wxPG_LABEL_STRING       wxS("@!")
+#define wxPG_NULL_BITMAP        wxNullBitmap
+#define wxPG_COLOUR_BLACK       (*wxBLACK)
 
 /** Convert Red, Green and Blue to a single 32-bit value.
 */
@@ -340,17 +317,10 @@ typedef wxString wxPGCachedString;
 
 // -----------------------------------------------------------------------
 
-#ifndef SWIG
-
-#if wxUSE_STL
-typedef std::vector<wxPGProperty*> wxArrayPGProperty;
-#else
 WX_DEFINE_TYPEARRAY_WITH_DECL_PTR(wxPGProperty*, wxArrayPGProperty,
                                   wxBaseArrayPtrVoid,
                                   class WXDLLIMPEXP_PROPGRID);
-#endif
 
-// Always use wxString based hashmap with unicode, stl, swig and GCC 4.0+
 WX_DECLARE_STRING_HASH_MAP_WITH_DECL(void*,
                                      wxPGHashMapS2P,
                                      class WXDLLIMPEXP_PROPGRID);
@@ -358,7 +328,7 @@ WX_DECLARE_STRING_HASH_MAP_WITH_DECL(void*,
 WX_DECLARE_STRING_HASH_MAP_WITH_DECL(wxString,
                                      wxPGHashMapS2S,
                                      class WXDLLIMPEXP_PROPGRID);
- 
+
 WX_DECLARE_VOIDPTR_HASH_MAP_WITH_DECL(void*,
                                       wxPGHashMapP2P,
                                       class WXDLLIMPEXP_PROPGRID);
@@ -370,7 +340,18 @@ WX_DECLARE_HASH_MAP_WITH_DECL(wxInt32,
                               wxPGHashMapI2I,
                               class WXDLLIMPEXP_PROPGRID);
 
-#endif // #ifndef SWIG
+// Utility to find if specific item is in a vector. Returns index to
+// the item, or wxNOT_FOUND if not present.
+template<typename CONTAINER, typename T>
+int wxPGFindInVector( CONTAINER vector, const T& item )
+{
+    for ( unsigned int i=0; i<vector.size(); i++ )
+    {
+        if ( vector[i] == item )
+            return (int) i;
+    }
+    return wxNOT_FOUND;
+}
 
 // -----------------------------------------------------------------------
 
@@ -463,15 +444,17 @@ enum wxPG_SETVALUE_FLAGS
 // -----------------------------------------------------------------------
 // Editor class.
 
-#ifndef SWIG
-
 // Editor accessor (for backwards compatiblity use only).
 #define wxPG_EDITOR(T)          wxPGEditor_##T
 
-// Declare editor class, with optional part.
-#define WX_PG_DECLARE_EDITOR_WITH_DECL(EDITOR,DECL) \
-extern DECL wxPGEditor* wxPGEditor_##EDITOR; \
-extern DECL wxPGEditor* wxPGConstruct##EDITOR##EditorClass();
+// Macro for declaring editor class, with optional impexpdecl part.
+#ifndef WX_PG_DECLARE_EDITOR_WITH_DECL
+
+    #define WX_PG_DECLARE_EDITOR_WITH_DECL(EDITOR,DECL) \
+    extern DECL wxPGEditor* wxPGEditor_##EDITOR; \
+    extern DECL wxPGEditor* wxPGConstruct##EDITOR##EditorClass();
+
+#endif
 
 // Declare editor class.
 #define WX_PG_DECLARE_EDITOR(EDITOR) \
@@ -487,8 +470,6 @@ WX_PG_DECLARE_EDITOR_WITH_DECL(TextCtrlAndButton,WXDLLIMPEXP_PROPGRID)
 WX_PG_DECLARE_EDITOR_WITH_DECL(CheckBox,WXDLLIMPEXP_PROPGRID)
 #endif
 WX_PG_DECLARE_EDITOR_WITH_DECL(ChoiceAndButton,WXDLLIMPEXP_PROPGRID)
-
-#endif  // !SWIG
 
 // -----------------------------------------------------------------------
 
@@ -517,6 +498,12 @@ template<> inline wxVariant WXVARIANT( const wxArrayString& value )
     { return wxVariant(value); }
 template<> inline wxVariant WXVARIANT( const wxString& value )
     { return wxVariant(value); }
+#if wxUSE_LONGLONG
+template<> inline wxVariant WXVARIANT( const wxLongLong& value )
+    { return wxVariant(value); }
+template<> inline wxVariant WXVARIANT( const wxULongLong& value )
+    { return wxVariant(value); }
+#endif
 #if wxUSE_DATETIME
 template<> inline wxVariant WXVARIANT( const wxDateTime& value )
     { return wxVariant(value); }
@@ -572,9 +559,12 @@ public:\
 \
     virtual wxVariantData* Clone() const { return new classname##VariantData(m_value); } \
 \
+    DECLARE_WXANY_CONVERSION() \
 protected:\
     classname m_value; \
 };\
+\
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(classname, classname##VariantData) \
 \
 wxString classname##VariantData::GetType() const\
 {\
@@ -589,14 +579,24 @@ expdecl wxVariant& operator << ( wxVariant &variant, const classname &value )\
 } \
 expdecl classname& classname##RefFromVariant( wxVariant& variant ) \
 { \
-    wxASSERT( variant.GetType() == #classname );\
-    classname##VariantData *data = (classname##VariantData*) variant.GetData();\
+    wxASSERT_MSG( variant.GetType() == wxS(#classname), \
+                  wxString::Format("Variant type should have been '%s'" \
+                                   "instead of '%s'", \
+                                   wxS(#classname), \
+                                   variant.GetType().c_str())); \
+    classname##VariantData *data = \
+        (classname##VariantData*) variant.GetData(); \
     return data->GetValue();\
 } \
 expdecl const classname& classname##RefFromVariant( const wxVariant& variant ) \
 { \
-    wxASSERT( variant.GetType() == #classname );\
-    classname##VariantData *data = (classname##VariantData*) variant.GetData();\
+    wxASSERT_MSG( variant.GetType() == wxS(#classname), \
+                  wxString::Format("Variant type should have been '%s'" \
+                                   "instead of '%s'", \
+                                   wxS(#classname), \
+                                   variant.GetType().c_str())); \
+    classname##VariantData *data = \
+        (classname##VariantData*) variant.GetData(); \
     return data->GetValue();\
 }
 
@@ -646,8 +646,6 @@ WX_PG_IMPLEMENT_VARIANT_DATA_EXPORTED_DUMMY_EQ(classname, wxEMPTY_PARAMETER_VALU
 WX_PG_DECLARE_VARIANT_DATA_EXPORTED(wxPoint, WXDLLIMPEXP_PROPGRID)
 WX_PG_DECLARE_VARIANT_DATA_EXPORTED(wxSize, WXDLLIMPEXP_PROPGRID)
 WX_PG_DECLARE_VARIANT_DATA_EXPORTED(wxArrayInt, WXDLLIMPEXP_PROPGRID)
-WX_PG_DECLARE_VARIANT_DATA_EXPORTED(wxLongLong, WXDLLIMPEXP_PROPGRID)
-WX_PG_DECLARE_VARIANT_DATA_EXPORTED(wxULongLong, WXDLLIMPEXP_PROPGRID)
 DECLARE_VARIANT_OBJECT_EXPORTED(wxFont, WXDLLIMPEXP_PROPGRID)
 template<> inline wxVariant WXVARIANT( const wxFont& value )
 {
@@ -663,27 +661,6 @@ template<> inline wxVariant WXVARIANT( const wxColour& value )
     return variant;
 }
 
-#if wxUSE_LONGLONG_NATIVE
-
-template<> inline wxVariant WXVARIANT( const wxLongLong_t& value )
-{
-    wxVariant variant;
-    variant << wxLongLong(value);
-    return variant;
-}
-
-template<> inline wxVariant WXVARIANT( const wxULongLong_t& value )
-{
-    wxVariant variant;
-    variant << wxULongLong(value);
-    return variant;
-}
-
-WXDLLIMPEXP_PROPGRID wxLongLong_t& operator << ( wxLongLong_t &value, const wxVariant &variant );
-WXDLLIMPEXP_PROPGRID wxULongLong_t& operator << ( wxULongLong_t &value, const wxVariant &variant );
-
-#endif  // wxUSE_LONGLONG_NATIVE
-
 // Define constants for common wxVariant type strings
 
 #define wxPG_VARIANT_TYPE_STRING        wxPGGlobalVars->m_strstring
@@ -693,30 +670,12 @@ WXDLLIMPEXP_PROPGRID wxULongLong_t& operator << ( wxULongLong_t &value, const wx
 #define wxPG_VARIANT_TYPE_DOUBLE        wxS("double")
 #define wxPG_VARIANT_TYPE_ARRSTRING     wxS("arrstring")
 #define wxPG_VARIANT_TYPE_DATETIME      wxS("datetime")
-
-// Safely converts a wxVariant to (long) int. Supports converting from string
-// and boolean as well.
-WXDLLIMPEXP_PROPGRID
-long wxPGVariantToInt( const wxVariant& variant, long defVal = 1 );
-
-// Safely converts a wxVariant to wxLongLong_t. Returns true on success.
-WXDLLIMPEXP_PROPGRID
-bool wxPGVariantToLongLong( const wxVariant& variant, wxLongLong_t* pResult );
-
-// Safely converts a wxVariant to wxULongLong_t. Returns true on success.
-WXDLLIMPEXP_PROPGRID
-bool wxPGVariantToULongLong( const wxVariant& variant, wxULongLong_t* pResult );
-
-// Safely converts a wxVariant to double. Supports converting from string and
-// wxLongLong as well.
-WXDLLIMPEXP_PROPGRID
-bool wxPGVariantToDouble( const wxVariant& variant, double* pResult );
+#define wxPG_VARIANT_TYPE_LONGLONG      wxS("longlong")
+#define wxPG_VARIANT_TYPE_ULONGLONG     wxS("ulonglong")
 
 #endif // !SWIG
 
 // -----------------------------------------------------------------------
-
-#ifndef SWIG
 
 //
 // Tokenizer macros.
@@ -772,8 +731,6 @@ protected:
 
 #define WX_PG_TOKENIZER2_END() \
     }
-
-#endif
 
 // -----------------------------------------------------------------------
 

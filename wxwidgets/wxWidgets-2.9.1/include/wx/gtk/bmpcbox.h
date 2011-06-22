@@ -3,7 +3,7 @@
 // Purpose:     wxBitmapComboBox
 // Author:      Jaakko Salli
 // Created:     2008-05-19
-// RCS-ID:      $Id: bmpcbox.h 60399 2009-04-26 19:41:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -132,6 +132,8 @@ protected:
 
     virtual void GTKCreateComboBoxWidget();
     virtual void GTKInsertComboBoxTextItem( unsigned int n, const wxString& text );
+
+    virtual wxSize DoGetBestSize() const;
 
     wxSize                  m_bitmapSize;
     int                     m_bitmapCellIndex;

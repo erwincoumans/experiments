@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin, Robert Roebling
 // Modified by:
 // Created:     26.05.99
-// RCS-ID:      $Id: dataobj.h 61110 2009-06-18 06:15:28Z RD $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets Team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -274,10 +274,16 @@ public:
     void Add(wxDataObjectSimple *dataObject, bool preferred = false);
 
     // Report the format passed to the SetData method.  This should be the
-    // format of the data object within the composite that recieved data from
+    // format of the data object within the composite that received data from
     // the clipboard or the DnD operation.  You can use this method to find
-    // out what kind of data object was recieved.
+    // out what kind of data object was received.
     wxDataFormat GetReceivedFormat() const;
+
+    // Returns the pointer to the object which supports this format or NULL.
+    // The returned pointer is owned by wxDataObjectComposite and must
+    // therefore not be destroyed by the caller.
+    wxDataObjectSimple *GetObject(const wxDataFormat& format,
+                                  wxDataObjectBase::Direction dir = Get) const;
 
     // implement base class pure virtuals
     // ----------------------------------
@@ -294,10 +300,6 @@ public:
                                    const wxDataFormat& format );
     virtual size_t GetBufferOffset( const wxDataFormat& format );
 #endif
-
-protected:
-    // returns the pointer to the object which supports this format or NULL
-    wxDataObjectSimple *GetObject(const wxDataFormat& format, wxDataObjectBase::Direction dir=Get) const;
 
 private:
     // the list of all (simple) data objects whose formats we support
@@ -515,7 +517,7 @@ private:
     #include "wx/gtk/dataobj2.h"
     // wxURLDataObject defined in msw/ole/dataobj2.h
 
-#else 
+#else
     #if defined(__WXGTK__)
         #include "wx/gtk1/dataobj2.h"
     #elif defined(__WXX11__)

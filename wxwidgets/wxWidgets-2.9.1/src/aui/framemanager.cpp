@@ -4,7 +4,7 @@
 // Author:      Benjamin I. Williams
 // Modified by:
 // Created:     2005-05-17
-// RCS-ID:      $Id: framemanager.cpp 60628 2009-05-14 06:58:29Z BIW $
+// RCS-ID:      $Id$
 // Copyright:   (C) Copyright 2005-2006, Kirix Corporation, All Rights Reserved
 // Licence:     wxWindows Library Licence, Version 3.1
 ///////////////////////////////////////////////////////////////////////////////
@@ -275,6 +275,16 @@ public:
     bool SetTransparent(wxByte WXUNUSED(alpha))
     {
         return true;
+    }
+
+protected:
+    virtual void DoSetSizeHints( int minW, int minH,
+                                 int maxW, int maxH,
+                                 int incW, int incH)
+    {
+        // the real wxFrame method doesn't work for us because we're not really
+        // a top level window so skip it
+        wxWindow::DoSetSizeHints(minW, minH, maxW, maxH, incW, incH);
     }
 
 private:
@@ -560,135 +570,6 @@ static int PaneSortFunc(wxAuiPaneInfo** p1, wxAuiPaneInfo** p2)
 
 
 
-
-// this utility class implements a proportional sizer
-// as it existed in wxWidgets 2.8 and before.
-
-class wxAuiProportionalBoxSizer : public wxBoxSizer
-{
-public:
-    wxAuiProportionalBoxSizer(int orientation) : wxBoxSizer(orientation) { }
-    
-    void RecalcSizes()
-    {
-        if (m_children.GetCount() == 0)
-            return;
-
-        int fixed_height = 0;
-        int fixed_width = 0;
-        int stretchable = 0;
-        wxSizerItemList::compatibility_iterator node;
-        
-        // find fixed width and height, as well
-        // as the total stretchable proportions
-        node = m_children.GetFirst();
-        while (node)
-        {
-            wxSizerItem *item = node->GetData();
-            
-            if (item->IsShown())
-            {
-                stretchable += item->GetProportion();
-                
-                wxSize size(item->GetMinSizeWithBorder());
-                if (item->GetProportion() == 0)
-                {
-                    if (m_orient == wxVERTICAL)
-                    {
-                        fixed_height += size.y;
-                        fixed_width = wxMax(fixed_width, size.x);
-                    }
-                     else
-                    {
-                        fixed_width += size.x;
-                        fixed_height = wxMax(fixed_height, size.y);
-                    }
-                }
-            }
-            
-            node = node->GetNext();
-        }
-
-
-        // delta specifies the total amount to be allocated to stretch spaces
-        int delta = 0;
-        if (stretchable)
-        {
-            if (m_orient == wxHORIZONTAL)
-                delta = m_size.x - fixed_width;
-                 else
-                delta = m_size.y - fixed_height;
-        }
-
-        // go through each item and assign sizes
-        wxPoint pt(m_position);
-        node = m_children.GetFirst();
-        while (node)
-        {
-            wxSizerItem* item = node->GetData();
-
-            if (item->IsShown())
-            {
-                wxSize size(item->GetMinSizeWithBorder());
-
-                if (m_orient == wxVERTICAL)
-                {
-                    wxCoord height = size.y;
-                    if (item->GetProportion())
-                    {
-                        height = (delta * item->GetProportion()) / stretchable;
-                        delta -= height;
-                        stretchable -= item->GetProportion();
-                    }
-
-                    wxPoint child_pos(pt);
-                    wxSize child_size(size.x, height);
-
-                    if (item->GetFlag() & (wxEXPAND | wxSHAPED))
-                        child_size.x = m_size.x;
-                    else if (item->GetFlag() & wxALIGN_RIGHT)
-                        child_pos.x += m_size.x - size.x;
-                    else if (item->GetFlag() & (wxCENTER | wxALIGN_CENTER_HORIZONTAL))
-                        child_pos.x += (m_size.x - size.x) / 2;
-
-                    item->SetDimension(child_pos, child_size);
-
-                    pt.y += height;
-                }
-                 else
-                {
-                    wxCoord width = size.x;
-                    if (item->GetProportion())
-                    {
-                        width = (delta * item->GetProportion()) / stretchable;
-                        delta -= width;
-                        stretchable -= item->GetProportion();
-                    }
-
-                    wxPoint child_pos(pt);
-                    wxSize child_size(width, size.y);
-
-                    if (item->GetFlag() & (wxEXPAND | wxSHAPED))
-                        child_size.y = m_size.y;
-                    else if (item->GetFlag() & wxALIGN_BOTTOM)
-                        child_pos.y += m_size.y - size.y;
-                    else if (item->GetFlag() & (wxCENTER | wxALIGN_CENTER_VERTICAL))
-                        child_pos.y += (m_size.y - size.y) / 2;
-
-                    item->SetDimension(child_pos, child_size);
-                    
-                    pt.x += width;
-                }
-            }
-
-            node = node->GetNext();
-        }
-    }
-};
-
-
-
-
 // -- wxAuiManager class implementation --
 
 
@@ -706,7 +587,6 @@ BEGIN_EVENT_TABLE(wxAuiManager, wxEvtHandler)
     EVT_MOUSE_CAPTURE_LOST(wxAuiManager::OnCaptureLost)
     EVT_CHILD_FOCUS(wxAuiManager::OnChildFocus)
     EVT_AUI_FIND_MANAGER(wxAuiManager::OnFindManager)
-    EVT_TIMER(101, wxAuiManager::OnHintFadeTimer)
 END_EVENT_TABLE()
 
 
@@ -874,6 +754,7 @@ bool wxAuiManager_HasLiveResize(wxAuiManager& manager)
     // With Core Graphics on Mac, it's not possible to show sash feedback,
     // so we'll always use live update instead.
 #if defined(__WXMAC__)
+    wxUnusedVar(manager);
     return true;
 #else
     return (manager.GetFlags() & wxAUI_MGR_LIVE_RESIZE) == wxAUI_MGR_LIVE_RESIZE;
@@ -1179,21 +1060,15 @@ bool wxAuiManager::AddPane(wxWindow* window, const wxAuiPaneInfo& pane_info)
     {
         pinfo.best_size = pinfo.window->GetClientSize();
 
+#if wxUSE_TOOLBAR
         if (pinfo.window->IsKindOf(CLASSINFO(wxToolBar)))
         {
             // GetClientSize() doesn't get the best size for
             // a toolbar under some newer versions of wxWidgets,
             // so use GetBestSize()
             pinfo.best_size = pinfo.window->GetBestSize();
-
-            // for some reason, wxToolBar::GetBestSize() is returning
-            // a size that is a pixel shy of the correct amount.
-            // I believe this to be the correct action, until
-            // wxToolBar::GetBestSize() is fixed.  Is this assumption
-            // correct?
-            // commented out by JACS 2007-9-08 after having added a pixel in wxMSW's wxToolBar::DoGetBestSize()
-            // pinfo.best_size.y++;
         }
+#endif // wxUSE_TOOLBAR
 
         if (pinfo.min_size != wxDefaultSize)
         {
@@ -1843,8 +1718,8 @@ void wxAuiManager::LayoutAddPane(wxSizer* cont,
     // value that the pane will receive
     int pane_proportion = pane.dock_proportion;
 
-    wxAuiProportionalBoxSizer* horz_pane_sizer = new wxAuiProportionalBoxSizer(wxHORIZONTAL);
-    wxAuiProportionalBoxSizer* vert_pane_sizer = new wxAuiProportionalBoxSizer(wxVERTICAL);
+    wxBoxSizer* horz_pane_sizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* vert_pane_sizer = new wxBoxSizer(wxVERTICAL);
 
     if (pane.HasGripper())
     {
@@ -1866,7 +1741,7 @@ void wxAuiManager::LayoutAddPane(wxSizer* cont,
     if (pane.HasCaption())
     {
         // create the caption sizer
-        wxAuiProportionalBoxSizer* caption_sizer = new wxAuiProportionalBoxSizer(wxHORIZONTAL);
+        wxBoxSizer* caption_sizer = new wxBoxSizer(wxHORIZONTAL);
 
         sizer_item = caption_sizer->Add(1, caption_size, 1, wxEXPAND);
 
@@ -2015,7 +1890,7 @@ void wxAuiManager::LayoutAddDock(wxSizer* cont,
     }
 
     // create the sizer for the dock
-    wxSizer* dock_sizer = new wxAuiProportionalBoxSizer(orientation);
+    wxSizer* dock_sizer = new wxBoxSizer(orientation);
 
     // add each pane to the dock
     bool has_maximized_pane = false;
@@ -2148,7 +2023,7 @@ wxSizer* wxAuiManager::LayoutAll(wxAuiPaneInfoArray& panes,
                                  wxAuiDockUIPartArray& uiparts,
                                  bool spacer_only)
 {
-    wxAuiProportionalBoxSizer* container = new wxAuiProportionalBoxSizer(wxVERTICAL);
+    wxBoxSizer* container = new wxBoxSizer(wxVERTICAL);
 
     int pane_border_size = m_art->GetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE);
     int caption_size = m_art->GetMetric(wxAUI_DOCKART_CAPTION_SIZE);
@@ -2431,7 +2306,7 @@ wxSizer* wxAuiManager::LayoutAll(wxAuiPaneInfoArray& panes,
 
         // create a container which will hold this layer's
         // docks (top, bottom, left, right)
-        cont = new wxAuiProportionalBoxSizer(wxVERTICAL);
+        cont = new wxBoxSizer(wxVERTICAL);
 
 
         // find any top docks in this layer
@@ -2446,7 +2321,7 @@ wxSizer* wxAuiManager::LayoutAll(wxAuiPaneInfoArray& panes,
         // fill out the middle layer (which consists
         // of left docks, content area and right docks)
 
-        middle = new wxAuiProportionalBoxSizer(wxHORIZONTAL);
+        middle = new wxBoxSizer(wxHORIZONTAL);
 
         // find any left docks in this layer
         FindDocks(docks, wxAUI_DOCK_LEFT, layer, -1, arr);
@@ -2515,7 +2390,7 @@ wxSizer* wxAuiManager::LayoutAll(wxAuiPaneInfoArray& panes,
     {
         // no sizer available, because there are no docks,
         // therefore we will create a simple background area
-        cont = new wxAuiProportionalBoxSizer(wxVERTICAL);
+        cont = new wxBoxSizer(wxVERTICAL);
         wxSizerItem* sizer_item = cont->Add(1,1, 1, wxEXPAND);
         wxAuiDockUIPart part;
         part.type = wxAuiDockUIPart::typeBackground;
@@ -2662,6 +2537,17 @@ void wxAuiManager::Update()
                     //p.frame->Move(p.floating_pos.x, p.floating_pos.y);
                 */
                 }
+
+                // update whether the pane is resizable or not
+                long style = p.frame->GetWindowStyleFlag();
+                if (p.IsFixed())
+                    style &= ~wxRESIZE_BORDER;
+                else
+                    style |= wxRESIZE_BORDER;
+                p.frame->SetWindowStyleFlag(style);
+
+                if (p.frame->GetLabel() != p.caption)
+                    p.frame->SetLabel(p.caption);
 
                 if (p.frame->IsShown() != p.IsShown())
                     p.frame->Show(p.IsShown());
@@ -3318,6 +3204,8 @@ void wxAuiManager::OnHintFadeTimer(wxTimerEvent& WXUNUSED(event))
     if (!m_hint_wnd || m_hint_fadeamt >= m_hint_fademax)
     {
         m_hint_fadetimer.Stop();
+        Disconnect(m_hint_fadetimer.GetId(), wxEVT_TIMER,
+                   wxTimerEventHandler(wxAuiManager::OnHintFadeTimer));
         return;
     }
 
@@ -3359,8 +3247,10 @@ void wxAuiManager::ShowHint(const wxRect& rect)
         if (m_hint_fadeamt != m_hint_fademax) //  Only fade if we need to
         {
             // start fade in timer
-            m_hint_fadetimer.SetOwner(this, 101);
+            m_hint_fadetimer.SetOwner(this);
             m_hint_fadetimer.Start(5);
+            Connect(m_hint_fadetimer.GetId(), wxEVT_TIMER,
+                    wxTimerEventHandler(wxAuiManager::OnHintFadeTimer));
         }
     }
     else  // Not using a transparent hint window...
@@ -3428,6 +3318,10 @@ void wxAuiManager::HideHint()
             m_hint_wnd->Show(false);
         m_hint_wnd->SetTransparent(0);
         m_hint_fadetimer.Stop();
+        // In case this is called while a hint fade is going, we need to
+        // disconnect the event handler.
+        Disconnect(m_hint_fadetimer.GetId(), wxEVT_TIMER,
+                   wxTimerEventHandler(wxAuiManager::OnHintFadeTimer));
         m_last_hint = wxRect();
         return;
     }
@@ -3593,6 +3487,9 @@ void wxAuiManager::OnFloatingPaneMoveStart(wxWindow* wnd)
     // try to find the pane
     wxAuiPaneInfo& pane = GetPane(wnd);
     wxASSERT_MSG(pane.IsOk(), wxT("Pane window not found"));
+
+    if(!pane.frame)
+        return;
 
     if (m_flags & wxAUI_MGR_TRANSPARENT_DRAG)
         pane.frame->SetTransparent(150);
@@ -3782,13 +3679,16 @@ void wxAuiManager::OnFloatingPaneMoved(wxWindow* wnd, wxDirection dir)
     HideHint();
 }
 
-void wxAuiManager::OnFloatingPaneResized(wxWindow* wnd, const wxSize& size)
+void wxAuiManager::OnFloatingPaneResized(wxWindow* wnd, const wxRect& rect)
 {
     // try to find the pane
     wxAuiPaneInfo& pane = GetPane(wnd);
     wxASSERT_MSG(pane.IsOk(), wxT("Pane window not found"));
 
-    pane.floating_size = size;
+    pane.FloatingSize(rect.GetWidth(), rect.GetHeight());
+
+    // the top-left position may change as well as the size
+    pane.FloatingPosition(rect.x, rect.y);
 }
 
 
@@ -4186,7 +4086,7 @@ bool wxAuiManager::DoEndResizeAction(wxMouseEvent& event)
         int used_width = 0, used_height = 0;
 
         wxSize client_size = m_frame->GetClientSize();
-        
+
         size_t dock_i, dock_count = m_docks.GetCount();
         for (dock_i = 0; dock_i < dock_count; ++dock_i)
         {
@@ -4204,12 +4104,12 @@ bool wxAuiManager::DoEndResizeAction(wxMouseEvent& event)
             if (dock.resizable)
                 used_width += sash_size;
         }
-        
-        
+
+
         int available_width = client_size.GetWidth() - used_width;
         int available_height = client_size.GetHeight() - used_height;
-        
-        
+
+
 #if wxUSE_STATUSBAR
         // if there's a status control, the available
         // height decreases accordingly
@@ -4224,13 +4124,13 @@ bool wxAuiManager::DoEndResizeAction(wxMouseEvent& event)
             }
         }
 #endif
-    
+
         wxRect& rect = m_action_part->dock->rect;
 
         wxPoint new_pos(event.m_x - m_action_offset.x,
             event.m_y - m_action_offset.y);
         int new_size, old_size = m_action_part->dock->size;
-        
+
         switch (m_action_part->dock->dock_direction)
         {
         case wxAUI_DOCK_LEFT:
@@ -4363,7 +4263,7 @@ bool wxAuiManager::DoEndResizeAction(wxMouseEvent& event)
             m_action = actionNone;
             return false;
         }
-        
+
         // calculate the new proportion of the pane
         int new_proportion = (new_pixsize*total_proportion)/dock_pixels;
 
@@ -4426,7 +4326,7 @@ bool wxAuiManager::DoEndResizeAction(wxMouseEvent& event)
             prop_borrow -= prop_diff;
         }
 
-        
+
         dock.panes.Item(borrow_pane)->dock_proportion = prop_borrow;
         pane.dock_proportion = new_proportion;
 
@@ -4573,7 +4473,7 @@ void wxAuiManager::OnMotion(wxMouseEvent& event)
                     DrawResizeHint(dc, m_action_hintrect);
                     m_action_hintrect = wxRect();
                 }
-                
+
                 // draw new resize hint, if it's inside the managed frame
                 wxRect frame_screen_rect = m_frame->GetScreenRect();
                 if (frame_screen_rect.Contains(rect))

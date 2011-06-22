@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     03/02/99
-// RCS-ID:      $Id: print.h 58164 2009-01-17 08:46:00Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,11 +34,20 @@ public:
 
     virtual void            TransferFrom( wxPrintDialogData * );
     virtual void            TransferTo( wxPrintDialogData * );
-    
-    PMPrintSession          GetPrintSession() { return m_macPrintSession; } 
-    PMPageFormat            GetPageFormat() { return m_macPageFormat; } 
-    PMPrintSettings         GetPrintSettings() { return m_macPrintSettings; } 
+
+    PMPrintSession          GetPrintSession() { return m_macPrintSession; }
+    PMPageFormat            GetPageFormat() { return m_macPageFormat; }
+    PMPrintSettings         GetPrintSettings() { return m_macPrintSettings; }
 protected :
+    virtual void            TransferPrinterNameFrom( const wxPrintData &data );
+    virtual void            TransferPaperInfoFrom( const wxPrintData &data );
+    virtual void            TransferResolutionFrom( const wxPrintData &data );
+
+    virtual void            TransferPrinterNameTo( wxPrintData &data );
+    virtual void            TransferPaperInfoTo( wxPrintData &data );
+    virtual void            TransferResolutionTo( wxPrintData &data );
+
+    
     virtual void            UpdateFromPMState();
     virtual void            UpdateToPMState();
 

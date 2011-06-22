@@ -3,7 +3,7 @@
 // Purpose:     wrapper header for CppUnit headers
 // Author:      Vadim Zeitlin
 // Created:     15.02.04
-// RCS-ID:      $Id: cppunit.h 60024 2009-04-04 23:55:05Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -48,11 +48,27 @@
 //
 
 #include "wx/beforestd.h"
+#ifdef __VISUALC__
+    #pragma warning(push)
+
+    // with cppunit 1.12 we get many bogus warnings 4701 (local variable may be
+    // used without having been initialized) in TestAssert.h
+    #pragma warning(disable:4701)
+
+    // and also 4100 (unreferenced formal parameter) in extensions/
+    // ExceptionTestCaseDecorator.h
+    #pragma warning(disable:4100)
+#endif
+
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/ui/text/TestRunner.h>
 #include <cppunit/TestCase.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/CompilerOutputter.h>
+
+#ifdef __VISUALC__
+    #pragma warning(pop)
+#endif
 #include "wx/afterstd.h"
 
 #include "wx/string.h"
@@ -71,7 +87,7 @@
     if (Condition) \
         { anyTest; } \
     else \
-        wxLogInfo(wxString::Format(_T("skipping: %s.%s\n  reason: %s equals false\n"), \
+        wxLogInfo(wxString::Format(wxT("skipping: %s.%s\n  reason: %s equals false\n"), \
                                     wxString(suiteName, wxConvUTF8).c_str(), \
                                     wxString(#testMethod, wxConvUTF8).c_str(), \
                                     wxString(#Condition, wxConvUTF8).c_str()))
@@ -183,6 +199,11 @@ WX_CPPUNIT_ALLOW_EQUALS_TO_INT(long)
 WX_CPPUNIT_ALLOW_EQUALS_TO_INT(short)
 WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned)
 WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned long)
+
+#if defined(wxLongLong_t) && !defined(wxLongLongIsLong)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(wxLongLong_t)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned wxLongLong_t)
+#endif
 
 // Use this macro to compare a wxArrayString with the pipe-separated elements
 // of the given string

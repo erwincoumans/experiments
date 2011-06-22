@@ -3,7 +3,7 @@
 // Purpose:     private definitions of wxListCtrl helpers
 // Author:      Robert Roebling
 //              Vadim Zeitlin (virtual list control support)
-// Id:          $Id: listctrl.h 60399 2009-04-26 19:41:08Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ public:
     {
         wxString s = GetText();
         if ( s.empty() )
-            s = _T('H');
+            s = wxT('H');
 
         return s;
     }
@@ -188,7 +188,7 @@ public:
         void ExtendWidth(wxCoord w)
         {
             wxASSERT_MSG( m_rectAll.width <= w,
-                            _T("width can only be increased") );
+                            wxT("width can only be increased") );
 
             m_rectAll.width = w;
             m_rectLabel.x = m_rectAll.x + (w - m_rectLabel.width) / 2;
@@ -211,6 +211,21 @@ public:
     {
         WX_CLEAR_LIST(wxListItemDataList, m_items);
         delete m_gi;
+    }
+
+    // called by the owner when it toggles report view
+    void SetReportView(bool inReportView)
+    {
+        // we only need m_gi when we're not in report view so update as needed
+        if ( inReportView )
+        {
+            delete m_gi;
+            m_gi = NULL;
+        }
+        else
+        {
+            m_gi = new GeometryInfo;
+        }
     }
 
     // are we in report mode?
@@ -254,7 +269,7 @@ public:
 
     bool IsHighlighted() const
     {
-        wxASSERT_MSG( !IsVirtual(), _T("unexpected call to IsHighlighted") );
+        wxASSERT_MSG( !IsVirtual(), wxT("unexpected call to IsHighlighted") );
 
         return m_highlighted;
     }
@@ -420,10 +435,14 @@ public:
                       const wxPoint& pos = wxDefaultPosition,
                       const wxSize& size = wxDefaultSize,
                       long style = 0,
-                      const wxString &name = _T("listctrlmainwindow") );
+                      const wxString &name = wxT("listctrlmainwindow") );
 
     virtual ~wxListMainWindow();
 
+    // called by the main control when its mode changes
+    void SetReportView(bool inReportView);
+
+    // helper to simplify testing for wxLC_XXX flags
     bool HasFlag(int flag) const { return m_parent->HasFlag(flag); }
 
     // return true if this is a virtual list control
@@ -505,7 +524,7 @@ public:
 
     // start editing the label of the given item
     wxTextCtrl *EditLabel(long item,
-                          wxClassInfo* textControlClass = CLASSINFO(wxTextCtrl));
+                          wxClassInfo* textControlClass = wxCLASSINFO(wxTextCtrl));
     wxTextCtrl *GetEditControl() const
     {
         return m_textctrlWrapper ? m_textctrlWrapper->GetText() : NULL;
@@ -570,11 +589,12 @@ public:
     bool GetItemPosition( long item, wxPoint& pos ) const;
     int GetSelectedItemCount() const;
 
-    wxString GetItemText(long item) const
+    wxString GetItemText(long item, int col = 0) const
     {
         wxListItem info;
         info.m_mask = wxLIST_MASK_TEXT;
         info.m_itemId = item;
+        info.m_col = col;
         GetItem( info );
         return info.m_text;
     }
@@ -610,7 +630,7 @@ public:
     void InsertItem( wxListItem &item );
     void InsertColumn( long col, wxListItem &item );
     int GetItemWidthWithImage(wxListItem * item);
-    void SortItems( wxListCtrlCompare fn, long data );
+    void SortItems( wxListCtrlCompare fn, wxIntPtr data );
 
     size_t GetItemCount() const;
     bool IsEmpty() const { return GetItemCount() == 0; }
@@ -719,7 +739,7 @@ protected:
     // get the line data for the given index
     wxListLineData *GetLine(size_t n) const
     {
-        wxASSERT_MSG( n != (size_t)-1, _T("invalid line index") );
+        wxASSERT_MSG( n != (size_t)-1, wxT("invalid line index") );
 
         if ( IsVirtual() )
         {

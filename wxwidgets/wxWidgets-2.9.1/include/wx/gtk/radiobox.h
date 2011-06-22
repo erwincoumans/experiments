@@ -2,7 +2,7 @@
 // Name:        wx/gtk/radiobox.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: radiobox.h 58876 2009-02-13 10:10:36Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,8 +36,8 @@ public:
                const wxSize& size = wxDefaultSize,
                int n = 0,
                const wxString choices[] = (const wxString *) NULL,
-               int majorDim = 1,
-               long style = wxRA_HORIZONTAL,
+               int majorDim = 0,
+               long style = wxRA_SPECIFY_COLS,
                const wxValidator& val = wxDefaultValidator,
                const wxString& name = wxRadioBoxNameStr)
     {
@@ -52,8 +52,8 @@ public:
                const wxPoint& pos,
                const wxSize& size,
                const wxArrayString& choices,
-               int majorDim = 1,
-               long style = wxRA_HORIZONTAL,
+               int majorDim = 0,
+               long style = wxRA_SPECIFY_COLS,
                const wxValidator& val = wxDefaultValidator,
                const wxString& name = wxRadioBoxNameStr)
     {
@@ -70,7 +70,7 @@ public:
                 int n = 0,
                 const wxString choices[] = (const wxString *) NULL,
                 int majorDim = 0,
-                long style = wxRA_HORIZONTAL,
+                long style = wxRA_SPECIFY_COLS,
                 const wxValidator& val = wxDefaultValidator,
                 const wxString& name = wxRadioBoxNameStr);
     bool Create(wxWindow *parent,
@@ -80,7 +80,7 @@ public:
                 const wxSize& size,
                 const wxArrayString& choices,
                 int majorDim = 0,
-                long style = wxRA_HORIZONTAL,
+                long style = wxRA_SPECIFY_COLS,
                 const wxValidator& val = wxDefaultValidator,
                 const wxString& name = wxRadioBoxNameStr);
 

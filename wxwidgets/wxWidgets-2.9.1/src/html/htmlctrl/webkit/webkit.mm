@@ -4,7 +4,7 @@
 // Author:      Jethro Grassie / Kevin Ollivier
 // Modified by:
 // Created:     2004-4-16
-// RCS-ID:      $Id: webkit.mm 60534 2009-05-06 18:51:55Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jethro Grassie / Kevin Ollivier
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -37,6 +37,8 @@
 
 #define DEBUG_WEBKIT_SIZING 0
 
+extern WXDLLEXPORT_DATA(const char) wxWebKitCtrlNameStr[] = "webkitctrl";
+
 // ----------------------------------------------------------------------------
 // macros
 // ----------------------------------------------------------------------------
@@ -55,7 +57,7 @@ END_EVENT_TABLE()
 // Carbon Events handlers
 // ----------------------------------------------------------------------------
 
-// prototype for function in src/mac/carbon/toplevel.cpp
+// prototype for function in src/osx/carbon/nonownedwnd.cpp
 void SetupMouseEvent( wxMouseEvent &wxevent , wxMacCarbonEvent &cEvent );
 
 static const EventTypeSpec eventList[] =

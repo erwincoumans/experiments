@@ -3,7 +3,7 @@
 // Purpose:     wxUString class
 // Author:      Robert Roebling
 // Created:     2008-07-25
-// RCS-ID:      $Id: ustring.cpp 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Robert Roebling
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

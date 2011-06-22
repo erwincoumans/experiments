@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     04/04/2003
-// RCS-ID:      $Id: taskbarosx.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton, 2003
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////
@@ -26,8 +26,8 @@ public:
 #if wxOSX_USE_COCOA
         ,   CUSTOM_STATUSITEM
 #endif
-//    ,   STATUSITEM 
-//    ,   MENUEXTRA 
+//    ,   STATUSITEM
+//    ,   MENUEXTRA
         ,   DEFAULT_TYPE = DOCK
         };
 
@@ -42,7 +42,7 @@ public:
     bool PopupMenu(wxMenu *menu);
 
 protected:
-    class wxTaskBarIconImpl* m_impl;    
+    class wxTaskBarIconImpl* m_impl;
     friend class wxTaskBarIconImpl;
 };
 #endif

@@ -3,7 +3,7 @@
 // Purpose:     wxOS2-specific wxTextEntry implementation
 // Author:      Stefan Neis
 // Created:     2007-11-18
-// RCS-ID:      $Id: textentry.h 60399 2009-04-26 19:41:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Stefan Neis
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Modified by: Bo Yang
 // Created:     08.01.06
-// RCS-ID:      $Id: dataview.h 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,9 +27,17 @@
 
 class WXDLLIMPEXP_FWD_CORE wxImageList;
 
-#if !(defined(__WXGTK20__) || defined(__WXOSX_CARBON__)) || defined(__WXUNIVERSAL__)
-// #if !(defined(__WXMAC__)) || defined(__WXUNIVERSAL__)
+#if !(defined(__WXGTK20__) || defined(__WXOSX__)) || defined(__WXUNIVERSAL__)
+// #if !(defined(__WXOSX__)) || defined(__WXUNIVERSAL__)
     #define wxHAS_GENERIC_DATAVIEWCTRL
+#endif
+
+#ifdef wxHAS_GENERIC_DATAVIEWCTRL
+    // this symbol doesn't follow the convention for wxUSE_XXX symbols which
+    // are normally always defined as either 0 or 1, so its use is deprecated
+    // and it only exists for backwards compatibility, don't use it any more
+    // and use wxHAS_GENERIC_DATAVIEWCTRL instead
+    #define wxUSE_GENERICDATAVIEWCTRL
 #endif
 
 // ----------------------------------------------------------------------------
@@ -85,7 +93,17 @@ private:
     void* m_id;
 };
 
-bool operator == (const wxDataViewItem &left, const wxDataViewItem &right);
+inline
+bool operator==(const wxDataViewItem& left, const wxDataViewItem& right)
+{
+    return left.GetID() == right.GetID();
+}
+
+inline
+bool operator!=(const wxDataViewItem& left, const wxDataViewItem& right)
+{
+    return !(left == right);
+}
 
 WX_DEFINE_ARRAY(wxDataViewItem, wxDataViewItemArray);
 
@@ -144,8 +162,11 @@ public:
     bool HasColour() const { return m_colour.Ok(); }
     const wxColour& GetColour() const { return m_colour; }
 
+    bool HasFont() const { return m_bold || m_italic; }
     bool GetBold() const { return m_bold; }
     bool GetItalic() const { return m_italic; }
+
+    bool IsDefault() const { return !(HasColour() || HasFont()); }
 
 private:
     wxColour m_colour;
@@ -161,7 +182,7 @@ private:
 WX_DECLARE_LIST_WITH_DECL(wxDataViewModelNotifier, wxDataViewModelNotifiers,
                           class WXDLLIMPEXP_ADV);
 
-class WXDLLIMPEXP_ADV wxDataViewModel: public wxObjectRefData
+class WXDLLIMPEXP_ADV wxDataViewModel: public wxRefCounter
 {
 public:
     wxDataViewModel();
@@ -175,13 +196,36 @@ public:
     virtual void GetValue( wxVariant &variant,
                            const wxDataViewItem &item, unsigned int col ) const = 0;
 
-    // set value, call ValueChanged() afterwards!
-    virtual bool SetValue( const wxVariant &variant,
-                           const wxDataViewItem &item, unsigned int col ) = 0;
+    // return true if the given item has a value to display in the given
+    // column: this is always true except for container items which by default
+    // only show their label in the first column (but see HasContainerColumns())
+    bool HasValue(const wxDataViewItem& item, unsigned col) const
+    {
+        return col == 0 || !IsContainer(item) || HasContainerColumns(item);
+    }
+
+    // usually ValueChanged() should be called after changing the value in the
+    // model to update the control, ChangeValue() does it on its own while
+    // SetValue() does not -- so while you will override SetValue(), you should
+    // be usually calling ChangeValue()
+    virtual bool SetValue(const wxVariant &variant,
+                          const wxDataViewItem &item,
+                          unsigned int col) = 0;
+
+    bool ChangeValue(const wxVariant& variant,
+                     const wxDataViewItem& item,
+                     unsigned int col)
+    {
+        return SetValue(variant, item, col) && ValueChanged(item, col);
+    }
 
     // Get text attribute, return false of default attributes should be used
-    virtual bool GetAttr( const wxDataViewItem &WXUNUSED(item), unsigned int WXUNUSED(col), wxDataViewItemAttr &WXUNUSED(attr) )
-        { return false; }
+    virtual bool GetAttr(const wxDataViewItem &WXUNUSED(item),
+                         unsigned int WXUNUSED(col),
+                         wxDataViewItemAttr &WXUNUSED(attr)) const
+    {
+        return false;
+    }
 
     // define hierachy
     virtual wxDataViewItem GetParent( const wxDataViewItem &item ) const = 0;
@@ -222,24 +266,78 @@ protected:
     wxDataViewModelNotifiers  m_notifiers;
 };
 
+// ----------------------------------------------------------------------------
+// wxDataViewListModel: a model of a list, i.e. flat data structure without any
+//      branches/containers, used as base class by wxDataViewIndexListModel and
+//      wxDataViewVirtualListModel
+// ----------------------------------------------------------------------------
+
+class WXDLLIMPEXP_ADV wxDataViewListModel : public wxDataViewModel
+{
+public:
+    // derived classes should override these methods instead of
+    // {Get,Set}Value() and GetAttr() inherited from the base class
+
+    virtual void GetValueByRow(wxVariant &variant,
+                               unsigned row, unsigned col) const = 0;
+
+    virtual bool SetValueByRow(const wxVariant &variant,
+                               unsigned row, unsigned col) = 0;
+
+    virtual bool
+    GetAttrByRow(unsigned WXUNUSED(row), unsigned WXUNUSED(col),
+                 wxDataViewItemAttr &WXUNUSED(attr)) const
+    {
+        return false;
+    }
+
+
+    // helper methods provided by list models only
+    virtual unsigned GetRow( const wxDataViewItem &item ) const = 0;
+
+
+    // implement some base class pure virtual directly
+    virtual wxDataViewItem
+    GetParent( const wxDataViewItem & WXUNUSED(item) ) const
+    {
+        // items never have valid parent in this model
+        return wxDataViewItem();
+    }
+
+    virtual bool IsContainer( const wxDataViewItem &item ) const
+    {
+        // only the invisible (and invalid) root item has children
+        return !item.IsOk();
+    }
+
+    // and implement some others by forwarding them to our own ones
+    virtual void GetValue( wxVariant &variant,
+                           const wxDataViewItem &item, unsigned int col ) const
+    {
+        GetValueByRow(variant, GetRow(item), col);
+    }
+
+    virtual bool SetValue( const wxVariant &variant,
+                           const wxDataViewItem &item, unsigned int col )
+    {
+        return SetValueByRow( variant, GetRow(item), col );
+    }
+
+    virtual bool GetAttr(const wxDataViewItem &item, unsigned int col,
+                         wxDataViewItemAttr &attr) const
+    {
+        return GetAttrByRow( GetRow(item), col, attr );
+    }
+};
+
 // ---------------------------------------------------------
 // wxDataViewIndexListModel
 // ---------------------------------------------------------
 
-class WXDLLIMPEXP_ADV wxDataViewIndexListModel: public wxDataViewModel
+class WXDLLIMPEXP_ADV wxDataViewIndexListModel: public wxDataViewListModel
 {
 public:
     wxDataViewIndexListModel( unsigned int initial_size = 0 );
-    ~wxDataViewIndexListModel();
-
-    virtual void GetValueByRow( wxVariant &variant,
-                           unsigned int row, unsigned int col ) const = 0;
-
-    virtual bool SetValueByRow( const wxVariant &variant,
-                           unsigned int row, unsigned int col ) = 0;
-
-    virtual bool GetAttrByRow( unsigned int WXUNUSED(row), unsigned int WXUNUSED(col), wxDataViewItemAttr &WXUNUSED(attr) )
-        { return false; }
 
     void RowPrepended();
     void RowInserted( unsigned int before );
@@ -252,7 +350,7 @@ public:
 
     // convert to/from row/wxDataViewItem
 
-    unsigned int GetRow( const wxDataViewItem &item ) const;
+    virtual unsigned GetRow( const wxDataViewItem &item ) const;
     wxDataViewItem GetItem( unsigned int row ) const;
 
     // compare based on index
@@ -262,23 +360,13 @@ public:
     virtual bool HasDefaultCompare() const;
 
     // implement base methods
-
-    virtual void GetValue( wxVariant &variant,
-                           const wxDataViewItem &item, unsigned int col ) const;
-    virtual bool SetValue( const wxVariant &variant,
-                           const wxDataViewItem &item, unsigned int col );
-    virtual bool GetAttr( const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr );
-    virtual wxDataViewItem GetParent( const wxDataViewItem &item ) const;
-    virtual bool IsContainer( const wxDataViewItem &item ) const;
     virtual unsigned int GetChildren( const wxDataViewItem &item, wxDataViewItemArray &children ) const;
 
-    // internal
-    virtual bool IsVirtualListModel() const { return false; }
-    unsigned int GetLastIndex() const { return m_lastIndex; }
+    unsigned int GetCount() const { return m_hash.GetCount(); }
 
 private:
     wxDataViewItemArray m_hash;
-    unsigned int m_lastIndex;
+    unsigned int m_nextFreeID;
     bool m_ordered;
 };
 
@@ -291,20 +379,10 @@ private:
 typedef wxDataViewIndexListModel wxDataViewVirtualListModel;
 #else
 
-class WXDLLIMPEXP_ADV wxDataViewVirtualListModel: public wxDataViewModel
+class WXDLLIMPEXP_ADV wxDataViewVirtualListModel: public wxDataViewListModel
 {
 public:
     wxDataViewVirtualListModel( unsigned int initial_size = 0 );
-    ~wxDataViewVirtualListModel();
-
-    virtual void GetValueByRow( wxVariant &variant,
-                           unsigned int row, unsigned int col ) const = 0;
-
-    virtual bool SetValueByRow( const wxVariant &variant,
-                           unsigned int row, unsigned int col ) = 0;
-
-    virtual bool GetAttrByRow( unsigned int WXUNUSED(row), unsigned int WXUNUSED(col), wxDataViewItemAttr &WXUNUSED(attr) )
-        { return false; }
 
     void RowPrepended();
     void RowInserted( unsigned int before );
@@ -317,7 +395,7 @@ public:
 
     // convert to/from row/wxDataViewItem
 
-    unsigned int GetRow( const wxDataViewItem &item ) const;
+    virtual unsigned GetRow( const wxDataViewItem &item ) const;
     wxDataViewItem GetItem( unsigned int row ) const;
 
     // compare based on index
@@ -327,164 +405,24 @@ public:
     virtual bool HasDefaultCompare() const;
 
     // implement base methods
-
-    virtual void GetValue( wxVariant &variant,
-                           const wxDataViewItem &item, unsigned int col ) const;
-    virtual bool SetValue( const wxVariant &variant,
-                           const wxDataViewItem &item, unsigned int col );
-    virtual bool GetAttr( const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr );
-    virtual wxDataViewItem GetParent( const wxDataViewItem &item ) const;
-    virtual bool IsContainer( const wxDataViewItem &item ) const;
     virtual unsigned int GetChildren( const wxDataViewItem &item, wxDataViewItemArray &children ) const;
+
+    unsigned int GetCount() const { return m_size; }
 
     // internal
     virtual bool IsVirtualListModel() const { return true; }
-    unsigned int GetLastIndex() const { return m_lastIndex; }
 
 private:
-    wxDataViewItemArray m_hash;
-    unsigned int m_lastIndex;
+    unsigned int m_size;
     bool m_ordered;
 };
 #endif
 
-//-----------------------------------------------------------------------------
-// wxDataViewEditorCtrlEvtHandler
-//-----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// wxDataViewRenderer and related classes
+// ----------------------------------------------------------------------------
 
-class wxDataViewEditorCtrlEvtHandler: public wxEvtHandler
-{
-public:
-    wxDataViewEditorCtrlEvtHandler( wxControl *editor, wxDataViewRenderer *owner );
-
-    void AcceptChangesAndFinish();
-    void SetFocusOnIdle( bool focus = true ) { m_focusOnIdle = focus; }
-
-protected:
-    void OnChar( wxKeyEvent &event );
-    void OnTextEnter( wxCommandEvent &event );
-    void OnKillFocus( wxFocusEvent &event );
-    void OnIdle( wxIdleEvent &event );
-
-private:
-    wxDataViewRenderer     *m_owner;
-    wxControl              *m_editorCtrl;
-    bool                    m_finished;
-    bool                    m_focusOnIdle;
-
-private:
-    DECLARE_EVENT_TABLE()
-};
-
-// ---------------------------------------------------------
-// wxDataViewRendererBase
-// ---------------------------------------------------------
-
-enum wxDataViewCellMode
-{
-    wxDATAVIEW_CELL_INERT,
-    wxDATAVIEW_CELL_ACTIVATABLE,
-    wxDATAVIEW_CELL_EDITABLE
-};
-
-enum wxDataViewCellRenderState
-{
-    wxDATAVIEW_CELL_SELECTED    = 1,
-    wxDATAVIEW_CELL_PRELIT      = 2,
-    wxDATAVIEW_CELL_INSENSITIVE = 4,
-    wxDATAVIEW_CELL_FOCUSED     = 8
-};
-
-class WXDLLIMPEXP_ADV wxDataViewRendererBase: public wxObject
-{
-public:
-    wxDataViewRendererBase( const wxString &varianttype,
-                            wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT,
-                            int alignment = wxDVR_DEFAULT_ALIGNMENT );
-    ~wxDataViewRendererBase();
-
-    virtual bool Validate( wxVariant& WXUNUSED(value) )
-        { return true; }
-
-    void SetOwner( wxDataViewColumn *owner )    { m_owner = owner; }
-    wxDataViewColumn* GetOwner() const          { return m_owner; }
-
-    // renderer properties:
-
-    virtual bool SetValue( const wxVariant& WXUNUSED(value) ) = 0;
-    virtual bool GetValue( wxVariant& WXUNUSED(value) ) const = 0;
-
-    wxString GetVariantType() const             { return m_variantType; }
-
-    virtual void SetMode( wxDataViewCellMode mode ) = 0;
-    virtual wxDataViewCellMode GetMode() const = 0;
-
-    // NOTE: Set/GetAlignment do not take/return a wxAlignment enum but
-    //       rather an "int"; that's because for rendering cells it's allowed
-    //       to combine alignment flags (e.g. wxALIGN_LEFT|wxALIGN_BOTTOM)
-    virtual void SetAlignment( int align ) = 0;
-    virtual int GetAlignment() const = 0;
-
-    // in-place editing
-    virtual bool HasEditorCtrl() const
-        { return false; }
-    virtual wxControl* CreateEditorCtrl(wxWindow * WXUNUSED(parent),
-                                        wxRect WXUNUSED(labelRect),
-                                        const wxVariant& WXUNUSED(value))
-        { return NULL; }
-    virtual bool GetValueFromEditorCtrl(wxControl * WXUNUSED(editor),
-                                        wxVariant& WXUNUSED(value))
-        { return false; }
-
-    virtual bool StartEditing( const wxDataViewItem &item, wxRect labelRect );
-    virtual void CancelEditing();
-    virtual bool FinishEditing();
-
-    wxControl *GetEditorCtrl() { return m_editorCtrl; }
-
-protected:
-    wxString                m_variantType;
-    wxDataViewColumn       *m_owner;
-    wxWeakRef<wxControl>    m_editorCtrl;
-    wxDataViewItem          m_item; // for m_editorCtrl
-
-    // internal utility:
-    const wxDataViewCtrl* GetView() const;
-
-protected:
-    DECLARE_DYNAMIC_CLASS_NO_COPY(wxDataViewRendererBase)
-};
-
-//-----------------------------------------------------------------------------
-// wxDataViewIconText
-//-----------------------------------------------------------------------------
-
-class WXDLLIMPEXP_ADV wxDataViewIconText: public wxObject
-{
-public:
-    wxDataViewIconText( const wxString &text = wxEmptyString, const wxIcon& icon = wxNullIcon )
-        : m_text(text), m_icon(icon)
-    { }
-    wxDataViewIconText( const wxDataViewIconText &other )
-        : wxObject()
-    { m_icon = other.m_icon; m_text = other.m_text; }
-
-    void SetText( const wxString &text ) { m_text = text; }
-    wxString GetText() const             { return m_text; }
-    void SetIcon( const wxIcon &icon )   { m_icon = icon; }
-    const wxIcon &GetIcon() const        { return m_icon; }
-
-private:
-    wxString    m_text;
-    wxIcon      m_icon;
-
-private:
-    DECLARE_DYNAMIC_CLASS(wxDataViewIconText)
-};
-
-bool operator == (const wxDataViewIconText &one, const wxDataViewIconText &two);
-
-DECLARE_VARIANT_OBJECT_EXPORTED(wxDataViewIconText, WXDLLIMPEXP_ADV)
+#include "wx/dvrenderers.h"
 
 // ---------------------------------------------------------
 // wxDataViewColumnBase
@@ -525,8 +463,7 @@ public:
         { m_owner = owner; }
 
     // getters:
-    unsigned int GetModelColumn() const 
-        { return static_cast<unsigned int>(m_model_column); }
+    unsigned int GetModelColumn() const { return static_cast<unsigned int>(m_model_column); }
     wxDataViewCtrl *GetOwner() const        { return m_owner; }
     wxDataViewRenderer* GetRenderer() const { return m_renderer; }
 
@@ -729,6 +666,20 @@ public:
         { return false; }
 #endif // wxUSE_DRAG_AND_DROP
 
+    // define control visual attributes
+    // --------------------------------
+
+    virtual wxVisualAttributes GetDefaultAttributes() const
+    {
+        return GetClassDefaultAttributes(GetWindowVariant());
+    }
+
+    static wxVisualAttributes
+    GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL)
+    {
+        return wxControl::GetCompositeControlsDefaultAttributes(variant);
+    }
+
 protected:
     virtual void DoSetExpanderColumn() = 0 ;
     virtual void DoSetIndent() = 0;
@@ -756,7 +707,9 @@ public:
         m_model(NULL),
         m_value(wxNullVariant),
         m_column(NULL),
-        m_pos(-1,-1)
+        m_pos(-1,-1),
+        m_cacheFrom(0),
+        m_cacheTo(0)
 #if wxUSE_DRAG_AND_DROP
         , m_dataObject(NULL),
         m_dataBuffer(NULL),
@@ -771,7 +724,9 @@ public:
         m_model(event.m_model),
         m_value(event.m_value),
         m_column(event.m_column),
-        m_pos(m_pos)
+        m_pos(m_pos),
+        m_cacheFrom(event.m_cacheFrom),
+        m_cacheTo(event.m_cacheTo)
 #if wxUSE_DRAG_AND_DROP
         , m_dataObject(event.m_dataObject),
         m_dataFormat(event.m_dataFormat),
@@ -800,6 +755,12 @@ public:
     wxPoint GetPosition() const { return m_pos; }
     void SetPosition( int x, int y ) { m_pos.x = x; m_pos.y = y; }
 
+    // For wxEVT_COMMAND_DATAVIEW_CACHE_HINT
+    int GetCacheFrom() const { return m_cacheFrom; }
+    int GetCacheTo() const { return m_cacheTo; }
+    void SetCache(int from, int to) { m_cacheFrom = from; m_cacheTo = to; }
+
+
 #if wxUSE_DRAG_AND_DROP
     // For drag operations
     void SetDataObject( wxDataObject *obj ) { m_dataObject = obj; }
@@ -823,6 +784,8 @@ protected:
     wxVariant           m_value;
     wxDataViewColumn   *m_column;
     wxPoint             m_pos;
+    int                 m_cacheFrom;
+    int                 m_cacheTo;
 
 #if wxUSE_DRAG_AND_DROP
     wxDataObject       *m_dataObject;
@@ -855,6 +818,8 @@ wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_COLUMN_HEADER_
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_COLUMN_SORTED, wxDataViewEvent );
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_COLUMN_REORDERED, wxDataViewEvent );
 
+wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_CACHE_HINT, wxDataViewEvent );
+
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_ITEM_BEGIN_DRAG, wxDataViewEvent );
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_ITEM_DROP_POSSIBLE, wxDataViewEvent );
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_ADV, wxEVT_COMMAND_DATAVIEW_ITEM_DROP, wxDataViewEvent );
@@ -885,18 +850,13 @@ typedef void (wxEvtHandler::*wxDataViewEventFunction)(wxDataViewEvent&);
 #define EVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICKED(id, fn) wx__DECLARE_DATAVIEWEVT(COLUMN_HEADER_RIGHT_CLICK, id, fn)
 #define EVT_DATAVIEW_COLUMN_SORTED(id, fn) wx__DECLARE_DATAVIEWEVT(COLUMN_SORTED, id, fn)
 #define EVT_DATAVIEW_COLUMN_REORDERED(id, fn) wx__DECLARE_DATAVIEWEVT(COLUMN_REORDERED, id, fn)
+#define EVT_DATAVIEW_CACHE_HINT(id, fn) wx__DECLARE_DATAVIEWEVT(CACHE_HINT, id, fn)
 
 #define EVT_DATAVIEW_ITEM_BEGIN_DRAG(id, fn) wx__DECLARE_DATAVIEWEVT(ITEM_BEGIN_DRAG, id, fn)
 #define EVT_DATAVIEW_ITEM_DROP_POSSIBLE(id, fn) wx__DECLARE_DATAVIEWEVT(ITEM_DROP_POSSIBLE, id, fn)
 #define EVT_DATAVIEW_ITEM_DROP(id, fn) wx__DECLARE_DATAVIEWEVT(ITEM_DROP, id, fn)
 
 #ifdef wxHAS_GENERIC_DATAVIEWCTRL
-    // this symbol doesn't follow the convention for wxUSE_XXX symbols which
-    // are normally always defined as either 0 or 1, so its use is deprecated
-    // and it only exists for backwards compatibility, don't use it any more
-    // and use wxHAS_GENERIC_DATAVIEWCTRL instead
-    #define wxUSE_GENERICDATAVIEWCTRL
-
     #include "wx/generic/dataview.h"
 #elif defined(__WXGTK20__)
     #include "wx/gtk/dataview.h"
@@ -904,56 +864,6 @@ typedef void (wxEvtHandler::*wxDataViewEventFunction)(wxDataViewEvent&);
     #include "wx/osx/dataview.h"
 #else
     #error "unknown native wxDataViewCtrl implementation"
-#endif
-
-// -------------------------------------
-// wxDataViewSpinRenderer
-// -------------------------------------
-
-class WXDLLIMPEXP_ADV wxDataViewSpinRenderer: public wxDataViewCustomRenderer
-{
-public:
-    wxDataViewSpinRenderer( int min, int max,
-                            wxDataViewCellMode mode = wxDATAVIEW_CELL_EDITABLE,
-                            int alignment = wxDVR_DEFAULT_ALIGNMENT );
-    virtual bool HasEditorCtrl() const { return true; }
-    virtual wxControl* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value );
-    virtual bool GetValueFromEditorCtrl( wxControl* editor, wxVariant &value );
-    virtual bool Render( wxRect rect, wxDC *dc, int state );
-    virtual wxSize GetSize() const;
-    virtual bool SetValue( const wxVariant &value );
-    virtual bool GetValue( wxVariant &value ) const;
-
-private:
-    long    m_data;
-    long    m_min,m_max;
-};
-
-#if defined(wxHAS_GENERIC_DATAVIEWCTRL) || defined(__WXMAC__)
-
-// -------------------------------------
-// wxDataViewChoiceRenderer
-// -------------------------------------
-
-class WXDLLIMPEXP_ADV wxDataViewChoiceRenderer: public wxDataViewCustomRenderer
-{
-public:
-    wxDataViewChoiceRenderer( const wxArrayString &choices,
-                            wxDataViewCellMode mode = wxDATAVIEW_CELL_EDITABLE,
-                            int alignment = wxDVR_DEFAULT_ALIGNMENT );
-    virtual bool HasEditorCtrl() const { return true; }
-    virtual wxControl* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value );
-    virtual bool GetValueFromEditorCtrl( wxControl* editor, wxVariant &value );
-    virtual bool Render( wxRect rect, wxDC *dc, int state );
-    virtual wxSize GetSize() const;
-    virtual bool SetValue( const wxVariant &value );
-    virtual bool GetValue( wxVariant &value ) const;
-
-private:
-    wxArrayString m_choices;
-    wxString      m_data;
-};
-
 #endif
 
 //-----------------------------------------------------------------------------
@@ -1200,7 +1110,7 @@ public:
 
     wxDataViewItem GetNthChild( const wxDataViewItem& parent, unsigned int pos ) const;
     int GetChildCount( const wxDataViewItem& parent ) const;
-
+    
     void SetItemText( const wxDataViewItem& item, const wxString &text );
     wxString GetItemText( const wxDataViewItem& item ) const;
     void SetItemIcon( const wxDataViewItem& item, const wxIcon &icon );
@@ -1247,22 +1157,35 @@ public:
 class WXDLLIMPEXP_ADV wxDataViewTreeCtrl: public wxDataViewCtrl
 {
 public:
-    wxDataViewTreeCtrl();
-    wxDataViewTreeCtrl( wxWindow *parent, wxWindowID id,
-           const wxPoint& pos = wxDefaultPosition,
-           const wxSize& size = wxDefaultSize, long style = wxDV_NO_HEADER | wxDV_ROW_LINES,
-           const wxValidator& validator = wxDefaultValidator );
-    ~wxDataViewTreeCtrl();
+    wxDataViewTreeCtrl() { Init(); }
+    wxDataViewTreeCtrl(wxWindow *parent,
+                       wxWindowID id,
+                       const wxPoint& pos = wxDefaultPosition,
+                       const wxSize& size = wxDefaultSize,
+                       long style = wxDV_NO_HEADER | wxDV_ROW_LINES,
+                       const wxValidator& validator = wxDefaultValidator)
+    {
+        Init();
 
-    bool Create( wxWindow *parent, wxWindowID id,
-           const wxPoint& pos = wxDefaultPosition,
-           const wxSize& size = wxDefaultSize, long style = wxDV_NO_HEADER | wxDV_ROW_LINES,
-           const wxValidator& validator = wxDefaultValidator );
+        Create(parent, id, pos, size, style, validator);
+    }
+
+    virtual ~wxDataViewTreeCtrl();
+
+    bool Create(wxWindow *parent,
+                wxWindowID id,
+                const wxPoint& pos = wxDefaultPosition,
+                const wxSize& size = wxDefaultSize,
+                long style = wxDV_NO_HEADER | wxDV_ROW_LINES,
+                const wxValidator& validator = wxDefaultValidator);
 
     wxDataViewTreeStore *GetStore()
         { return (wxDataViewTreeStore*) GetModel(); }
     const wxDataViewTreeStore *GetStore() const
         { return (const wxDataViewTreeStore*) GetModel(); }
+
+    bool IsContainer( const wxDataViewItem& item ) const
+        { return GetStore()->IsContainer(item); }
 
     void SetImageList( wxImageList *imagelist );
     wxImageList* GetImageList() { return m_imageList; }
@@ -1312,7 +1235,12 @@ public:
     void OnSize( wxSizeEvent &event );
 
 private:
-    wxImageList  *m_imageList;
+    void Init()
+    {
+        m_imageList = NULL;
+    }
+
+    wxImageList *m_imageList;
 
 private:
     DECLARE_EVENT_TABLE()

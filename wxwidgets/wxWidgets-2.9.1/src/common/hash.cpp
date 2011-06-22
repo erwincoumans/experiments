@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: VZ at 25.02.00: type safe hashes with WX_DECLARE_HASH()
 // Created:     01/02/97
-// RCS-ID:      $Id: hash.cpp 45750 2007-05-02 07:41:27Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -135,9 +135,7 @@ void wxHashTableBase::Destroy()
 {
     Clear();
 
-    delete[] m_table;
-
-    m_table = NULL;
+    wxDELETEA(m_table);
     m_size = 0;
 }
 

@@ -4,7 +4,7 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2007-07-06
-// RCS-ID:      $Id: strconv_cf.cpp 60176 2009-04-15 20:17:40Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,6 +33,7 @@
  * assume ABI compatibility even within a given wxWidgets release.
  */
 
+#if wxUSE_FONTMAP
 WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf( const char* name)
 {
     wxMBConv_cf *result = new wxMBConv_cf(name);
@@ -44,6 +45,7 @@ WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf( const char* name)
     else
         return result;
 }
+#endif // wxUSE_FONTMAP
 
 WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf(wxFontEncoding encoding)
 {
@@ -130,11 +132,11 @@ WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf(wxFontEncoding encoding)
         else
         {
             // NOTE: Includes NULL iff source did
-            /* NOTE: This is an approximation.  The eventual UTF-32 will    
+            /* NOTE: This is an approximation.  The eventual UTF-32 will
              * possibly have less elements but certainly not more.
              */
             size_t returnSize = CFStringGetLength(theString);
-    
+
             if (dstSize == 0 || dst == NULL)
             {
                 return returnSize;
@@ -144,13 +146,13 @@ WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf(wxFontEncoding encoding)
             // for an undersized UTF-32 destination buffer.
             CFRange fullStringRange = CFRangeMake(0, CFStringGetLength(theString));
             UniChar *szUniCharBuffer = new UniChar[fullStringRange.length];
-    
+
             CFStringGetCharacters(theString, fullStringRange, szUniCharBuffer);
-    
+
             wxMBConvUTF16 converter;
             returnSize = converter.ToWChar( dst, dstSize, (const char*)szUniCharBuffer, fullStringRange.length );
             delete [] szUniCharBuffer;
-    
+
             return returnSize;
         }
         // NOTREACHED
@@ -205,18 +207,20 @@ WXDLLIMPEXP_BASE wxMBConv* new_wxMBConv_cf(wxFontEncoding encoding)
         CFIndex usedBufLen;
 
         CFIndex charsConverted = CFStringGetBytes(
-                theString, 
+                theString,
                 CFRangeMake(0, CFStringGetLength(theString)),
                 m_encoding,
                 0, // FAIL on unconvertible characters
                 false, // not an external representation
-                // if dstSize is 0 then pass NULL to get required length in usedBufLen
-                (dstSize != 0)?(UInt8*)dst:NULL,
+                (UInt8*)dst,
                 dstSize,
                 &usedBufLen
             );
 
-        if(charsConverted < CFStringGetLength(theString) )
+        // when dst is non-NULL, we check usedBufLen against dstSize as
+        // CFStringGetBytes sometimes treats dst as being NULL when dstSize==0
+        if( (charsConverted < CFStringGetLength(theString)) ||
+                (dst && (size_t) usedBufLen > dstSize) )
             return wxCONV_FAILED;
 
         return usedBufLen;

@@ -2,7 +2,7 @@
 // Name:        src/gtk/combobox.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: combobox.cpp 60241 2009-04-19 07:20:34Z SC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -222,11 +222,26 @@ void wxComboBox::OnChar( wxKeyEvent &event )
     event.Skip();
 }
 
-void wxComboBox::DisableEvents()
+void wxComboBox::EnableTextChangedEvents(bool enable)
 {
-    if ( GetEntry() )
+    if ( !GetEntry() )
+        return;
+
+    if ( enable )
+    {
+        g_signal_handlers_unblock_by_func(GTK_BIN(m_widget)->child,
+            (gpointer)gtkcombobox_text_changed_callback, this);
+    }
+    else // disable
+    {
         g_signal_handlers_block_by_func(GTK_BIN(m_widget)->child,
             (gpointer)gtkcombobox_text_changed_callback, this);
+    }
+}
+
+void wxComboBox::GTKDisableEvents()
+{
+    EnableTextChangedEvents(false);
 
     g_signal_handlers_block_by_func(m_widget,
         (gpointer)gtkcombobox_changed_callback, this);
@@ -234,11 +249,9 @@ void wxComboBox::DisableEvents()
         (gpointer)gtkcombobox_popupshown_callback, this);
 }
 
-void wxComboBox::EnableEvents()
+void wxComboBox::GTKEnableEvents()
 {
-    if ( GetEntry() )
-        g_signal_handlers_unblock_by_func(GTK_BIN(m_widget)->child,
-            (gpointer)gtkcombobox_text_changed_callback, this);
+    EnableTextChangedEvents(true);
 
     g_signal_handlers_unblock_by_func(m_widget,
         (gpointer)gtkcombobox_changed_callback, this);
@@ -251,10 +264,8 @@ GtkWidget* wxComboBox::GetConnectWidget()
     return GTK_WIDGET( GetEntry() );
 }
 
-GdkWindow *wxComboBox::GTKGetWindow(wxArrayGdkWindows& windows) const
+GdkWindow* wxComboBox::GTKGetWindow(wxArrayGdkWindows& /* windows */) const
 {
-    wxUnusedVar(windows);
-
     return GetEntry()->text_area;
 }
 
@@ -339,4 +350,13 @@ void wxComboBox::OnUpdateSelectAll(wxUpdateUIEvent& event)
     event.Enable(!wxTextEntry::IsEmpty());
 }
 
+void wxComboBox::Popup()
+{
+     gtk_combo_box_popup( GTK_COMBO_BOX(m_widget) );
+}
+
+void wxComboBox::Dismiss()
+{
+    gtk_combo_box_popdown( GTK_COMBO_BOX(m_widget) );
+}
 #endif // wxUSE_COMBOBOX

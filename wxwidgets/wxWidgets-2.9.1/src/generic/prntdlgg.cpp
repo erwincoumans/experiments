@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: prntdlgg.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ END_EVENT_TABLE()
 
 wxGenericPrintDialog::wxGenericPrintDialog(wxWindow *parent,
                                            wxPrintDialogData* data)
-                    : wxPrintDialogBase(GetParentForModalDialog(parent), 
+                    : wxPrintDialogBase(GetParentForModalDialog(parent, 0),
                                wxID_ANY, _("Print"),
                                wxPoint(0,0), wxSize(600, 600),
                                wxDEFAULT_DIALOG_STYLE |
@@ -159,7 +159,7 @@ wxGenericPrintDialog::wxGenericPrintDialog(wxWindow *parent,
 
 wxGenericPrintDialog::wxGenericPrintDialog(wxWindow *parent,
                                            wxPrintData* data)
-                    : wxPrintDialogBase(GetParentForModalDialog(parent), 
+                    : wxPrintDialogBase(GetParentForModalDialog(parent, 0),
                                 wxID_ANY, _("Print"),
                                wxPoint(0,0), wxSize(600, 600),
                                wxDEFAULT_DIALOG_STYLE |
@@ -229,8 +229,7 @@ void wxGenericPrintDialog::Init(wxWindow * WXUNUSED(parent))
     {
         m_rangeRadioBox = new wxRadioBox(this, wxPRINTID_RANGE, _("Print Range"),
                                          wxDefaultPosition, wxDefaultSize,
-                                         2, choices,
-                                         1, wxRA_VERTICAL);
+                                         2, choices);
         m_rangeRadioBox->SetSelection(1);
 
         mainsizer->Add( m_rangeRadioBox, 0, wxLEFT|wxTOP|wxRIGHT, 10 );
@@ -357,9 +356,9 @@ bool wxGenericPrintDialog::TransferDataToWindow()
              m_fromText->Enable(true);
              m_toText->Enable(true);
              if (m_printDialogData.GetFromPage() > 0)
-                m_fromText->SetValue(wxString::Format(_T("%d"), m_printDialogData.GetFromPage()));
+                m_fromText->SetValue(wxString::Format(wxT("%d"), m_printDialogData.GetFromPage()));
              if (m_printDialogData.GetToPage() > 0)
-                m_toText->SetValue(wxString::Format(_T("%d"), m_printDialogData.GetToPage()));
+                m_toText->SetValue(wxString::Format(wxT("%d"), m_printDialogData.GetToPage()));
              if(m_rangeRadioBox)
              {
                 if (m_printDialogData.GetAllPages() || m_printDialogData.GetFromPage() == 0)
@@ -381,7 +380,7 @@ bool wxGenericPrintDialog::TransferDataToWindow()
        }
     }
     m_noCopiesText->SetValue(
-        wxString::Format(_T("%d"), m_printDialogData.GetNoCopies()));
+        wxString::Format(wxT("%d"), m_printDialogData.GetNoCopies()));
 
     m_printToFileCheckBox->SetValue(m_printDialogData.GetPrintToFile());
     m_printToFileCheckBox->Enable(m_printDialogData.GetEnablePrintToFile());
@@ -459,13 +458,13 @@ wxDialog(parent, wxID_ANY, _("Print Setup"), wxPoint(0,0), wxSize(600, 600), wxD
 }
 
 /* XPM */
-static const char * check_xpm[] = {
+static const char* const check_xpm[] = {
 /* width height ncolors chars_per_pixel */
 "16 16 3 1",
 /* colors */
-" 	s None	c None",
-"X	c #000000",
-".	c #808080",
+"  s None c None",
+"X c #000000",
+". c #808080",
 /* pixels */
 "                ",
 "                ",
@@ -709,7 +708,7 @@ void wxGenericPrintSetupDialog::OnPrinter(wxListEvent& event)
         li.SetMask( wxLIST_MASK_TEXT );
         li.SetId( event.GetIndex() );
         m_printerListCtrl->GetItem( li );
-        m_printerCommandText->SetValue( _T("lpr -P") + li.GetText() );
+        m_printerCommandText->SetValue( wxT("lpr -P") + li.GetText() );
     }
 }
 

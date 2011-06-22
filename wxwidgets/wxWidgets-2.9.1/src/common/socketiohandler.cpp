@@ -3,10 +3,10 @@
 // Purpose:     implementation of wxFDIOHandler for wxSocket
 // Author:      Angel Vidal, Lukasz Michalski
 // Created:     08.24.06
-// RCS-ID:      $Id: socketiohandler.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Angel vidal
 //              (c) 2007 Vadim Zeitlin <vadim@wxwidgets.org>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================

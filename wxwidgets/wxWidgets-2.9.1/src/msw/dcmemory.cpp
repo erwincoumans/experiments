@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcmemory.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,25 +40,25 @@
 
 IMPLEMENT_ABSTRACT_CLASS(wxMemoryDCImpl, wxMSWDCImpl)
 
-wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner ) 
+wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner )
         : wxMSWDCImpl( owner )
 {
-    CreateCompatible(NULL); 
-    Init(); 
+    CreateCompatible(NULL);
+    Init();
 }
 
-wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxBitmap& bitmap ) 
-        : wxMSWDCImpl( owner ) 
-{ 
-    CreateCompatible(NULL); 
-    Init(); 
+wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxBitmap& bitmap )
+        : wxMSWDCImpl( owner )
+{
+    CreateCompatible(NULL);
+    Init();
     DoSelect(bitmap);
 }
 
 wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxDC *dc )
-        : wxMSWDCImpl( owner ) 
+        : wxMSWDCImpl( owner )
 {
-    wxCHECK_RET( dc, _T("NULL dc in wxMemoryDC ctor") );
+    wxCHECK_RET( dc, wxT("NULL dc in wxMemoryDC ctor") );
 
     CreateCompatible(dc);
 

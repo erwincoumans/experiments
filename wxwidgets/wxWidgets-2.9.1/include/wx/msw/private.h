@@ -6,7 +6,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: private.h 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -61,6 +61,13 @@ extern WXDLLIMPEXP_DATA_CORE(HFONT) wxSTATUS_LINE_FONT;
 // ---------------------------------------------------------------------------
 
 extern WXDLLIMPEXP_DATA_BASE(HINSTANCE) wxhInstance;
+
+extern "C"
+{
+    WXDLLIMPEXP_BASE HINSTANCE wxGetInstance();
+}
+
+WXDLLIMPEXP_BASE void wxSetInstance(HINSTANCE hInst);
 
 // ---------------------------------------------------------------------------
 // define things missing from some compilers' headers
@@ -289,7 +296,9 @@ inline void wxCopyRectToRECT(const wxRect& rect, RECT& rc)
 // translations between HIMETRIC units (which OLE likes) and pixels (which are
 // liked by all the others) - implemented in msw/utilsexc.cpp
 extern void HIMETRICToPixel(LONG *x, LONG *y);
+extern void HIMETRICToPixel(LONG *x, LONG *y, HDC hdcRef);
 extern void PixelToHIMETRIC(LONG *x, LONG *y);
+extern void PixelToHIMETRIC(LONG *x, LONG *y, HDC hdcRef);
 
 // Windows convention of the mask is opposed to the wxWidgets one, so we need
 // to invert the mask each time we pass one/get one to/from Windows
@@ -366,7 +375,9 @@ inline RECT wxGetWindowRect(HWND hwnd)
     RECT rect;
 
     if ( !::GetWindowRect(hwnd, &rect) )
-        wxLogLastError(_T("GetWindowRect"));
+    {
+        wxLogLastError(wxT("GetWindowRect"));
+    }
 
     return rect;
 }
@@ -376,7 +387,9 @@ inline RECT wxGetClientRect(HWND hwnd)
     RECT rect;
 
     if ( !::GetClientRect(hwnd, &rect) )
-        wxLogLastError(_T("GetClientRect"));
+    {
+        wxLogLastError(wxT("GetClientRect"));
+    }
 
     return rect;
 }
@@ -446,7 +459,7 @@ public:
 
     void Init(HDC hdc, HGDIOBJ hgdiobj)
     {
-        wxASSERT_MSG( !m_hdc, _T("initializing twice?") );
+        wxASSERT_MSG( !m_hdc, wxT("initializing twice?") );
 
         m_hdc = hdc;
 
@@ -475,7 +488,7 @@ protected:
 
     void InitGdiobj(HGDIOBJ gdiobj)
     {
-        wxASSERT_MSG( !m_gdiobj, _T("initializing twice?") );
+        wxASSERT_MSG( !m_gdiobj, wxT("initializing twice?") );
 
         m_gdiobj = gdiobj;
     }
@@ -568,7 +581,9 @@ public:
         : m_hdc(hdc)
     {
         if ( !::SelectClipRgn(hdc, hrgn) )
-            wxLogLastError(_T("SelectClipRgn"));
+        {
+            wxLogLastError(wxT("SelectClipRgn"));
+        }
     }
 
     ~HDCClipper()
@@ -597,7 +612,9 @@ private:
         {
             m_modeOld = ::SetMapMode(hdc, mm);
             if ( !m_modeOld )
-                wxLogLastError(_T("SelectClipRgn"));
+            {
+                wxLogLastError(wxT("SelectClipRgn"));
+            }
         }
 
         ~HDCMapModeChanger()
@@ -632,7 +649,9 @@ public:
     {
         m_hGlobal = ::GlobalAlloc(flags, size);
         if ( !m_hGlobal )
-            wxLogLastError(_T("GlobalAlloc"));
+        {
+            wxLogLastError(wxT("GlobalAlloc"));
+        }
     }
 
     GlobalPtr(size_t size, unsigned flags = GMEM_MOVEABLE)
@@ -643,7 +662,9 @@ public:
     ~GlobalPtr()
     {
         if ( m_hGlobal && ::GlobalFree(m_hGlobal) )
-            wxLogLastError(_T("GlobalFree"));
+        {
+            wxLogLastError(wxT("GlobalFree"));
+        }
     }
 
     // implicit conversion
@@ -679,7 +700,9 @@ public:
         //     global scope operator with it (and neither with GlobalUnlock())
         m_ptr = GlobalLock(hGlobal);
         if ( !m_ptr )
-            wxLogLastError(_T("GlobalLock"));
+        {
+            wxLogLastError(wxT("GlobalLock"));
+        }
     }
 
     // initialize the object, HGLOBAL must not be NULL
@@ -696,7 +719,7 @@ public:
             DWORD dwLastError = ::GetLastError();
             if ( dwLastError != NO_ERROR )
             {
-                wxLogApiError(_T("GlobalUnlock"), dwLastError);
+                wxLogApiError(wxT("GlobalUnlock"), dwLastError);
             }
         }
     }
@@ -729,12 +752,12 @@ public:
     {
         // we should only be called if we hadn't been initialized yet
         wxASSERT_MSG( m_registered == -1,
-                        _T("calling ClassRegistrar::Register() twice?") );
+                        wxT("calling ClassRegistrar::Register() twice?") );
 
         m_registered = ::RegisterClass(&wc) ? 1 : 0;
         if ( !IsRegistered() )
         {
-            wxLogLastError(_T("RegisterClassEx()"));
+            wxLogLastError(wxT("RegisterClassEx()"));
         }
         else
         {
@@ -753,9 +776,9 @@ public:
     {
         if ( IsRegistered() )
         {
-            if ( !::UnregisterClass(m_clsname.wx_str(), wxhInstance) )
+            if ( !::UnregisterClass(m_clsname.wx_str(), wxGetInstance()) )
             {
-                wxLogLastError(_T("UnregisterClass"));
+                wxLogLastError(wxT("UnregisterClass"));
             }
         }
     }
@@ -797,7 +820,7 @@ private:
 #define GetHbrushOf(brush)      ((HBRUSH)(brush).GetResourceHandle())
 
 #define GetHmenu()              ((HMENU)GetHMenu())
-#define GetHmenuOf(menu)        ((HMENU)menu->GetHMenu())
+#define GetHmenuOf(menu)        ((HMENU)(menu)->GetHMenu())
 
 #define GetHcursor()            ((HCURSOR)GetHCURSOR())
 #define GetHcursorOf(cursor)    ((HCURSOR)(cursor).GetHCURSOR())
@@ -806,7 +829,7 @@ private:
 #define GetHfontOf(font)        ((HFONT)(font).GetHFONT())
 
 #define GetHimagelist()         ((HIMAGELIST)GetHIMAGELIST())
-#define GetHimagelistOf(imgl)   ((HIMAGELIST)imgl->GetHIMAGELIST())
+#define GetHimagelistOf(imgl)   ((HIMAGELIST)(imgl)->GetHIMAGELIST())
 
 #define GetHpalette()           ((HPALETTE)GetHPALETTE())
 #define GetHpaletteOf(pal)      ((HPALETTE)(pal).GetHPALETTE())
@@ -823,13 +846,6 @@ private:
 // global functions
 // ---------------------------------------------------------------------------
 
-extern "C"
-{
-    WXDLLIMPEXP_BASE HINSTANCE wxGetInstance();
-}
-
-WXDLLIMPEXP_BASE void wxSetInstance(HINSTANCE hInst);
-
 // return the full path of the given module
 inline wxString wxGetFullModuleName(HMODULE hmod)
 {
@@ -841,7 +857,7 @@ inline wxString wxGetFullModuleName(HMODULE hmod)
                 MAX_PATH
             ) )
     {
-        wxLogLastError(_T("GetModuleFileName"));
+        wxLogLastError(wxT("GetModuleFileName"));
     }
 
     return fullname;
@@ -860,9 +876,10 @@ inline wxString wxGetFullModuleName()
 //      0x0400      Windows 95, NT4
 //      0x0410      Windows 98
 //      0x0500      Windows ME, 2000
-//      0x0501      Windows XP
-//      0x0502      Windows 2003
-//      0x0600      Longhorn
+//      0x0501      Windows XP, 2003
+//      0x0502      Windows XP SP2, 2003 SP1
+//      0x0600      Windows Vista, 2008
+//      0x0601      Windows 7
 //
 // for the other Windows versions 0 is currently returned
 enum wxWinVersion
@@ -882,11 +899,15 @@ enum wxWinVersion
     wxWinVersion_NT5 = wxWinVersion_5,
     wxWinVersion_2000 = wxWinVersion_5,
     wxWinVersion_XP = 0x0501,
-    wxWinVersion_2003 = 0x0502,
+    wxWinVersion_2003 = 0x0501,
+    wxWinVersion_XP_SP2 = 0x0502,
+    wxWinVersion_2003_SP1 = 0x0502,
 
     wxWinVersion_6 = 0x0600,
     wxWinVersion_Vista = wxWinVersion_6,
-    wxWinVersion_NT6 = wxWinVersion_6
+    wxWinVersion_NT6 = wxWinVersion_6,
+
+    wxWinVersion_7 = 0x601
 };
 
 WXDLLIMPEXP_BASE wxWinVersion wxGetWinVersion();
@@ -951,12 +972,6 @@ inline long wxSetWindowExStyle(const wxWindowMSW *win, long style)
 // this function simply checks whether the given hwnd corresponds to a wxWindow
 // and returns either that window if it does or NULL otherwise
 extern WXDLLIMPEXP_CORE wxWindow* wxFindWinFromHandle(HWND hwnd);
-
-// without STRICT WXHWND is the same as HWND anyhow
-inline wxWindow* wxFindWinFromHandle(WXHWND hWnd)
-{
-    return wxFindWinFromHandle(static_cast<HWND>(hWnd));
-}
 
 // find the window for HWND which is part of some wxWindow, i.e. unlike
 // wxFindWinFromHandle() above it will also work for "sub controls" of a

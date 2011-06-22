@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: spinctrl.cpp 50329 2007-11-29 17:00:58Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -126,8 +126,11 @@ bool wxSpinCtrl::Create( wxWindow*       pParent,
         m_windowId = NewControlId();
     else
         m_windowId = vId;
-    m_backgroundColour = pParent->GetBackgroundColour();
-    m_foregroundColour = pParent->GetForegroundColour();
+    if (pParent)
+    {
+        m_backgroundColour = pParent->GetBackgroundColour();
+        m_foregroundColour = pParent->GetForegroundColour();
+    }
     SetName(rsName);
     SetParent(pParent);
     m_windowStyle      = lStyle;
@@ -296,7 +299,7 @@ wxSpinCtrl* wxSpinCtrl::GetSpinForTextCtrl(
 
     // sanity check
     wxASSERT_MSG( pSpin->m_hWndBuddy == hWndBuddy,
-                  _T("wxSpinCtrl has incorrect buddy HWND!") );
+                  wxT("wxSpinCtrl has incorrect buddy HWND!") );
 
     return pSpin;
 } // end of wxSpinCtrl::GetSpinForTextCtrl

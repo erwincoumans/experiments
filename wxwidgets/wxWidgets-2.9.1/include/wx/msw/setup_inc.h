@@ -3,7 +3,7 @@
 // Purpose:     MSW-specific setup.h options
 // Author:      Vadim Zeitlin
 // Created:     2007-07-21 (extracted from wx/msw/setup0.h)
-// RCS-ID:      $Id: setup_inc.h 50586 2007-12-08 20:51:21Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Author:      David Elliott
 // Modified by: Mark Oxenham
 // Created:     2004/04/25
-// RCS-ID:      $Id: scrolbar.mm 50329 2007-11-29 17:00:58Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

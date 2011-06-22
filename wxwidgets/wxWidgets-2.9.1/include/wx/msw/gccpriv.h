@@ -4,7 +4,7 @@
  Author:      Vadim Zeitlin
  Modified by:
  Created:
- RCS-ID:      $Id: gccpriv.h 36155 2005-11-10 16:16:05Z ABX $
+ RCS-ID:      $Id$
  Copyright:   (c) Vadim Zeitlin
  Licence:     wxWindows Licence
 */

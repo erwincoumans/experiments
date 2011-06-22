@@ -11,15 +11,6 @@
 #ifndef _WX_CAIRO_H_BASE_
 #define _WX_CAIRO_H_BASE_
 
-// for now GTK+ only
-#ifndef wxUSE_CAIRO
-    #ifdef __WXGTK210__
-        #define wxUSE_CAIRO 1
-    #else
-        #define wxUSE_CAIRO 0
-    #endif
-#endif
-
 #if wxUSE_CAIRO
 
 #include "wx/dynlib.h"
@@ -43,13 +34,13 @@ private:
 
     wxCairoLibrary();
     ~wxCairoLibrary();
-    
+
     bool IsOk();
     bool InitializeMethods();
 
     wxDynamicLibrary m_libCairo;
     wxDynamicLibrary m_libPangoCairo;
-    
+
     // true if we successfully loaded the libraries and can use them
     //
     // note that this field must have this name as it's used by wxDL_XXX macros

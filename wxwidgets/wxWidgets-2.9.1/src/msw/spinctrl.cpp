@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.07.99
-// RCS-ID:      $Id: spinctrl.cpp 59722 2009-03-22 10:55:55Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999-2005 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -207,7 +207,7 @@ wxSpinCtrl *wxSpinCtrl::GetSpinForTextCtrl(WXHWND hwndBuddy)
 
     // sanity check
     wxASSERT_MSG( spin->m_hwndBuddy == hwndBuddy,
-                  _T("wxSpinCtrl has incorrect buddy HWND!") );
+                  wxT("wxSpinCtrl has incorrect buddy HWND!") );
 
     return spin;
 }
@@ -341,11 +341,6 @@ bool wxSpinCtrl::Create(wxWindow *parent,
     else if ( style & wxALIGN_CENTER )
         msStyle |= ES_CENTER;
 
-    // this control is used for numeric entry so normally using these flags by
-    // default shouldn't be a problem, if it is we can always add a style such
-    // as wxSP_NON_NUMERIC later
-    msStyle |= ES_NUMBER;
-
     // calculate the sizes: the size given is the total size for both controls
     // and we need to fit them both in the given width (height is the same)
     wxSize sizeText(size), sizeBtn(size);
@@ -359,7 +354,7 @@ bool wxSpinCtrl::Create(wxWindow *parent,
     sizeText.x -= sizeBtn.x + MARGIN_BETWEEN;
     if ( sizeText.x <= 0 )
     {
-        wxLogDebug(_T("not enough space for wxSpinCtrl!"));
+        wxLogDebug(wxT("not enough space for wxSpinCtrl!"));
     }
 
     wxPoint posBtn(pos);
@@ -376,7 +371,7 @@ bool wxSpinCtrl::Create(wxWindow *parent,
     m_hwndBuddy = (WXHWND)::CreateWindowEx
                     (
                      exStyle,                // sunken border
-                     _T("EDIT"),             // window class
+                     wxT("EDIT"),             // window class
                      NULL,                   // no window title
                      msStyle,                // style (will be shown later)
                      pos.x, pos.y,           // position
@@ -493,7 +488,7 @@ void  wxSpinCtrl::SetValue(int val)
         // to leave it like this, while we really want to always show the
         // current value in the control, so do it manually
         ::SetWindowText(GetBuddyHwnd(),
-                        wxString::Format(_T("%d"), val).wx_str());
+                        wxString::Format(wxT("%d"), val).wx_str());
     }
 
     m_oldValue = GetValue();
@@ -527,6 +522,28 @@ void wxSpinCtrl::SetSelection(long from, long to)
     }
 
     ::SendMessage(GetBuddyHwnd(), EM_SETSEL, (WPARAM)from, (LPARAM)to);
+}
+
+// ----------------------------------------------------------------------------
+// wxSpinButton methods
+// ----------------------------------------------------------------------------
+
+void wxSpinCtrl::SetRange(int minVal, int maxVal)
+{
+    wxSpinButton::SetRange(minVal, maxVal);
+
+    // this control is used for numeric entry so restrict the input to numeric
+    // keys only -- but only if we don't need to be able to enter "-" in it as
+    // otherwise this would become impossible
+    const DWORD styleOld = ::GetWindowLong(GetBuddyHwnd(), GWL_STYLE);
+    DWORD styleNew;
+    if ( minVal < 0 )
+        styleNew = styleOld & ~ES_NUMBER;
+    else
+        styleNew = styleOld | ES_NUMBER;
+
+    if ( styleNew != styleOld )
+        ::SetWindowLong(GetBuddyHwnd(), GWL_STYLE, styleNew);
 }
 
 // ----------------------------------------------------------------------------
@@ -580,7 +597,9 @@ bool wxSpinCtrl::Reparent(wxWindowBase *newParent)
     // destroy the old spin button
     UnsubclassWin();
     if ( !::DestroyWindow(GetHwnd()) )
+    {
         wxLogLastError(wxT("DestroyWindow"));
+    }
 
     // create and initialize the new one
     if ( !wxSpinButton::Create(GetParent(), GetId(),
@@ -707,7 +726,7 @@ void wxSpinCtrl::DoMoveWindow(int x, int y, int width, int height)
     int widthText = width - widthBtn - MARGIN_BETWEEN;
     if ( widthText <= 0 )
     {
-        wxLogDebug(_T("not enough space for wxSpinCtrl!"));
+        wxLogDebug(wxT("not enough space for wxSpinCtrl!"));
     }
 
     // 1) The buddy window

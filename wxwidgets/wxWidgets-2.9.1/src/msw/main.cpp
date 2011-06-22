@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: main.cpp 54900 2008-08-01 14:22:42Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,6 +31,7 @@
 #endif //WX_PRECOMP
 
 #include "wx/cmdline.h"
+#include "wx/dynlib.h"
 #include "wx/scopeguard.h"
 
 #include "wx/msw/private.h"
@@ -77,28 +78,6 @@ extern int wxEntryCleanupReal(int& argc, wxChar **argv);
 // OnFatalException() if necessary
 #if wxUSE_ON_FATAL_EXCEPTION
 
-#if defined(__VISUALC__) && !defined(__WXWINCE__)
-    // VC++ (at least from 4.0 up to version 7.1) is incredibly broken in that
-    // a "catch ( ... )" will *always* catch SEH exceptions in it even though
-    // it should have never been the case... to prevent such catches from
-    // stealing the exceptions from our wxGlobalSEHandler which is only called
-    // if the exception is not handled elsewhere, we have to also call it from
-    // a special SEH translator function which is called by VC CRT when a Win32
-    // exception occurs
-
-    // this warns that /EHa (async exceptions) should be used when using
-    // _set_se_translator but, in fact, this doesn't seem to change anything
-    // with VC++ up to 8.0
-    #if _MSC_VER <= 1400
-        #pragma warning(disable:4535)
-    #endif
-
-    // note that the SE translator must be called wxSETranslator!
-    #define DisableAutomaticSETranslator() _set_se_translator(wxSETranslator)
-#else // !__VISUALC__
-    #define DisableAutomaticSETranslator()
-#endif // __VISUALC__/!__VISUALC__
-
 // global pointer to exception information, only valid inside OnFatalException,
 // used by wxStackWalker and wxCrashReport
 extern EXCEPTION_POINTERS *wxGlobalSEInformation = NULL;
@@ -142,7 +121,7 @@ void wxSETranslator(unsigned int WXUNUSED(code), EXCEPTION_POINTERS *ep)
     switch ( wxGlobalSEHandler(ep) )
     {
         default:
-            wxFAIL_MSG( _T("unexpected wxGlobalSEHandler() return value") );
+            wxFAIL_MSG( wxT("unexpected wxGlobalSEHandler() return value") );
             // fall through
 
         case EXCEPTION_EXECUTE_HANDLER:
@@ -176,19 +155,19 @@ bool wxHandleFatalExceptions(bool doit)
         wxChar fullname[MAX_PATH];
         if ( !::GetTempPath(WXSIZEOF(fullname), fullname) )
         {
-            wxLogLastError(_T("GetTempPath"));
+            wxLogLastError(wxT("GetTempPath"));
 
             // when all else fails...
-            wxStrcpy(fullname, _T("c:\\"));
+            wxStrcpy(fullname, wxT("c:\\"));
         }
 
         // use PID and date to make the report file name more unique
         wxString name = wxString::Format
                         (
-                            _T("%s_%s_%lu.dmp"),
+                            wxT("%s_%s_%lu.dmp"),
                             wxTheApp ? (const wxChar*)wxTheApp->GetAppDisplayName().c_str()
-                                     : _T("wxwindows"),
-                            wxDateTime::Now().Format(_T("%Y%m%dT%H%M%S")).c_str(),
+                                     : wxT("wxwindows"),
+                            wxDateTime::Now().Format(wxT("%Y%m%dT%H%M%S")).c_str(),
                             ::GetCurrentProcessId()
                         );
 
@@ -225,6 +204,9 @@ int wxEntry(int& argc, wxChar **argv)
 
 #if wxUSE_GUI && defined(__WXMSW__)
 
+namespace
+{
+
 #if wxUSE_UNICODE && !defined(__WXWINCE__)
     #define NEED_UNICODE_CHECK
 #endif
@@ -232,7 +214,7 @@ int wxEntry(int& argc, wxChar **argv)
 #ifdef NEED_UNICODE_CHECK
 
 // check whether Unicode is available
-static bool wxIsUnicodeAvailable()
+bool wxIsUnicodeAvailable()
 {
     static const wchar_t *ERROR_STRING = L"wxWidgets Fatal Error";
 
@@ -303,6 +285,21 @@ static bool wxIsUnicodeAvailable()
 
 #endif // NEED_UNICODE_CHECK
 
+void wxSetProcessDPIAware()
+{
+#if wxUSE_DYNLIB_CLASS
+    typedef BOOL (WINAPI *SetProcessDPIAware_t)(void);
+    wxDynamicLibrary dllUser32(wxT("user32.dll"));
+    SetProcessDPIAware_t pfnSetProcessDPIAware =
+        (SetProcessDPIAware_t)dllUser32.RawGetSymbol(wxT("SetProcessDPIAware"));
+
+    if ( pfnSetProcessDPIAware )
+        pfnSetProcessDPIAware();
+#endif // wxUSE_DYNLIB_CLASS
+}
+
+} //anonymous namespace
+
 // ----------------------------------------------------------------------------
 // Windows-specific wxEntry
 // ----------------------------------------------------------------------------
@@ -336,8 +333,7 @@ struct wxMSWCommandLineArguments
             free(argv[i]);
         }
 
-        delete [] argv;
-        argv = NULL;
+        wxDELETEA(argv);
         argc = 0;
     }
 
@@ -403,6 +399,13 @@ WXDLLEXPORT int wxEntry(HINSTANCE hInstance,
                         wxCmdLineArgType WXUNUSED(pCmdLine),
                         int nCmdShow)
 {
+    // wxWidgets library doesn't have problems with non-default DPI settings,
+    // so we can mark the app as "DPI aware" for Vista/Win7 (see
+    // http://msdn.microsoft.com/en-us/library/dd464659%28VS.85%29.aspx).
+    // Note that we intentionally do it here and not in wxApp, so that it
+    // doesn't happen if wx code is hosted in another app (e.g. a plugin).
+    wxSetProcessDPIAware();
+
     if ( !wxMSWEntryCommon(hInstance, nCmdShow) )
         return -1;
 

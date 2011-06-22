@@ -4,7 +4,7 @@
 // Author:      Julian Smart, Robert Roebling, Markus Holzhem
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: dcpsg.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ static const char *wxPostScriptHeaderColourImage = "\
   } ifelse          % end of 'false' case\n\
 ";
 
-static char wxPostScriptHeaderReencodeISO1[] =
+static const char wxPostScriptHeaderReencodeISO1[] =
     "\n/reencodeISO {\n"
 "dup dup findfont dup length dict begin\n"
 "{ 1 index /FID ne { def }{ pop pop } ifelse } forall\n"
@@ -214,7 +214,7 @@ static char wxPostScriptHeaderReencodeISO1[] =
 "/.notdef/dotlessi/grave/acute/circumflex/tilde/macron/breve\n"
 "/dotaccent/dieresis/.notdef/ring/cedilla/.notdef/hungarumlaut\n";
 
-static char wxPostScriptHeaderReencodeISO2[] =
+static const char wxPostScriptHeaderReencodeISO2[] =
 "/ogonek/caron/space/exclamdown/cent/sterling/currency/yen/brokenbar\n"
 "/section/dieresis/copyright/ordfeminine/guillemotleft/logicalnot\n"
 "/hyphen/registered/macron/degree/plusminus/twosuperior/threesuperior\n"
@@ -962,7 +962,7 @@ void wxPostScriptDCImpl::DoDrawIcon( const wxIcon& icon, wxCoord x, wxCoord y )
 }
 
 /* this has to be char, not wxChar */
-static char hexArray[] = "0123456789ABCDEF";
+static const char hexArray[] = "0123456789ABCDEF";
 
 void wxPostScriptDCImpl::DoDrawBitmap( const wxBitmap& bitmap, wxCoord x, wxCoord y, bool WXUNUSED(useMask) )
 {
@@ -1935,7 +1935,7 @@ bool wxPostScriptDCImpl::DoBlit( wxCoord xdest, wxCoord ydest,
                            wxCoord fwidth, wxCoord fheight,
                            wxDC *source,
                            wxCoord xsrc, wxCoord ysrc,
-                           wxRasterOperationMode rop, 
+                           wxRasterOperationMode rop,
                            bool WXUNUSED(useMask), wxCoord WXUNUSED(xsrcMask), wxCoord WXUNUSED(ysrcMask) )
 {
     wxCHECK_MSG( m_ok, false, wxT("invalid postscript dc") );

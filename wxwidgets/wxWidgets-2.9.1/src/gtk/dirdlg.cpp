@@ -2,7 +2,7 @@
 // Name:        src/gtk/dirdlg.cpp
 // Purpose:     native implementation of wxDirDialog
 // Author:      Robert Roebling, Zbigniew Zagorski, Mart Raudsepp, Francesco Montorsi
-// Id:          $Id: dirdlg.cpp 55288 2008-08-26 16:19:23Z PC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, 2004 Zbigniew Zagorski, 2005 Mart Raudsepp
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -99,7 +99,7 @@ wxDirDialog::wxDirDialog(wxWindow* parent,
 {
     m_message = title;
 
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, style);
 
     if (!PreCreation(parent, pos, wxDefaultSize) ||
         !CreateBase(parent, wxID_ANY, pos, wxDefaultSize, style,
@@ -172,7 +172,7 @@ void wxDirDialog::SetPath(const wxString& dir)
 wxString wxDirDialog::GetPath() const
 {
     wxGtkString str(gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(m_widget)));
-    return wxString(str, *wxConvFileName);
+    return wxString::FromUTF8(str);
 }
 
 #endif // wxUSE_DIRDLG

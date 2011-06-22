@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dialog.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,6 +13,15 @@
 #define _WX_DIALOG_H_
 
 #include "wx/panel.h"
+
+// this option is always enabled (there doesn't seem to be any good reason to
+// disable it) for desktop Windows versions but Windows CE dialogs are usually
+// not resizeable and never show resize gripper anyhow so don't use it there
+#ifdef __WXWINCE__
+    #define wxUSE_DIALOG_SIZEGRIP 0
+#else
+    #define wxUSE_DIALOG_SIZEGRIP 1
+#endif
 
 extern WXDLLIMPEXP_DATA_CORE(const char) wxDialogNameStr[];
 
@@ -99,15 +108,11 @@ public:
     WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
 
 protected:
-    // find the window to use as parent for this dialog if none has been
-    // specified explicitly by the user
-    //
-    // may return NULL
-    wxWindow *FindSuitableParent() const;
-
     // common part of all ctors
     void Init();
 
+private:
+#if wxUSE_DIALOG_SIZEGRIP
     // these functions deal with the gripper window shown in the corner of
     // resizeable dialogs
     void CreateGripper();
@@ -115,10 +120,13 @@ protected:
     void ShowGripper(bool show);
     void ResizeGripper();
 
-private:
     // this function is used to adjust Z-order of new children relative to the
     // gripper if we have one
     void OnWindowCreate(wxWindowCreateEvent& event);
+
+    // gripper window for a resizable dialog, NULL if we're not resizable
+    WXHWND m_hGripper;
+#endif // wxUSE_DIALOG_SIZEGRIP
 
 #if wxUSE_TOOLBAR && defined(__POCKETPC__)
     wxToolBar*  m_dialogToolBar;
@@ -126,9 +134,6 @@ private:
 
     // this pointer is non-NULL only while the modal event loop is running
     wxDialogModalData *m_modalData;
-
-    // gripper window for a resizable dialog, NULL if we're not resizable
-    WXHWND m_hGripper;
 
     DECLARE_DYNAMIC_CLASS(wxDialog)
     wxDECLARE_NO_COPY_CLASS(wxDialog);

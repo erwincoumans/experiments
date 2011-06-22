@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxGTK-specific socket event handling
 // Author:      Guilhem Lavaux, Vadim Zeitlin
 // Created:     1999
-// RCS-ID:      $Id: sockgtk.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999, 2007 wxWidgets dev team
 //              (c) 2009 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -14,11 +14,10 @@
 
 #if wxUSE_SOCKETS
 
-#include <gdk/gdk.h>
-#include <glib.h>
-
 #include "wx/apptrait.h"
 #include "wx/private/fdiomanager.h"
+
+#include <gdk/gdk.h>
 
 extern "C" {
 static

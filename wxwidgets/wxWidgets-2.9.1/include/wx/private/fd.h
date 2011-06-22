@@ -3,7 +3,7 @@
 // Purpose:     private stuff for working with file descriptors
 // Author:      Vadim Zeitlin
 // Created:     2008-11-23 (moved from wx/unix/private.h)
-// RCS-ID:      $Id: fd.h 56938 2008-11-23 13:30:42Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,11 +37,11 @@
         return FD_ISSET(fd, fds);
         #pragma warning(pop)
     }
-    inline bool wxFD_CLR(int fd, fd_set *fds)
+    inline void wxFD_CLR(int fd, fd_set *fds)
     {
         #pragma warning(push, 1)
         #pragma warning(disable:1469)
-        return FD_CLR(fd, fds);
+        FD_CLR(fd, fds);
         #pragma warning(pop)
     }
 #else // !__INTELC__

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: utils.h 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ class WXDLLIMPEXP_FWD_BASE wxArrayInt;
 // wxLongLong
 #include "wx/longlong.h"
 
-// need for wxOperatingSystemId
+// needed for wxOperatingSystemId, wxLinuxDistributionInfo
 #include "wx/platinfo.h"
 
 #ifdef __WATCOMC__
@@ -115,6 +115,11 @@ WXDLLIMPEXP_BASE bool wxIsPlatformLittleEndian();
 
 // Get platform architecture
 WXDLLIMPEXP_BASE bool wxIsPlatform64Bit();
+
+#ifdef __LINUX__
+// Get linux-distro informations
+WXDLLIMPEXP_BASE wxLinuxDistributionInfo wxGetLinuxDistributionInfo();
+#endif
 
 // Return a string with the current date/time
 WXDLLIMPEXP_BASE wxString wxNow();
@@ -670,13 +675,6 @@ public:
 
 void WXDLLIMPEXP_CORE wxGetMousePosition( int* x, int* y );
 
-// MSW only: get user-defined resource from the .res file.
-// Returns NULL or newly-allocated memory, so use delete[] to clean up.
-#ifdef __WXMSW__
-    extern WXDLLIMPEXP_CORE const wxChar* wxUserResourceStr;
-    WXDLLIMPEXP_CORE wxChar* wxLoadUserResource(const wxString& resourceName, const wxString& resourceType = wxUserResourceStr);
-#endif // MSW
-
 // ----------------------------------------------------------------------------
 // X11 Display access
 // ----------------------------------------------------------------------------
@@ -719,6 +717,40 @@ WXDLLIMPEXP_CORE bool wxYield();
 
 // Like wxYield, but fails silently if the yield is recursive.
 WXDLLIMPEXP_CORE bool wxYieldIfNeeded();
+
+// ----------------------------------------------------------------------------
+// Windows resources access
+// ----------------------------------------------------------------------------
+
+// MSW only: get user-defined resource from the .res file.
+#ifdef __WXMSW__
+    // default resource type for wxLoadUserResource()
+    extern WXDLLIMPEXP_DATA_BASE(const wxChar*) wxUserResourceStr;
+
+    // Return the pointer to the resource data. This pointer is read-only, use
+    // the overload below if you need to modify the data.
+    //
+    // Returns true on success, false on failure. Doesn't log an error message
+    // if the resource is not found (because this could be expected) but does
+    // log one if any other error occurs.
+    WXDLLIMPEXP_BASE bool
+    wxLoadUserResource(const void **outData,
+                       size_t *outLen,
+                       const wxString& resourceName,
+                       const wxString& resourceType = wxUserResourceStr,
+                       WXHINSTANCE module = 0);
+
+    // This function allocates a new buffer and makes a copy of the resource
+    // data, remember to delete[] the buffer. And avoid using it entirely if
+    // the overload above can be used.
+    //
+    // Returns NULL on failure.
+    WXDLLIMPEXP_BASE char*
+    wxLoadUserResource(const wxString& resourceName,
+                       const wxString& resourceType = wxUserResourceStr,
+                       int* pLen = NULL,
+                       WXHINSTANCE module = 0);
+#endif // MSW
 
 #endif
     // _WX_UTILSH__

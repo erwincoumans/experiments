@@ -3,7 +3,7 @@
 // Purpose:     font management for ports that don't have their own
 // Author:      Vaclav Slavik
 // Created:     2006-11-18
-// RCS-ID:      $Id: fontmgrcmn.cpp 56726 2008-11-10 14:30:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001-2002 SciTech Software, Inc. (www.scitechsoft.com)
 //              (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
@@ -69,7 +69,7 @@ void wxFontFaceBase::Release()
 
 wxFontInstance *wxFontFaceBase::GetFontInstance(float ptSize, bool aa)
 {
-    wxASSERT_MSG( m_refCnt > 0, _T("font library not loaded!") );
+    wxASSERT_MSG( m_refCnt > 0, wxT("font library not loaded!") );
 
     for ( wxFontInstanceList::const_iterator i = m_instances->begin();
           i != m_instances->end(); ++i )
@@ -103,7 +103,7 @@ wxFontFace *wxFontBundleBase::GetFace(FaceType type) const
 {
     wxFontFace *f = m_faces[type];
 
-    wxCHECK_MSG( f, NULL, _T("no such face in font bundle") );
+    wxCHECK_MSG( f, NULL, wxT("no such face in font bundle") );
 
     f->Acquire();
 
@@ -115,7 +115,7 @@ wxFontBundleBase::GetFaceForFont(const wxFontMgrFontRefData& font) const
 {
     wxASSERT_MSG( font.GetFaceName().empty() ||
                   GetName().CmpNoCase(font.GetFaceName()) == 0,
-                  _T("calling GetFaceForFont for incompatible font") );
+                  wxT("calling GetFaceForFont for incompatible font") );
 
     int type = FaceType_Regular;
 
@@ -141,7 +141,7 @@ wxFontBundleBase::GetFaceForFont(const wxFontMgrFontRefData& font) const
                 return GetFace((FaceType)i);
         }
 
-        wxFAIL_MSG( _T("no face") );
+        wxFAIL_MSG( wxT("no face") );
         return NULL;
     }
 
@@ -245,8 +245,6 @@ wxFontMgrFontRefData::wxFontMgrFontRefData(int size,
     m_info.underlined = underlined;
     m_info.encoding = encoding;
 
-    m_noAA = false;
-
     m_fontFace = NULL;
     m_fontBundle = NULL;
     m_fontValid = false;
@@ -255,7 +253,6 @@ wxFontMgrFontRefData::wxFontMgrFontRefData(int size,
 wxFontMgrFontRefData::wxFontMgrFontRefData(const wxFontMgrFontRefData& data)
 {
     m_info = data.m_info;
-    m_noAA = data.m_noAA;
 
     m_fontFace = data.m_fontFace;
     m_fontBundle = data.m_fontBundle;
@@ -281,7 +278,7 @@ wxFontMgrFontRefData::GetFontInstance(float scale, bool antialiased) const
 {
     wxConstCast(this, wxFontMgrFontRefData)->EnsureValidFont();
     return m_fontFace->GetFontInstance(m_info.pointSize * scale,
-                                       antialiased && !m_noAA);
+                                       antialiased);
 }
 
 void wxFontMgrFontRefData::SetPointSize(int pointSize)
@@ -325,12 +322,6 @@ void wxFontMgrFontRefData::SetEncoding(wxFontEncoding encoding)
     m_info.encoding = encoding;
     m_fontValid = false;
 }
-
-void wxFontMgrFontRefData::SetNoAntiAliasing(bool no)
-{
-    m_noAA = no;
-}
-
 
 void wxFontMgrFontRefData::EnsureValidFont()
 {

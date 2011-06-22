@@ -3,7 +3,7 @@
 // Purpose:     functions to manipulate atomically integers and pointers
 // Author:      Armel Asselin
 // Created:     12/13/2006
-// RCS-ID:      $Id: atomic.h 53954 2008-06-02 20:42:23Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Armel Asselin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

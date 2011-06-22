@@ -29,7 +29,6 @@
 
 @interface wxNSStaticTextView : NSTextField
 {
-    wxWidgetCocoaImpl* impl;
 }
 @end
 
@@ -38,8 +37,8 @@
 + (void)initialize
 {
     static BOOL initialized = NO;
-    if (!initialized) 
-    {    
+    if (!initialized)
+    {
         initialized = YES;
         wxOSXCocoaClassAddWXMethods( self );
     }
@@ -54,9 +53,9 @@ public:
     {
         m_lineBreak = lineBreak;
     }
-    
-    virtual void SetLabel(const wxString& title, wxFontEncoding encoding) 
-    { 
+
+    virtual void SetLabel(const wxString& title, wxFontEncoding encoding)
+    {
         wxNSStaticTextView* v = (wxNSStaticTextView*)GetWXWidget();
         wxWindow* wxpeer = GetWXPeer();
         NSCell* cell = [v cell];
@@ -69,7 +68,7 @@ public:
             [paragraphStyle setAlignment: NSCenterTextAlignment];
         else if (style & wxALIGN_RIGHT)
             [paragraphStyle setAlignment: NSRightTextAlignment];
-    
+
         NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:paragraphStyle, NSParagraphStyleAttributeName, nil];
         NSAttributedString *attrstring = [[NSAttributedString alloc] initWithString:text.AsNSString() attributes:dict];
         [cell setAttributedStringValue:attrstring];
@@ -102,7 +101,7 @@ wxWidgetImplType* wxWidgetImpl::CreateStaticText( wxWindowMac* wxpeer,
     [v setSelectable: NO];
     [v setBezeled:NO];
     [v setBordered:NO];
-    
+
     NSLineBreakMode linebreak = NSLineBreakByWordWrapping;
     if ( ((wxStaticText*)wxpeer)->IsEllipsized() )
     {
@@ -113,11 +112,11 @@ wxWidgetImplType* wxWidgetImpl::CreateStaticText( wxWindowMac* wxpeer,
         else if (style & wxST_ELLIPSIZE_START )
             linebreak = NSLineBreakByTruncatingHead;
     }
-    else 
+    else
     {
         [[v cell] setWraps:YES];
     }
-            
+
     wxWidgetCocoaImpl* c = new wxStaticTextCocoaImpl( wxpeer, v, linebreak );
     return c;
 }

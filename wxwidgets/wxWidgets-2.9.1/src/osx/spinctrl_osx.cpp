@@ -3,7 +3,7 @@
 // Purpose:     wxSpinCtrl
 // Author:      Robert
 // Modified by: Mark Newsam (Based on GTK file)
-// RCS-ID:      $Id: spinctrl_osx.cpp 59722 2009-03-22 10:55:55Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -281,10 +281,8 @@ wxSpinCtrl::~wxSpinCtrl()
     // delete the controls now, don't leave them alive even though they would
     // still be eventually deleted by our parent - but it will be too late, the
     // user code expects them to be gone now
-    delete m_text;
-    m_text = NULL ;
-    delete m_btn;
-    m_btn = NULL ;
+    wxDELETE(m_text);
+    wxDELETE(m_btn);
 }
 
 // ----------------------------------------------------------------------------
@@ -388,12 +386,14 @@ int wxSpinCtrl::GetMax() const
 
 void wxSpinCtrl::SetTextValue(int val)
 {
-    wxCHECK_RET( m_text, _T("invalid call to wxSpinCtrl::SetTextValue") );
+    wxCHECK_RET( m_text, wxT("invalid call to wxSpinCtrl::SetTextValue") );
 
-    m_text->SetValue(wxString::Format(_T("%d"), val));
+    m_text->SetValue(wxString::Format(wxT("%d"), val));
 
     // select all text
     m_text->SetSelection(0, -1);
+
+    m_text->SetInsertionPointEnd();
 
     // and give focus to the control!
     // m_text->SetFocus();    Why???? TODO.
@@ -401,7 +401,7 @@ void wxSpinCtrl::SetTextValue(int val)
 
 void wxSpinCtrl::SetValue(int val)
 {
-    wxCHECK_RET( m_btn, _T("invalid call to wxSpinCtrl::SetValue") );
+    wxCHECK_RET( m_btn, wxT("invalid call to wxSpinCtrl::SetValue") );
 
     SetTextValue(val);
 
@@ -411,7 +411,7 @@ void wxSpinCtrl::SetValue(int val)
 
 void wxSpinCtrl::SetValue(const wxString& text)
 {
-    wxCHECK_RET( m_text, _T("invalid call to wxSpinCtrl::SetValue") );
+    wxCHECK_RET( m_text, wxT("invalid call to wxSpinCtrl::SetValue") );
 
     long val;
     if ( text.ToLong(&val) && ((val > INT_MIN) && (val < INT_MAX)) )
@@ -427,7 +427,7 @@ void wxSpinCtrl::SetValue(const wxString& text)
 
 void wxSpinCtrl::SetRange(int min, int max)
 {
-    wxCHECK_RET( m_btn, _T("invalid call to wxSpinCtrl::SetRange") );
+    wxCHECK_RET( m_btn, wxT("invalid call to wxSpinCtrl::SetRange") );
 
     m_btn->SetRange(min, max);
 }

@@ -4,7 +4,7 @@
 // Author:      Julian Smart, Robert Roebling
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: msgdlgg.cpp 50433 2007-12-02 19:39:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart and Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -60,7 +60,7 @@ wxGenericMessageDialog::wxGenericMessageDialog( wxWindow *parent,
                                                 const wxString& caption,
                                                 long style,
                                                 const wxPoint& pos)
-                      : wxMessageDialogBase(GetParentForModalDialog(parent),
+                      : wxMessageDialogBase(GetParentForModalDialog(parent, style),
                                             message,
                                             caption,
                                             style),
@@ -107,7 +107,11 @@ void wxGenericMessageDialog::DoCreateMsgdialog()
     int center_flag = wxEXPAND;
     if (m_dialogStyle & wxYES_NO)
         center_flag = wxALIGN_CENTRE;
-    wxSizer *sizerBtn = CreateSeparatedButtonSizer(m_dialogStyle & ButtonSizerFlags);
+    wxSizer *sizerBtn = CreateSeparatedButtonSizer
+                        (
+                            m_dialogStyle & (wxOK | wxCANCEL | wxYES_NO |
+                                             wxNO_DEFAULT | wxCANCEL_DEFAULT)
+                        );
     if ( sizerBtn )
         topsizer->Add(sizerBtn, 0, center_flag | wxALL, 10 );
 

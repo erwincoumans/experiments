@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     09/25/2004
-// RCS-ID:      $Id: taskbar.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Ryan Norton
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,7 +141,7 @@ wxDockEventHandler(EventHandlerCallRef WXUNUSED(inHandlerCallRef),
     wxDockTaskBarIcon* pTB = (wxDockTaskBarIcon*) pData;
     const UInt32 eventClass = GetEventClass(inEvent);
     const UInt32 eventKind = GetEventKind(inEvent);
-    
+
     OSStatus err = eventNotHandledErr;
 
     // Handle wxTaskBar menu events (note that this is a global event handler
@@ -409,11 +409,7 @@ bool wxDockTaskBarIcon::SetIcon(const wxIcon& icon, const wxString& WXUNUSED(too
 //-----------------------------------------------------------------------------
 bool wxDockTaskBarIcon::RemoveIcon()
 {
-    if (m_pMenu)
-    {
-        delete m_pMenu;
-        m_pMenu = NULL;
-    }
+    wxDELETE(m_pMenu);
 
     // restore old icon to the dock
     OSStatus err = RestoreApplicationDockTileImage();
@@ -470,7 +466,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxTaskBarIcon, wxEvtHandler)
 // actually seperate programs that also require a special undocumented id
 // hack and other such fun stuff).
 //-----------------------------------------------------------------------------
-wxTaskBarIcon::wxTaskBarIcon(wxTaskBarIconType nType)
+wxTaskBarIcon::wxTaskBarIcon(wxTaskBarIconType WXUNUSED_UNLESS_DEBUG(nType))
 {
     wxASSERT_MSG(
         nType == DOCK,

@@ -2,7 +2,7 @@
 // Name:        font.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: font.h 59564 2009-03-15 16:28:33Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,9 +20,9 @@ public:
     wxFont() { }
 
     // wxGTK-specific
-    wxFont(const wxString& fontname)
+    wxFont(const wxString& nativeFontInfoString)
     {
-        Create(fontname);
+        Create(nativeFontInfoString);
     }
 
     wxFont(const wxNativeFontInfo& info);
@@ -62,7 +62,7 @@ public:
         Create(10, family, style, weight, underlined, face, encoding);
         SetPixelSize(pixelSize);
     }
-    
+
     bool Create(int size,
                 wxFontFamily family,
                 wxFontStyle style,
@@ -95,10 +95,7 @@ public:
     virtual void SetUnderlined( bool underlined );
     virtual void SetEncoding(wxFontEncoding encoding);
 
-    WXDECLARE_COMPAT_SETTERS
-
-    virtual void SetNoAntiAliasing( bool no = true );
-    virtual bool GetNoAntiAliasing() const ;
+    wxDECLARE_COMMON_FONT_METHODS();
 
     // implementation from now on
     void Unshare();

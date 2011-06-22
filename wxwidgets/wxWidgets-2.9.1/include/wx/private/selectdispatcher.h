@@ -4,7 +4,7 @@
 // Authors:     Lukasz Michalski and Vadim Zeitlin
 // Created:     December 2006
 // Copyright:   (c) Lukasz Michalski
-// RCS-ID:      $Id: selectdispatcher.h 57804 2009-01-03 01:21:24Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -15,14 +15,17 @@
 
 #if wxUSE_SELECT_DISPATCHER
 
+#if defined(HAVE_SYS_SELECT_H) || defined(__WATCOMC__)
+    #include <sys/time.h>
+    #include <sys/select.h>
+#endif
+
 #ifdef __WATCOMC__
-  #include <types.h>
-  #include <sys/ioctl.h>
-  #include <sys/time.h>
-  #include <sys/select.h>
-  #include <tcpustd.h>
+    #include <types.h>
+    #include <sys/ioctl.h>
+    #include <tcpustd.h>
 #else
-  #include <sys/types.h>
+    #include <sys/types.h>
 #endif
 
 #include "wx/private/fdiodispatcher.h"

@@ -2,7 +2,7 @@
 // Name:        wx/gtk/radiobut.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: radiobut.h 51427 2008-01-29 04:02:33Z PC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,9 @@ protected:
 
     virtual void DoApplyWidgetStyle(GtkRcStyle *style);
     virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
+
+private:
+    typedef wxControl base_type;
 
     DECLARE_DYNAMIC_CLASS(wxRadioButton)
 };

@@ -3,16 +3,18 @@
 // Purpose:     Information window (when app is busy)
 // Author:      Vaclav Slavik
 // Copyright:   (c) 1999 Vaclav Slavik
-// RCS-ID:      $Id: busyinfo.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __BUSYINFO_H__
-#define __BUSYINFO_H__
+#ifndef _WX_BUSYINFO_H_
+#define _WX_BUSYINFO_H_
 
 #include "wx/defs.h"
 
 #if wxUSE_BUSYINFO
+
+#include "wx/object.h"
 
 class WXDLLIMPEXP_FWD_CORE wxFrame;
 class WXDLLIMPEXP_FWD_CORE wxWindow;
@@ -36,7 +38,5 @@ private:
     wxDECLARE_NO_COPY_CLASS(wxBusyInfo);
 };
 
-
 #endif // wxUSE_BUSYINFO
-
-#endif // __BUSYINFO_H__
+#endif // _WX_BUSYINFO_H_

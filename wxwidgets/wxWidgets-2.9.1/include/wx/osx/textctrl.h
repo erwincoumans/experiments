@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/textctrl.h
+// Name:        wx/osx/textctrl.h
 // Purpose:     wxTextCtrl class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: textctrl.h 60155 2009-04-14 20:11:16Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,9 +25,6 @@
 
 #include "wx/control.h"
 #include "wx/textctrl.h"
-
-// forward decl for wxListWidgetImpl implementation type.
-class WXDLLIMPEXP_FWD_CORE wxTextWidgetImpl;
 
 class WXDLLIMPEXP_CORE wxTextCtrl: public wxTextCtrlBase
 {
@@ -69,17 +66,10 @@ public:
     virtual int GetNumberOfLines() const;
 
     virtual bool IsModified() const;
-    virtual bool IsEditable() const;
-
-    // If the return values from and to are the same, there is no selection.
-    virtual void GetSelection(long* from, long* to) const;
 
     // operations
     // ----------
 
-    // editing
-    virtual void Clear();
-    virtual void Remove(long from, long to);
 
     // sets/clears the dirty flag
     virtual void MarkDirty();
@@ -93,12 +83,9 @@ public:
     // methods apply the given text style to the given selection or to
     // set/get the style which will be used for all appended text
     virtual bool SetFont( const wxFont &font );
+    virtual bool GetStyle(long position, wxTextAttr& style);
     virtual bool SetStyle(long start, long end, const wxTextAttr& style);
     virtual bool SetDefaultStyle(const wxTextAttr& style);
-
-    // writing text inserts it at the current position;
-    // appending always inserts it at the end
-    virtual void WriteText(const wxString& text);
 
     // translate between the position (which is just an index into the textctrl
     // considering all its contents as a single strings) and (x, y) coordinates
@@ -108,31 +95,11 @@ public:
 
     virtual void ShowPosition(long pos);
 
-    // Clipboard operations
+    // overrides so that we can send text updated events
     virtual void Copy();
     virtual void Cut();
     virtual void Paste();
-
-    virtual bool CanCopy() const;
-    virtual bool CanCut() const;
-    virtual bool CanPaste() const;
-
-    // Undo/redo
-    virtual void Undo();
-    virtual void Redo();
-
-    virtual bool CanUndo() const;
-    virtual bool CanRedo() const;
-
-    // Insertion point
-    virtual void SetInsertionPoint(long pos);
-    virtual void SetInsertionPointEnd();
-    virtual long GetInsertionPoint() const;
-    virtual wxTextPos GetLastPosition() const;
-
-    virtual void SetSelection(long from, long to);
-    virtual void SetEditable(bool editable);
-
+    
     // Implementation
     // --------------
     virtual void Command(wxCommandEvent& event);
@@ -142,6 +109,7 @@ public:
     // callbacks
     void OnDropFiles(wxDropFilesEvent& event);
     void OnChar(wxKeyEvent& event); // Process 'enter' if required
+    void OnKeyDown(wxKeyEvent& event); // Process clipboard shortcuts
 
     void OnCut(wxCommandEvent& event);
     void OnCopy(wxCommandEvent& event);
@@ -167,34 +135,25 @@ public:
     virtual void MacSuperChangedPosition();
     virtual void MacCheckSpelling(bool check);
 
-    wxTextWidgetImpl * GetTextPeer() const;
 protected:
     // common part of all ctors
     void Init();
 
     virtual wxSize DoGetBestSize() const;
 
-    virtual wxString DoGetValue() const;
-
-    bool  m_editable;
-
     // flag is set to true when the user edits the controls contents
     bool m_dirty;
 
-  // need to make this public because of the current implementation via callbacks
-    unsigned long  m_maxLength;
-
-    virtual void EnableTextChangedEvents(bool enable)
-    { 
-        m_triggerUpdateEvents = enable;
+    virtual void EnableTextChangedEvents(bool WXUNUSED(enable))
+    {
+        // nothing to do here as the events are never generated when we change
+        // the controls value programmatically anyhow
     }
-    
-    bool m_triggerUpdateEvents ;
 
 private :
-  wxMenu  *m_privateContextMenu;
+    wxMenu  *m_privateContextMenu;
 
-  DECLARE_EVENT_TABLE()
+    DECLARE_EVENT_TABLE()
 };
 
 #endif // _WX_TEXTCTRL_H_

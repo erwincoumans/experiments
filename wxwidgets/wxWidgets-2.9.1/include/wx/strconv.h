@@ -4,7 +4,7 @@
 // Author:      Ove Kaaven, Robert Roebling, Vadim Zeitlin
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: strconv.h 59927 2009-03-29 20:58:39Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Ove Kaaven, Robert Roebling
 //              (c) 1998-2006 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -28,8 +28,6 @@
 #ifndef __WXPALMOS5__
 #include <stdlib.h>
 #endif // ! __WXPALMOS5__
-
-#if wxUSE_WCHAR_T
 
 class WXDLLIMPEXP_FWD_BASE wxString;
 
@@ -61,19 +59,21 @@ public:
     // there is not enough space for everything, including the trailing NUL
     // character(s), in the output buffer, wxCONV_FAILED is returned.
     //
-    // In the special case when dstLen is 0 (outputBuf may be NULL then) the
-    // return value is the length of the needed buffer but nothing happens
-    // otherwise. If srcLen is wxNO_LEN, the entire string, up to and
+    // In the special case when dst is NULL (the value of dstLen is ignored
+    // then) the return value is the length of the needed buffer but nothing
+    // happens otherwise. If srcLen is wxNO_LEN, the entire string, up to and
     // including the trailing NUL(s), is converted, otherwise exactly srcLen
     // bytes are.
     //
     // Typical usage:
     //
     //          size_t dstLen = conv.ToWChar(NULL, 0, src);
-    //          if ( dstLen != wxCONV_FAILED )
+    //          if ( dstLen == wxCONV_FAILED )
     //              ... handle error ...
     //          wchar_t *wbuf = new wchar_t[dstLen];
     //          conv.ToWChar(wbuf, dstLen, src);
+    //          ... work with wbuf ...
+    //          delete [] wbuf;
     //
     virtual size_t ToWChar(wchar_t *dst, size_t dstLen,
                            const char *src, size_t srcLen = wxNO_LEN) const;
@@ -107,6 +107,12 @@ public:
         cMB2WC(const char *in, size_t inLen, size_t *outLen) const;
     const wxCharBuffer
         cWC2MB(const wchar_t *in, size_t inLen, size_t *outLen) const;
+
+    // And yet more convenience functions for converting the entire buffers:
+    // these are the simplest and least error-prone as you never need to bother
+    // with lengths/sizes directly.
+    const wxWCharBuffer cMB2WC(const wxScopedCharBuffer& in) const;
+    const wxCharBuffer cWC2MB(const wxScopedWCharBuffer& in) const;
 
     // convenience functions for converting MB or WC to/from wxWin default
 #if wxUSE_UNICODE
@@ -634,33 +640,6 @@ extern WXDLLIMPEXP_DATA_BASE(wxMBConv *) wxConvUI;
 #endif
     #define wxFNSTRINGCAST WXSTRINGCAST
 #endif
-
-#else // !wxUSE_WCHAR_T
-
-// ----------------------------------------------------------------------------
-// stand-ins in absence of wchar_t
-// ----------------------------------------------------------------------------
-
-class WXDLLIMPEXP_BASE wxMBConv
-{
-public:
-    const char* cMB2WX(const char *psz) const { return psz; }
-    const char* cWX2MB(const char *psz) const { return psz; }
-};
-
-#define wxConvFile wxConvLocal
-
-extern WXDLLIMPEXP_DATA_BASE(wxMBConv) wxConvLibc,
-                                       wxConvLocal,
-                                       wxConvISO8859_1,
-                                       wxConvUTF8;
-extern WXDLLIMPEXP_DATA_BASE(wxMBConv *) wxConvCurrent;
-
-#define wxFNCONV(name) name
-#define wxFNSTRINGCAST WXSTRINGCAST
-
-#endif
-  // wxUSE_WCHAR_T
 
 // ----------------------------------------------------------------------------
 // macros for the most common conversions

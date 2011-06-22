@@ -4,7 +4,7 @@
  * Author:      Julian Smart
  * Modified by:
  * Created:     01/02/97
- * RCS-ID:      $Id: chkconf.h 58625 2009-02-02 20:38:56Z VZ $
+ * RCS-ID:      $Id$
  * Copyright:   (c) Julian Smart
  * Licence:     wxWindows licence
  */
@@ -238,17 +238,23 @@
 /*
    Compiler-specific checks.
  */
-#if defined(__BORLANDC__) && (__BORLANDC__ < 0x500)
+
+// Borland
+#ifdef __BORLANDC__
+
+#if __BORLANDC__ < 0x500
     /* BC++ 4.0 can't compile JPEG library */
 #   undef wxUSE_LIBJPEG
 #   define wxUSE_LIBJPEG 0
 #endif
 
 /* wxUSE_DEBUG_NEW_ALWAYS = 1 not compatible with BC++ in DLL mode */
-#if defined(__BORLANDC__) && (defined(WXMAKINGDLL) || defined(WXUSINGDLL))
+#if defined(WXMAKINGDLL) || defined(WXUSINGDLL)
 #   undef wxUSE_DEBUG_NEW_ALWAYS
 #   define wxUSE_DEBUG_NEW_ALWAYS 0
 #endif
+
+#endif /* __BORLANDC__ */
 
 /* DMC++ doesn't have definitions for date picker control, so use generic control
  */
@@ -396,20 +402,20 @@
 #   endif
 #endif /* !wxUSE_ACTIVEX */
 
+#if !wxUSE_THREADS
+#   if wxUSE_FSWATCHER
+#       ifdef wxABORT_ON_CONFIG_ERROR
+#           error "wxFileSystemWatcher requires wxThread under MSW"
+#       else
+#           undef wxUSE_FSWATCHER
+#           define wxUSE_FSWATCHER 0
+#       endif
+#   endif
+#endif /* !wxUSE_THREADS */
+
 #if defined(__WXUNIVERSAL__) && wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW && !wxUSE_POSTSCRIPT
 #   undef wxUSE_POSTSCRIPT
 #   define wxUSE_POSTSCRIPT 1
-#endif
-
-/*
-   Currently only recent MSVC compilers can build the new events code under
-   Windows.
- */
-#if !wxEVENTS_COMPATIBILITY_2_8
-#   if !wxCHECK_VISUALC_VERSION(7)
-#       undef wxEVENTS_COMPATIBILITY_2_8
-#       define wxEVENTS_COMPATIBILITY_2_8 1
-#   endif
 #endif
 
 #endif /* _WX_MSW_CHKCONF_H_ */

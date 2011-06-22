@@ -4,9 +4,9 @@
 // Author:      David Elliiott
 // Modified by:
 // Created:     2003/02/15
-// RCS-ID:      $Id: control.mm 50329 2007-11-29 17:00:58Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

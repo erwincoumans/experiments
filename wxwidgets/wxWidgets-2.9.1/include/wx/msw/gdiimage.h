@@ -1,11 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/msw/gdiimage.h
+// Name:        wx/msw/gdiimage.h
 // Purpose:     wxGDIImage class: base class for wxBitmap, wxIcon, wxCursor
 //              under MSW
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.11.99
-// RCS-ID:      $Id: gdiimage.h 57019 2008-11-29 00:24:57Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ protected:
     virtual wxGDIRefData *
     CloneGDIRefData(const wxGDIRefData *WXUNUSED(data)) const
     {
-        wxFAIL_MSG( _T("must be implemented if used") );
+        wxFAIL_MSG( wxT("must be implemented if used") );
 
         return NULL;
     }

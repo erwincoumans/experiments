@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: uma.cpp 55419 2008-09-02 16:53:23Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     The wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -246,12 +246,12 @@ static OSStatus UMAGetHelpMenu(
                                bool             allowHelpMenuCreation)
 {
     static bool s_createdHelpMenu = false ;
-    
+
     if ( !s_createdHelpMenu && !allowHelpMenuCreation )
     {
         return paramErr ;
     }
-    
+
     OSStatus status = HMGetHelpMenu( outHelpMenu , outFirstCustomItemIndex ) ;
     s_createdHelpMenu = ( status == noErr ) ;
     return status ;

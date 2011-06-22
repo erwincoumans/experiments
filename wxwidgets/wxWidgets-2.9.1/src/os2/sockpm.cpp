@@ -3,7 +3,7 @@
 // Purpose:     implementation of OS-2-specific handler event handling
 // Author:      Guilhem Lavaux, Vadim Zeitlin
 // Created:     1999
-// RCS-ID:      $Id: sockpm.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999-2008 wxWidgets dev team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,14 +23,14 @@
 
 static void wxSocket_PM_Input(void *data)
 {
-    wxFDIOHandler *handler = static_cast<wxFDIOHandler *>(data);
+    wxFDIOHandler *handler = static_cast<wxSocketImplUnix *>(data);
 
     handler->OnReadWaiting();
 }
 
 static void wxSocket_PM_Output(void *data)
 {
-    wxFDIOHandler *handler = static_cast<wxFDIOHandler *>(data);
+    wxFDIOHandler *handler = static_cast<wxSocketImplUnix *>(data);
 
     handler->OnWriteWaiting();
 }

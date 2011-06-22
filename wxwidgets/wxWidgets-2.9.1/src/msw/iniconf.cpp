@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     27.07.98
-// RCS-ID:      $Id: iniconf.cpp 47747 2007-07-27 14:57:31Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -257,13 +257,13 @@ bool wxIniConfig::IsEmpty() const
 {
     wxChar szBuf[1024];
 
-    GetPrivateProfileString(m_strGroup.wx_str(), NULL, _T(""),
+    GetPrivateProfileString(m_strGroup.wx_str(), NULL, wxT(""),
                             szBuf, WXSIZEOF(szBuf),
                             m_strLocalFilename.wx_str());
     if ( !wxIsEmpty(szBuf) )
         return false;
 
-    GetProfileString(m_strGroup.wx_str(), NULL, _T(""), szBuf, WXSIZEOF(szBuf));
+    GetProfileString(m_strGroup.wx_str(), NULL, wxT(""), szBuf, WXSIZEOF(szBuf));
     if ( !wxIsEmpty(szBuf) )
         return false;
 
@@ -284,14 +284,14 @@ bool wxIniConfig::DoReadString(const wxString& szKey, wxString *pstr) const
   // first look in the private INI file
 
   // NB: the lpDefault param to GetPrivateProfileString can't be NULL
-  GetPrivateProfileString(m_strGroup.wx_str(), strKey.wx_str(), _T(""),
+  GetPrivateProfileString(m_strGroup.wx_str(), strKey.wx_str(), wxT(""),
                           szBuf, WXSIZEOF(szBuf),
                           m_strLocalFilename.wx_str());
   if ( wxIsEmpty(szBuf) ) {
     // now look in win.ini
     wxString strKey = GetKeyName(path.Name());
     GetProfileString(m_strGroup.wx_str(), strKey.wx_str(),
-                     _T(""), szBuf, WXSIZEOF(szBuf));
+                     wxT(""), szBuf, WXSIZEOF(szBuf));
   }
 
   if ( wxIsEmpty(szBuf) )
@@ -350,14 +350,16 @@ bool wxIniConfig::DoWriteString(const wxString& szKey, const wxString& szValue)
                                        m_strLocalFilename.wx_str()) != 0;
 
   if ( !bOk )
+  {
     wxLogLastError(wxT("WritePrivateProfileString"));
+  }
 
   return bOk;
 }
 
 bool wxIniConfig::DoWriteLong(const wxString& szKey, long lValue)
 {
-  return Write(szKey, wxString::Format(_T("%ld"), lValue));
+  return Write(szKey, wxString::Format(wxT("%ld"), lValue));
 }
 
 bool wxIniConfig::DoReadBinary(const wxString& WXUNUSED(key),
@@ -405,7 +407,9 @@ bool wxIniConfig::DeleteEntry(const wxString& szKey, bool bGroupIfEmptyAlso)
                                        NULL, m_strLocalFilename.wx_str()) != 0;
 
   if ( !bOk )
+  {
     wxLogLastError(wxT("WritePrivateProfileString"));
+  }
 
   return bOk;
 }
@@ -420,7 +424,9 @@ bool wxIniConfig::DeleteGroup(const wxString& szKey)
                                        NULL, m_strLocalFilename.wx_str()) != 0;
 
   if ( !bOk )
+  {
     wxLogLastError(wxT("WritePrivateProfileString"));
+  }
 
   return bOk;
 }

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: button.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,7 +19,7 @@
 class WXDLLIMPEXP_CORE wxButton : public wxButtonBase
 {
 public:
-    wxButton() { }
+    wxButton() { m_imageData = NULL; }
     wxButton(wxWindow *parent,
              wxWindowID id,
              const wxString& label = wxEmptyString,
@@ -29,6 +29,8 @@ public:
              const wxValidator& validator = wxDefaultValidator,
              const wxString& name = wxButtonNameStr)
     {
+        m_imageData = NULL;
+
         Create(parent, id, label, pos, size, style, validator, name);
     }
 
@@ -77,6 +79,19 @@ protected:
 
     // usually overridden base class virtuals
     virtual wxSize DoGetBestSize() const;
+
+    virtual bool DoGetAuthNeeded() const;
+    virtual void DoSetAuthNeeded(bool show);
+    virtual wxBitmap DoGetBitmap(State which) const;
+    virtual void DoSetBitmap(const wxBitmap& bitmap, State which);
+    virtual wxSize DoGetBitmapMargins() const;
+    virtual void DoSetBitmapMargins(wxCoord x, wxCoord y);
+    virtual void DoSetBitmapPosition(wxDirection dir);
+
+    class wxButtonImageData *m_imageData;
+
+    // true if the UAC symbol is shown
+    bool m_authNeeded;
 
 private:
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxButton)

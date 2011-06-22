@@ -40,12 +40,6 @@
 #endif
 
 #include "wx/osx/private.h"
-
-#ifdef wxOSX_USE_COCOA
-// to get the themeing APIs
-#include <Carbon/Carbon.h>
-#endif
-
 #include "wx/osx/private/timer.h"
 
 #include "wx/evtloop.h"
@@ -99,12 +93,20 @@ bool wxLaunchDefaultApplication(const wxString& document, int flags)
 {
     wxUnusedVar(flags);
 
-    static const char * const OPEN_CMD = "/usr/bin/open";
-    if ( wxFileExists(OPEN_CMD) &&
-            wxExecute(wxString(OPEN_CMD) + " " + document) )
+    wxCFRef<CFMutableStringRef> cfMutableString(CFStringCreateMutableCopy(NULL, 0, wxCFStringRef(document)));
+    CFStringNormalize(cfMutableString,kCFStringNormalizationFormD);
+    wxCFRef<CFURLRef> curl(CFURLCreateWithFileSystemPath(kCFAllocatorDefault, cfMutableString , kCFURLPOSIXPathStyle, false));
+    OSStatus err = LSOpenCFURLRef( curl , NULL );
+    
+    if (err == noErr)
+    {
         return true;
-
-    return false;
+    }
+    else
+    {
+        wxLogDebug(wxT("Default Application Launch error %d"), (int) err);
+        return false;
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -160,9 +162,30 @@ wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
     return new wxEventLoop;
 }
 
+wxWindow* wxFindWindowAtPoint(wxWindow* win, const wxPoint& pt);
+
 wxWindow* wxFindWindowAtPoint(const wxPoint& pt)
 {
-    return wxGenericFindWindowAtPoint(pt);
+#if wxOSX_USE_CARBON
+
+    Point screenPoint = { pt.y , pt.x };
+    WindowRef windowRef;
+
+    if ( FindWindow( screenPoint , &windowRef ) )
+    {
+        wxNonOwnedWindow *nonOwned = wxNonOwnedWindow::GetFromWXWindow( windowRef );
+
+        if ( nonOwned )
+            return wxFindWindowAtPoint( nonOwned , pt );
+    }
+
+    return NULL;
+
+#else
+
+    return wxGenericFindWindowAtPoint( pt );
+
+#endif
 }
 
 /*

@@ -2,7 +2,7 @@
 // Name:        wx/gtk/toplevel.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: toplevel.h 59394 2009-03-06 23:30:54Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,6 +16,7 @@
 
 class WXDLLIMPEXP_CORE wxTopLevelWindowGTK : public wxTopLevelWindowBase
 {
+    typedef wxTopLevelWindowBase base_type;
 public:
     // construction
     wxTopLevelWindowGTK() { Init(); }
@@ -52,6 +53,7 @@ public:
 
     virtual bool EnableCloseButton(bool enable = true);
 
+    virtual void ShowWithoutActivating();
     virtual bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL);
     virtual bool IsFullScreen() const { return m_fsIsShowing; };
 

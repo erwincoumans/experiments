@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Modified by:
 // Created:     12/12/98
-// RCS-ID:      $Id: filedlgg.cpp 52252 2008-03-02 14:33:47Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ bool wxGenericFileDialog::Create( wxWindow *parent,
 {
     m_bypassGenericImpl = bypassGenericImpl;
 
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, style);
 
     if (!wxFileDialogBase::Create(parent, message, defaultDir, defaultFile,
                                   wildCard, style, pos, sz, name))

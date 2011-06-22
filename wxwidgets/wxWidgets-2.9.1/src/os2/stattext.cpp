@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: stattext.cpp 45279 2007-04-06 20:49:07Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -131,7 +131,7 @@ wxSize wxStaticText::DoGetBestSize() const
                 if (!nHeightLineDefault)
                     nHeightLineDefault = nHeightLine;
                 if (!nHeightLineDefault)
-                    GetTextExtent(_T("W"), NULL, &nHeightLineDefault);
+                    GetTextExtent(wxT("W"), NULL, &nHeightLineDefault);
                 nHeightTextTotal += nHeightLineDefault;
             }
             else
@@ -162,7 +162,7 @@ wxSize wxStaticText::DoGetBestSize() const
             // when it is preceded by another '~' in which case it stands for a
             // literal tilde
             //
-            if (*pc == _T('~'))
+            if (*pc == wxT('~'))
             {
                 if (!bLastWasTilde)
                 {

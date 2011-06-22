@@ -2,7 +2,7 @@
 // Name:        src/common/fs_mem.cpp
 // Purpose:     in-memory file system
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: fs_mem.cpp 60780 2009-05-28 10:50:58Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

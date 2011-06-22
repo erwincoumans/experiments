@@ -4,7 +4,7 @@
 // Author:      Jethro Grassie / Kevin Ollivier
 // Modified by:
 // Created:     2004-4-16
-// RCS-ID:      $Id: webkit.h 60543 2009-05-07 08:52:08Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jethro Grassie / Kevin Ollivier
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,6 +24,8 @@
 // Web Kit Control
 // ----------------------------------------------------------------------------
 
+extern WXDLLIMPEXP_DATA_CORE(const char) wxWebKitCtrlNameStr[];
+
 class WXDLLIMPEXP_CORE wxWebKitCtrl : public wxControl
 {
 public:
@@ -36,7 +38,7 @@ public:
                     const wxPoint& pos = wxDefaultPosition,
                     const wxSize& size = wxDefaultSize, long style = 0,
                     const wxValidator& validator = wxDefaultValidator,
-                    const wxString& name = wxT("webkitctrl"))
+                    const wxString& name = wxWebKitCtrlNameStr)
     {
         Create(parent, winID, strURL, pos, size, style, validator, name);
     };
@@ -46,7 +48,7 @@ public:
                 const wxPoint& pos = wxDefaultPosition,
                 const wxSize& size = wxDefaultSize, long style = 0,
                 const wxValidator& validator = wxDefaultValidator,
-                const wxString& name = wxT("webkitctrl"));
+                const wxString& name = wxWebKitCtrlNameStr);
     virtual ~wxWebKitCtrl();
 
     void LoadURL(const wxString &url);
@@ -75,15 +77,21 @@ public:
     bool CanDecreaseTextSize();
     void DecreaseTextSize();
 
-    void Print(bool showPrompt=FALSE);
+    void Print(bool showPrompt = false);
 
-    void MakeEditable(bool enable=TRUE);
+    void MakeEditable(bool enable = true);
     bool IsEditable();
 
     wxString RunScript(const wxString& javascript);
 
     void SetScrollPos(int pos);
     int GetScrollPos();
+
+    // don't hide base class virtuals
+    virtual void SetScrollPos( int orient, int pos, bool refresh = true )
+        { return wxControl::SetScrollPos(orient, pos, refresh); }
+    virtual int GetScrollPos( int orient ) const
+        { return wxControl::GetScrollPos(orient); }
 
     //we need to resize the webview when the control size changes
     void OnSize(wxSizeEvent &event);
@@ -208,21 +216,21 @@ wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_CORE, wxEVT_WEBKIT_BEFORE_LOAD, wxWebKitBe
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_CORE, wxEVT_WEBKIT_NEW_WINDOW, wxWebKitNewWindowEvent );
 
 #define EVT_WEBKIT_STATE_CHANGED(func) \
-            DECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_STATE_CHANGED, \
+            wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_STATE_CHANGED, \
                             wxID_ANY, \
                             wxID_ANY, \
                             wxWebKitStateChangedEventHandler( func ), \
                             NULL ),
 
 #define EVT_WEBKIT_BEFORE_LOAD(func) \
-            DECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_BEFORE_LOAD, \
+            wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_BEFORE_LOAD, \
                             wxID_ANY, \
                             wxID_ANY, \
                             wxWebKitBeforeLoadEventHandler( func ), \
                             NULL ),
 
 #define EVT_WEBKIT_NEW_WINDOW(func)                              \
-            DECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_NEW_WINDOW, \
+            wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_NEW_WINDOW, \
                             wxID_ANY, \
                             wxID_ANY, \
                             wxWebKitNewWindowEventFunction( func ), \

@@ -1,4 +1,4 @@
-/* $Id: tiff-bi.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 /*
  * tiff-bi.c -- create a Class B (bilevel) TIFF file

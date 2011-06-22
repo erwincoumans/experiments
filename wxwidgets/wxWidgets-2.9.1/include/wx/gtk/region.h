@@ -2,7 +2,7 @@
 // Name:        wx/gtk/region.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: region.h 57907 2009-01-08 14:21:53Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ public:
         InitRect(rect.x, rect.y, rect.width, rect.height);
     }
 
-    wxRegion( size_t n, const wxPoint *points, 
+    wxRegion( size_t n, const wxPoint *points,
               wxPolygonFillMode fillStyle = wxODDEVEN_RULE );
 
 #if wxUSE_IMAGE

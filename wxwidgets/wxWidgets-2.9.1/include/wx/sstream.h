@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2004-09-19
-// RCS-ID:      $Id: sstream.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,6 +28,7 @@ public:
     wxStringInputStream(const wxString& s);
 
     virtual wxFileOffset GetLength() const;
+    virtual bool IsSeekable() const { return true; }
 
 protected:
     virtual wxFileOffset OnSysSeek(wxFileOffset ofs, wxSeekMode mode);
@@ -75,6 +76,8 @@ public:
 
     // get the string containing current output
     const wxString& GetString() const { return *m_str; }
+
+    virtual bool IsSeekable() const { return true; }
 
 protected:
     virtual wxFileOffset OnSysTell() const;

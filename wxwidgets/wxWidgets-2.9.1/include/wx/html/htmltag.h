@@ -2,7 +2,7 @@
 // Name:        htmltag.h
 // Purpose:     wxHtmlTag class (represents single tag)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmltag.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -96,6 +96,10 @@ public:
     //           <P IMG SRC="WhaT.jpg"> GetParam("SRC") returns (WhaT.jpg)
     //                           (or ("WhaT.jpg") if with_quotes == true)
     wxString GetParam(const wxString& par, bool with_quotes = false) const;
+
+    // Return true if the string could be parsed as an HTML colour and false
+    // otherwise.
+    static bool ParseAsColour(const wxString& str, wxColour *clr);
 
     // Convenience functions:
     bool GetParamAsColour(const wxString& par, wxColour *clr) const;

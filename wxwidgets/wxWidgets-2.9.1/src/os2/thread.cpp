@@ -4,7 +4,7 @@
 // Author:      Original from Wolfram Gloger/Guilhem Lavaux/David Webster
 // Modified by: Stefan Neis
 // Created:     04/22/98
-// RCS-ID:      $Id: thread.cpp 53134 2008-04-12 02:28:46Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Neis (2003)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ enum wxThreadState
 
 // id of the main thread - the one which can call GUI functions without first
 // calling wxMutexGuiEnter()
-static ULONG                        s_ulIdMainThread = 1;
+wxThreadIdType                      wxThread::ms_idMainThread = 0;
 wxMutex*                            p_wxMainMutex;
 
 // OS2 substitute for Tls pointer the current parent thread object
@@ -124,7 +124,9 @@ wxMutexInternal::~wxMutexInternal()
     if (m_vMutex)
     {
         if (::DosCloseMutexSem(m_vMutex))
-            wxLogLastError(_T("DosCloseMutexSem(mutex)"));
+        {
+            wxLogLastError(wxT("DosCloseMutexSem(mutex)"));
+        }
     }
 }
 
@@ -219,7 +221,7 @@ wxSemaphoreInternal::wxSemaphoreInternal(int initialcount, int maxcount)
     ulrc = ::DosCreateMutexSem(NULL, &m_vMutex, 0L, FALSE);
     if (ulrc != 0)
     {
-        wxLogLastError(_T("DosCreateMutexSem()"));
+        wxLogLastError(wxT("DosCreateMutexSem()"));
         m_vMutex = NULL;
         m_vEvent = NULL;
         return;
@@ -227,7 +229,7 @@ wxSemaphoreInternal::wxSemaphoreInternal(int initialcount, int maxcount)
     ulrc = ::DosCreateEventSem(NULL, &m_vEvent, 0L, FALSE);
     if ( ulrc != 0)
     {
-        wxLogLastError(_T("DosCreateEventSem()"));
+        wxLogLastError(wxT("DosCreateEventSem()"));
         ::DosCloseMutexSem(m_vMutex);
         m_vMutex = NULL;
         m_vEvent = NULL;
@@ -242,11 +244,11 @@ wxSemaphoreInternal::~wxSemaphoreInternal()
     {
         if ( ::DosCloseEventSem(m_vEvent) )
         {
-            wxLogLastError(_T("DosCloseEventSem(semaphore)"));
+            wxLogLastError(wxT("DosCloseEventSem(semaphore)"));
         }
         if ( ::DosCloseMutexSem(m_vMutex) )
         {
-            wxLogLastError(_T("DosCloseMutexSem(semaphore)"));
+            wxLogLastError(wxT("DosCloseMutexSem(semaphore)"));
         }
         else
             m_vEvent = NULL;
@@ -270,7 +272,7 @@ wxSemaError wxSemaphoreInternal::WaitTimeout(unsigned long ulMilliseconds)
                     return wxSEMA_TIMEOUT;
 
             default:
-                wxLogLastError(_T("DosWaitEventSem(semaphore)"));
+                wxLogLastError(wxT("DosWaitEventSem(semaphore)"));
                 return wxSEMA_MISC_ERROR;
         }
         ulrc = :: DosRequestMutexSem(m_vMutex, ulMilliseconds);
@@ -330,7 +332,7 @@ wxSemaError wxSemaphoreInternal::Post()
         return wxSEMA_OVERFLOW;
     if ( ulrc != NO_ERROR && ulrc != ERROR_ALREADY_POSTED )
     {
-        wxLogLastError(_T("DosPostEventSem(semaphore)"));
+        wxLogLastError(wxT("DosPostEventSem(semaphore)"));
 
         return wxSEMA_MISC_ERROR;
     }
@@ -547,19 +549,6 @@ wxThread *wxThread::This()
     return pThread;
 }
 
-bool wxThread::IsMain()
-{
-    PTIB ptib;
-    PPIB ppib;
-
-    ::DosGetInfoBlocks(&ptib, &ppib);
-
-    if (ptib->tib_ptib2->tib2_ultid == s_ulIdMainThread)
-        return true;
-
-    return false;
-}
-
 #ifdef Yield
     #undef Yield
 #endif
@@ -582,18 +571,18 @@ int wxThread::GetCPUCount()
     return CPUCount;
 }
 
-unsigned long wxThread::GetCurrentId()
+wxThreadIdType wxThread::GetCurrentId()
 {
     PTIB                            ptib;
     PPIB                            ppib;
 
     ::DosGetInfoBlocks(&ptib, &ppib);
-    return (unsigned long) ptib->tib_ptib2->tib2_ultid;
+    return (wxThreadIdType) ptib->tib_ptib2->tib2_ultid;
 }
 
 bool wxThread::SetConcurrency(size_t level)
 {
-    wxASSERT_MSG( IsMain(), _T("should only be called from the main thread") );
+    wxASSERT_MSG( IsMain(), wxT("should only be called from the main thread") );
 
     // ok only for the default one
     if ( level == 0 )
@@ -677,7 +666,7 @@ wxThread::ExitCode wxThread::Wait()
     // although under Windows we can wait for any thread, it's an error to
     // wait for a detached one in wxWin API
     wxCHECK_MSG( !IsDetached(), (ExitCode)-1,
-                 _T("can't wait for detached thread") );
+                 wxT("can't wait for detached thread") );
     ExitCode rc = (ExitCode)-1;
     (void)Delete(&rc);
     return(rc);
@@ -937,12 +926,8 @@ bool wxThreadModule::OnInit()
     gs_pCritsectGui = new wxCriticalSection();
     gs_pCritsectGui->Enter();
 
-    PTIB ptib;
-    PPIB ppib;
+    wxThread::ms_idMainThread = wxThread::GetCurrentId();
 
-    ::DosGetInfoBlocks(&ptib, &ppib);
-
-    s_ulIdMainThread = ptib->tib_ptib2->tib2_ultid;
     return true;
 }
 

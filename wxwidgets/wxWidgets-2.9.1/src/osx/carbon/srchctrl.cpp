@@ -3,9 +3,9 @@
 // Purpose:     implements mac carbon wxSearchCtrl
 // Author:      Vince Harron
 // Created:     2006-02-19
-// RCS-ID:      $Id: srchctrl.cpp 60007 2009-04-04 09:05:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   Vince Harron
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h".
@@ -39,7 +39,7 @@ public :
                              const wxString& str,
                              const wxPoint& pos,
                              const wxSize& size, long style ) ;
-                             
+
     // search field options
     virtual void ShowSearchButton( bool show );
     virtual bool IsSearchButtonVisible() const;
@@ -50,7 +50,7 @@ public :
     virtual void SetSearchMenu( wxMenu* menu );
 
     virtual void SetDescriptiveText(const wxString& text);
-    
+
     virtual bool SetFocus();
 
 private:
@@ -204,13 +204,13 @@ bool wxMacSearchFieldControl::SetFocus()
     return true;
 }
 
-wxWidgetImplType* wxWidgetImpl::CreateSearchControl( wxTextCtrl* wxpeer, 
-                                    wxWindowMac* WXUNUSED(parent), 
-                                    wxWindowID WXUNUSED(id), 
+wxWidgetImplType* wxWidgetImpl::CreateSearchControl( wxTextCtrl* wxpeer,
+                                    wxWindowMac* WXUNUSED(parent),
+                                    wxWindowID WXUNUSED(id),
                                     const wxString& str,
-                                    const wxPoint& pos, 
+                                    const wxPoint& pos,
                                     const wxSize& size,
-                                    long style, 
+                                    long style,
                                     long WXUNUSED(extraStyle))
 {
     wxMacControl* peer = new wxMacSearchFieldControl( wxpeer , str , pos , size , style );

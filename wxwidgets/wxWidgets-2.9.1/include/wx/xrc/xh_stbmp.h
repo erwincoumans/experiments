@@ -3,7 +3,7 @@
 // Purpose:     XML resource handler for wxStaticBitmap
 // Author:      Vaclav Slavik
 // Created:     2000/04/22
-// RCS-ID:      $Id: xh_stbmp.h 41590 2006-10-03 14:53:40Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

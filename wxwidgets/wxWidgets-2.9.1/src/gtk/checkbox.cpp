@@ -2,7 +2,7 @@
 // Name:        src/gtk/checkbox.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: checkbox.cpp 58194 2009-01-18 12:34:23Z JS $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ static void gtk_checkbox_toggled_callback(GtkWidget *widget, wxCheckBox *cb)
             }
             else
             {
-                wxFAIL_MSG(_T("3state wxCheckBox in unexpected state!"));
+                wxFAIL_MSG(wxT("3state wxCheckBox in unexpected state!"));
             }
 
             cb->GTKEnableEvents();
@@ -171,7 +171,7 @@ void wxCheckBox::SetValue( bool state )
 
     if (state == GetValue())
         return;
- 
+
     GTKDisableEvents();
 
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON(m_widgetCheckbox), state );
@@ -217,17 +217,13 @@ void wxCheckBox::SetLabel( const wxString& label )
 
 bool wxCheckBox::Enable( bool enable )
 {
-    bool isEnabled = IsEnabled();
-
-    if ( !wxControl::Enable( enable ) )
+    if (!base_type::Enable(enable))
         return false;
 
     gtk_widget_set_sensitive( m_widgetLabel, enable );
 
-    if (!isEnabled && enable)
-    {
+    if (enable)
         GTKFixSensitivity();
-    }
 
     return true;
 }
@@ -241,11 +237,6 @@ void wxCheckBox::DoApplyWidgetStyle(GtkRcStyle *style)
 GdkWindow *wxCheckBox::GTKGetWindow(wxArrayGdkWindows& WXUNUSED(windows)) const
 {
     return GTK_BUTTON(m_widgetCheckbox)->event_window;
-}
-
-wxSize wxCheckBox::DoGetBestSize() const
-{
-    return wxControl::DoGetBestSize();
 }
 
 // static

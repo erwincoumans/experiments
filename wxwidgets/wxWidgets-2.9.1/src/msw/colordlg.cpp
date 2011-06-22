@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: colordlg.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,9 @@ int wxColourDialog::ShowModal()
         // occurred
         const DWORD err = CommDlgExtendedError();
         if ( err )
+        {
             wxLogError(_("Colour selection dialog failed with error %0lx."), err);
+        }
 
         return wxID_CANCEL;
     }

@@ -4,9 +4,9 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     24.09.01
-// RCS-ID:      $Id: toplevel_osx.cpp 61131 2009-06-19 15:30:58Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001-2004 Stefan Csomor
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -86,6 +86,17 @@ bool wxTopLevelWindowMac::Create(wxWindow *parent,
     return true;
 }
 
+bool wxTopLevelWindowMac::Create(wxWindow *parent,
+                                 WXWindow nativeWindow)
+{
+    if ( !wxNonOwnedWindow::Create(parent, nativeWindow ) )
+        return false;
+    
+    wxTopLevelWindows.Append(this);
+    
+    return true;
+}
+
 wxTopLevelWindowMac::~wxTopLevelWindowMac()
 {
 }
@@ -95,7 +106,7 @@ bool wxTopLevelWindowMac::Destroy()
     // NB: this will get called during destruction if we don't do it now,
     // and may fire a kill focus event on a control being destroyed
 #if wxOSX_USE_CARBON
-    if (m_nowpeer->GetWXWindow())
+    if (m_nowpeer && m_nowpeer->GetWXWindow())
         ClearKeyboardFocus( (WindowRef)m_nowpeer->GetWXWindow() );
 #endif
     return wxTopLevelWindowBase::Destroy();
@@ -114,6 +125,9 @@ void wxTopLevelWindowMac::Maximize(bool maximize)
 
 bool wxTopLevelWindowMac::IsMaximized() const
 {
+    if ( m_nowpeer == NULL )
+        return false;
+    
     return m_nowpeer->IsMaximized();
 }
 
@@ -125,6 +139,9 @@ void wxTopLevelWindowMac::Iconize(bool iconize)
 
 bool wxTopLevelWindowMac::IsIconized() const
 {
+    if ( m_nowpeer == NULL )
+        return false;
+
     return m_nowpeer->IsIconized();
 }
 
@@ -147,7 +164,8 @@ wxPoint wxTopLevelWindowMac::GetClientAreaOrigin() const
 
 void wxTopLevelWindowMac::SetTitle(const wxString& title)
 {
-    wxWindow::SetLabel( title ) ;
+    m_label = title ;
+
     if ( m_nowpeer )
         m_nowpeer->SetTitle(title, GetFont().GetEncoding() );
 }
@@ -155,6 +173,18 @@ void wxTopLevelWindowMac::SetTitle(const wxString& title)
 wxString wxTopLevelWindowMac::GetTitle() const
 {
     return wxWindow::GetLabel();
+}
+
+void wxTopLevelWindowMac::ShowWithoutActivating()
+{
+    // wxTopLevelWindowBase is derived from wxNonOwnedWindow, so don't
+    // call it here.
+    if ( !wxWindow::Show(true) )
+        return;
+
+    m_nowpeer->ShowWithoutActivating();
+    
+    // TODO: Should we call EVT_SIZE here?
 }
 
 bool wxTopLevelWindowMac::ShowFullScreen(bool show, long style)
@@ -170,4 +200,19 @@ bool wxTopLevelWindowMac::IsFullScreen() const
 void wxTopLevelWindowMac::RequestUserAttention(int flags)
 {
     return m_nowpeer->RequestUserAttention(flags);
+}
+
+bool wxTopLevelWindowMac::IsActive()
+{
+    return m_nowpeer->IsActive();
+}
+
+void wxTopLevelWindowMac::OSXSetModified(bool modified)
+{
+    m_nowpeer->SetModified(modified);
+}
+
+bool wxTopLevelWindowMac::OSXIsModified() const
+{
+    return m_nowpeer->IsModified();
 }

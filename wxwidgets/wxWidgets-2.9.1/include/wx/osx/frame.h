@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: frame.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,7 +23,7 @@ class WXDLLIMPEXP_FWD_CORE wxMenuBar;
 class WXDLLIMPEXP_FWD_CORE wxStatusBar;
 class WXDLLIMPEXP_FWD_CORE wxMacToolTip ;
 
-class WXDLLIMPEXP_CORE wxFrame: public wxFrameBase 
+class WXDLLIMPEXP_CORE wxFrame: public wxFrameBase
 {
 public:
     // construction
@@ -59,7 +59,7 @@ public:
     virtual wxPoint GetClientAreaOrigin() const;
 
     // override some more virtuals
-    virtual bool Enable(bool enable = TRUE) ;
+    virtual bool Enable(bool enable = true) ;
 
     // event handlers
     void OnActivate(wxActivateEvent& event);
@@ -77,7 +77,7 @@ public:
     // Status bar
 #if wxUSE_STATUSBAR
     virtual wxStatusBar* OnCreateStatusBar(int number = 1,
-                                           long style = wxST_SIZEGRIP,
+                                           long style = wxSTB_DEFAULT_STYLE,
                                            wxWindowID id = 0,
                                            const wxString& name = wxStatusLineNameStr);
 #endif // wxUSE_STATUSBAR
@@ -87,6 +87,9 @@ public:
     wxWindow *GetLastFocus() const { return m_winLastFocused; }
 
     void PositionBars();
+
+    // osx specific event handling common for all osx-ports
+    virtual void HandleResized( double timestampsec );
 
 protected:
     // common part of all ctors
@@ -108,16 +111,11 @@ protected:
     virtual void AttachMenuBar(wxMenuBar *menubar);
 #endif
 
-    // osx specific event handling common for all osx-ports
-    virtual void HandleResized( double timestampsec );
-
-protected:
     // the last focused child: we restore focus to it on activation
     wxWindow             *m_winLastFocused;
 
     virtual bool        MacIsChildOfClientArea( const wxWindow* child ) const ;
 
-private:
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxFrame)
 };

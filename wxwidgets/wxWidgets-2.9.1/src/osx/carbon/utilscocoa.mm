@@ -23,6 +23,10 @@
 
 #include "wx/fontutil.h"
 
+#if wxOSX_USE_COCOA
+#include "wx/cocoa/string.h"
+#endif
+
 #ifdef __WXMAC__
 
 #if wxOSX_USE_CARBON
@@ -55,12 +59,12 @@ CGContextRef wxOSXGetContextFromCurrentContext()
     return context;
 }
 
-bool wxOSXLockFocus( WXWidget view) 
+bool wxOSXLockFocus( WXWidget view)
 {
     return [view lockFocusIfCanDraw];
 }
 
-void wxOSXUnlockFocus( WXWidget view) 
+void wxOSXUnlockFocus( WXWidget view)
 {
     [view unlockFocus];
 }
@@ -102,6 +106,48 @@ void* wxMacCocoaRetain( void* obj )
 // ----------------------------------------------------------------------------
 
 #if wxOSX_USE_COCOA
+wxFont::wxFont(WX_NSFont nsfont)
+{
+    [nsfont retain];
+    wxNativeFontInfo info;
+    SetNativeInfoFromNSFont(nsfont, &info);
+    Create(info);
+}
+
+void wxFont::SetNativeInfoFromNSFont(WX_NSFont theFont, wxNativeFontInfo* info)
+{   
+    if ( info->m_faceName.empty())
+    {
+        //Get more information about the user's chosen font
+        NSFontTraitMask theTraits = [[NSFontManager sharedFontManager] traitsOfFont:theFont];
+        int theFontWeight = [[NSFontManager sharedFontManager] weightOfFont:theFont];
+
+        wxFontFamily fontFamily = wxFONTFAMILY_DEFAULT;
+        //Set the wx font to the appropriate data
+        if(theTraits & NSFixedPitchFontMask)
+            fontFamily = wxFONTFAMILY_TELETYPE;
+
+        wxFontStyle fontstyle = wxFONTSTYLE_NORMAL;
+        wxFontWeight fontweight = wxFONTWEIGHT_NORMAL;
+        bool underlined = false;
+
+        int size = (int) ([theFont pointSize]+0.5);
+ 
+        if ( theFontWeight >= 9 )
+            fontweight = wxFONTWEIGHT_BOLD ;
+        else if ( theFontWeight < 5 )
+            fontweight = wxFONTWEIGHT_LIGHT;
+        else
+            fontweight = wxFONTWEIGHT_NORMAL ;
+            
+        if ( theTraits & NSItalicFontMask )
+            fontstyle = wxFONTSTYLE_ITALIC ;
+
+        info->Init(size,fontFamily,fontstyle,fontweight,underlined,
+            wxStringWithNSString([theFont familyName]), wxFONTENCODING_DEFAULT);
+
+    }
+}
 
 WX_NSFont wxFont::OSXCreateNSFont(wxOSXSystemFont font, wxNativeFontInfo* info)
 {
@@ -138,65 +184,88 @@ WX_NSFont wxFont::OSXCreateNSFont(wxOSXSystemFont font, wxNativeFontInfo* info)
             break;
     }
     [nsfont retain];
-    NSFontDescriptor*desc = [[nsfont fontDescriptor] retain];
-    if ( info->m_faceName.empty())
-    {
-        wxFontStyle fontstyle = wxFONTSTYLE_NORMAL;
-        wxFontWeight fontweight = wxFONTWEIGHT_NORMAL;
-        bool underlined = false;
-        
-        int size = (int) ([desc pointSize]+0.5);
-        NSFontSymbolicTraits traits = [desc symbolicTraits];
-            
-        if ( traits & NSFontBoldTrait )
-            fontweight = wxFONTWEIGHT_BOLD ;
-        else
-            fontweight = wxFONTWEIGHT_NORMAL ;
-        if ( traits & NSFontItalicTrait )
-            fontstyle = wxFONTSTYLE_ITALIC ;
-             
-        wxCFStringRef fontname( [desc postscriptName] );
-        info->Init(size,wxFONTFAMILY_DEFAULT,fontstyle,fontweight,underlined,
-            fontname.AsString(), wxFONTENCODING_DEFAULT);
-        
-    }
-    info->m_nsFontDescriptor = desc;
+    SetNativeInfoFromNSFont(nsfont, info);
     return nsfont;
 }
 
-void wxNativeFontInfo::OSXValidateNSFontDescriptor()
-{
-    NSFontDescriptor* desc  = nil;
-    NSFontSymbolicTraits traits = 0;
-    float weight = 0; 
-
-    if (m_weight == wxFONTWEIGHT_BOLD)
-    {
-        traits |= NSFontBoldTrait;
-        weight = 1.0;
-    }
-    else if (m_weight == wxFONTWEIGHT_LIGHT)
-        weight = -1;
-    
-    if (m_style == wxFONTSTYLE_ITALIC || m_style == wxFONTSTYLE_SLANT)
-        traits |= NSFontItalicTrait;
-
-    desc = [NSFontDescriptor fontDescriptorWithFontAttributes:
-        [[NSDictionary alloc] initWithObjectsAndKeys:
-            wxCFStringRef(m_faceName).AsNSString(), NSFontFamilyAttribute, 
-            [NSNumber numberWithFloat:m_pointSize], NSFontSizeAttribute, 
-            [NSNumber numberWithUnsignedInt:traits], NSFontSymbolicTrait, 
-            [NSNumber numberWithFloat:weight],NSFontWeightTrait,
-            nil]];
-
-    wxMacCocoaRetain(desc);
-    m_nsFontDescriptor = desc;
-}
+static inline double DegToRad(double deg) { return (deg * M_PI) / 180.0; }
+static const NSAffineTransformStruct kSlantNSTransformStruct = { 1, 0, tan(DegToRad(11)), 1, 0, 0  };
 
 WX_NSFont wxFont::OSXCreateNSFont(const wxNativeFontInfo* info)
 {
     NSFont* nsFont;
-    nsFont = [NSFont fontWithDescriptor:info->m_nsFontDescriptor size:info->m_pointSize];
+    int weight = 5;
+    NSFontTraitMask traits = 0;
+    if (info->m_weight == wxFONTWEIGHT_BOLD)
+    {
+        traits |= NSBoldFontMask;
+        weight = 9;
+    }
+    else if (info->m_weight == wxFONTWEIGHT_LIGHT)
+        weight = 3;
+
+    if (info->m_style == wxFONTSTYLE_ITALIC || info->m_style == wxFONTSTYLE_SLANT)
+        traits |= NSItalicFontMask;
+    
+    nsFont = [[NSFontManager sharedFontManager] fontWithFamily:wxCFStringRef(info->m_faceName).AsNSString() 
+        traits:traits weight:weight size:info->m_pointSize];
+    
+    if ( nsFont == nil )
+    {
+        NSFontTraitMask remainingTraits = traits;
+        nsFont = [[NSFontManager sharedFontManager] fontWithFamily:wxCFStringRef(info->m_faceName).AsNSString() 
+                                                            traits:0 weight:5 size:info->m_pointSize];
+        if ( nsFont == nil )
+        {
+            if ( info->m_weight == wxFONTWEIGHT_BOLD )
+            {
+                nsFont = [NSFont boldSystemFontOfSize:info->m_pointSize];
+                remainingTraits &= ~NSBoldFontMask;
+            }
+            else
+                nsFont = [NSFont systemFontOfSize:info->m_pointSize];
+        }
+        
+        // fallback - if in doubt, let go of the bold attribute
+        if ( nsFont && (remainingTraits & NSItalicFontMask) )
+        {
+            NSFont* nsFontWithTraits = nil;
+            if ( remainingTraits & NSBoldFontMask)
+            {
+                nsFontWithTraits = [[NSFontManager sharedFontManager] convertFont:nsFont toHaveTrait:NSBoldFontMask];
+                if ( nsFontWithTraits == nil )
+                {
+                    nsFontWithTraits = [[NSFontManager sharedFontManager] convertFont:nsFont toHaveTrait:NSItalicFontMask];
+                    if ( nsFontWithTraits != nil )
+                        remainingTraits &= ~NSItalicFontMask;
+                }
+                else
+                {
+                    remainingTraits &= ~NSBoldFontMask;
+                }
+            }
+            if ( remainingTraits & NSItalicFontMask)
+            {
+                if ( nsFontWithTraits == nil )
+                    nsFontWithTraits = nsFont;
+                
+                NSAffineTransform* transform = [NSAffineTransform transform];
+                [transform setTransformStruct:kSlantNSTransformStruct];
+                [transform scaleBy:info->m_pointSize];
+                NSFontDescriptor* italicDesc = [[nsFontWithTraits fontDescriptor] fontDescriptorWithMatrix:transform];
+                if ( italicDesc != nil )
+                {
+                    NSFont* f = [NSFont fontWithDescriptor:italicDesc size:(CGFloat)(info->m_pointSize)];
+                    if ( f != nil )
+                        nsFontWithTraits = f;
+                }
+            }
+            if ( nsFontWithTraits != nil )
+                nsFont = nsFontWithTraits;
+        }
+    }
+            
+    wxASSERT_MSG(nsFont != nil,wxT("Couldn't create nsFont")) ;
     wxMacCocoaRetain(nsFont);
     return nsFont;
 }
@@ -237,11 +306,11 @@ WX_UIFont wxFont::OSXCreateUIFont(wxOSXSystemFont font, wxNativeFontInfo* info)
         wxFontStyle fontstyle = wxFONTSTYLE_NORMAL;
         wxFontWeight fontweight = wxFONTWEIGHT_NORMAL;
         bool underlined = false;
-        
+
         int size = (int) ([uifont pointSize]+0.5);
         /*
         NSFontSymbolicTraits traits = [desc symbolicTraits];
-            
+
         if ( traits & NSFontBoldTrait )
             fontweight = wxFONTWEIGHT_BOLD ;
         else
@@ -249,10 +318,10 @@ WX_UIFont wxFont::OSXCreateUIFont(wxOSXSystemFont font, wxNativeFontInfo* info)
         if ( traits & NSFontItalicTrait )
             fontstyle = wxFONTSTYLE_ITALIC ;
         */
-        wxCFStringRef fontname( [uifont familyName] );
+        wxCFStringRef fontname( wxCFRetain([uifont familyName]) );
         info->Init(size,wxFONTFAMILY_DEFAULT,fontstyle,fontweight,underlined,
             fontname.AsString(), wxFONTENCODING_DEFAULT);
-        
+
     }
     return uifont;
 }
@@ -270,26 +339,37 @@ WX_UIFont wxFont::OSXCreateUIFont(const wxNativeFontInfo* info)
 // NSImage Utils
 // ----------------------------------------------------------------------------
 
+#if wxOSX_USE_IPHONE
+
+WX_UIImage  wxOSXGetUIImageFromCGImage( CGImageRef image )
+{
+    UIImage  *newImage = [UIImage imageWithCGImage:image];
+    [newImage autorelease];
+    return( newImage );
+}
+
+#endif
+
 #if wxOSX_USE_COCOA
 
 //  From "Cocoa Drawing Guide:Working with Images"
-WX_NSImage  wxOSXCreateNSImageFromCGImage( CGImageRef image )
+WX_NSImage  wxOSXGetNSImageFromCGImage( CGImageRef image )
 {
     NSRect      imageRect    = NSMakeRect(0.0, 0.0, 0.0, 0.0);
-    
+
     // Get the image dimensions.
     imageRect.size.height = CGImageGetHeight(image);
     imageRect.size.width = CGImageGetWidth(image);
-    
+
     // Create a new image to receive the Quartz image data.
-    NSImage  *newImage = [[NSImage alloc] initWithSize:imageRect.size]; 
+    NSImage  *newImage = [[NSImage alloc] initWithSize:imageRect.size];
     [newImage lockFocus];
-    
+
     // Get the Quartz context and draw.
     CGContextRef  imageContext = (CGContextRef) [[NSGraphicsContext currentContext] graphicsPort];
     CGContextDrawImage( imageContext, *(CGRect*)&imageRect, image );
     [newImage unlockFocus];
-    
+
     /*
         // Create a bitmap rep from the image...
         NSBitmapImageRep *bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage:cgImage];
@@ -301,6 +381,25 @@ WX_NSImage  wxOSXCreateNSImageFromCGImage( CGImageRef image )
     [newImage autorelease];
     return( newImage );
 }
+
+CGImageRef wxOSXCreateCGImageFromNSImage( WX_NSImage nsimage )
+{
+    // based on http://www.mail-archive.com/cocoa-dev@lists.apple.com/msg18065.html
+    
+    NSSize imageSize = [nsimage size];
+    CGColorSpaceRef genericRGB = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB); 
+    CGContextRef context = CGBitmapContextCreate(NULL, imageSize.width, imageSize.height, 8, 0, genericRGB, kCGImageAlphaPremultipliedFirst); 
+    NSGraphicsContext *nsGraphicsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:NO];
+    [NSGraphicsContext saveGraphicsState];
+    [NSGraphicsContext setCurrentContext:nsGraphicsContext];
+    [[NSColor whiteColor] setFill];
+    NSRectFill(NSMakeRect(0.0, 0.0, imageSize.width, imageSize.height));
+    [nsimage drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
+    [NSGraphicsContext setCurrentContext:nsGraphicsContext];
+    CGImageRef image = CGBitmapContextCreateImage(context);
+    CFRelease(context);
+    return image;
+ }
 
 // ----------------------------------------------------------------------------
 // NSCursor Utils
@@ -425,7 +524,7 @@ WX_NSCursor wxMacCocoaCreateStockCursor( int cursor_type )
     case wxCURSOR_HAND:
         cursor = [[NSCursor pointingHandCursor] retain];
         break;
-        
+
     case wxCURSOR_BULLSEYE:
         cursor = wxGetStockCursor(kwxCursorBullseye);
         break;
@@ -494,19 +593,17 @@ WX_NSCursor wxMacCocoaCreateStockCursor( int cursor_type )
 WX_NSCursor  wxMacCocoaCreateCursorFromCGImage( CGImageRef cgImageRef, float hotSpotX, float hotSpotY )
 {
     static BOOL    firstTime  = YES;
-    
+
     if ( firstTime )
     {
         //  Must first call [[[NSWindow alloc] init] release] to get the NSWindow machinery set up so that NSCursor can use a window to cache the cursor image
         [[[NSWindow alloc] init] release];
         firstTime = NO;
     }
-    
-    NSImage    *nsImage  = wxOSXCreateNSImageFromCGImage( cgImageRef );
+
+    NSImage    *nsImage  = wxOSXGetNSImageFromCGImage( cgImageRef );
     NSCursor  *cursor    = [[NSCursor alloc] initWithImage:nsImage hotSpot:NSMakePoint( hotSpotX, hotSpotY )];
-    
-    [nsImage release];
-    
+
     return cursor;
 }
 

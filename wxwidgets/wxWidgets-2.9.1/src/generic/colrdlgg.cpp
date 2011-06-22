@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: colrdlgg.cpp 58709 2009-02-07 14:47:55Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ END_EVENT_TABLE()
 
 // don't change the number of elements (48) in this array, the code below is
 // hardcoded to use it
-static const wxChar *wxColourDialogNames[] =
+static const wxChar *const wxColourDialogNames[] =
 {
     wxT("ORANGE"),
     wxT("GOLDENROD"),
@@ -140,7 +140,7 @@ void wxGenericColourDialog::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
 
 bool wxGenericColourDialog::Create(wxWindow *parent, wxColourData *data)
 {
-    if ( !wxDialog::Create(GetParentForModalDialog(parent), wxID_ANY,
+    if ( !wxDialog::Create(GetParentForModalDialog(parent, 0), wxID_ANY,
                            _("Choose colour"),
                            wxPoint(0, 0), wxSize(900, 900)) )
         return false;
@@ -380,7 +380,7 @@ void wxGenericColourDialog::PaintBasicColours(wxDC& dc)
             int y = (i*(m_smallRectangleSize.y+m_gridSpacing) + m_standardColoursRect.y);
 
             dc.SetPen(*wxBLACK_PEN);
-            wxBrush brush(m_standardColours[ptr], wxSOLID);
+            wxBrush brush(m_standardColours[ptr]);
             dc.SetBrush(brush);
 
             dc.DrawRectangle( x, y, m_smallRectangleSize.x, m_smallRectangleSize.y);
@@ -403,7 +403,7 @@ void wxGenericColourDialog::PaintCustomColours(wxDC& dc)
 
       dc.SetPen(*wxBLACK_PEN);
 
-      wxBrush brush(m_customColours[ptr], wxSOLID);
+      wxBrush brush(m_customColours[ptr]);
       dc.SetBrush(brush);
 
       dc.DrawRectangle( x, y, m_smallRectangleSize.x, m_smallRectangleSize.y);
@@ -461,7 +461,7 @@ void wxGenericColourDialog::PaintCustomColour(wxDC& dc)
 {
     dc.SetPen(*wxBLACK_PEN);
 
-    wxBrush *brush = new wxBrush(m_colourData.m_dataColour, wxSOLID);
+    wxBrush *brush = new wxBrush(m_colourData.m_dataColour);
     dc.SetBrush(*brush);
 
     dc.DrawRectangle( m_singleCustomColourRect.x, m_singleCustomColourRect.y,

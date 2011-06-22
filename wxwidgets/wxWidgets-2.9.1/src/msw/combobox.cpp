@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: combobox.cpp 59603 2009-03-18 10:42:58Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -188,7 +188,7 @@ LRESULT APIENTRY _EXPORT wxComboEditWndProc(HWND hWnd,
                     // longer, check for it to avoid bogus assert failures
                     if ( !win->IsBeingDeleted() )
                     {
-                        wxFAIL_MSG( _T("should have combo as parent") );
+                        wxFAIL_MSG( wxT("should have combo as parent") );
                     }
                 }
                 else if ( combo->MSWProcessEditMsg(message, wParam, lParam) )
@@ -201,7 +201,7 @@ LRESULT APIENTRY _EXPORT wxComboEditWndProc(HWND hWnd,
 
         case WM_GETDLGCODE:
             {
-                wxCHECK_MSG( win, 0, _T("should have a parent") );
+                wxCHECK_MSG( win, 0, wxT("should have a parent") );
 
                 if ( win->GetWindowStyle() & wxTE_PROCESS_ENTER )
                 {
@@ -438,6 +438,32 @@ bool wxComboBox::MSWShouldPreProcessMessage(WXMSG *pMsg)
 
 WXHWND wxComboBox::GetEditHWNDIfAvailable() const
 {
+#if defined(WINVER) && WINVER >= 0x0500
+    typedef BOOL (WINAPI *GetComboBoxInfo_t)(HWND, COMBOBOXINFO*);
+    static GetComboBoxInfo_t s_pfnGetComboBoxInfo = NULL;
+    static bool s_triedToLoad = false;
+    if ( !s_triedToLoad )
+    {
+        s_triedToLoad = true;
+        wxLoadedDLL dllUser32("user32.dll");
+        wxDL_INIT_FUNC(s_pfn, GetComboBoxInfo, dllUser32);
+    }
+
+    if ( s_pfnGetComboBoxInfo )
+    {
+        WinStruct<COMBOBOXINFO> info;
+        (*s_pfnGetComboBoxInfo)(GetHwnd(), &info);
+        return info.hwndItem;
+    }
+#endif
+
+    if (HasFlag(wxCB_SIMPLE))
+    {
+        POINT pt;
+        pt.x = pt.y = 4;
+        return (WXHWND) ::ChildWindowFromPoint(GetHwnd(), pt);
+    }
+
     // notice that a slightly safer alternative could be to use FindWindowEx()
     // but it's not available under WinCE so just take the first child for now
     // to keep one version of the code for all platforms and fix it later if
@@ -452,10 +478,10 @@ WXHWND wxComboBox::GetEditHWND() const
     // this function should not be called for wxCB_READONLY controls, it is
     // the callers responsibility to check this
     wxASSERT_MSG( !HasFlag(wxCB_READONLY),
-                  _T("read-only combobox doesn't have any edit control") );
+                  wxT("read-only combobox doesn't have any edit control") );
 
     WXHWND hWndEdit = GetEditHWNDIfAvailable();
-    wxASSERT_MSG( hWndEdit, _T("combobox without edit control?") );
+    wxASSERT_MSG( hWndEdit, wxT("combobox without edit control?") );
 
     return hWndEdit;
 }
@@ -463,7 +489,7 @@ WXHWND wxComboBox::GetEditHWND() const
 wxWindow *wxComboBox::GetEditableWindow()
 {
     wxASSERT_MSG( !HasFlag(wxCB_READONLY),
-                  _T("read-only combobox doesn't have any edit control") );
+                  wxT("read-only combobox doesn't have any edit control") );
 
     return this;
 }
@@ -674,6 +700,22 @@ void wxComboBox::OnUpdateDelete(wxUpdateUIEvent& event)
 void wxComboBox::OnUpdateSelectAll(wxUpdateUIEvent& event)
 {
     event.Enable(IsEditable() && !wxTextEntry::IsEmpty());
+}
+
+void wxComboBox::MSWDoPopupOrDismiss(bool show)
+{
+    wxASSERT_MSG( !HasFlag(wxCB_SIMPLE),
+                  wxT("can't popup/dismiss the list for simple combo box") );
+
+    // we *must* set focus to the combobox before showing or hiding the drop
+    // down as without this we get WM_LBUTTONDOWN messages with invalid HWND
+    // when hiding it (whether programmatically or manually) resulting in a
+    // crash when we pass them to IsDialogMessage()
+    //
+    // this can be seen in the combo page of the widgets sample under Windows 7
+    SetFocus();
+
+    ::SendMessage(GetHwnd(), CB_SHOWDROPDOWN, show, 0);
 }
 
 #if wxUSE_TOOLTIPS

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     16/11/98
-// RCS-ID:      $Id: listimpl.cpp 49277 2007-10-20 22:02:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

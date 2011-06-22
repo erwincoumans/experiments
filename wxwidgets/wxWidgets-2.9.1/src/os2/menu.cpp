@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/10/99
-// RCS-ID:      $Id: menu.cpp 49835 2007-11-11 22:25:52Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -387,7 +387,7 @@ void wxMenu::EndRadioGroup()
 
 wxMenuItem* wxMenu::DoAppend( wxMenuItem* pItem )
 {
-    wxCHECK_MSG( pItem, NULL, _T("NULL item in wxMenu::DoAppend") );
+    wxCHECK_MSG( pItem, NULL, wxT("NULL item in wxMenu::DoAppend") );
 
     bool bCheck = false;
 
@@ -428,7 +428,7 @@ wxMenuItem* wxMenu::DoAppend( wxMenuItem* pItem )
             }
             else
             {
-                wxFAIL_MSG( _T("where is the radio group start item?") );
+                wxFAIL_MSG( wxT("where is the radio group start item?") );
             }
         }
     }
@@ -1097,7 +1097,9 @@ void wxMenuBar::Attach(
                             ,m_vAccelTable.GetHACCEL()
                             ,(HWND)pFrame->GetFrame()
                            ))
+    {
         wxLogLastError(wxT("WinSetAccelTable"));
+    }
 #endif // wxUSE_ACCEL
 } // end of wxMenuBar::Attach
 

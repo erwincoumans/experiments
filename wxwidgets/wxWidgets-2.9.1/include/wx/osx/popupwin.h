@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/popupwin.h
+// Name:        wx/osx/popupwin.h
 // Purpose:     wxPopupWindow class for wxMac
 // Author:      Stefan Csomor
 // Modified by:
-// Created:     
-// RCS-ID:      $Id: popupwin.h 58168 2009-01-17 10:43:43Z SC $
+// Created:
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,6 +26,8 @@ public:
         { (void)Create(parent, flags); }
 
     bool Create(wxWindow *parent, int flags = wxBORDER_NONE);
+    
+    virtual bool Show(bool show);
 
 protected:
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxPopupWindow)

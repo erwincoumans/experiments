@@ -3,7 +3,7 @@
 // Purpose:     wxMessageDialog class
 // Author:      Gareth Simpson
 // Created:     2007-10-29
-// RCS-ID:      $Id: msgdlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 

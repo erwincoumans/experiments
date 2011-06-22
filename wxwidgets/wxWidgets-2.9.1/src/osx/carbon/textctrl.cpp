@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by: Ryan Norton (MLTE GetLineLength and GetLineText)
 // Created:     1998-01-01
-// RCS-ID:      $Id: textctrl.cpp 60901 2009-06-05 20:51:47Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -223,7 +223,7 @@ class wxMacMLTEControl : public wxMacControl, public wxTextWidgetImpl
 public :
     wxMacMLTEControl( wxTextCtrl *peer ) ;
     ~wxMacMLTEControl() {}
-    
+
     virtual bool        CanFocus() const
                         { return true; }
 
@@ -332,7 +332,7 @@ public :
         return true;
     }
 
-    virtual void            Move(int x, int y, int width, int height); 
+    virtual void            Move(int x, int y, int width, int height);
 
 protected :
     OSStatus                 DoCreate();
@@ -361,13 +361,13 @@ private :
     SInt32                  m_lastVerticalValue ;
 };
 
-wxWidgetImplType* wxWidgetImpl::CreateTextControl( wxTextCtrl* wxpeer, 
-                                    wxWindowMac* WXUNUSED(parent), 
-                                    wxWindowID WXUNUSED(id), 
+wxWidgetImplType* wxWidgetImpl::CreateTextControl( wxTextCtrl* wxpeer,
+                                    wxWindowMac* WXUNUSED(parent),
+                                    wxWindowID WXUNUSED(id),
                                     const wxString& str,
-                                    const wxPoint& pos, 
+                                    const wxPoint& pos,
                                     const wxSize& size,
-                                    long style, 
+                                    long style,
                                     long WXUNUSED(extraStyle))
 {
     bool forceMLTE = false ;
@@ -744,11 +744,11 @@ wxString wxMacMLTEControl::GetStringValue() const
                 (((UniChar*)*theText)[actualSize]) = 0 ;
                 wxMBConvUTF16 converter ;
                 size_t noChars = converter.MB2WC( NULL , (const char*)*theText , 0 ) ;
-                wxASSERT_MSG( noChars != wxCONV_FAILED, _T("Unable to count the number of characters in this string!") );
+                wxASSERT_MSG( noChars != wxCONV_FAILED, wxT("Unable to count the number of characters in this string!") );
                 ptr = new wxChar[noChars + 1] ;
 
                 noChars = converter.MB2WC( ptr , (const char*)*theText , noChars + 1 ) ;
-                wxASSERT_MSG( noChars != wxCONV_FAILED, _T("Conversion of string failed!") );
+                wxASSERT_MSG( noChars != wxCONV_FAILED, wxT("Conversion of string failed!") );
                 ptr[noChars] = 0 ;
                 HUnlock( theText ) ;
 #endif
@@ -893,7 +893,7 @@ void wxMacMLTEControl::AdjustCreationAttributes(const wxColour &background,
     } ;
 
     err = TXNSetTypeAttributes(
-        m_txn, sizeof(typeAttr) / sizeof(TXNTypeAttributes),
+        m_txn, WXSIZEOF(typeAttr),
         typeAttr, kTXNStartOffset, kTXNEndOffset );
     verify_noerr( err );
 
@@ -1371,7 +1371,7 @@ void wxMacMLTEControl::ShowPosition( long pos )
 
     // there will be an error returned for classic MLTE implementation when the control is
     // invisible, but HITextView works correctly, so we don't assert that one
-    // wxASSERT_MSG( theErr == noErr, _T("TXNScroll returned an error!") );
+    // wxASSERT_MSG( theErr == noErr, wxT("TXNScroll returned an error!") );
 }
 
 void wxMacMLTEControl::SetTXNData( const wxString& st, TXNOffset start, TXNOffset end )
@@ -1384,7 +1384,7 @@ void wxMacMLTEControl::SetTXNData( const wxString& st, TXNOffset start, TXNOffse
     wxMBConvUTF16 converter ;
     ByteCount byteBufferLen = converter.WC2MB( NULL, st.wc_str(), 0 ) ;
     wxASSERT_MSG( byteBufferLen != wxCONV_FAILED,
-                  _T("Conversion to UTF-16 unexpectedly failed") );
+                  wxT("Conversion to UTF-16 unexpectedly failed") );
     UniChar *unibuf = (UniChar*)malloc( byteBufferLen + 2 ) ; // 2 for NUL in UTF-16
     converter.WC2MB( (char*)unibuf, st.wc_str(), byteBufferLen + 2 ) ;
     TXNSetData( m_txn, kTXNUnicodeTextData, (void*)unibuf, byteBufferLen, start, end ) ;
@@ -1732,7 +1732,7 @@ void wxMacMLTEClassicControl::MacUpdatePosition()
     }
 }
 
-void wxMacMLTEClassicControl::Move(int x, int y, int width, int height) 
+void wxMacMLTEClassicControl::Move(int x, int y, int width, int height)
 {
     wxMacControl::Move(x,y,width,height) ;
     MacUpdatePosition() ;

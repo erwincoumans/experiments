@@ -2,7 +2,7 @@
 // Name:        src/gtk/popupwin.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: popupwin.cpp 58503 2009-01-29 22:32:25Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -124,7 +124,7 @@ bool wxPopupWindow::Create( wxWindow *parent, int style )
         if (!gtk_check_version(2,10,0))
             gtk_window_group_add_window (gtk_window_get_group (GTK_WINDOW (toplevel)), GTK_WINDOW (m_widget));
 #endif
-    
+
         gtk_window_set_transient_for (GTK_WINDOW (m_widget), GTK_WINDOW (toplevel));
     }
     gtk_window_set_resizable (GTK_WINDOW (m_widget), FALSE);
@@ -133,7 +133,7 @@ bool wxPopupWindow::Create( wxWindow *parent, int style )
     g_signal_connect (m_widget, "delete_event",
                       G_CALLBACK (gtk_dialog_delete_callback), this);
 
-    m_wxwindow = wxPizza::New(m_windowStyle, this);
+    m_wxwindow = wxPizza::New(m_windowStyle);
     gtk_widget_show( m_wxwindow );
 
     gtk_container_add( GTK_CONTAINER(m_widget), m_wxwindow );
@@ -210,7 +210,7 @@ void wxPopupWindow::SetFocus()
             return;
         }
     }
-    
+
     wxPopupWindowBase::SetFocus();
 }
 

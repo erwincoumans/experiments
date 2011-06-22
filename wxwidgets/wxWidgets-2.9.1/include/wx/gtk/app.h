@@ -2,7 +2,7 @@
 // Name:        wx/gtk/app.h
 // Purpose:     wxApp definition for wxGTK
 // Author:      Robert Roebling
-// Id:          $Id: app.h 59711 2009-03-21 23:36:37Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,13 +14,9 @@
 // classes
 //-----------------------------------------------------------------------------
 
-#if wxUSE_THREADS
-class WXDLLIMPEXP_FWD_BASE wxMutex;
-#endif
-
-#if wxUSE_LIBHILDON
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
 typedef struct _HildonProgram HildonProgram;
-#endif // wxUSE_LIBHILDON
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2
 
 //-----------------------------------------------------------------------------
 // wxApp
@@ -60,17 +56,13 @@ public:
     // must return XVisualInfo pointer (it is not freed by caller)
     virtual void *GetXVisualInfo() { return NULL; }
 
-#if wxUSE_LIBHILDON
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
     // Maemo-specific method: get the main program object
-    HildonProgram *GetHildonProgram() const { return m_hildonProgram; }
-#endif // wxUSE_LIBHILDON
+    HildonProgram *GetHildonProgram();
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2
 
     // implementation only from now on
     // -------------------------------
-
-    // This returns the current visual: either that used by wxRootWindow
-    // or the XVisualInfo* for SGI.
-    GdkVisual      *GetGdkVisual();
 
     // check for pending events, without interference from our idle source
     bool EventsPending();
@@ -81,13 +73,13 @@ private:
     bool m_isInAssert;
 
 #if wxUSE_THREADS
-    wxMutex* m_idleMutex;
+    wxMutex m_idleMutex;
 #endif
     guint m_idleSourceId;
 
-#if wxUSE_LIBHILDON
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
     HildonProgram *m_hildonProgram;
-#endif // wxUSE_LIBHILDON
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2
 
     DECLARE_DYNAMIC_CLASS(wxApp)
 };

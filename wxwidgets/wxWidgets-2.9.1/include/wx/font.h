@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.09.99
-// RCS-ID:      $Id: font.h 59564 2009-03-15 16:28:33Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -113,7 +113,7 @@ class WXDLLIMPEXP_CORE wxFontBase : public wxGDIObject
 public:
     /*
         derived classes should provide the following ctors:
-    
+
     wxFont();
     wxFont(const wxString& nativeFontInfoString);
     wxFont(const wxNativeFontInfo& info);
@@ -132,7 +132,7 @@ public:
            const wxString& face = wxEmptyString,
            wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
     */
-    
+
     // creator function
     virtual ~wxFontBase();
 
@@ -249,14 +249,16 @@ public:
     wxString GetStyleString() const;
     wxString GetWeightString() const;
 
-    // Unofficial API, don't use
-    virtual void SetNoAntiAliasing( bool WXUNUSED(no) = true ) {  }
-    virtual bool GetNoAntiAliasing() const { return false; }
-
     // the default encoding is used for creating all fonts with default
     // encoding parameter
     static wxFontEncoding GetDefaultEncoding() { return ms_encodingDefault; }
     static void SetDefaultEncoding(wxFontEncoding encoding);
+
+    // this doesn't do anything and is kept for compatibility only
+#ifdef WXWIN_COMPATIBILITY_2_8
+    wxDEPRECATED_INLINE(void SetNoAntiAliasing(bool no = true), wxUnusedVar(no););
+    wxDEPRECATED_INLINE(bool GetNoAntiAliasing() const, return false;)
+#endif // WXWIN_COMPATIBILITY_2_8
 
 protected:
     // the function called by both overloads of SetNativeFontInfo()
@@ -276,7 +278,7 @@ WXDLLIMPEXP_CORE bool wxFromString(const wxString& str, wxFontBase* font);
 
 
 #if FUTURE_WXWIN_COMPATIBILITY_3_0
-#define WXDECLARE_COMPAT_SETTERS   \
+#define wxDECLARE_FONT_COMPAT_SETTER   \
     wxDEPRECATED_FUTURE( void SetFamily(int family) ) \
         { SetFamily((wxFontFamily)family); } \
     wxDEPRECATED_FUTURE( void SetStyle(int style) ) \
@@ -290,8 +292,25 @@ WXDLLIMPEXP_CORE bool wxFromString(const wxString& str, wxFontBase* font);
     wxDEPRECATED_FUTURE( void SetWeight(wxDeprecatedGUIConstants weight) ) \
         { SetWeight((wxFontWeight)weight); }
 #else
-#define WXDECLARE_COMPAT_SETTERS  /*empty*/
+#define wxDECLARE_FONT_COMPAT_SETTER  /*empty*/
 #endif
+
+// this macro must be used in all derived wxFont classes declarations
+#define wxDECLARE_COMMON_FONT_METHODS() \
+    wxDECLARE_FONT_COMPAT_SETTER \
+ \
+    /* functions for modifying font in place */ \
+    wxFont& MakeBold(); \
+    wxFont& MakeItalic(); \
+    wxFont& MakeLarger() { return Scale(1.2f); } \
+    wxFont& MakeSmaller() { return Scale(1/1.2f); } \
+    wxFont& Scale(float x); \
+    /* functions for creating fonts based on this one */ \
+    wxFont Bold() const; \
+    wxFont Italic() const; \
+    wxFont Larger() const { return Scaled(1.2f); } \
+    wxFont Smaller() const { return Scaled(1/1.2f); } \
+    wxFont Scaled(float x) const
 
 // include the real class declaration
 #if defined(__WXPALMOS__)

@@ -2,7 +2,7 @@
 // Name:        htmlwin.h
 // Purpose:     wxHtmlWindow class for parsing & displaying HTML
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlwin.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -318,12 +318,14 @@ public:
     // when/if we have CSS support we could add other possibilities...)
     void SetBackgroundImage(const wxBitmap& bmpBg) { m_bmpBg = bmpBg; }
 
+#if wxUSE_CONFIG
     // Saves custom settings into cfg config. it will use the path 'path'
     // if given, otherwise it will save info into currently selected path.
     // saved values : things set by SetFonts, SetBorders.
     virtual void ReadCustomization(wxConfigBase *cfg, wxString path = wxEmptyString);
     // ...
     virtual void WriteCustomization(wxConfigBase *cfg, wxString path = wxEmptyString);
+#endif // wxUSE_CONFIG
 
     // Goes to previous/next page (in browsing history)
     // Returns true if successful, false otherwise
@@ -400,7 +402,6 @@ protected:
     // actual size of window. This method also setup scrollbars
     void CreateLayout();
 
-    void OnEraseBackground(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);
     void OnMouseMove(wxMouseEvent& event);
@@ -510,8 +511,13 @@ protected:
 #endif // wxUSE_CLIPBOARD
 
 private:
-    // window content for double buffered rendering:
-    wxBitmap *m_backBuffer;
+    // erase the window background using m_bmpBg or just solid colour if we
+    // don't have any background image
+    void DoEraseBackground(wxDC& dc);
+
+    // window content for double buffered rendering, may be invalid until it is
+    // really initialized in OnPaint()
+    wxBitmap m_backBuffer;
 
     // background image, may be invalid
     wxBitmap m_bmpBg;
@@ -538,10 +544,6 @@ private:
     int m_HistoryPos;
     // if this FLAG is false, items are not added to history
     bool m_HistoryOn;
-
-    // a flag set if we need to erase background in OnPaint() (otherwise this
-    // is supposed to have been done in OnEraseBackground())
-    bool m_eraseBgInOnPaint;
 
     // standard mouse cursors
     static wxCursor *ms_cursorLink;

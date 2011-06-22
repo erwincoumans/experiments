@@ -3,7 +3,7 @@
 // Purpose:     common persistence support classes
 // Author:      Vadim Zeitlin
 // Created:     2009-01-20
-// RCS-ID:      $Id: persist.cpp 58733 2009-02-07 23:03:30Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2009 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -22,6 +22,8 @@
 #ifdef __BORLANDC__
     #pragma hdrstop
 #endif
+
+#if wxUSE_CONFIG
 
 #ifndef WX_PRECOMP
 #endif // WX_PRECOMP
@@ -150,4 +152,6 @@ wxPERSIST_DEFINE_SAVE_RESTORE_FOR(int)
 wxPERSIST_DEFINE_SAVE_RESTORE_FOR(long)
 wxPERSIST_DEFINE_SAVE_RESTORE_FOR(wxString)
 
-#undef wxPERSIST_DEFINE_SAVE_RESTORE_FOR  
+#undef wxPERSIST_DEFINE_SAVE_RESTORE_FOR
+
+#endif // wxUSE_CONFIG

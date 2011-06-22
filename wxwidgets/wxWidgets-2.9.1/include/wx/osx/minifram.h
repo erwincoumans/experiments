@@ -6,7 +6,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: minifram.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ public:
            const wxString& title,
            const wxPoint& pos = wxDefaultPosition,
            const wxSize& size = wxDefaultSize,
-           long style = wxCAPTION | wxRESIZE_BORDER | wxTINY_CAPTION_HORIZ,
+           long style = wxCAPTION | wxRESIZE_BORDER | wxTINY_CAPTION,
            const wxString& name = wxFrameNameStr)
   {
       // Use wxFrame constructor in absence of more specific code.

@@ -2,7 +2,7 @@
 // Name:        src/common/zipstrm.cpp
 // Purpose:     Streams for Zip files
 // Author:      Mike Wetherell
-// RCS-ID:      $Id: zipstrm.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Mike Wetherell
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -151,9 +151,9 @@ wxZipClassFactory::wxZipClassFactory()
 const wxChar * const *
 wxZipClassFactory::GetProtocols(wxStreamProtocolType type) const
 {
-    static const wxChar *protocols[] = { _T("zip"), NULL };
-    static const wxChar *mimetypes[] = { _T("application/zip"), NULL };
-    static const wxChar *fileexts[]  = { _T(".zip"), _T(".htb"), NULL };
+    static const wxChar *protocols[] = { wxT("zip"), NULL };
+    static const wxChar *mimetypes[] = { wxT("application/zip"), NULL };
+    static const wxChar *fileexts[]  = { wxT(".zip"), wxT(".htb"), NULL };
     static const wxChar *empty[]     = { NULL };
 
     switch (type) {
@@ -200,7 +200,7 @@ wxZipHeader::wxZipHeader(wxInputStream& stream, size_t size)
     m_pos(0),
     m_ok(false)
 {
-    wxCHECK_RET(size <= sizeof(m_data), _T("buffer too small"));
+    wxCHECK_RET(size <= sizeof(m_data), wxT("buffer too small"));
     m_size = stream.Read(m_data, size).LastRead();
     m_ok = m_size == size;
 }
@@ -786,15 +786,15 @@ wxString wxZipEntry::GetName(wxPathFormat format /*=wxPATH_NATIVE*/) const
     switch (wxFileName::GetFormat(format)) {
         case wxPATH_DOS:
         {
-            wxString name(isDir ? m_Name + _T("\\") : m_Name);
+            wxString name(isDir ? m_Name + wxT("\\") : m_Name);
             for (size_t i = 0; i < name.length(); i++)
-                if (name[i] == _T('/'))
-                    name[i] = _T('\\');
+                if (name[i] == wxT('/'))
+                    name[i] = wxT('\\');
             return name;
         }
 
         case wxPATH_UNIX:
-            return isDir ? m_Name + _T("/") : m_Name;
+            return isDir ? m_Name + wxT("/") : m_Name;
 
         default:
             ;
@@ -834,9 +834,9 @@ wxString wxZipEntry::GetInternalName(const wxString& name,
 
     while (!internal.empty() && *internal.begin() == '/')
         internal.erase(0, 1);
-    while (!internal.empty() && internal.compare(0, 2, _T("./")) == 0)
+    while (!internal.empty() && internal.compare(0, 2, wxT("./")) == 0)
         internal.erase(0, 2);
-    if (internal == _T(".") || internal == _T(".."))
+    if (internal == wxT(".") || internal == wxT(".."))
         internal = wxEmptyString;
 
     return internal;
@@ -1269,7 +1269,9 @@ bool wxZipEndRec::Read(wxInputStream& stream, wxMBConv& conv)
 
     if (m_DiskNumber != 0 || m_StartDisk != 0 ||
             m_EntriesHere != m_TotalEntries)
+    {
         wxLogWarning(_("assuming this is a multi-part zip concatenated"));
+    }
 
     return true;
 }
@@ -1872,13 +1874,19 @@ size_t wxZipInputStream::OnSysRead(void *buffer, size_t size)
             m_lasterror = wxSTREAM_READ_ERROR;
 
             if (m_entry.GetSize() != TellI())
+            {
                 wxLogError(_("reading zip stream (entry %s): bad length"),
                            m_entry.GetName().c_str());
+            }
             else if (m_crcAccumulator != m_entry.GetCrc())
+            {
                 wxLogError(_("reading zip stream (entry %s): bad crc"),
                            m_entry.GetName().c_str());
+            }
             else
+            {
                 m_lasterror = wxSTREAM_EOF;
+            }
         }
     }
 

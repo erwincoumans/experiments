@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2/13/2005
-// RCS-ID:      $Id: hidjoystick.cpp 58581 2009-02-01 05:54:10Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -157,8 +157,7 @@ wxJoystick::wxJoystick(int joystick)
     }
     else
     {
-        delete m_hid;
-        m_hid = NULL;
+        wxDELETE(m_hid);
     }
 }
 
@@ -901,4 +900,4 @@ void* wxJoystickThread::Entry()
     }
 }
 
-#endif // wxUSE_JOYSTICK 
+#endif // wxUSE_JOYSTICK

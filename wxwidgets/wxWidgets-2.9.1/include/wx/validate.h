@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: validate.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,10 +62,23 @@ public:
     wxWindow *GetWindow() const { return (wxWindow *)m_validatorWindow; }
     void SetWindow(wxWindowBase *win) { m_validatorWindow = win; }
 
-    // validators beep by default if invalid key is pressed, these functions
-    // allow to change it
+    // validators beep by default if invalid key is pressed, this function
+    // allows to change this
+    static void SuppressBellOnError(bool suppress = true)
+        { ms_isSilent = suppress; }
+
+    // test if beep is currently disabled
     static bool IsSilent() { return ms_isSilent; }
-    static void SetBellOnError(bool doIt = true) { ms_isSilent = doIt; }
+
+    // this function is deprecated because it handled its parameter
+    // unnaturally: it disabled the bell when it was true, not false as could
+    // be expected; use SuppressBellOnError() instead
+#if WXWIN_COMPATIBILITY_2_8
+    wxDEPRECATED_INLINE(
+        static void SetBellOnError(bool doIt = true),
+        ms_isSilent = doIt;
+    )
+#endif
 
 protected:
     wxWindowBase *m_validatorWindow;
@@ -87,7 +100,7 @@ extern WXDLLIMPEXP_DATA_CORE(const wxValidator) wxDefaultValidator;
     // a wxValidator parameter to avoid using "#if wxUSE_VALIDATORS"
     // everywhere
     class WXDLLIMPEXP_FWD_CORE wxValidator;
-    #define wxDefaultValidator (*(NULL))
+    #define wxDefaultValidator (*reinterpret_cast<wxValidator*>(NULL))
 
     // this macro allows to avoid warnings about unused parameters when
     // wxUSE_VALIDATORS == 0

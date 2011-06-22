@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/mimetype.h
+// Name:        wx/osx/carbon/mimetype.h
 // Purpose:     Mac Carbon implementation for wx mime-related classes
 // Author:      Ryan Norton
 // Modified by:
 // Created:     04/16/2005
-// RCS-ID:      $Id: mimetype.h 58178 2009-01-17 13:21:02Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Ryan Norton (<wxprojects@comcast.net>)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,7 @@ public:
 
     // set an arbitrary command, ask confirmation if it already exists and
     // overwriteprompt is TRUE
-    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = TRUE);
+    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = true);
     bool SetDefaultIcon(const wxString& strIcon = wxEmptyString, int index = 0);
 
  private:

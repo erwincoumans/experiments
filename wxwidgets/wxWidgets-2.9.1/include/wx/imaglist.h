@@ -5,12 +5,14 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Julian Smart
-// RCS-ID:      $Id: imaglist.h 54125 2008-06-11 19:17:41Z SC $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_IMAGLIST_H_BASE_
 #define _WX_IMAGLIST_H_BASE_
+
+#include "wx/defs.h"
 
 /*
  * wxImageList is used for wxListCtrl, wxTreeCtrl. These controls refer to

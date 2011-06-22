@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: settings.cpp 42245 2006-10-22 18:59:15Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -70,8 +70,7 @@ void wxSystemSettingsModule::OnExit()
 {
     sm_optionNames.Clear();
     sm_optionValues.Clear();
-    delete gs_fontDefault;
-    gs_fontDefault = NULL;
+    wxDELETE(gs_fontDefault);
 }
 
 wxColour wxSystemSettingsNative::GetColour(
@@ -248,7 +247,7 @@ wxFont wxSystemSettingsNative::GetFont(
                               wxFONTWEIGHT_NORMAL   );
                 break;
         default:
-                wxFAIL_MSG( _T("stock font not found") );
+                wxFAIL_MSG( wxT("stock font not found") );
                 return GetFont(wxSYS_ANSI_VAR_FONT);
     }
 

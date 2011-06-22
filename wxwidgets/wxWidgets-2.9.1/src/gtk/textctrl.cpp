@@ -2,7 +2,7 @@
 // Name:        src/gtk/textctrl.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: textctrl.cpp 58877 2009-02-13 10:25:38Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Vadim Zeitlin, 2005 Mart Raudsepp
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,6 +22,7 @@
     #include "wx/math.h"
 #endif
 
+#include "wx/scopeguard.h"
 #include "wx/strconv.h"
 #include "wx/fontutil.h"        // for wxNativeFontInfo (GetNativeFontInfo())
 
@@ -243,10 +244,10 @@ static void wxGtkTextApplyTagsFromAttr(GtkWidget *text,
 
         const wxArrayInt& tabs = attr.GetTabs();
 
-        wxString tagname = _T("WXTABS");
+        wxString tagname = wxT("WXTABS");
         g_snprintf(buf, sizeof(buf), "WXTABS");
         for (size_t i = 0; i < tabs.GetCount(); i++)
-            tagname += wxString::Format(_T(" %d"), tabs[i]);
+            tagname += wxString::Format(wxT(" %d"), tabs[i]);
 
         const wxWX2MBbuf buftag = tagname.utf8_str();
 
@@ -350,7 +351,7 @@ extern "C" {
 static void
 au_check_word( GtkTextIter *s, GtkTextIter *e )
 {
-    static const char *URIPrefixes[] =
+    static const char *const URIPrefixes[] =
     {
         "http://",
         "ftp://",
@@ -621,16 +622,10 @@ void wxTextCtrl::Init()
 
     m_text = NULL;
     m_showPositionOnThaw = NULL;
-    m_gdkHandCursor = NULL;
-    m_gdkXTermCursor = NULL;
 }
 
 wxTextCtrl::~wxTextCtrl()
 {
-    if(m_gdkHandCursor)
-        gdk_cursor_unref(m_gdkHandCursor);
-    if(m_gdkXTermCursor)
-        gdk_cursor_unref(m_gdkXTermCursor);
 }
 
 wxTextCtrl::wxTextCtrl( wxWindow *parent,
@@ -703,6 +698,9 @@ bool wxTextCtrl::Create( wxWindow *parent,
         // a single-line text control: no need for scrollbars
         m_widget =
         m_text = gtk_entry_new();
+        // work around probable bug in GTK+ 2.18 when calling WriteText on a
+        // new, empty control, see http://trac.wxwidgets.org/ticket/11409
+        gtk_entry_get_text((GtkEntry*)m_text);
 
         if (style & wxNO_BORDER)
             g_object_set (m_text, "has-frame", FALSE, NULL);
@@ -759,8 +757,6 @@ bool wxTextCtrl::Create( wxWindow *parent,
         if (style & wxTE_AUTO_URL)
         {
             GtkTextIter start, end;
-            m_gdkHandCursor = gdk_cursor_new(GDK_HAND2);
-            m_gdkXTermCursor = gdk_cursor_new(GDK_XTERM);
 
             // We create our wxUrl tag here for slight efficiency gain - we
             // don't have to check for the tag existance in callbacks,
@@ -816,6 +812,11 @@ GtkEditable *wxTextCtrl::GetEditable() const
     wxCHECK_MSG( IsSingleLine(), NULL, "shouldn't be called for multiline" );
 
     return GTK_EDITABLE(m_text);
+}
+
+GtkEntry *wxTextCtrl::GetEntry() const
+{
+    return GTK_ENTRY(m_text);
 }
 
 // ----------------------------------------------------------------------------
@@ -1613,7 +1614,7 @@ void wxTextCtrl::ChangeFontGlobally()
     //
     // TODO: it can be implemented much more efficiently for GTK2
     wxASSERT_MSG( IsMultiLine(),
-                  _T("shouldn't be called for single line controls") );
+                  wxT("shouldn't be called for single line controls") );
 
     wxString value = GetValue();
     if ( !value.empty() )
@@ -1665,7 +1666,7 @@ bool wxTextCtrl::SetStyle( long start, long end, const wxTextAttr& style )
         gint l = gtk_text_buffer_get_char_count( m_buffer );
 
         wxCHECK_MSG( start >= 0 && end <= l, false,
-                     _T("invalid range in wxTextCtrl::SetStyle") );
+                     wxT("invalid range in wxTextCtrl::SetStyle") );
 
         GtkTextIter starti, endi;
         gtk_text_buffer_get_iter_at_offset( m_buffer, &starti, start );
@@ -1678,6 +1679,50 @@ bool wxTextCtrl::SetStyle( long start, long end, const wxTextAttr& style )
     //else: single line text controls don't support styles
 
     return false;
+}
+
+bool wxTextCtrl::GetStyle(long position, wxTextAttr& style)
+{
+    if ( !IsMultiLine() )
+    {
+        // no styles for GtkEntry
+        return false;
+    }
+
+    gint l = gtk_text_buffer_get_char_count( m_buffer );
+
+    wxCHECK_MSG( position >= 0 && position <= l, false,
+                 _T("invalid range in wxTextCtrl::GetStyle") );
+
+    GtkTextIter positioni;
+    gtk_text_buffer_get_iter_at_offset(m_buffer, &positioni, position);
+
+    // Obtain a copy of the default attributes
+    GtkTextAttributes * const
+        pattr = gtk_text_view_get_default_attributes(GTK_TEXT_VIEW(m_text));
+    wxON_BLOCK_EXIT1( g_free, pattr );
+
+    // And query GTK for the attributes at the given position using it as base
+    if ( !gtk_text_iter_get_attributes(&positioni, pattr) )
+    {
+        style = m_defaultStyle;
+    }
+    else // have custom attributes
+    {
+        style.SetBackgroundColour(pattr->appearance.bg_color);
+        style.SetTextColour(pattr->appearance.fg_color);
+
+        const wxGtkString
+            pangoFontString(pango_font_description_to_string(pattr->font));
+
+        wxFont font;
+        if ( font.SetNativeFontInfo(wxString(pangoFontString)) )
+            style.SetFont(font);
+
+        // TODO: set alignment, tabs and indents
+    }
+
+    return true;
 }
 
 void wxTextCtrl::DoApplyWidgetStyle(GtkRcStyle *style)
@@ -1820,13 +1865,11 @@ void wxTextCtrl::OnUrlMouseEvent(wxMouseEvent& event)
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(m_text), &end, x, y);
     if (!gtk_text_iter_has_tag(&end, tag))
     {
-        gdk_window_set_cursor(gtk_text_view_get_window(GTK_TEXT_VIEW(m_text),
-                              GTK_TEXT_WINDOW_TEXT), m_gdkXTermCursor);
+        SetCursor(wxCursor(wxCURSOR_IBEAM));
         return;
     }
 
-    gdk_window_set_cursor(gtk_text_view_get_window(GTK_TEXT_VIEW(m_text),
-                          GTK_TEXT_WINDOW_TEXT), m_gdkHandCursor);
+    SetCursor(wxCursor(wxCURSOR_HAND));
 
     start = end;
     if(!gtk_text_iter_begins_tag(&start, tag))

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: cmndata.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -87,7 +87,7 @@ wxColourData::~wxColourData()
 
 void wxColourData::SetCustomColour(int i, const wxColour& colour)
 {
-    wxCHECK_RET( i >= 0 && i < NUM_CUSTOM, _T("custom colour index out of range") );
+    wxCHECK_RET( i >= 0 && i < NUM_CUSTOM, wxT("custom colour index out of range") );
 
     m_custColours[i] = colour;
 }
@@ -95,7 +95,7 @@ void wxColourData::SetCustomColour(int i, const wxColour& colour)
 wxColour wxColourData::GetCustomColour(int i) const
 {
     wxCHECK_MSG( i >= 0 && i < NUM_CUSTOM, wxColour(0,0,0),
-                 _T("custom colour index out of range") );
+                 wxT("custom colour index out of range") );
 
     return m_custColours[i];
 }
@@ -223,11 +223,7 @@ wxPrintData::wxPrintData(const wxPrintData& printData)
 
 void wxPrintData::SetPrivData( char *privData, int len )
 {
-    if (m_privData)
-    {
-        delete [] m_privData;
-        m_privData = NULL;
-    }
+    wxDELETEA(m_privData);
     m_privDataLen = len;
     if (m_privDataLen > 0)
     {
@@ -287,11 +283,7 @@ wxPrintData& wxPrintData::operator=(const wxPrintData& data)
     m_nativeData = data.GetNativeData();
     m_nativeData->m_ref++;
 
-    if (m_privData)
-    {
-        delete [] m_privData;
-        m_privData = NULL;
-    }
+    wxDELETEA(m_privData);
     m_privDataLen = data.GetPrivDataLen();
     if (m_privDataLen > 0)
     {
@@ -524,9 +516,12 @@ void wxPageSetupDialogData::CalculatePaperSizeFromId()
 
     wxSize sz = wxThePrintPaperDatabase->GetSize(m_printData.GetPaperId());
 
-    // sz is in 10ths of a mm, while paper size is in mm
-    m_paperSize.x = sz.x / 10;
-    m_paperSize.y = sz.y / 10;
+    if (sz != wxSize(0, 0))
+    {
+        // sz is in 10ths of a mm, while paper size is in mm
+        m_paperSize.x = sz.x / 10;
+        m_paperSize.y = sz.y / 10;
+    }
 }
 
 #endif // wxUSE_PRINTING_ARCHITECTURE

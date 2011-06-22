@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.06.2003
-// RCS-ID:      $Id: basemsw.cpp 58919 2009-02-15 19:34:58Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -51,21 +51,6 @@ WXDWORD wxAppTraits::DoSimpleWaitForThread(WXHANDLE hThread)
 // ============================================================================
 // wxConsoleAppTraits implementation
 // ============================================================================
-
-void wxConsoleAppTraits::AlwaysYield()
-{
-    // we need to use special logic to deal with WM_PAINT: as this pseudo
-    // message is generated automatically as long as there are invalidated
-    // windows belonging to this thread, we'd never return if we waited here
-    // until we have no more of them left. OTOH, this message is always the
-    // last one in the queue, so we can safely return as soon as we detect it
-    MSG msg;
-    while ( ::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) )
-    {
-        if ( msg.message == WM_PAINT )
-            break;
-    }
-}
 
 void *wxConsoleAppTraits::BeforeChildWaitLoop()
 {

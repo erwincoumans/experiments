@@ -3,11 +3,15 @@
 // Purpose:     implementation of BASE64 encoding/decoding functions
 // Author:      Charles Reimers, Vadim Zeitlin
 // Created:     2007-06-18
-// RCS-ID:      $Id: base64.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "wxprec.h"
+
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
 
 #if wxUSE_BASE64
 
@@ -16,7 +20,7 @@
 size_t
 wxBase64Encode(char *dst, size_t dstLen, const void *src_, size_t srcLen)
 {
-    wxCHECK_MSG( src_, wxCONV_FAILED, _T("NULL input buffer") );
+    wxCHECK_MSG( src_, wxCONV_FAILED, wxT("NULL input buffer") );
 
     const unsigned char *src = static_cast<const unsigned char *>(src_);
 
@@ -69,7 +73,7 @@ wxBase64Decode(void *dst_, size_t dstLen,
                wxBase64DecodeMode mode,
                size_t *posErr)
 {
-    wxCHECK_MSG( src, wxCONV_FAILED, _T("NULL input buffer") );
+    wxCHECK_MSG( src, wxCONV_FAILED, wxT("NULL input buffer") );
 
     unsigned char *dst = static_cast<unsigned char *>(dst_);
 
@@ -183,8 +187,15 @@ wxBase64Decode(void *dst_, size_t dstLen,
 
                 // undo the bit shifting done during encoding
                 *dst++ = in[0] << 2 | in[1] >> 4;
-                *dst++ = in[1] << 4 | in[2] >> 2;
-                *dst++ = in[2] << 6 | in[3];
+
+                // be careful to not overwrite the output buffer with NUL pad
+                // bytes
+                if ( padLen != 2 )
+                {
+                    *dst++ = in[1] << 4 | in[2] >> 2;
+                    if ( !padLen )
+                        *dst++ = in[2] << 6 | in[3];
+                }
             }
 
             n = 0;
@@ -212,7 +223,7 @@ wxMemoryBuffer wxBase64Decode(const char *src,
                               size_t *posErr)
 {
     wxMemoryBuffer buf;
-    wxCHECK_MSG( src, buf, _T("NULL input buffer") );
+    wxCHECK_MSG( src, buf, wxT("NULL input buffer") );
 
     if ( srcLen == wxNO_LEN )
         srcLen = strlen(src);

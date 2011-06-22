@@ -3,7 +3,7 @@
 // Purpose:     wxImage PCX handler
 // Author:      Guillermo Rodriguez Garcia <guille@iies.es>
 // Version:     1.1
-// CVS-ID:      $Id: imagpcx.cpp 54766 2008-07-22 20:16:03Z VZ $
+// CVS-ID:      $Id$
 // Copyright:   (c) 1999 Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -439,7 +439,9 @@ bool wxPCXHandler::LoadFile( wxImage *image, wxInputStream& stream, bool verbose
     if (!CanRead(stream))
     {
         if (verbose)
+        {
             wxLogError(_("PCX: this is not a PCX file."));
+        }
 
         return false;
     }
@@ -487,7 +489,7 @@ bool wxPCXHandler::SaveFile( wxImage *image, wxOutputStream& stream, bool verbos
 
 bool wxPCXHandler::DoCanRead( wxInputStream& stream )
 {
-    unsigned char c = stream.GetC();
+    unsigned char c = stream.GetC();     // it's ok to modify the stream position here
     if ( !stream )
         return false;
 

@@ -3,7 +3,7 @@
 // Purpose:     OS2 version of wxStaticLine class
 // Author:      David Webster
 // Created:     10/23/99
-// Version:     $Id: statline.cpp 38920 2006-04-26 08:21:31Z ABX $
+// Version:     $Id$
 // Copyright:   (c) 1999 David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

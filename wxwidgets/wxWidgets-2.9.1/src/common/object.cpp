@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Ron Lee
 // Created:     04/01/98
-// RCS-ID:      $Id: object.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 //              (c) 2001 Ron Lee <ron@debian.org>
 // Licence:     wxWindows licence
@@ -55,10 +55,10 @@ const wxClassInfo* wxObject::ms_classParents[] = { NULL } ;
             (wxObjectConstructorFn) 0   ,
             NULL,NULL,0 , 0 ,
             0 , wxVariantOfPtrToObjectConverterwxObject , wxVariantToObjectConverterwxObject , wxObjectToVariantConverterwxObject);
- template<> void wxStringReadValue(const wxString & , wxObject * & ){assert(0) ;}
- template<> void wxStringWriteValue(wxString & , wxObject* const & ){assert(0) ;}
- template<> void wxStringReadValue(const wxString & , wxObject & ){assert(0) ;}
- template<> void wxStringWriteValue(wxString & , wxObject const & ){assert(0) ;}
+ template<> void wxStringReadValue(const wxString & , wxObject * & ){ wxFAIL_MSG("unreachable"); }
+ template<> void wxStringWriteValue(wxString & , wxObject* const & ){ wxFAIL_MSG("unreachable"); }
+ template<> void wxStringReadValue(const wxString & , wxObject & ){ wxFAIL_MSG("unreachable"); }
+ template<> void wxStringWriteValue(wxString & , wxObject const & ){ wxFAIL_MSG("unreachable"); }
  wxClassTypeInfo s_typeInfo(wxT_OBJECT_PTR , &wxObject::ms_classInfo , NULL , NULL , typeid(wxObject*).name() ) ;
  wxClassTypeInfo s_typeInfowxObject(wxT_OBJECT , &wxObject::ms_classInfo , NULL , NULL , typeid(wxObject).name() ) ;
 #else
@@ -206,48 +206,73 @@ wxClassInfo *wxClassInfo::FindClass(const wxString& className)
     }
 }
 
-// This function wasn't written to be reentrant but there is a possiblity of
-// reentrance if something it does causes a shared lib to load and register
-// classes. On Solaris this happens when the wxHashTable is newed, so the first
-// part of the function has been modified to handle it, and a wxASSERT checks
-// against reentrance in the remainder of the function.
+// Reentrance can occur on some platforms (Solaris for one), as the use of hash
+// and string objects can cause other modules to load and register classes
+// before the original call returns. This is handled by keeping the hash table
+// local when it is first created and only assigning it to the global variable
+// when the function is ready to return.
+//
+// That does make the assumption that after the function has completed the
+// first time the problem will no longer happen; all the modules it depends on
+// will have been loaded. The assumption is checked using the 'entry' variable
+// as a reentrance guard, it checks that once the hash table is global it is
+// not accessed multiple times simulateously.
 
 void wxClassInfo::Register()
 {
-    if ( !sm_classTable )
-    {
-        wxHashTable *classTable = new wxHashTable(wxKEY_STRING);
-
-        // check for reentrance
-        if ( sm_classTable )
-            delete classTable;
-        else
-            sm_classTable = classTable;
-    }
-
 #if wxDEBUG_LEVEL
     // reentrance guard - see note above
     static int entry = 0;
-    wxASSERT_MSG(++entry == 1, _T("wxClassInfo::Register() reentrance"));
 #endif // wxDEBUG_LEVEL
+
+    wxHashTable *classTable;
+
+    if ( !sm_classTable )
+    {
+        // keep the hash local initially, reentrance is possible
+        classTable = new wxHashTable(wxKEY_STRING);
+    }
+    else
+    {
+        // guard againt reentrance once the global has been created
+        wxASSERT_MSG(++entry == 1, wxT("wxClassInfo::Register() reentrance"));
+        classTable = sm_classTable;
+    }
 
     // Using IMPLEMENT_DYNAMIC_CLASS() macro twice (which may happen if you
     // link any object module twice mistakenly, or link twice against wx shared
     // library) will break this function because it will enter an infinite loop
     // and eventually die with "out of memory" - as this is quite hard to
     // detect if you're unaware of this, try to do some checks here.
-    wxASSERT_MSG( sm_classTable->Get(m_className) == NULL,
+    wxASSERT_MSG( classTable->Get(m_className) == NULL,
         wxString::Format
         (
-            _T("Class \"%s\" already in RTTI table - have you used IMPLEMENT_DYNAMIC_CLASS() multiple times or linked some object file twice)?"),
+            wxT("Class \"%s\" already in RTTI table - have you used IMPLEMENT_DYNAMIC_CLASS() multiple times or linked some object file twice)?"),
             m_className
         )
     );
 
-    sm_classTable->Put(m_className, (wxObject *)this);
+    classTable->Put(m_className, (wxObject *)this);
+
+    // if we're using a local hash we need to try to make it global
+    if ( sm_classTable != classTable )
+    {
+        if ( !sm_classTable )
+        {
+            // make the hash global
+            sm_classTable = classTable;
+        }
+        else
+        {
+            // the gobal hash has already been created by a reentrant call,
+            // so delete the local hash and try again
+            delete classTable;
+            Register();
+        }
+    }
 
 #if wxDEBUG_LEVEL
-    --entry;
+    entry = 0;
 #endif // wxDEBUG_LEVEL
 }
 
@@ -258,8 +283,7 @@ void wxClassInfo::Unregister()
         sm_classTable->Delete(m_className);
         if ( sm_classTable->GetCount() == 0 )
         {
-            delete sm_classTable;
-            sm_classTable = NULL;
+            wxDELETE(sm_classTable);
         }
     }
 }
@@ -325,8 +349,10 @@ wxClassInfo::const_iterator wxClassInfo::end_classinfo()
 // wxObjectRefData
 // ----------------------------------------------------------------------------
 
-void wxObjectRefData::DecRef()
+void wxRefCounter::DecRef()
 {
+    wxASSERT_MSG( m_count > 0, "invalid ref data count" );
+
     if ( --m_count == 0 )
         delete this;
 }
@@ -361,8 +387,6 @@ void wxObject::UnRef()
 {
     if ( m_refData )
     {
-        wxASSERT_MSG( m_refData->m_count > 0, _T("invalid ref data count") );
-
         m_refData->DecRef();
         m_refData = NULL;
     }
@@ -386,13 +410,13 @@ void wxObject::AllocExclusive()
     //else: ref count is 1, we are exclusive owners of m_refData anyhow
 
     wxASSERT_MSG( m_refData && m_refData->GetRefCount() == 1,
-                  _T("wxObject::AllocExclusive() failed.") );
+                  wxT("wxObject::AllocExclusive() failed.") );
 }
 
 wxObjectRefData *wxObject::CreateRefData() const
 {
     // if you use AllocExclusive() you must override this method
-    wxFAIL_MSG( _T("CreateRefData() must be overridden if called!") );
+    wxFAIL_MSG( wxT("CreateRefData() must be overridden if called!") );
 
     return NULL;
 }
@@ -401,7 +425,7 @@ wxObjectRefData *
 wxObject::CloneRefData(const wxObjectRefData * WXUNUSED(data)) const
 {
     // if you use AllocExclusive() you must override this method
-    wxFAIL_MSG( _T("CloneRefData() must be overridden if called!") );
+    wxFAIL_MSG( wxT("CloneRefData() must be overridden if called!") );
 
     return NULL;
 }

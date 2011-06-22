@@ -3,9 +3,9 @@
 // Purpose:     wxSound class (loads and plays short Windows .wav files).
 //              Optional on non-Windows platforms.
 // Authors:     David Elliott, Ryan Norton
-// Modified by: 
+// Modified by:
 // Created:     2004-10-02
-// RCS-ID:      $Id: sound.h 50646 2007-12-12 01:35:53Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott, Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -41,7 +41,7 @@ public:
     void SetNSSound(WX_NSSound cocoaNSSound);
     inline WX_NSSound GetNSSound()
     {   return m_cocoaNSSound; }
-protected:  
+protected:
     bool DoPlay(unsigned flags) const;
     bool LoadWAV(const wxUint8 *data, size_t length, bool copyData);
 private:

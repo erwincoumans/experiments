@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: combocmn.cpp 59085 2009-02-22 15:13:29Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,6 @@
     #include "wx/log.h"
     #include "wx/dcclient.h"
     #include "wx/settings.h"
-    #include "wx/dialog.h"
     #include "wx/timer.h"
     #include "wx/textctrl.h"
 #endif
@@ -59,6 +58,11 @@
 
 #if defined(__WXMSW__)
 
+// Let's use wxFrame as a fall-back solution until wxMSW gets wxNonOwnedWindow
+#include "wx/frame.h"
+#define wxCC_GENERIC_TLW_IS_FRAME
+#define wxComboCtrlGenericTLW   wxFrame
+
 #define USE_TRANSIENT_POPUP           1 // Use wxPopupWindowTransient (preferred, if it works properly on platform)
 #define TRANSIENT_POPUPWIN_IS_PERFECT 0 // wxPopupTransientWindow works, its child can have focus, and common
                                         // native controls work on it like normal.
@@ -77,6 +81,12 @@
 //     reflected (or something like that - atleast commenting out ->Hide()
 //     seemed to eliminate the position change).
 
+#include "wx/dialog.h"
+#define wxCC_GENERIC_TLW_IS_DIALOG
+#define wxComboCtrlGenericTLW   wxDialog
+
+#include "wx/gtk/private.h"
+
 // NB: Let's not be afraid to use wxGTK's wxPopupTransientWindow as a
 //     'perfect' popup, as it can succesfully host child controls even in
 //     popups that are shown in modal dialogs.
@@ -89,6 +99,10 @@
 #define FOCUS_RING                    0 // No focus ring on wxGTK
 
 #elif defined(__WXMAC__)
+
+#include "wx/nonownedwnd.h"
+#define wxCC_GENERIC_TLW_IS_NONOWNEDWINDOW
+#define wxComboCtrlGenericTLW   wxNonOwnedWindow
 
 #define USE_TRANSIENT_POPUP           1 // Use wxPopupWindowTransient (preferred, if it works properly on platform)
 #define TRANSIENT_POPUPWIN_IS_PERFECT 1 // wxPopupTransientWindow works, its child can have focus, and common
@@ -103,6 +117,10 @@
 #define COMBO_MARGIN                  FOCUS_RING
 
 #else
+
+#include "wx/dialog.h"
+#define wxCC_GENERIC_TLW_IS_DIALOG
+#define wxComboCtrlGenericTLW   wxDialog
 
 #define USE_TRANSIENT_POPUP           0 // Use wxPopupWindowTransient (preferred, if it works properly on platform)
 #define TRANSIENT_POPUPWIN_IS_PERFECT 0 // wxPopupTransientWindow works, its child can have focus, and common
@@ -137,7 +155,7 @@ enum
     POPUPWIN_NONE                   = 0,
     POPUPWIN_WXPOPUPTRANSIENTWINDOW = 1,
     POPUPWIN_WXPOPUPWINDOW          = 2,
-    POPUPWIN_WXDIALOG               = 3
+    POPUPWIN_GENERICTLW             = 3
 };
 
 
@@ -155,9 +173,9 @@ enum
         #define SECONDARY_POPUP_TYPE        POPUPWIN_WXPOPUPWINDOW
         #define USES_WXPOPUPWINDOW          1
     #else
-        #define wxComboPopupWindowBase2     wxDialog
-        #define SECONDARY_POPUP_TYPE        POPUPWIN_WXDIALOG
-        #define USES_WXDIALOG               1
+        #define wxComboPopupWindowBase2     wxComboCtrlGenericTLW
+        #define SECONDARY_POPUP_TYPE        POPUPWIN_GENERICTLW
+        #define USES_GENERICTLW             1
     #endif
 
 #elif wxUSE_POPUPWIN
@@ -168,17 +186,17 @@ enum
     #define USES_WXPOPUPWINDOW          1
 
     #if !POPUPWIN_IS_PERFECT
-        #define wxComboPopupWindowBase2     wxDialog
-        #define SECONDARY_POPUP_TYPE        POPUPWIN_WXDIALOG
-        #define USES_WXDIALOG               1
+        #define wxComboPopupWindowBase2     wxComboCtrlGenericTLW
+        #define SECONDARY_POPUP_TYPE        POPUPWIN_GENERICTLW
+        #define USES_GENERICTLW             1
     #endif
 
 #else
     // wxPopupWindow is not implemented
 
-    #define wxComboPopupWindowBase      wxDialog
-    #define PRIMARY_POPUP_TYPE          POPUPWIN_WXDIALOG
-    #define USES_WXDIALOG               1
+    #define wxComboPopupWindowBase      wxComboCtrlGenericTLW
+    #define PRIMARY_POPUP_TYPE          POPUPWIN_GENERICTLW
+    #define USES_GENERICTLW             1
 
 #endif
 
@@ -191,8 +209,8 @@ enum
     #define USES_WXPOPUPWINDOW          0
 #endif
 
-#ifndef USES_WXDIALOG
-    #define USES_WXDIALOG               0
+#ifndef USES_GENERICTLW
+    #define USES_GENERICTLW             0
 #endif
 
 
@@ -201,6 +219,26 @@ enum
 #else
     #define INSTALL_TOPLEV_HANDLER      0
 #endif
+
+
+// Returns true if given popup window type can be classified as perfect
+// on this platform.
+static inline bool IsPopupWinTypePerfect( wxByte popupWinType )
+{
+#if POPUPWIN_IS_PERFECT && TRANSIENT_POPUPWIN_IS_PERFECT
+    wxUnusedVar(popupWinType);
+    return true;
+#else
+    return ( popupWinType == POPUPWIN_GENERICTLW
+        #if POPUPWIN_IS_PERFECT
+             || popupWinType == POPUPWIN_WXPOPUPWINDOW 
+        #endif
+        #if TRANSIENT_POPUPWIN_IS_PERFECT
+             || popupWinType == POPUPWIN_WXPOPUPTRANSIENTWINDOW 
+        #endif
+            );
+#endif
+}
 
 
 //
@@ -289,7 +327,7 @@ void wxComboFrameEventHandler::OnIdle( wxIdleEvent& event )
          winFocused != m_combo->GetButton() // GTK (atleast) requires this
         )
     {
-        m_combo->HidePopup();
+        m_combo->HidePopup(true);
     }
 
     event.Skip();
@@ -297,37 +335,37 @@ void wxComboFrameEventHandler::OnIdle( wxIdleEvent& event )
 
 void wxComboFrameEventHandler::OnMenuEvent( wxMenuEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
 void wxComboFrameEventHandler::OnMouseEvent( wxMouseEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
 void wxComboFrameEventHandler::OnClose( wxCloseEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
 void wxComboFrameEventHandler::OnActivate( wxActivateEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
 void wxComboFrameEventHandler::OnResize( wxSizeEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
 void wxComboFrameEventHandler::OnMove( wxMoveEvent& event )
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
     event.Skip();
 }
 
@@ -411,7 +449,7 @@ void wxComboPopupWindow::OnDismiss()
     wxASSERT_MSG( combo->IsKindOf(CLASSINFO(wxComboCtrlBase)),
                   wxT("parent might not be wxComboCtrl, but check IMPLEMENT_DYNAMIC_CLASS(2) macro for correctness") );
 
-    combo->OnPopupDismiss();
+    combo->OnPopupDismiss(true);
 }
 #endif // USES_WXPOPUPTRANSIENTWINDOW
 
@@ -433,7 +471,7 @@ public:
 
     void OnSizeEvent( wxSizeEvent& event );
     void OnKeyEvent(wxKeyEvent& event);
-#if USES_WXDIALOG
+#if USES_GENERICTLW
     void OnActivate( wxActivateEvent& event );
 #endif
 
@@ -447,7 +485,8 @@ private:
 BEGIN_EVENT_TABLE(wxComboPopupWindowEvtHandler, wxEvtHandler)
     EVT_KEY_DOWN(wxComboPopupWindowEvtHandler::OnKeyEvent)
     EVT_KEY_UP(wxComboPopupWindowEvtHandler::OnKeyEvent)
-#if USES_WXDIALOG
+    EVT_CHAR(wxComboPopupWindowEvtHandler::OnKeyEvent)
+#if USES_GENERICTLW
     EVT_ACTIVATE(wxComboPopupWindowEvtHandler::OnActivate)
 #endif
     EVT_SIZE(wxComboPopupWindowEvtHandler::OnSizeEvent)
@@ -465,16 +504,16 @@ void wxComboPopupWindowEvtHandler::OnKeyEvent( wxKeyEvent& event )
     wxWindowList children = m_combo->GetPopupWindow()->GetChildren();
     wxWindowList::iterator node = children.begin();
     wxWindow* child = (wxWindow*)*node;
-    child->GetEventHandler()->AddPendingEvent(event);
+    child->GetEventHandler()->ProcessEvent(event);
 }
 
-#if USES_WXDIALOG
+#if USES_GENERICTLW
 void wxComboPopupWindowEvtHandler::OnActivate( wxActivateEvent& event )
 {
     if ( !event.GetActive() )
     {
         // Tell combo control that we are dismissed.
-        m_combo->HidePopup();
+        m_combo->HidePopup(true);
 
         event.Skip();
     }
@@ -519,7 +558,7 @@ void wxComboPopup::DefaultPaintComboControl( wxComboCtrlBase* combo,
         combo->PrepareBackground(dc,rect,0);
 
         dc.DrawText( combo->GetValue(),
-                     rect.x + combo->GetTextIndent(),
+                     rect.x + combo->m_marginLeft,
                      (rect.height-dc.GetCharHeight())/2 + rect.y );
     }
 }
@@ -530,6 +569,11 @@ void wxComboPopup::PaintComboControl( wxDC& dc, const wxRect& rect )
 }
 
 void wxComboPopup::OnComboKeyEvent( wxKeyEvent& event )
+{
+    event.Skip();
+}
+
+void wxComboPopup::OnComboCharEvent( wxKeyEvent& event )
 {
     event.Skip();
 }
@@ -549,7 +593,7 @@ bool wxComboPopup::LazyCreate()
 
 void wxComboPopup::Dismiss()
 {
-    m_combo->HidePopup();
+    m_combo->HidePopup(true);
 }
 
 // ----------------------------------------------------------------------------
@@ -637,17 +681,21 @@ void wxComboBoxExtraInputHandler::OnFocus(wxFocusEvent& event)
 // This is pushed to the event handler queue of the control in popup.
 //
 
-class wxComboPopupExtraEventHandler : public wxEvtHandler
+class wxComboPopupEvtHandler : public wxEvtHandler
 {
 public:
 
-    wxComboPopupExtraEventHandler( wxComboCtrlBase* combo )
+    wxComboPopupEvtHandler( wxComboCtrlBase* combo )
         : wxEvtHandler()
     {
         m_combo = combo;
         m_beenInside = false;
+
+        // Let's make it so that the popup control will not receive mouse
+        // events until mouse left button has been up.
+        m_blockEventsToPopup = true;
     }
-    virtual ~wxComboPopupExtraEventHandler() { }
+    virtual ~wxComboPopupEvtHandler() { }
 
     void OnMouseEvent( wxMouseEvent& event );
 
@@ -655,24 +703,26 @@ public:
     void OnPopupDismiss()
     {
         m_beenInside = false;
+        m_blockEventsToPopup = true;
     }
 
 protected:
     wxComboCtrlBase*     m_combo;
 
-    bool                    m_beenInside;
+    bool                m_beenInside;
+    bool                m_blockEventsToPopup;
 
 private:
     DECLARE_EVENT_TABLE()
 };
 
 
-BEGIN_EVENT_TABLE(wxComboPopupExtraEventHandler, wxEvtHandler)
-    EVT_MOUSE_EVENTS(wxComboPopupExtraEventHandler::OnMouseEvent)
+BEGIN_EVENT_TABLE(wxComboPopupEvtHandler, wxEvtHandler)
+    EVT_MOUSE_EVENTS(wxComboPopupEvtHandler::OnMouseEvent)
 END_EVENT_TABLE()
 
 
-void wxComboPopupExtraEventHandler::OnMouseEvent( wxMouseEvent& event )
+void wxComboPopupEvtHandler::OnMouseEvent( wxMouseEvent& event )
 {
     wxPoint pt = event.GetPosition();
     wxSize sz = m_combo->GetPopupControl()->GetControl()->GetClientSize();
@@ -682,49 +732,97 @@ void wxComboPopupExtraEventHandler::OnMouseEvent( wxMouseEvent& event )
 
     event.Skip();
 
-    if ( evtType == wxEVT_MOTION ||
-         evtType == wxEVT_LEFT_DOWN ||
-         evtType == wxEVT_RIGHT_DOWN )
+    if ( !isInside || !m_combo->IsPopupShown() )
     {
-        // Block motion and click events outside the popup
-        if ( !isInside || !m_combo->IsPopupShown() )
+        // Mouse is outside the popup or popup is not actually shown (yet)
+
+        if ( evtType == wxEVT_MOTION ||
+             evtType == wxEVT_LEFT_DOWN ||
+             evtType == wxEVT_LEFT_UP ||
+             evtType == wxEVT_RIGHT_DOWN )
+        {
+            // Block motion and click events outside the popup
+            event.Skip(false);
+        }
+    }
+    else
+    {
+        // Mouse is inside the popup, which is fully shown
+
+        m_beenInside = true;
+
+        // Do not let the popup control respond to mouse events until
+        // mouse press used to display the popup has been lifted. This
+        // is important for users with slower mouse fingers or mouse
+        // drivers. Note that we have some redundancy here, just in
+        // case the popup is some native control that does not emit all
+        // mouse event types.
+        if ( evtType == wxEVT_MOTION )
+        {
+            if ( m_blockEventsToPopup )
+            {
+                if ( event.LeftIsDown() )
+                    event.Skip(false);
+                else
+                    m_blockEventsToPopup = false;
+            }
+        }
+        else if ( evtType == wxEVT_LEFT_DOWN )
+        {
+            if ( m_blockEventsToPopup )
+                m_blockEventsToPopup = false;
+        }
+        else if ( evtType == wxEVT_LEFT_UP )
+        {
+            if ( m_blockEventsToPopup )
+            {
+                // On first left up, stop blocking mouse events (but still
+                // block this one)
+                m_blockEventsToPopup = false;
+                event.Skip(false);
+
+                // Also, this button press was (probably) used to display
+                // the popup, so relay it back to the drop-down button
+                // (which supposedly originated it). This is necessary to
+                // refresh it properly.
+                relayToButton = true;
+            }
+        }
+        else if ( m_blockEventsToPopup )
         {
             event.Skip(false);
         }
     }
-    else if ( evtType == wxEVT_LEFT_UP )
+
+    //
+    // Some mouse events to popup that happen outside it, before cursor
+    // has been inside the popup, need to be ignored by it but relayed to
+    // the dropbutton.
+    //
+    if ( evtType == wxEVT_LEFT_UP )
     {
         if ( !m_combo->IsPopupShown() )
         {
             event.Skip(false);
             relayToButton = true;
         }
-        else if ( !m_beenInside )
+        else if ( !isInside && !m_beenInside )
         {
-            if ( isInside )
-            {
-                m_beenInside = true;
-            }
-            else
-            {
-                relayToButton = true;
-            }
+            // Popup is shown but the cursor is not inside, nor it has been
+            relayToButton = true;
         }
     }
 
     if ( relayToButton )
     {
-        //
-        // Some mouse events to popup that happen outside it, before cursor
-        // has been inside the popup, need to be ignored by it but relayed to
-        // the dropbutton.
-        //
-        wxWindow* eventSink = m_combo;
         wxWindow* btn = m_combo->GetButton();
         if ( btn )
-            eventSink = btn;
-
-        eventSink->GetEventHandler()->ProcessEvent(event);
+            btn->GetEventHandler()->ProcessEvent(event);
+        else
+            // Bypass the event handling mechanism. Using it would be
+            // confusing for the platform-specific wxComboCtrl
+            // implementations.
+            m_combo->HandleButtonMouseEvent(event, 0);
     }
 }
 
@@ -762,6 +860,7 @@ BEGIN_EVENT_TABLE(wxComboCtrlBase, wxControl)
     EVT_IDLE(wxComboCtrlBase::OnIdleEvent)
     //EVT_BUTTON(wxID_ANY,wxComboCtrlBase::OnButtonClickEvent)
     EVT_KEY_DOWN(wxComboCtrlBase::OnKeyEvent)
+    EVT_CHAR(wxComboCtrlBase::OnCharEvent)
     EVT_TEXT_ENTER(wxID_ANY,wxComboCtrlBase::OnTextCtrlEvent)
     EVT_SYS_COLOUR_CHANGED(wxComboCtrlBase::OnSysColourChanged)
 END_EVENT_TABLE()
@@ -778,7 +877,7 @@ void wxComboCtrlBase::Init()
     m_text = NULL;
     m_popupInterface = NULL;
 
-    m_popupExtraHandler = NULL;
+    m_popupEvtHandler = NULL;
     m_textEvtHandler = NULL;
 
 #if INSTALL_TOPLEV_HANDLER
@@ -804,8 +903,9 @@ void wxComboCtrlBase::Init()
 
     m_extLeft = 0;
     m_extRight = 0;
-    m_absIndent = -1;
+    m_marginLeft = -1;
     m_iFlags = 0;
+    m_textCtrlStyle = 0;
     m_timeCanAcceptClick = 0;
 
     m_resetFocus = false;
@@ -833,7 +933,7 @@ bool wxComboCtrlBase::Create(wxWindow *parent,
 
     // Get colours
     OnThemeChange();
-    m_absIndent = GetNativeTextIndent();
+    m_marginLeft = GetNativeTextIndent();
 
     m_iFlags |= wxCC_IFLAG_CREATED;
 
@@ -869,7 +969,7 @@ wxComboCtrlBase::CreateTextCtrl(int style, const wxValidator& validator)
         // not used by the wxPropertyGrid and therefore the tab is processed by
         // looking at ancestors to see if they have wxTAB_TRAVERSAL. The
         // navigation event is then sent to the wrong window.
-        style |= wxTE_PROCESS_TAB;
+        style |= wxTE_PROCESS_TAB | m_textCtrlStyle;
 
         if ( HasFlag(wxTE_PROCESS_ENTER) )
             style |= wxTE_PROCESS_ENTER;
@@ -886,6 +986,7 @@ wxComboCtrlBase::CreateTextCtrl(int style, const wxValidator& validator)
         m_text->Create(this, wxID_ANY, m_valueString,
                        wxDefaultPosition, wxSize(10,-1),
                        style, validator);
+        m_text->SetHint(m_hintText);
     }
 }
 
@@ -895,8 +996,27 @@ void wxComboCtrlBase::OnThemeChange()
     // be the correct colour and themed brush.  Instead we'll use
     // wxSYS_COLOUR_WINDOW in the EVT_PAINT handler as needed.
 #ifndef __WXMAC__
-    SetOwnBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-#endif
+  #if defined(__WXMSW__) || defined(__WXGTK__)
+    wxVisualAttributes vattrs = wxComboBox::GetClassDefaultAttributes();
+  #else
+    wxVisualAttributes vattrs;
+    vattrs.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    vattrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+  #endif
+
+    // Only change the colours if application has not specified
+    // custom ones.
+    if ( !m_hasFgCol )
+    {
+        SetOwnForegroundColour(vattrs.colFg);
+        m_hasFgCol = false;
+    }
+    if ( !m_hasBgCol )
+    {
+        SetOwnBackgroundColour(vattrs.colBg);
+        m_hasBgCol = false;
+    }
+#endif // !__WXMAC__
 }
 
 wxComboCtrlBase::~wxComboCtrlBase()
@@ -953,8 +1073,8 @@ void wxComboCtrlBase::CalculateAreas( int btnWidth )
     }
 
     // Defaul indentation
-    if ( m_absIndent < 0 )
-        m_absIndent = GetNativeTextIndent();
+    if ( m_marginLeft < 0 )
+        m_marginLeft = GetNativeTextIndent();
 
     int butWidth = btnWidth;
 
@@ -1058,43 +1178,60 @@ void wxComboCtrlBase::PositionTextCtrl( int textCtrlXAdjust, int textCtrlYAdjust
     if ( !m_text )
         return;
 
-#if !TEXTCTRL_TEXT_CENTERED
-
     wxSize sz = GetClientSize();
 
     int customBorder = m_widthCustomBorder;
     if ( (m_text->GetWindowStyleFlag() & wxBORDER_MASK) == wxNO_BORDER )
     {
-        // Centre textctrl
+        int x;
+
+        if ( !m_widthCustomPaint )
+        {
+            // No special custom paint area - we can use 0 left margin
+            // with wxTextCtrl.
+            if ( m_text->SetMargins(0) )
+                textCtrlXAdjust = 0;
+            x = m_tcArea.x + m_marginLeft + textCtrlXAdjust;
+        }
+        else
+        {
+            // There is special custom paint area - it is better to
+            // use some margin with the wxTextCtrl.
+            m_text->SetMargins(m_marginLeft);
+            x = m_tcArea.x + m_widthCustomPaint + 
+                m_marginLeft + textCtrlXAdjust;
+        }
+
+        // Centre textctrl vertically, if needed
+#if !TEXTCTRL_TEXT_CENTERED
         int tcSizeY = m_text->GetBestSize().y;
-        int diff = sz.y - tcSizeY;
-        int y = textCtrlYAdjust + (diff/2);
+        int diff0 = sz.y - tcSizeY;
+        int y = textCtrlYAdjust + (diff0/2);
+#else
+        wxUnusedVar(textCtrlYAdjust);
+        int y = 0;
+#endif
 
         if ( y < customBorder )
             y = customBorder;
 
-        m_text->SetSize( m_tcArea.x + m_widthCustomPaint + m_absIndent + textCtrlXAdjust,
-                         y,
-                         m_tcArea.width - COMBO_MARGIN -
-                         (textCtrlXAdjust + m_widthCustomPaint + m_absIndent),
-                         -1 );
+        m_text->SetSize(x,
+                        y,
+                        m_tcArea.width - m_tcArea.x - x,
+                        -1 );
 
         // Make sure textctrl doesn't exceed the bottom custom border
         wxSize tsz = m_text->GetSize();
-        diff = (y + tsz.y) - (sz.y - customBorder);
-        if ( diff >= 0 )
+        int diff1 = (y + tsz.y) - (sz.y - customBorder);
+        if ( diff1 >= 0 )
         {
-            tsz.y = tsz.y - diff - 1;
+            tsz.y = tsz.y - diff1 - 1;
             m_text->SetSize(tsz);
         }
     }
     else
-#else // TEXTCTRL_TEXT_CENTERED
-    wxUnusedVar(textCtrlXAdjust);
-    wxUnusedVar(textCtrlYAdjust);
-#endif // !TEXTCTRL_TEXT_CENTERED/TEXTCTRL_TEXT_CENTERED
     {
-        // If it has border, have textctrl will the entire text field.
+        // If it has border, have textctrl fill the entire text field.
         m_text->SetSize( m_tcArea.x + m_widthCustomPaint,
                          m_tcArea.y,
                          m_tcArea.width - m_widthCustomPaint,
@@ -1216,8 +1353,15 @@ bool wxComboCtrlBase::SetFont ( const wxFont& font )
     if ( !wxControl::SetFont(font) )
         return false;
 
-    if (m_text)
+    if ( m_text )
+    {
+        // Without hiding the wxTextCtrl there would be some
+        // visible 'flicker' (at least on Windows XP).
+        m_text->Hide();
         m_text->SetFont(font);
+        OnResize();
+        m_text->Show();
+    }
 
     return true;
 }
@@ -1261,6 +1405,27 @@ wxValidator* wxComboCtrlBase::GetValidator()
 }
 #endif // wxUSE_VALIDATORS
 
+bool wxComboCtrlBase::SetForegroundColour(const wxColour& colour)
+{
+    if ( wxControl::SetForegroundColour(colour) )
+    {
+        if ( m_text )
+            m_text->SetForegroundColour(colour);
+        return true;
+    }
+    return false;
+}
+
+bool wxComboCtrlBase::SetBackgroundColour(const wxColour& colour)
+{
+    if ( wxControl::SetBackgroundColour(colour) )
+    {
+        if ( m_text )
+            m_text->SetBackgroundColour(colour);
+        return true;
+    }
+    return false;
+}
 // ----------------------------------------------------------------------------
 // painting
 // ----------------------------------------------------------------------------
@@ -1311,20 +1476,46 @@ void wxComboCtrlBase::PrepareBackground( wxDC& dc, const wxRect& rect, int flags
     selRect.width -= wcp + (focusSpacingX*2);
 
     wxColour bgCol;
+    wxColour fgCol;
+
     bool doDrawSelRect = true;
 
+    // Determine foreground colour
     if ( isEnabled )
     {
-        // If popup is hidden and this control is focused,
-        // then draw the focus-indicator (selbgcolor background etc.).
         if ( doDrawFocusRect )
         {
-            dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT) );
-            bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+            fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+        }
+        else if ( m_hasFgCol )
+        {
+            // Honour the custom foreground colour
+            fgCol = GetForegroundColour();
         }
         else
         {
-            dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT) );
+            fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+        }
+    }
+    else
+    {
+        fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+    }
+
+    // Determine background colour
+    if ( isEnabled )
+    {
+        if ( doDrawFocusRect )
+        {
+            bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+        }
+        else if ( m_hasBgCol )
+        {
+            // Honour the custom background colour
+            bgCol = GetBackgroundColour();
+        }
+        else
+        {
 #ifndef __WXMAC__  // see note in OnThemeChange
             doDrawSelRect = false;
             bgCol = GetBackgroundColour();
@@ -1335,7 +1526,6 @@ void wxComboCtrlBase::PrepareBackground( wxDC& dc, const wxRect& rect, int flags
     }
     else
     {
-        dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT) );
 #ifndef __WXMAC__  // see note in OnThemeChange
         bgCol = GetBackgroundColour();
 #else
@@ -1343,6 +1533,7 @@ void wxComboCtrlBase::PrepareBackground( wxDC& dc, const wxRect& rect, int flags
 #endif
     }
 
+    dc.SetTextForeground( fgCol );
     dc.SetBrush( bgCol );
     if ( doDrawSelRect )
     {
@@ -1592,13 +1783,13 @@ bool wxComboCtrlBase::PreprocessMouseEvent( wxMouseEvent& event,
     wxLongLong t = ::wxGetLocalTimeMillis();
     int evtType = event.GetEventType();
 
-#if USES_WXPOPUPWINDOW || USES_WXDIALOG
+#if USES_WXPOPUPWINDOW || USES_GENERICTLW
     if ( m_popupWinType != POPUPWIN_WXPOPUPTRANSIENTWINDOW )
     {
         if ( IsPopupWindowState(Visible) &&
              ( evtType == wxEVT_LEFT_DOWN || evtType == wxEVT_RIGHT_DOWN ) )
         {
-            HidePopup();
+            HidePopup(true);
             return true;
         }
     }
@@ -1626,7 +1817,7 @@ void wxComboCtrlBase::HandleNormalMouseEvent( wxMouseEvent& event )
     #if USES_WXPOPUPWINDOW
             // Click here always hides the popup.
             if ( m_popupWinType == POPUPWIN_WXPOPUPWINDOW )
-                HidePopup();
+                HidePopup(true);
     #endif
         }
         else
@@ -1646,15 +1837,35 @@ void wxComboCtrlBase::HandleNormalMouseEvent( wxMouseEvent& event )
             }
         }
     }
-    else
-    if ( IsPopupShown() )
+    else if ( evtType == wxEVT_MOUSEWHEEL )
     {
-        // relay (some) mouse events to the popup
-        if ( evtType == wxEVT_MOUSEWHEEL )
-            m_popup->GetEventHandler()->AddPendingEvent(event);
+        if ( IsPopupShown() )
+        {
+            // relay (some) mouse events to the popup
+            m_popup->GetEventHandler()->ProcessEvent(event);
+        }
+        else if ( event.GetWheelAxis() == 0 &&
+                  event.GetWheelRotation() != 0 &&
+                  event.GetModifiers() == 0 )
+        {
+            // Translate mousewheel actions into key up/down. This is
+            // the simplest way of getting native behaviour: scrolling the
+            // wheel moves selection up/down by one item.
+            wxKeyEvent kevent(wxEVT_KEY_DOWN);
+            kevent.m_keyCode = event.GetWheelRotation() > 0
+                               ? WXK_UP
+                               : WXK_DOWN;
+            GetEventHandler()->ProcessEvent(kevent);
+        }
+        else
+        {
+            event.Skip();
+        }
     }
     else if ( evtType )
+    {
         event.Skip();
+    }
 }
 
 void wxComboCtrlBase::OnKeyEvent(wxKeyEvent& event)
@@ -1662,13 +1873,17 @@ void wxComboCtrlBase::OnKeyEvent(wxKeyEvent& event)
     if ( IsPopupShown() )
     {
         // pass it to the popped up control
-        GetPopupControl()->GetControl()->GetEventHandler()->AddPendingEvent(event);
+        GetPopupControl()->GetControl()->GetEventHandler()->ProcessEvent(event);
     }
     else // no popup
     {
-        if ( GetParent()->HasFlag(wxTAB_TRAVERSAL) &&
-             HandleAsNavigationKey(event) )
-            return;
+        wxWindow* mainCtrl = GetMainWindowOfCompositeControl();
+
+        if ( mainCtrl->GetParent()->HasFlag(wxTAB_TRAVERSAL) )
+        {
+            if ( mainCtrl->HandleAsNavigationKey(event) )
+                return;
+        }
 
         if ( IsKeyPopupToggle(event) )
         {
@@ -1697,19 +1912,36 @@ void wxComboCtrlBase::OnKeyEvent(wxKeyEvent& event)
     }
 }
 
+void wxComboCtrlBase::OnCharEvent(wxKeyEvent& event)
+{
+    if ( IsPopupShown() )
+    {
+        // pass it to the popped up control
+        GetPopupControl()->GetControl()->GetEventHandler()->ProcessEvent(event);
+    }
+    else // no popup
+    {
+        wxComboPopup* popupInterface = GetPopupControl();
+        if ( popupInterface )
+        {
+            popupInterface->OnComboCharEvent(event);
+        }
+        else
+        {
+            event.Skip();
+        }
+    }
+}
+
 void wxComboCtrlBase::OnFocusEvent( wxFocusEvent& event )
 {
     if ( event.GetEventType() == wxEVT_SET_FOCUS )
     {
         wxWindow* tc = GetTextCtrl();
         if ( tc && tc != DoFindFocus() )
-#ifdef __WXMAC__
-            m_resetFocus = true;
-#else
         {
             tc->SetFocus();
         }
-#endif
     }
 
     Refresh();
@@ -1729,9 +1961,9 @@ void wxComboCtrlBase::OnIdleEvent( wxIdleEvent& WXUNUSED(event) )
 void wxComboCtrlBase::OnSysColourChanged(wxSysColourChangedEvent& WXUNUSED(event))
 {
     OnThemeChange();
-    // indentation may also have changed
-    if ( !(m_iFlags & wxCC_IFLAG_INDENT_SET) )
-        m_absIndent = GetNativeTextIndent();
+    // left margin may also have changed
+    if ( !(m_iFlags & wxCC_IFLAG_LEFT_MARGIN_SET) )
+        m_marginLeft = GetNativeTextIndent();
     RecalcAndRefresh();
 }
 
@@ -1750,12 +1982,23 @@ void wxComboCtrlBase::CreatePopup()
 #ifdef wxComboPopupWindowBase2
         if ( m_iFlags & wxCC_IFLAG_USE_ALT_POPUP )
         {
-        #if !USES_WXDIALOG
+        #if !USES_GENERICTLW
             m_winPopup = new wxComboPopupWindowBase2( this, wxNO_BORDER );
         #else
+            int tlwFlags = wxNO_BORDER;
+          #ifdef wxCC_GENERIC_TLW_IS_FRAME
+            tlwFlags |= wxFRAME_NO_TASKBAR;
+          #endif
+
+          #ifdef wxCC_GENERIC_TLW_IS_NONOWNEDWINDOW
+            m_winPopup = new wxComboPopupWindowBase2( this, wxID_ANY,
+                                                      wxPoint(-21,-21), wxSize(20, 20),
+                                                      tlwFlags );
+          #else
             m_winPopup = new wxComboPopupWindowBase2( this, wxID_ANY, wxEmptyString,
                                                       wxPoint(-21,-21), wxSize(20, 20),
-                                                      wxNO_BORDER );
+                                                      tlwFlags );
+          #endif
         #endif
             m_popupWinType = SECONDARY_POPUP_TYPE;
         }
@@ -1772,8 +2015,8 @@ void wxComboCtrlBase::CreatePopup()
     popupInterface->Create(m_winPopup);
     m_popup = popup = popupInterface->GetControl();
 
-    m_popupExtraHandler = new wxComboPopupExtraEventHandler(this);
-    popup->PushEventHandler( m_popupExtraHandler );
+    m_popupEvtHandler = new wxComboPopupEvtHandler(this);
+    popup->PushEventHandler( m_popupEvtHandler );
 
     // This may be helpful on some platforms
     //   (eg. it bypasses a wxGTK popupwindow bug where
@@ -1786,26 +2029,23 @@ void wxComboCtrlBase::CreatePopup()
 // Destroy popup window and the child control
 void wxComboCtrlBase::DestroyPopup()
 {
-    HidePopup();
+    HidePopup(true);
 
     if ( m_popup )
-        m_popup->RemoveEventHandler(m_popupExtraHandler);
+        m_popup->RemoveEventHandler(m_popupEvtHandler);
 
-    delete m_popupExtraHandler;
+    wxDELETE(m_popupEvtHandler);
 
-    delete m_popupInterface;
+    wxDELETE(m_popupInterface);
 
     if ( m_winPopup )
     {
         m_winPopup->RemoveEventHandler(m_popupWinEvtHandler);
-        delete m_popupWinEvtHandler;
-        m_popupWinEvtHandler = NULL;
+        wxDELETE(m_popupWinEvtHandler);
         m_winPopup->Destroy();
+        m_winPopup = NULL;
     }
 
-    m_popupExtraHandler = NULL;
-    m_popupInterface = NULL;
-    m_winPopup = NULL;
     m_popup = NULL;
 }
 
@@ -1849,9 +2089,17 @@ void wxComboCtrlBase::OnButtonClick()
     // Derived classes can override this method for totally custom
     // popup action
     if ( !IsPopupWindowState(Visible) )
+    {
+        wxCommandEvent event(wxEVT_COMMAND_COMBOBOX_DROPDOWN, GetId());
+        event.SetEventObject(this);
+        HandleWindowEvent(event);
+
         ShowPopup();
+    }
     else
-        HidePopup();
+    {
+        HidePopup(true);
+    }
 }
 
 void wxComboCtrlBase::ShowPopup()
@@ -1898,7 +2146,8 @@ void wxComboCtrlBase::ShowPopup()
     //     that if transient popup is open, then tab traversal is to be ignored.
     //     However, I think this code would still be needed for cases where
     //     transient popup doesn't work yet (wxWinCE?).
-    wxWindow* parent = GetParent();
+    wxWindow* mainCtrl = GetMainWindowOfCompositeControl();
+    wxWindow* parent = mainCtrl->GetParent();
     int parentFlags = parent->GetWindowStyle();
     if ( parentFlags & wxTAB_TRAVERSAL )
     {
@@ -2057,6 +2306,13 @@ void wxComboCtrlBase::DoShowPopup( const wxRect& rect, int WXUNUSED(flags) )
             winPopup->Show();
 
         m_popupWinState = Visible;
+
+        // If popup window was a generic top-level window, or the
+        // wxPopupWindow implemenation on this platform is classified as
+        // perfect, then we should be able to safely set focus to the popup
+        // control.
+        if ( IsPopupWinTypePerfect(m_popupWinType) )
+            m_popup->SetFocus();
     }
     else if ( IsPopupWindowState(Hidden) )
     {
@@ -2070,7 +2326,7 @@ void wxComboCtrlBase::DoShowPopup( const wxRect& rect, int WXUNUSED(flags) )
     Refresh();
 }
 
-void wxComboCtrlBase::OnPopupDismiss()
+void wxComboCtrlBase::OnPopupDismiss(bool generateEvent)
 {
     // Just in case, avoid double dismiss
     if ( IsPopupWindowState(Hidden) )
@@ -2086,8 +2342,8 @@ void wxComboCtrlBase::OnPopupDismiss()
     // Inform popup control itself
     m_popupInterface->OnDismiss();
 
-    if ( m_popupExtraHandler )
-        ((wxComboPopupExtraEventHandler*)m_popupExtraHandler)->OnPopupDismiss();
+    if ( m_popupEvtHandler )
+        ((wxComboPopupEvtHandler*)m_popupEvtHandler)->OnPopupDismiss();
 
 #if INSTALL_TOPLEV_HANDLER
     // Remove top level window event handler
@@ -2122,9 +2378,16 @@ void wxComboCtrlBase::OnPopupDismiss()
     Refresh();
 
     SetFocus();
+
+    if ( generateEvent )
+    {
+        wxCommandEvent event(wxEVT_COMMAND_COMBOBOX_CLOSEUP, GetId());
+        event.SetEventObject(this);
+        HandleWindowEvent(event);
+    }
 }
 
-void wxComboCtrlBase::HidePopup()
+void wxComboCtrlBase::HidePopup(bool generateEvent)
 {
     // Should be able to call this without popup interface
     if ( IsPopupWindowState(Hidden) )
@@ -2136,7 +2399,7 @@ void wxComboCtrlBase::HidePopup()
 
     m_winPopup->Hide();
 
-    OnPopupDismiss();
+    OnPopupDismiss(generateEvent);
 }
 
 // ----------------------------------------------------------------------------
@@ -2150,6 +2413,9 @@ void wxComboCtrlBase::SetButtonPosition( int width, int height,
     m_btnHei = height;
     m_btnSide = side;
     m_btnSpacingX = spacingX;
+
+    if ( width > 0 || height > 0 || spacingX )
+        m_iFlags |= wxCC_IFLAG_HAS_NONSTANDARD_BUTTON;
 
     RecalcAndRefresh();
 }
@@ -2217,25 +2483,72 @@ void wxComboCtrlBase::SetCustomPaintWidth( int width )
     RecalcAndRefresh();
 }
 
+bool wxComboCtrlBase::DoSetMargins(const wxPoint& margins)
+{
+    // For general sanity's sake, we ignore top margin. Instead
+    // we will always try to center the text vertically.
+    bool res = true;
+
+    if ( margins.x != -1 )
+    {
+        m_marginLeft = margins.x;
+        m_iFlags |= wxCC_IFLAG_LEFT_MARGIN_SET;
+    }
+    else
+    {
+        m_marginLeft = GetNativeTextIndent();
+        m_iFlags &= ~(wxCC_IFLAG_LEFT_MARGIN_SET);
+    }
+
+    if ( margins.y != -1 )
+    {
+        res = false;
+    }
+
+    RecalcAndRefresh();
+
+    return res;
+}
+
+wxPoint wxComboCtrlBase::DoGetMargins() const
+{
+    return wxPoint(m_marginLeft, -1);
+}
+
+#if WXWIN_COMPATIBILITY_2_8
 void wxComboCtrlBase::SetTextIndent( int indent )
 {
     if ( indent < 0 )
     {
-        m_absIndent = GetNativeTextIndent();
-        m_iFlags &= ~(wxCC_IFLAG_INDENT_SET);
+        m_marginLeft = GetNativeTextIndent();
+        m_iFlags &= ~(wxCC_IFLAG_LEFT_MARGIN_SET);
     }
     else
     {
-        m_absIndent = indent;
-        m_iFlags |= wxCC_IFLAG_INDENT_SET;
+        m_marginLeft = indent;
+        m_iFlags |= wxCC_IFLAG_LEFT_MARGIN_SET;
     }
 
     RecalcAndRefresh();
 }
 
+wxCoord wxComboCtrlBase::GetTextIndent() const
+{
+    return m_marginLeft;
+}
+#endif
+
 wxCoord wxComboCtrlBase::GetNativeTextIndent() const
 {
     return DEFAULT_TEXT_INDENT;
+}
+
+void wxComboCtrlBase::SetTextCtrlStyle( int style )
+{
+    m_textCtrlStyle = style;
+
+    if ( m_text )
+        m_text->SetWindowStyle(style);
 }
 
 // ----------------------------------------------------------------------------
@@ -2368,6 +2681,21 @@ void wxComboCtrlBase::Undo()
 {
     if ( m_text )
         m_text->Undo();
+}
+
+bool wxComboCtrlBase::SetHint(const wxString& hint)
+{
+    m_hintText = hint;
+    bool res = true;
+    if ( m_text )
+        res = m_text->SetHint(hint);
+    Refresh();
+    return res;
+}
+
+wxString wxComboCtrlBase::GetHint() const
+{
+    return m_hintText;
 }
 
 #endif // wxUSE_COMBOCTRL

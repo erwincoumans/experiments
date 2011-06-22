@@ -4,7 +4,7 @@
 * Author:      Vadim Zeitlin
 * Modified by:
 * Created:     29.10.01 (extracted from wx/defs.h)
-* RCS-ID:      $Id: platform.h 60421 2009-04-28 07:35:36Z CE $
+* RCS-ID:      $Id$
 * Copyright:   (c) 1997-2001 Vadim Zeitlin
 * Licence:     wxWindows licence
 */
@@ -33,23 +33,28 @@
     __WXOSX_IPHONE__ means OS X iPhone
 */
 
-/* backwards compatible define, until configure gets updated */
-#if defined __WXMAC__
-#define __WXOSX_CARBON__ 1
-#endif
+/*
+    Normally all of __WXOSX_XXX__, __WXOSX__ and __WXMAC__ are defined by
+    configure but ensure that we also define them if configure was not used for
+    whatever reason.
 
-#if defined(__WXOSX_CARBON__) || defined(__WXOSX_COCOA__) || defined(__WXOSX_IPHONE__) 
-#   define __WXOSX__ 1
-#endif
-
-#ifdef __WXOSX__
-/* for backwards compatibility of code (including our own) define __WXMAC__ */
+    The primare symbol remains __WXOSX_XXX__ one, __WXOSX__ exists to allow
+    checking for any OS X port (Carbon and Cocoa) and __WXMAC__ is an old name
+    for it.
+ */
+#if defined(__WXOSX_CARBON__) || defined(__WXOSX_COCOA__) || defined(__WXOSX_IPHONE__)
+#   ifndef __WXOSX__
+#       define __WXOSX__ 1
+#   endif
 #   ifndef __WXMAC__
 #       define __WXMAC__ 1
 #   endif
+#endif
+
+#ifdef __WXOSX__
 /* setup precise defines according to sdk used */
 #   include <TargetConditionals.h>
-#   if defined(__WXOSX_IPHONE__) 
+#   if defined(__WXOSX_IPHONE__)
 #       if !( defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE )
 #           error "incorrect SDK for an iPhone build"
 #       endif
@@ -233,6 +238,10 @@
 #   endif
 #endif
 
+#if defined(__WXWINCE__) && defined(_MSC_VER) && (_MSC_VER == 1201)
+    #define __EVC4__
+#endif
+
 #if defined(__POCKETPC__) || defined(__SMARTPHONE__) || defined(__WXGPE__)
 #   define __WXHANDHELD__
 #endif
@@ -320,26 +329,36 @@
 
 /*
    test for old versions of Borland C, normally need at least 5.82, Turbo
-   explorer, available for free at https://downloads.embarcadero.com/free/c_builder
+   explorer, available for free at http://www.turboexplorer.com/downloads
 */
-#if defined(__BORLANDC__) && (__BORLANDC__ < 0x582)
-#   error "wxWidgets requires a newer version of Borland, we require upgrading to 5.82 (Turbo Explorer). You may at your own risk remove this line and try building but be prepared to get build errors."
+#if defined(__BORLANDC__) && (__BORLANDC__ < 0x550)
+#   error "wxWidgets requires a newer version of Borland, we recommend upgrading to 5.82 (Turbo Explorer). You may at your own risk remove this line and try building but be prepared to get build errors."
+#endif /* __BORLANDC__ */
+
+#if defined(__BORLANDC__) && (__BORLANDC__ < 0x582) && (__BORLANDC__ > 0x559)
+#   ifndef _USE_OLD_RW_STL
+#       error "wxWidgets is incompatible with default Borland C++ 5.6 STL library, please add -D_USE_OLD_RW_STL to your bcc32.cfg to use RogueWave STL implementation."
+#   endif
 #endif /* __BORLANDC__ */
 
 
 /*
-   This macro can be used to test the Open Watcom version.
+   Define Watcom-specific macros.
 */
 #ifndef __WATCOMC__
 #   define wxWATCOM_VERSION(major,minor) 0
 #   define wxCHECK_WATCOM_VERSION(major,minor) 0
 #   define wxONLY_WATCOM_EARLIER_THAN(major,minor) 0
-#elif defined(__WATCOMC__) && __WATCOMC__ < 1200
-#   error "Only Open Watcom is supported in this release"
+#   define WX_WATCOM_ONLY_CODE( x )
 #else
+#   if __WATCOMC__ < 1200
+#       error "Only Open Watcom is supported in this release"
+#   endif
+
 #   define wxWATCOM_VERSION(major,minor) ( major * 100 + minor * 10 + 1100 )
 #   define wxCHECK_WATCOM_VERSION(major,minor) ( __WATCOMC__ >= wxWATCOM_VERSION(major,minor) )
 #   define wxONLY_WATCOM_EARLIER_THAN(major,minor) ( __WATCOMC__ < wxWATCOM_VERSION(major,minor) )
+#   define WX_WATCOM_ONLY_CODE( x )  x
 #endif
 
 /*
@@ -525,8 +544,10 @@
 #       define __VISUALC8__
 #   elif __VISUALC__ < 1600
 #       define __VISUALC9__
+#   elif __VISUALC__ < 1700
+#       define __VISUALC10__
 #   else
-#       pragma message("Please update this code for the next VC++ version")
+#       pragma message("Please update wx/platform.h to recognize this VC++ version")
 #   endif
 
 #    elif defined(__BCPLUSPLUS__) && !defined(__BORLANDC__)
@@ -631,6 +652,8 @@
 #else
 #    undef wxCHECK_W32API_VERSION
 #    define wxCHECK_W32API_VERSION(maj, min) (0)
+#    undef wxCHECK_MINGW32_VERSION
+#    define wxCHECK_MINGW32_VERSION(maj, min) (0)
 #endif
 
 /**
@@ -664,21 +687,21 @@
 #endif
 /* also the 32/64 bit universal builds must be handled accordingly */
 #ifdef __DARWIN__
-#	ifdef __LP64__
-#		undef SIZEOF_VOID_P 
-#		undef SIZEOF_LONG 
-#		undef SIZEOF_SIZE_T 
-#		define SIZEOF_VOID_P 8
-#		define SIZEOF_LONG 8
-#		define SIZEOF_SIZE_T 8
-#	else
-#		undef SIZEOF_VOID_P 
-#		undef SIZEOF_LONG 
-#		undef SIZEOF_SIZE_T 
-#		define SIZEOF_VOID_P 4
-#		define SIZEOF_LONG 4
-#		define SIZEOF_SIZE_T 4
-#	endif
+#    ifdef __LP64__
+#        undef SIZEOF_VOID_P
+#        undef SIZEOF_LONG
+#        undef SIZEOF_SIZE_T
+#        define SIZEOF_VOID_P 8
+#        define SIZEOF_LONG 8
+#        define SIZEOF_SIZE_T 8
+#    else
+#        undef SIZEOF_VOID_P
+#        undef SIZEOF_LONG
+#        undef SIZEOF_SIZE_T
+#        define SIZEOF_VOID_P 4
+#        define SIZEOF_LONG 4
+#        define SIZEOF_SIZE_T 4
+#    endif
 #endif
 /*
    check the consistency of the settings in setup.h: note that this must be
@@ -803,5 +826,30 @@
 #define POSSEC_FILECONF
 #define POSSEC_FILEFN
 #endif // __WXPALMOS5__
+
+/*
+    Optionally supported C++ features.
+ */
+
+/*
+    RTTI: if it is disabled in build/msw/makefile.* then this symbol will
+    already be defined but it's also possible to do it from configure (with
+    g++) or by editing project files with MSVC so test for it here too.
+ */
+#ifndef wxNO_RTTI
+    /*
+        Only 4.3 defines __GXX_RTTI by default so its absence is not an
+        indication of disabled RTTI with the previous versions.
+     */
+#   if wxCHECK_GCC_VERSION(4, 3)
+#       ifndef __GXX_RTTI
+#           define wxNO_RTTI
+#       endif
+#   elif defined(_MSC_VER)
+#       ifndef _CPPRTTI
+#           define wxNO_RTTI
+#       endif
+#   endif
+#endif // wxNO_RTTI
 
 #endif /* _WX_PLATFORM_H_ */

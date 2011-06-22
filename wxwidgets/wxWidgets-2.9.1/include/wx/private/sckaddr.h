@@ -3,7 +3,7 @@
 // Purpose:     wxSockAddressImpl
 // Author:      Vadim Zeitlin
 // Created:     2008-12-28
-// RCS-ID:      $Id: sckaddr.h 60571 2009-05-09 16:04:00Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,10 +137,11 @@ public:
 
     wxSockAddressImpl& operator=(const wxSockAddressImpl& other)
     {
-        free(m_addr);
-
-        InitFromOther(other);
-
+        if (this != &other)
+        {
+            free(m_addr);
+            InitFromOther(other);
+        }
         return *this;
     }
 

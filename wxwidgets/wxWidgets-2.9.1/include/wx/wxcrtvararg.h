@@ -2,10 +2,10 @@
 // Name:        wx/wxcrtvararg.h
 // Purpose:     Type-safe ANSI and Unicode builds compatible wrappers for
 //              printf(), scanf() and related CRT functions
-// Author:      Joel Farley, Ove Kåven
+// Author:      Joel Farley, Ove KÃ¥ven
 // Modified by: Vadim Zeitlin, Robert Roebling, Ron Lee
 // Created:     2007-02-19
-// RCS-ID:      $Id: wxcrtvararg.h 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 REA Elektronik GmbH
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

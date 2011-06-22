@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: David Webster to add support for font encodings
 // Created:     01/03/00
-// RCS-ID:      $Id: fontenum.cpp 57023 2008-11-29 14:41:02Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

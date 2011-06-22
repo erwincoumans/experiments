@@ -2,7 +2,7 @@
 // Name:        src/html/winpars.cpp
 // Purpose:     wxHtmlParser class (generic parser)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: winpars.cpp 53493 2008-05-08 14:48:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -202,7 +202,7 @@ void wxHtmlWinParser::InitParser(const wxString& source)
     m_FontBold = m_FontItalic = m_FontUnderlined = m_FontFixed = FALSE;
     m_FontSize = 3; //default one
     CreateCurrentFont();           // we're selecting default font into
-    
+
     // we're not using GetCharWidth/Height() because of
     // differences under X and win
     wxCoord w,h;
@@ -552,6 +552,38 @@ void wxHtmlWinParser::SetFontSize(int s)
 }
 
 
+void wxHtmlWinParser::SetDC(wxDC *dc, double pixel_scale, double font_scale)
+{
+    m_DC = dc;
+    m_PixelScale = pixel_scale;
+    m_FontScale = font_scale;
+}
+
+void wxHtmlWinParser::SetFontPointSize(int pt)
+{
+    if (pt <= m_FontsSizes[0])
+        m_FontSize = 1;
+    else if (pt >= m_FontsSizes[6])
+        m_FontSize = 7;
+    else
+    {
+        // Find the font closest to the given value with a simple linear search
+        // (binary search is not worth it here for so small number of elements)
+        for ( int n = 0; n < 6; n++ )
+        {
+            if ( (pt > m_FontsSizes[n]) && (pt <= m_FontsSizes[n + 1]) )
+            {
+                // In this range, find out which entry it is closest to
+                if ( (pt - m_FontsSizes[n]) < (m_FontsSizes[n + 1] - pt) )
+                    m_FontSize = n;
+                else
+                    m_FontSize = n + 1;
+
+                break;
+            }
+        }
+    }
+}
 
 wxFont* wxHtmlWinParser::CreateCurrentFont()
 {
@@ -574,15 +606,14 @@ wxFont* wxHtmlWinParser::CreateCurrentFont()
 #endif
                             ))
     {
-        delete *fontptr;
-        *fontptr = NULL;
+        wxDELETE(*fontptr);
     }
 
     if (*fontptr == NULL)
     {
         *faceptr = face;
         *fontptr = new wxFont(
-                       (int) (m_FontsSizes[fs] * m_PixelScale),
+                       (int) (m_FontsSizes[fs] * m_FontScale),
                        ff ? wxMODERN : wxSWISS,
                        fi ? wxITALIC : wxNORMAL,
                        fb ? wxBOLD : wxNORMAL,
@@ -637,11 +668,7 @@ void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
     m_nbsp = 0;
 
     m_InputEnc = m_OutputEnc = wxFONTENCODING_DEFAULT;
-    if (m_EncConv)
-    {
-        delete m_EncConv;
-        m_EncConv = NULL;
-    }
+    wxDELETE(m_EncConv);
 
     if (enc == wxFONTENCODING_DEFAULT)
         return;
@@ -706,8 +733,7 @@ void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
         wxLogError(_("Failed to display HTML document in %s encoding"),
                    wxFontMapper::GetEncodingName(enc).c_str());
         m_InputEnc = m_OutputEnc = wxFONTENCODING_DEFAULT;
-        delete m_EncConv;
-        m_EncConv = NULL;
+        wxDELETE(m_EncConv);
     }
 }
 #endif

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     04.04.98
-// RCS-ID:      $Id: statusbar.h 58893 2009-02-13 23:23:03Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -13,6 +13,9 @@
 #define _WX_MSW_STATUSBAR_H_
 
 #if wxUSE_NATIVE_STATUSBAR
+
+#include "wx/vector.h"
+#include "wx/tooltip.h"
 
 class WXDLLIMPEXP_FWD_CORE wxClientDC;
 
@@ -23,7 +26,7 @@ public:
     wxStatusBar();
     wxStatusBar(wxWindow *parent,
                 wxWindowID id = wxID_ANY,
-                long style = wxST_SIZEGRIP,
+                long style = wxSTB_DEFAULT_STYLE,
                 const wxString& name = wxStatusBarNameStr)
     {
         m_pDC = NULL;
@@ -32,51 +35,72 @@ public:
 
     bool Create(wxWindow *parent,
                 wxWindowID id = wxID_ANY,
-                long style = wxST_SIZEGRIP,
+                long style = wxSTB_DEFAULT_STYLE,
                 const wxString& name = wxStatusBarNameStr);
 
     virtual ~wxStatusBar();
 
-    // a status line can have several (<256) fields numbered from 0
+    // implement base class methods
     virtual void SetFieldsCount(int number = 1, const int *widths = NULL);
-
-    // each field of status line has it's own text
-    virtual void     SetStatusText(const wxString& text, int number = 0);
-
-    // set status line fields' widths
     virtual void SetStatusWidths(int n, const int widths_field[]);
-
-    // set status line fields' styles
     virtual void SetStatusStyles(int n, const int styles[]);
-
-    // sets the minimal vertical size of the status bar
     virtual void SetMinHeight(int height);
-
-    // get the position and size of the field's internal bounding rectangle
     virtual bool GetFieldRect(int i, wxRect& rect) const;
 
-    // get the border size
     virtual int GetBorderX() const;
     virtual int GetBorderY() const;
 
+    // override some wxWindow virtual methods too
     virtual bool SetFont(const wxFont& font);
 
     virtual WXLRESULT MSWWindowProc(WXUINT nMsg,
                                     WXWPARAM wParam,
                                     WXLPARAM lParam);
+
 protected:
-    void CopyFieldsWidth(const int widths[]);
-    void SetFieldsWidth();
-    void UpdateFieldText(int nField);
+    // implement base class pure virtual method
+    virtual void DoUpdateStatusText(int number);
 
     // override some base class virtuals
     virtual wxSize DoGetBestSize() const;
     virtual void DoMoveWindow(int x, int y, int width, int height);
+#if wxUSE_TOOLTIPS
+    virtual bool MSWProcessMessage(WXMSG* pMsg);
+    virtual bool MSWOnNotify(int idCtrl, WXLPARAM lParam, WXLPARAM* result);
+#endif
 
-    // used by UpdateFieldText
+    // implementation of the public SetStatusWidths()
+    void MSWUpdateFieldsWidths();
+
+    // used by DoUpdateStatusText()
     wxClientDC *m_pDC;
 
+    // the tooltips used when wxSTB_SHOW_TIPS is given
+    wxVector<wxToolTip*> m_tooltips;
+
 private:
+    struct MSWBorders
+    {
+        int horz,
+            vert,
+            between;
+    };
+
+    // retrieve all status bar borders using SB_GETBORDERS
+    MSWBorders MSWGetBorders() const;
+
+    // return the size of the border between the fields
+    int MSWGetBorderWidth() const;
+
+    struct MSWMetrics
+    {
+        int gripWidth,
+            textMargin;
+    };
+
+    // return the various status bar metrics
+    static const MSWMetrics& MSWGetMetrics();
+
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxStatusBar)
 };
 

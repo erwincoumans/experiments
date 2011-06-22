@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     22.04.01
-// RCS-ID:      $Id: bitmap.h 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -174,6 +174,9 @@ public:
     virtual void SetMask(wxMask *mask) = 0;
 
     virtual wxBitmap GetSubBitmap(const wxRect& rect) const = 0;
+
+    // Convert to disabled (dimmed) bitmap.
+    wxBitmap ConvertToDisabled(unsigned char brightness = 255) const;
 
     virtual bool SaveFile(const wxString &name, wxBitmapType type,
                           const wxPalette *palette = NULL) const = 0;

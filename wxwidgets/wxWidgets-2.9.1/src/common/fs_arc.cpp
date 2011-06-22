@@ -3,7 +3,7 @@
 // Purpose:     wxArchive file system
 // Author:      Vaclav Slavik, Mike Wetherell
 // Copyright:   (c) 1999 Vaclav Slavik, (c) 2006 Mike Wetherell
-// CVS-ID:      $Id: fs_arc.cpp 51496 2008-02-01 17:07:40Z MW $
+// CVS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -135,10 +135,8 @@ wxArchiveFSEntry *wxArchiveFSCacheDataImpl::AddToCache(wxArchiveEntry *entry)
 
 void wxArchiveFSCacheDataImpl::CloseStreams()
 {
-    delete m_archive;
-    m_archive = NULL;
-    delete m_stream;
-    m_stream = NULL;
+    wxDELETE(m_archive);
+    wxDELETE(m_stream);
 }
 
 wxArchiveEntry *wxArchiveFSCacheDataImpl::Get(const wxString& name)

@@ -2,7 +2,7 @@
 // Name:        treeentry_gtk.h
 // Purpose:     GtkTreeEntry - a string/userdata combo for use with treeview
 // Author:      Ryan Norton
-// Id:          $Id: treeentry_gtk.h 37769 2006-03-01 21:51:42Z RR $
+// Id:          $Id$
 // Copyright:   (c) 2006 Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////// */
@@ -65,7 +65,7 @@ WXDLLIMPEXP_CORE
 void   gtk_tree_entry_set_userdata      (GtkTreeEntry* entry, gpointer userdata);
 
 WXDLLIMPEXP_CORE
-void   gtk_tree_entry_set_destroy_func (GtkTreeEntry* entry, 
+void   gtk_tree_entry_set_destroy_func (GtkTreeEntry* entry,
                                         GtkTreeEntryDestroy destroy_func,
                                         gpointer destroy_func_data);
 

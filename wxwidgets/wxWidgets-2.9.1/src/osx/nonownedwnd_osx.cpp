@@ -45,36 +45,30 @@ wxWindow* g_MacLastWindow = NULL ;
 // wxWindowMac utility functions
 // ---------------------------------------------------------------------------
 
-// Find an item given the Macintosh Window Reference
-
-WX_DECLARE_HASH_MAP(WXWindow, wxNonOwnedWindow*, wxPointerHash, wxPointerEqual, MacWindowMap);
+WX_DECLARE_HASH_MAP(WXWindow, wxNonOwnedWindowImpl*, wxPointerHash, wxPointerEqual, MacWindowMap);
 
 static MacWindowMap wxWinMacWindowList;
 
-wxNonOwnedWindow *wxFindWindowFromWXWindow(WXWindow inWindowRef)
+wxNonOwnedWindow* wxNonOwnedWindow::GetFromWXWindow( WXWindow win )
 {
-    MacWindowMap::iterator node = wxWinMacWindowList.find(inWindowRef);
+    wxNonOwnedWindowImpl* impl = wxNonOwnedWindowImpl::FindFromWXWindow(win);
+    
+    return ( impl != NULL ? impl->GetWXPeer() : NULL ) ;
+}
 
+wxNonOwnedWindowImpl* wxNonOwnedWindowImpl::FindFromWXWindow (WXWindow window)
+{
+    MacWindowMap::iterator node = wxWinMacWindowList.find(window);
+    
     return (node == wxWinMacWindowList.end()) ? NULL : node->second;
 }
 
-void wxAssociateWindowWithWXWindow(WXWindow inWindowRef, wxNonOwnedWindow *win) ;
-void wxAssociateWindowWithWXWindow(WXWindow inWindowRef, wxNonOwnedWindow *win)
-{
-    // adding NULL WindowRef is (first) surely a result of an error and
-    // nothing else :-)
-    wxCHECK_RET( inWindowRef != (WXWindow) NULL, wxT("attempt to add a NULL WindowRef to window list") );
-
-    wxWinMacWindowList[inWindowRef] = win;
-}
-
-void wxRemoveWXWindowAssociation(wxNonOwnedWindow *win) ;
-void wxRemoveWXWindowAssociation(wxNonOwnedWindow *win)
+void wxNonOwnedWindowImpl::RemoveAssociations( wxNonOwnedWindowImpl* impl)
 {
     MacWindowMap::iterator it;
     for ( it = wxWinMacWindowList.begin(); it != wxWinMacWindowList.end(); ++it )
     {
-        if ( it->second == win )
+        if ( it->second == impl )
         {
             wxWinMacWindowList.erase(it);
             break;
@@ -82,9 +76,13 @@ void wxRemoveWXWindowAssociation(wxNonOwnedWindow *win)
     }
 }
 
-wxNonOwnedWindow* wxNonOwnedWindow::GetFromWXWindow( WXWindow win )
+void wxNonOwnedWindowImpl::Associate( WXWindow window, wxNonOwnedWindowImpl *impl )
 {
-    return wxFindWindowFromWXWindow( win );
+    // adding NULL WindowRef is (first) surely a result of an error and
+    // nothing else :-)
+    wxCHECK_RET( window != (WXWindow) NULL, wxT("attempt to add a NULL WindowRef to window list") );
+    
+    wxWinMacWindowList[window] = impl;
 }
 
 // ----------------------------------------------------------------------------
@@ -98,6 +96,7 @@ wxNonOwnedWindow *wxNonOwnedWindow::s_macDeactivateWindow = NULL;
 void wxNonOwnedWindow::Init()
 {
     m_nowpeer = NULL;
+    m_isNativeWindowWrapper = false;
 }
 
 bool wxNonOwnedWindow::Create(wxWindow *parent,
@@ -107,9 +106,6 @@ bool wxNonOwnedWindow::Create(wxWindow *parent,
                                  long style,
                                  const wxString& name)
 {
-    // init our fields
-    Init();
-
     m_windowStyle = style;
 
     SetName( name );
@@ -134,7 +130,7 @@ bool wxNonOwnedWindow::Create(wxWindow *parent,
     int h = HeightDefault(size.y);
 
     m_nowpeer = wxNonOwnedWindowImpl::CreateNonOwnedWindow(this, parent, wxPoint(x,y) , wxSize(w,h) , style , GetExtraStyle(), name );
-    wxAssociateWindowWithWXWindow( m_nowpeer->GetWXWindow() , this ) ;
+    wxNonOwnedWindowImpl::Associate( m_nowpeer->GetWXWindow() , m_nowpeer ) ;
     m_peer = wxWidgetImpl::CreateContentView(this);
 
     DoSetWindowVariant( m_windowVariant ) ;
@@ -150,47 +146,77 @@ bool wxNonOwnedWindow::Create(wxWindow *parent,
     return true;
 }
 
+bool wxNonOwnedWindow::Create(wxWindow *parent, WXWindow nativeWindow)
+{
+    m_nowpeer = wxNonOwnedWindowImpl::CreateNonOwnedWindow(this, parent, nativeWindow );
+    m_isNativeWindowWrapper = true;
+    wxNonOwnedWindowImpl::Associate( m_nowpeer->GetWXWindow() , m_nowpeer ) ;
+    m_peer = wxWidgetImpl::CreateContentView(this);
+
+    if ( parent )
+        parent->AddChild(this);
+    
+    return true;
+}
+
 wxNonOwnedWindow::~wxNonOwnedWindow()
 {
     SendDestroyEvent();
-    
-    wxRemoveWXWindowAssociation( this ) ;
-    
+
+    wxNonOwnedWindowImpl::RemoveAssociations(m_nowpeer) ;
+
     DestroyChildren();
-    
-    delete m_nowpeer;
+
+    wxDELETE(m_nowpeer);
 
     // avoid dangling refs
     if ( s_macDeactivateWindow == this )
         s_macDeactivateWindow = NULL;
 }
 
+bool wxNonOwnedWindow::Destroy()
+{
+    WillBeDestroyed();
+    
+    return wxWindow::Destroy();
+}
+
+void wxNonOwnedWindow::WillBeDestroyed()
+{
+    if ( m_nowpeer )
+        m_nowpeer->WillBeDestroyed();
+}
+
 // ----------------------------------------------------------------------------
 // wxNonOwnedWindow misc
 // ----------------------------------------------------------------------------
 
-bool wxNonOwnedWindow::ShowWithEffect(wxShowEffect effect,
-                                unsigned timeout )
-{ 
-    if ( !wxWindow::Show(true) )
+bool wxNonOwnedWindow::OSXShowWithEffect(bool show,
+                                         wxShowEffect effect,
+                                         unsigned timeout)
+{
+    // Cocoa code needs to manage window visibility on its own and so calls
+    // wxWindow::Show() as needed but if we already changed the internal
+    // visibility flag here, Show() would do nothing, so avoid doing it
+#if wxOSX_USE_CARBON
+    if ( !wxWindow::Show(show) )
         return false;
+#endif // Carbon
 
-    // because apps expect a size event to occur at this moment
-    wxSizeEvent event(GetSize() , m_windowId);
-    event.SetEventObject(this);
-    HandleWindowEvent(event);
+    if ( effect == wxSHOW_EFFECT_NONE ||
+            !m_nowpeer || !m_nowpeer->ShowWithEffect(show, effect, timeout) )
+        return Show(show);
 
+    if ( show )
+    {
+        // as apps expect a size event to occur when the window is shown,
+        // generate one when it is shown with effect too
+        wxSizeEvent event(GetSize(), m_windowId);
+        event.SetEventObject(this);
+        HandleWindowEvent(event);
+    }
 
-    return m_nowpeer->ShowWithEffect(true, effect, timeout); 
-}
-
-bool wxNonOwnedWindow::HideWithEffect(wxShowEffect effect,
-                                unsigned timeout )
-{ 
-    if ( !wxWindow::Show(false) )
-        return false;
-
-    return m_nowpeer->ShowWithEffect(false, effect, timeout); 
+    return true;
 }
 
 wxPoint wxNonOwnedWindow::GetClientAreaOrigin() const
@@ -201,17 +227,28 @@ wxPoint wxNonOwnedWindow::GetClientAreaOrigin() const
 }
 
 bool wxNonOwnedWindow::SetBackgroundColour(const wxColour& c )
-{        
+{
     if ( !wxWindow::SetBackgroundColour(c) && m_hasBgCol )
         return false ;
-    
+
     if ( GetBackgroundStyle() != wxBG_STYLE_CUSTOM )
     {
         if ( m_nowpeer )
             return m_nowpeer->SetBackgroundColour(c);
     }
     return true;
-}    
+}
+
+void wxNonOwnedWindow::SetWindowStyleFlag(long flags)
+{
+    if (flags == GetWindowStyleFlag())
+        return;
+        
+    wxWindow::SetWindowStyleFlag(flags);
+    
+    if (m_nowpeer)
+        m_nowpeer->SetWindowStyleFlag(flags);
+}
 
 // Raise the window to the top of the Z order
 void wxNonOwnedWindow::Raise()
@@ -306,7 +343,7 @@ bool wxNonOwnedWindow::Show(bool show)
 
     if ( m_nowpeer )
         m_nowpeer->Show(show);
-    
+
     if ( show )
     {
         // because apps expect a size event to occur at this moment
@@ -314,7 +351,7 @@ bool wxNonOwnedWindow::Show(bool show)
         event.SetEventObject(this);
         HandleWindowEvent(event);
     }
-    
+
     return true ;
 }
 
@@ -345,7 +382,7 @@ bool wxNonOwnedWindow::SetBackgroundStyle(wxBackgroundStyle style)
 {
     if ( !wxWindow::SetBackgroundStyle(style) )
         return false ;
-        
+
     return m_nowpeer ? m_nowpeer->SetBackgroundStyle(style) : true;
 }
 
@@ -378,9 +415,9 @@ void wxNonOwnedWindow::DoGetSize( int *width, int *height ) const
 {
     if ( m_nowpeer == NULL )
         return;
-        
+
     int w,h;
-    
+
     m_nowpeer->GetSize(w, h);
 
     if (width)
@@ -396,7 +433,7 @@ void wxNonOwnedWindow::DoGetClientSize( int *width, int *height ) const
 
     int left, top, w, h;
     m_nowpeer->GetContentArea(left, top, w, h);
-
+    
     if (width)
        *width = w ;
     if (height)
@@ -422,8 +459,10 @@ WXWindow wxNonOwnedWindow::GetWXWindow() const
 bool wxNonOwnedWindow::DoSetShape(const wxRegion& region)
 {
     wxCHECK_MSG( HasFlag(wxFRAME_SHAPED), false,
-                 _T("Shaped windows must be created with the wxFRAME_SHAPED style."));
+                 wxT("Shaped windows must be created with the wxFRAME_SHAPED style."));
 
+    m_shape = region;
+    
     // The empty region signifies that the shape
     // should be removed from the window.
     if ( region.IsEmpty() )

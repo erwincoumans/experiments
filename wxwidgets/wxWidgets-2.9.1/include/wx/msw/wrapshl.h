@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2004-10-19
-// RCS-ID:      $Id: wrapshl.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ public:
         wxString path;
         if ( !SHGetPathFromIDList(m_pidl, wxStringBuffer(path, MAX_PATH)) )
         {
-            wxLogLastError(_T("SHGetPathFromIDList"));
+            wxLogLastError(wxT("SHGetPathFromIDList"));
         }
 
         return path;

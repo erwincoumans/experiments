@@ -3,7 +3,7 @@
 // Purpose:     Misc debug functions and macros
 // Author:      Vadim Zeitlin
 // Created:     29/01/98
-// RCS-ID:      $Id: debug.h 59846 2009-03-25 13:31:38Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998-2009 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,6 +19,7 @@
 
 #include "wx/chartype.h"     // for __TFILE__ and wxChar
 #include "wx/cpp.h"          // for __WXFUNCTION__
+#include "wx/dlimpexp.h"     // for WXDLLIMPEXP_FWD_BASE
 
 class WXDLLIMPEXP_FWD_BASE wxString;
 class WXDLLIMPEXP_FWD_BASE wxCStrData;
@@ -37,43 +38,35 @@ class WXDLLIMPEXP_FWD_BASE wxCStrData;
     2:  Maximal (at least for now): asserts which are "expensive"
         (performance-wise) or only make sense for finding errors in wxWidgets
         itself, as opposed to bugs in applications using it, are also enabled.
-
-    For compatibility reasons, currently wxDEBUG_LEVEL is defined if
-    __WXDEBUG__ is defined but in the near future (2.9.1) the role of the flags
-    will change and wxDEBUG_LEVEL will be the primary value with __WXDEBUG__
-    only used for compatibility.
  */
 
-// if _DEBUG is defined (MS VC++ and others use it in debug builds), define
-// __WXDEBUG__ too
-#ifdef _DEBUG
+// unless wxDEBUG_LEVEL is predefined (by configure or via wx/setup.h under
+// Windows), use the default
+#if !defined(wxDEBUG_LEVEL)
+    #define wxDEBUG_LEVEL 1
+#endif // !defined(wxDEBUG_LEVEL)
+
+/*
+    __WXDEBUG__ is defined when wxDEBUG_LEVEL != 0. This is done mostly for
+    compatibility but it also provides a simpler way to check if asserts and
+    debug logging is enabled at all.
+ */
+#if wxDEBUG_LEVEL > 0
     #ifndef __WXDEBUG__
         #define __WXDEBUG__
-    #endif // !__WXDEBUG__
-#endif // _DEBUG
-
-// if NDEBUG is defined (<assert.h> uses it), undef __WXDEBUG__ and WXDEBUG
-#ifdef NDEBUG
+    #endif
+#else
     #undef __WXDEBUG__
-    #undef WXDEBUG
-#endif // NDEBUG
+#endif
 
-// if __WXDEBUG__ is defined, make sure that WXDEBUG is defined and >= 1
+// Finally there is also a very old WXDEBUG macro not used anywhere at all, it
+// is only defined for compatibility.
 #ifdef __WXDEBUG__
     #if !defined(WXDEBUG) || !WXDEBUG
         #undef WXDEBUG
         #define WXDEBUG 1
     #endif // !WXDEBUG
 #endif // __WXDEBUG__
-
-// temporarily define wxDEBUG_LEVEL as function of __WXDEBUG__
-#if !defined(wxDEBUG_LEVEL)
-    #ifdef __WXDEBUG__
-        #define wxDEBUG_LEVEL 1
-    #else
-        #define wxDEBUG_LEVEL 0
-    #endif
-#endif // !defined(wxDEBUG_LEVEL)
 
 // ----------------------------------------------------------------------------
 // Handling assertion failures
@@ -126,6 +119,14 @@ inline wxAssertHandler_t wxSetAssertHandler(wxAssertHandler_t handler)
     return old;
 }
 
+/*
+    Reset the default assert handler.
+
+    This may be used to enable asserts, which are disabled by default in this
+    case, for programs built in release build (NDEBUG defined).
+ */
+extern void WXDLLIMPEXP_BASE wxSetDefaultAssertHandler();
+
 #else // !wxDEBUG_LEVEL
 
 // provide empty stubs in case assertions are completely disabled
@@ -137,10 +138,25 @@ inline wxAssertHandler_t wxSetAssertHandler(wxAssertHandler_t /* handler */)
     return NULL;
 }
 
+inline void wxSetDefaultAssertHandler() { }
+
 #endif // wxDEBUG_LEVEL/!wxDEBUG_LEVEL
 
 // simply a synonym for wxSetAssertHandler(NULL)
 inline void wxDisableAsserts() { wxSetAssertHandler(NULL); }
+
+/*
+    A macro which disables asserts for applications compiled in release build.
+
+    By default, wxIMPLEMENT_APP (or rather wxIMPLEMENT_WXWIN_MAIN) disable the
+    asserts in the applications compiled in the release build by calling this.
+    It does nothing if NDEBUG is not defined.
+ */
+#ifdef NDEBUG
+    #define wxDISABLE_ASSERTS_IN_RELEASE_BUILD() wxDisableAsserts()
+#else
+    #define wxDISABLE_ASSERTS_IN_RELEASE_BUILD()
+#endif
 
 #if wxDEBUG_LEVEL
 
@@ -364,6 +380,24 @@ extern void WXDLLIMPEXP_BASE wxOnAssert(const char *file,
           unsigned int msg: expr; \
           wxMAKE_UNIQUE_ASSERT_NAME() { wxUnusedVar(msg); } \
         }
+#elif defined( __VMS )
+namespace wxdebug{
+
+// HP aCC cannot deal with missing names for template value parameters
+template <bool x> struct STATIC_ASSERTION_FAILURE;
+
+template <> struct STATIC_ASSERTION_FAILURE<true> { enum { value = 1 }; };
+
+// HP aCC cannot deal with missing names for template value parameters
+template<int x> struct static_assert_test{};
+
+}
+    #define WX_JOIN( X, Y ) X##Y
+    #define WX_STATIC_ASSERT_BOOL_CAST(x) (bool)(x)
+    #define wxCOMPILE_TIME_ASSERT(expr, msg) \
+       typedef ::wxdebug::static_assert_test<\
+          sizeof(::wxdebug::STATIC_ASSERTION_FAILURE< WX_STATIC_ASSERT_BOOL_CAST( expr ) >)>\
+            WX_JOIN(wx_static_assert_typedef_, __LINE__)
 #else
     #define wxCOMPILE_TIME_ASSERT(expr, msg) \
         struct wxMAKE_UNIQUE_ASSERT_NAME { unsigned int msg: expr; }

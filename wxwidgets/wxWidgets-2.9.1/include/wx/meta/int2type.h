@@ -1,9 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        wx/meta/int2type.h
-// Purpose:     Generate a unique type from a constant integer 
+// Purpose:     Generate a unique type from a constant integer
 // Author:      Arne Steinarson
 // Created:     2008-01-10
-// RCS-ID:      $Id: int2type.h 51305 2008-01-21 11:56:15Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Arne Steinarson
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

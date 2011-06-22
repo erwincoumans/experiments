@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.04.03 (from src/*/data.cpp files)
-// RCS-ID:      $Id: datacmn.cpp 49873 2007-11-12 21:37:46Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997-2002 wxWidgets development team
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -78,6 +78,3 @@ extern WXDLLEXPORT_DATA(const char) wxDirDialogNameStr[] = "wxDirCtrl";
 extern WXDLLEXPORT_DATA(const char) wxDirDialogDefaultFolderStr[] = "/";
 
 extern WXDLLEXPORT_DATA(const char) wxFileDialogNameStr[] = "filedlg";
-#if defined(__WXMSW__) || defined(__OS2__)
-WXDLLEXPORT_DATA(const wxChar *) wxUserResourceStr = wxT("TEXT");
-#endif

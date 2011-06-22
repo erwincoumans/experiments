@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     06/30/02
-// RCS-ID:      $Id: toolbar.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -423,11 +423,7 @@ bool wxToolBar::Create( wxWindow* pParent,
 
 wxToolBar::~wxToolBar()
 {
-    if (m_pToolTip)
-    {
-        delete m_pToolTip;
-        m_pToolTip = NULL;
-    }
+    wxDELETE(m_pToolTip);
 } // end of wxToolBar::~wxToolBar
 
 bool wxToolBar::Realize()
@@ -935,7 +931,7 @@ void wxToolBar::SetRows(
   int                               nRows
 )
 {
-    wxCHECK_RET( nRows != 0, _T("max number of rows must be > 0") );
+    wxCHECK_RET( nRows != 0, wxT("max number of rows must be > 0") );
 
     m_maxCols = (GetToolsCount() + nRows - 1) / nRows;
     Refresh();

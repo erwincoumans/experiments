@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: settings.cpp 59820 2009-03-24 23:13:02Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,6 +34,7 @@
 
 #include "wx/msw/private.h"
 #include "wx/msw/missing.h" // for SM_CXCURSOR, SM_CYCURSOR, SM_TABLETPC
+#include "wx/msw/private/metrics.h"
 
 #ifndef SPI_GETFLATMENU
 #define SPI_GETFLATMENU                     0x1022
@@ -90,8 +91,7 @@ bool wxSystemSettingsModule::OnInit()
 
 void wxSystemSettingsModule::OnExit()
 {
-    delete gs_fontDefault;
-    gs_fontDefault = NULL;
+    wxDELETE(gs_fontDefault);
 }
 
 // ----------------------------------------------------------------------------
@@ -192,7 +192,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
                 unsigned int n = index - wxSYS_COLOUR_BTNHIGHLIGHT;
 
                 wxASSERT_MSG( n < WXSIZEOF(s_defaultSysColors),
-                              _T("forgot tp update the default colours array") );
+                              wxT("forgot tp update the default colours array") );
 
                 colSys = s_defaultSysColors[n];
                 hasCol = true;
@@ -208,7 +208,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
         colSys = ::GetSysColor(index);
 #endif
     }
-    
+
     wxColour ret = wxRGBToColour(colSys);
     wxASSERT(ret.IsOk());
     return ret;
@@ -230,13 +230,6 @@ wxFont wxCreateFontFromStockObject(int index)
         {
             wxNativeFontInfo info;
             info.lf = lf;
-#ifndef __WXWINCE__
-            // We want Windows 2000 or later to have new fonts even MS Shell Dlg
-            // is returned as default GUI font for compatibility
-            int verMaj;
-            if(index == DEFAULT_GUI_FONT && wxGetOsVersion(&verMaj) == wxOS_WINDOWS_NT && verMaj >= 5)
-                wxStrcpy(info.lf.lfFaceName, wxT("MS Shell Dlg 2"));
-#endif
             // Under MicroWindows we pass the HFONT as well
             // because it's hard to convert HFONT -> LOGFONT -> HFONT
             // It's OK to delete stock objects, the delete will be ignored.
@@ -248,12 +241,12 @@ wxFont wxCreateFontFromStockObject(int index)
         }
         else
         {
-            wxFAIL_MSG( _T("failed to get LOGFONT") );
+            wxFAIL_MSG( wxT("failed to get LOGFONT") );
         }
     }
     else // GetStockObject() failed
     {
-        wxFAIL_MSG( _T("stock font not found") );
+        wxFAIL_MSG( wxT("stock font not found") );
     }
 
     return font;
@@ -270,28 +263,40 @@ wxFont wxSystemSettingsNative::GetFont(wxSystemFont index)
         gs_fontDefault = new wxFont(wxCreateFontFromStockObject(SYSTEM_FONT));
     }
 
-    wxASSERT(gs_fontDefault->IsOk() && 
+    wxASSERT(gs_fontDefault->IsOk() &&
              wxFontEnumerator::IsValidFacename(gs_fontDefault->GetFaceName()));
     return *gs_fontDefault;
 #else // !__WXWINCE__
     // wxWindow ctor calls GetFont(wxSYS_DEFAULT_GUI_FONT) so we're
     // called fairly often -- this is why we cache this particular font
-    const bool isDefaultRequested = index == wxSYS_DEFAULT_GUI_FONT;
-    if ( isDefaultRequested )
+    if ( index == wxSYS_DEFAULT_GUI_FONT )
     {
-        if ( gs_fontDefault )
-            return *gs_fontDefault;
+        if ( !gs_fontDefault )
+        {
+            // http://blogs.msdn.com/oldnewthing/archive/2005/07/07/436435.aspx
+            // explains why neither SYSTEM_FONT nor DEFAULT_GUI_FONT should be
+            // used here
+            //
+            // the message box font seems to be the one which should be used
+            // for most (simple) controls, e.g. buttons and such but other
+            // controls may prefer to use lfStatusFont or lfCaptionFont if it
+            // is more appropriate for them
+            wxNativeFontInfo info;
+            info.lf = wxMSWImpl::GetNonClientMetrics().lfMessageFont;
+            gs_fontDefault = new wxFont(info);
+        }
+
+        return *gs_fontDefault;
     }
 
     wxFont font = wxCreateFontFromStockObject(index);
 
-    if ( isDefaultRequested )
-    {
-        // if we got here it means we hadn't cached it yet - do now
-        gs_fontDefault = new wxFont(font);
-    }
+    wxASSERT(font.IsOk());
 
-    wxASSERT(font.IsOk() && wxFontEnumerator::IsValidFacename(font.GetFaceName()));
+#if wxUSE_FONTENUM
+    wxASSERT(wxFontEnumerator::IsValidFacename(font.GetFaceName()));
+#endif // wxUSE_FONTENUM
+
     return font;
 #endif // __WXWINCE__/!__WXWINCE__
 }
@@ -406,7 +411,7 @@ int wxSystemSettingsNative::GetMetric(wxSystemMetric index, wxWindow* WXUNUSED(w
     return 0;
 #else // !__WXMICROWIN__
     wxCHECK_MSG( index > 0 && (size_t)index < WXSIZEOF(gs_metricsMap), 0,
-                 _T("invalid metric") );
+                 wxT("invalid metric") );
 
     if ( index == wxSYS_DCLICK_MSEC )
     {
@@ -444,7 +449,7 @@ bool wxSystemSettingsNative::HasFeature(wxSystemFeature index)
             return ::GetSystemMetrics(SM_TABLETPC) != 0;
 
         default:
-            wxFAIL_MSG( _T("unknown system feature") );
+            wxFAIL_MSG( wxT("unknown system feature") );
 
             return false;
     }
@@ -496,7 +501,7 @@ extern wxFont wxGetCCDefaultFont()
         }
         else
         {
-            wxLogLastError(_T("SystemParametersInfo(SPI_GETICONTITLELOGFONT"));
+            wxLogLastError(wxT("SystemParametersInfo(SPI_GETICONTITLELOGFONT"));
         }
     }
 #endif // __WXWINCE__

@@ -3,7 +3,7 @@
 // Purpose:     class allowing to show notification messages to the user
 // Author:      Vadim Zeitlin
 // Created:     2007-11-19
-// RCS-ID:      $Id: notifmsg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,7 +127,7 @@ private:
     wxDECLARE_NO_COPY_CLASS(wxNotificationMessageBase);
 };
 
-#if defined(__WXGTK__) && wxUSE_LIBHILDON
+#if defined(__WXGTK__) && (wxUSE_LIBHILDON || wxUSE_LIBHILDON2)
     #include "wx/gtk/hildon/notifmsg.h"
 /*
     TODO: provide support for

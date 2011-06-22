@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     03/02/99
-// RCS-ID:      $Id: textimpl.h 60760 2009-05-27 09:58:37Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,6 +12,7 @@
 #ifndef _WX_OSX_COCOA_PRIVATE_TEXTIMPL_H_
 #define _WX_OSX_COCOA_PRIVATE_TEXTIMPL_H_
 
+#include "wx/combobox.h"
 #include "wx/osx/private.h"
 
 // implementation exposed, so that search control can pull it
@@ -19,7 +20,7 @@
 class wxNSTextFieldControl : public wxWidgetCocoaImpl, public wxTextWidgetImpl
 {
 public :
-    wxNSTextFieldControl( wxTextCtrl *wxPeer, WXWidget w );
+    wxNSTextFieldControl( wxWindow *wxPeer, WXWidget w );
     virtual ~wxNSTextFieldControl();
 
     virtual wxString GetStringValue() const ;
@@ -32,7 +33,8 @@ public :
     virtual void GetSelection( long* from, long* to) const ;
     virtual void SetSelection( long from , long to );
     virtual void WriteText(const wxString& str) ;
-    
+    virtual bool HasOwnContextMenu() const { return true; }
+
     virtual void controlAction(WXWidget slf, void* _cmd, void *sender);
 protected :
     NSTextField* m_textField;
@@ -57,10 +59,43 @@ public:
     virtual void SetSelection( long from , long to );
     virtual void WriteText(const wxString& str) ;
     virtual void SetFont( const wxFont & font , const wxColour& foreground , long windowStyle, bool ignoreBlack = true );
+    
+    virtual bool GetStyle(long position, wxTextAttr& style);
+    virtual void SetStyle(long start, long end, const wxTextAttr& style);
+    
+    virtual bool CanFocus() const;
+    
+    virtual bool HasOwnContextMenu() const { return true; }
+    
+    virtual void CheckSpelling(bool check);
+    virtual wxSize GetBestSize() const;
 
 protected:
     NSScrollView* m_scrollView;
     NSTextView* m_textView;
+};
+
+class wxNSComboBoxControl : public wxNSTextFieldControl, public wxComboWidgetImpl
+{
+public :
+    wxNSComboBoxControl( wxWindow *wxPeer, WXWidget w );
+    virtual ~wxNSComboBoxControl();
+    
+    virtual int GetSelectedItem() const;
+    virtual void SetSelectedItem(int item);
+    
+    virtual int GetNumberOfItems() const;
+    
+    virtual void InsertItem(int pos, const wxString& item);
+    virtual void RemoveItem(int pos);
+    
+    virtual void Clear();
+    
+    virtual wxString GetStringAtIndex(int pos) const;
+    
+    virtual int FindString(const wxString& text) const;
+private:
+    NSComboBox* m_comboBox;
 };
 
 #endif // _WX_OSX_COCOA_PRIVATE_TEXTIMPL_H_

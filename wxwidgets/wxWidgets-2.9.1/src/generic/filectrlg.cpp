@@ -3,7 +3,7 @@
 // Purpose:     wxGenericFileCtrl Implementation
 // Author:      Diaa M. Sami
 // Created:     2007-07-07
-// RCS-ID:      $Id: filectrlg.cpp 57873 2009-01-07 01:47:47Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Diaa M. Sami
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,6 +33,7 @@
 #include "wx/generic/dirctrlg.h" // for wxFileIconsTable
 #include "wx/dir.h"
 #include "wx/tokenzr.h"
+#include "wx/imaglist.h"
 
 #ifdef __WXMSW__
     #include "wx/msw/wrapwin.h"
@@ -52,7 +53,7 @@
 // ----------------------------------------------------------------------------
 
 static
-int wxCALLBACK wxFileDataNameCompare( long data1, long data2, long sortOrder)
+int wxCALLBACK wxFileDataNameCompare( long data1, long data2, wxIntPtr sortOrder)
 {
      wxFileData *fd1 = (wxFileData *)wxUIntToPtr(data1);
      wxFileData *fd2 = (wxFileData *)wxUIntToPtr(data2);
@@ -70,7 +71,7 @@ int wxCALLBACK wxFileDataNameCompare( long data1, long data2, long sortOrder)
 }
 
 static
-int wxCALLBACK wxFileDataSizeCompare(long data1, long data2, long sortOrder)
+int wxCALLBACK wxFileDataSizeCompare(long data1, long data2, wxIntPtr sortOrder)
 {
      wxFileData *fd1 = (wxFileData *)wxUIntToPtr(data1);
      wxFileData *fd2 = (wxFileData *)wxUIntToPtr(data2);
@@ -92,7 +93,7 @@ int wxCALLBACK wxFileDataSizeCompare(long data1, long data2, long sortOrder)
 }
 
 static
-int wxCALLBACK wxFileDataTypeCompare(long data1, long data2, long sortOrder)
+int wxCALLBACK wxFileDataTypeCompare(long data1, long data2, wxIntPtr sortOrder)
 {
      wxFileData *fd1 = (wxFileData *)wxUIntToPtr(data1);
      wxFileData *fd2 = (wxFileData *)wxUIntToPtr(data2);
@@ -114,7 +115,7 @@ int wxCALLBACK wxFileDataTypeCompare(long data1, long data2, long sortOrder)
 }
 
 static
-int wxCALLBACK wxFileDataTimeCompare(long data1, long data2, long sortOrder)
+int wxCALLBACK wxFileDataTimeCompare(long data1, long data2, wxIntPtr sortOrder)
 {
      wxFileData *fd1 = (wxFileData *)wxUIntToPtr(data1);
      wxFileData *fd2 = (wxFileData *)wxUIntToPtr(data2);
@@ -225,13 +226,7 @@ void wxFileData::ReadData()
     lstat( m_filePath.fn_str(), &buff );
     m_type |= S_ISLNK(buff.st_mode) ? is_link : 0;
 #else // no lstat()
-    // only translate to file charset if we don't go by our
-    // wxStat implementation
-#ifndef wxNEED_WX_UNISTD_H
-    wxStat( m_filePath.fn_str() , &buff );
-#else
     wxStat( m_filePath, &buff );
-#endif
 #endif
 
     m_type |= (buff.st_mode & S_IFDIR) != 0 ? is_dir : 0;
@@ -244,25 +239,25 @@ void wxFileData::ReadData()
     // __WXWINCE__
 
 #if defined(__UNIX__)
-    m_permissions.Printf(_T("%c%c%c%c%c%c%c%c%c"),
-                         buff.st_mode & wxS_IRUSR ? _T('r') : _T('-'),
-                         buff.st_mode & wxS_IWUSR ? _T('w') : _T('-'),
-                         buff.st_mode & wxS_IXUSR ? _T('x') : _T('-'),
-                         buff.st_mode & wxS_IRGRP ? _T('r') : _T('-'),
-                         buff.st_mode & wxS_IWGRP ? _T('w') : _T('-'),
-                         buff.st_mode & wxS_IXGRP ? _T('x') : _T('-'),
-                         buff.st_mode & wxS_IROTH ? _T('r') : _T('-'),
-                         buff.st_mode & wxS_IWOTH ? _T('w') : _T('-'),
-                         buff.st_mode & wxS_IXOTH ? _T('x') : _T('-'));
+    m_permissions.Printf(wxT("%c%c%c%c%c%c%c%c%c"),
+                         buff.st_mode & wxS_IRUSR ? wxT('r') : wxT('-'),
+                         buff.st_mode & wxS_IWUSR ? wxT('w') : wxT('-'),
+                         buff.st_mode & wxS_IXUSR ? wxT('x') : wxT('-'),
+                         buff.st_mode & wxS_IRGRP ? wxT('r') : wxT('-'),
+                         buff.st_mode & wxS_IWGRP ? wxT('w') : wxT('-'),
+                         buff.st_mode & wxS_IXGRP ? wxT('x') : wxT('-'),
+                         buff.st_mode & wxS_IROTH ? wxT('r') : wxT('-'),
+                         buff.st_mode & wxS_IWOTH ? wxT('w') : wxT('-'),
+                         buff.st_mode & wxS_IXOTH ? wxT('x') : wxT('-'));
 #elif defined(__WIN32__)
     DWORD attribs = ::GetFileAttributes(m_filePath.c_str());
     if (attribs != (DWORD)-1)
     {
-        m_permissions.Printf(_T("%c%c%c%c"),
-                             attribs & FILE_ATTRIBUTE_ARCHIVE  ? _T('A') : _T(' '),
-                             attribs & FILE_ATTRIBUTE_READONLY ? _T('R') : _T(' '),
-                             attribs & FILE_ATTRIBUTE_HIDDEN   ? _T('H') : _T(' '),
-                             attribs & FILE_ATTRIBUTE_SYSTEM   ? _T('S') : _T(' '));
+        m_permissions.Printf(wxT("%c%c%c%c"),
+                             attribs & FILE_ATTRIBUTE_ARCHIVE  ? wxT('A') : wxT(' '),
+                             attribs & FILE_ATTRIBUTE_READONLY ? wxT('R') : wxT(' '),
+                             attribs & FILE_ATTRIBUTE_HIDDEN   ? wxT('H') : wxT(' '),
+                             attribs & FILE_ATTRIBUTE_SYSTEM   ? wxT('S') : wxT(' '));
     }
 #endif
 
@@ -356,7 +351,7 @@ wxString wxFileData::GetEntry( fileListFieldType num ) const
 #endif // defined(__UNIX__) || defined(__WIN32__)
 
         default:
-            wxFAIL_MSG( _T("unexpected field in wxFileData::GetEntry()") );
+            wxFAIL_MSG( wxT("unexpected field in wxFileData::GetEntry()") );
     }
 
     return s;
@@ -381,7 +376,7 @@ void wxFileData::MakeItem( wxListItem &item )
 
     if (IsLink())
     {
-        wxColour dg = wxTheColourDatabase->Find( _T("MEDIUM GREY") );
+        wxColour dg = wxTheColourDatabase->Find( wxT("MEDIUM GREY") );
         if ( dg.Ok() )
             item.SetTextColour(dg);
     }
@@ -1182,13 +1177,15 @@ void wxGenericFileCtrl::DoSetFilterIndex( int filterindex )
     if ( str.Left( 2 ) == wxT( "*." ) )
     {
         m_filterExtension = str.Mid( 1 );
-        if ( m_filterExtension == _T( ".*" ) )
+        if ( m_filterExtension == wxT( ".*" ) )
             m_filterExtension.clear();
     }
     else
     {
         m_filterExtension.clear();
     }
+
+    GenerateFilterChangedEvent( this, this );
 }
 
 void wxGenericFileCtrl::SetWildcard( const wxString& wildCard )

@@ -4,7 +4,7 @@
 // Author:      Francesco Montorsi
 // Modified by:
 // Created:     15/04/2006
-// RCS-ID:      $Id: fontpickerg.cpp 52836 2008-03-26 15:49:31Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,8 +47,8 @@ bool wxGenericFontButton::Create( wxWindow *parent, wxWindowID id,
                         const wxValidator& validator, const wxString &name)
 {
     wxString label = (style & wxFNTP_FONTDESC_AS_LABEL) ?
-                        wxEmptyString : // label will be updated by UpdateFont
-                        wxT("Choose font");
+                        wxString() : // label will be updated by UpdateFont
+                        _("Choose font");
 
     // create this button
     if (!wxButton::Create( parent, id, label, pos,

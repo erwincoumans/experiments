@@ -2,7 +2,7 @@
 #                                                                            *
 # Make file for VMS                                                          *
 # Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                             *
-# Date : 7 January 2009                                                      *
+# Date : 28 June 2010                                                        *
 #                                                                            *
 #*****************************************************************************
 .first
@@ -61,7 +61,7 @@ OBJECTS = appunix.obj,apptraits.obj,\
 		sound_sdl.obj,\
 		stdpaths.obj,\
 		taskbarx11.obj,\
-		timerunx.obj,evtloopunix.obj
+		timerunx.obj,evtloopunix.obj,fdiounix.obj
 
 SOURCES = appunix.cpp,apptraits.cpp,\
 		dialup.cpp,\
@@ -81,7 +81,7 @@ SOURCES = appunix.cpp,apptraits.cpp,\
 		sound_sdl.cpp,\
 		stdpaths.cpp,\
 		taskbarx11.cpp,\
-		timerunx.cpp,evtloopunix.cpp
+		timerunx.cpp,evtloopunix.cpp,fdiounix.cpp
 
 all : $(SOURCES)
 	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)
@@ -101,6 +101,8 @@ all : $(SOURCES)
 .endif
 .endif
 
+$(OBJECTS) : [--.include.wx]setup.h
+
 appunix.obj : appunix.cpp
 apptraits.obj : apptraits.cpp
 dialup.obj : dialup.cpp
@@ -112,6 +114,7 @@ sockunix.obj : sockunix.cpp
 	cxx $(CXXFLAGS)$(CXX_DEFINE)/nowarn sockunix.cpp
 mimetype.obj : mimetype.cpp
 threadpsx.obj : threadpsx.cpp
+	cxx $(CXXFLAGS)$(CXX_DEFINE)/nowarn threadpsx.cpp
 utilsunx.obj : utilsunx.cpp
 utilsx11.obj : utilsx11.cpp
 joystick.obj : joystick.cpp
@@ -124,3 +127,4 @@ displayx11.obj : displayx11.cpp
 timerunx.obj : timerunx.cpp
 evtloopunix.obj : evtloopunix.cpp
 	cxx $(CXXFLAGS)$(CXX_DEFINE)/nowarn evtloopunix.cpp
+fdiounix.obj : fdiounix.cpp

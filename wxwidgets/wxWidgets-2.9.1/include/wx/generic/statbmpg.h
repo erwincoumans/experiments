@@ -3,7 +3,7 @@
 // Purpose:     wxGenericStaticBitmap header
 // Author:      Marcin Wojdyr, Stefan Csomor
 // Created:     2008-06-16
-// RCS-ID:      $Id: statbmpg.h 54314 2008-06-21 15:32:33Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   wxWidgets developers
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -45,9 +45,9 @@ public:
 
     virtual wxBitmap GetBitmap() const { return m_bitmap; }
 
-    virtual void SetIcon(const wxIcon& icon) 
-    { 
-        m_bitmap.CopyFromIcon(icon); 
+    virtual void SetIcon(const wxIcon& icon)
+    {
+        m_bitmap.CopyFromIcon(icon);
         SetInitialSize(GetBitmapSize());
         Refresh();
     }
@@ -59,7 +59,7 @@ public:
 
 
 private:
-    wxSize GetBitmapSize() 
+    wxSize GetBitmapSize()
     {
         return m_bitmap.Ok() ? wxSize(m_bitmap.GetWidth(), m_bitmap.GetHeight())
                              : wxSize(16, 16); // this is completely arbitrary

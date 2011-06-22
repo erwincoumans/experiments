@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dc.cpp 60034 2009-04-05 14:58:11Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,14 +44,14 @@
 #include "wx/dynlib.h"
 
 #ifdef wxHAS_RAW_BITMAP
-#include "wx/rawbmp.h"
+    #include "wx/rawbmp.h"
 #endif
 
 #include <string.h>
 
-#ifndef __WIN32__
-    #include <print.h>
-#endif
+#include "wx/msw/private/dc.h"
+
+using namespace wxMSWImpl;
 
 #ifndef AC_SRC_ALPHA
     #define AC_SRC_ALPHA 1
@@ -149,119 +149,6 @@ wxAlphaBlend(HDC hdcDst, int xDst, int yDst,
 // private classes
 // ----------------------------------------------------------------------------
 
-// various classes to change some DC property temporarily
-
-// text background and foreground colours
-class wxTextColoursChanger
-{
-public:
-    wxTextColoursChanger(HDC hdc, const wxMSWDCImpl& dc)
-        : m_hdc(hdc)
-    {
-        Change(dc.GetTextForeground(), dc.GetTextBackground());
-    }
-
-    wxTextColoursChanger(HDC hdc, const wxColour& colFg, const wxColour& colBg)
-        : m_hdc(hdc)
-    {
-        Change(colFg, colBg);
-    }
-
-    ~wxTextColoursChanger()
-    {
-        if ( m_oldColFg != CLR_INVALID )
-            ::SetTextColor(m_hdc, m_oldColFg);
-        if ( m_oldColBg != CLR_INVALID )
-            ::SetBkColor(m_hdc, m_oldColBg);
-    }
-
-protected:
-    // this ctor doesn't change mode immediately, call Change() later to do it
-    // only if needed
-    wxTextColoursChanger(HDC hdc)
-        : m_hdc(hdc)
-    {
-        m_oldColFg =
-        m_oldColBg = CLR_INVALID;
-    }
-
-    void Change(const wxColour& colFg, const wxColour& colBg)
-    {
-        if ( colFg.IsOk() )
-        {
-            m_oldColFg = ::SetTextColor(m_hdc, colFg.GetPixel());
-            if ( m_oldColFg == CLR_INVALID )
-            {
-                wxLogLastError(_T("SetTextColor"));
-            }
-        }
-        else
-        {
-            m_oldColFg = CLR_INVALID;
-        }
-
-        if ( colBg.IsOk() )
-        {
-            m_oldColBg = ::SetBkColor(m_hdc, colBg.GetPixel());
-            if ( m_oldColBg == CLR_INVALID )
-            {
-                wxLogLastError(_T("SetBkColor"));
-            }
-        }
-        else
-        {
-            m_oldColBg = CLR_INVALID;
-        }
-    }
-
-private:
-    const HDC m_hdc;
-    COLORREF m_oldColFg,
-             m_oldColBg;
-
-    wxDECLARE_NO_COPY_CLASS(wxTextColoursChanger);
-};
-
-// background mode
-class wxBkModeChanger
-{
-public:
-    // set background mode to opaque if mode != wxBRUSHSTYLE_TRANSPARENT
-    wxBkModeChanger(HDC hdc, int mode)
-        : m_hdc(hdc)
-    {
-        Change(mode);
-    }
-
-    ~wxBkModeChanger()
-    {
-        if ( m_oldMode )
-            ::SetBkMode(m_hdc, m_oldMode);
-    }
-
-protected:
-    // this ctor doesn't change mode immediately, call Change() later to do it
-    // only if needed
-    wxBkModeChanger(HDC hdc) : m_hdc(hdc) { m_oldMode = 0; }
-
-    void Change(int mode)
-    {
-        m_oldMode = ::SetBkMode(m_hdc, mode == wxBRUSHSTYLE_TRANSPARENT
-                                        ? TRANSPARENT
-                                        : OPAQUE);
-        if ( !m_oldMode )
-        {
-            wxLogLastError(_T("SetBkMode"));
-        }
-    }
-
-private:
-    const HDC m_hdc;
-    int m_oldMode;
-
-    wxDECLARE_NO_COPY_CLASS(wxBkModeChanger);
-};
-
 // instead of duplicating the same code which sets and then restores text
 // colours in each wxDC method working with wxSTIPPLE_MASK_OPAQUE brushes,
 // encapsulate this in a small helper class
@@ -278,27 +165,35 @@ private:
     wxDECLARE_NO_COPY_CLASS(wxBrushAttrsSetter);
 };
 
-// this class saves the old stretch blit mode during its life time
+#ifdef __WXWINCE__
+
+#define SET_STRETCH_BLT_MODE(hdc)
+
+#else // !__WXWINCE__
+
+// this class sets the stretch blit mode to COLORONCOLOR during its lifetime
+//
+// don't use it directly, use SET_STRETCH_BLT_MODE() macro instead as it
+// expands to nothing under WinCE which doesn't have SetStretchBltMode()
 class StretchBltModeChanger
 {
 public:
-    StretchBltModeChanger(HDC hdc,
-                          int WXUNUSED_IN_WINCE(mode))
+    StretchBltModeChanger(HDC hdc)
         : m_hdc(hdc)
     {
-#ifndef __WXWINCE__
-        m_modeOld = ::SetStretchBltMode(m_hdc, mode);
+        m_modeOld = ::SetStretchBltMode(m_hdc, COLORONCOLOR);
         if ( !m_modeOld )
-            wxLogLastError(_T("SetStretchBltMode"));
-#endif
+        {
+            wxLogLastError(wxT("SetStretchBltMode"));
+        }
     }
 
     ~StretchBltModeChanger()
     {
-#ifndef __WXWINCE__
         if ( !::SetStretchBltMode(m_hdc, m_modeOld) )
-            wxLogLastError(_T("SetStretchBltMode"));
-#endif
+        {
+            wxLogLastError(wxT("SetStretchBltMode"));
+        }
     }
 
 private:
@@ -308,6 +203,11 @@ private:
 
     wxDECLARE_NO_COPY_CLASS(StretchBltModeChanger);
 };
+
+#define SET_STRETCH_BLT_MODE(hdc) \
+    StretchBltModeChanger wxMAKE_UNIQUE_NAME(stretchModeChanger)(hdc)
+
+#endif // __WXWINCE__/!__WXWINCE__
 
 #if wxUSE_DYNLIB_CLASS
 
@@ -355,7 +255,7 @@ private:
     const wxChar *m_dllName;
 };
 
-static wxOnceOnlyDLLLoader wxMSIMG32DLL(_T("msimg32"));
+static wxOnceOnlyDLLLoader wxMSIMG32DLL(wxT("msimg32"));
 
 // we must ensure that DLLs are unloaded before the static objects cleanup time
 // because we may hit the notorious DllMain() dead lock in this case if wx is
@@ -568,7 +468,7 @@ void wxMSWDCImpl::SetClippingHrgn(WXHRGN hrgn)
 #else // !WinCE
     if ( ::ExtSelectClipRgn(GetHdc(), (HRGN)hrgn, RGN_AND) == ERROR )
     {
-        wxLogLastError(_T("ExtSelectClipRgn"));
+        wxLogLastError(wxT("ExtSelectClipRgn"));
 
         return;
     }
@@ -591,7 +491,7 @@ void wxMSWDCImpl::DoSetClippingRegion(wxCoord x, wxCoord y, wxCoord w, wxCoord h
                                 LogicalToDeviceY(y + h));
     if ( !hrgn )
     {
-        wxLogLastError(_T("CreateRectRgn"));
+        wxLogLastError(wxT("CreateRectRgn"));
     }
     else
     {
@@ -741,7 +641,7 @@ bool wxMSWDCImpl::DoGetPixel(wxCoord x, wxCoord y, wxColour *col) const
 {
     WXMICROWIN_CHECK_HDC_RET(false)
 
-    wxCHECK_MSG( col, false, _T("NULL colour parameter in wxMSWDCImpl::GetPixel") );
+    wxCHECK_MSG( col, false, wxT("NULL colour parameter in wxMSWDCImpl::GetPixel") );
 
     // get the color of the pixel
     COLORREF pixelcolor = ::GetPixel(GetHdc(), XLOG2DEV(x), YLOG2DEV(y));
@@ -1065,7 +965,7 @@ void wxMSWDCImpl::DoDrawRoundedRectangle(wxCoord x, wxCoord y, wxCoord width, wx
     // Windows draws the filled rectangles without outline (i.e. drawn with a
     // transparent pen) one pixel smaller in both directions and we want them
     // to have the same size regardless of which pen is used - adjust
-    if ( m_pen.GetStyle() == wxPENSTYLE_TRANSPARENT )
+    if ( m_pen.IsOk() && m_pen.GetStyle() == wxPENSTYLE_TRANSPARENT )
     {
         x2++;
         y2++;
@@ -1274,7 +1174,7 @@ void wxMSWDCImpl::DoDrawBitmap( const wxBitmap &bmp, wxCoord x, wxCoord y, bool 
 {
     WXMICROWIN_CHECK_HDC
 
-    wxCHECK_RET( bmp.IsOk(), _T("invalid bitmap in wxMSWDCImpl::DrawBitmap") );
+    wxCHECK_RET( bmp.IsOk(), wxT("invalid bitmap in wxMSWDCImpl::DrawBitmap") );
 
     int width = bmp.GetWidth(),
         height = bmp.GetHeight();
@@ -1294,9 +1194,7 @@ void wxMSWDCImpl::DoDrawBitmap( const wxBitmap &bmp, wxCoord x, wxCoord y, bool 
             return;
     }
 
-#ifndef __WXWINCE__
-    StretchBltModeChanger changeMode(GetHdc(), COLORONCOLOR);
-#endif
+    SET_STRETCH_BLT_MODE(GetHdc());
 
     if ( useMask )
     {
@@ -1316,13 +1214,20 @@ void wxMSWDCImpl::DoDrawBitmap( const wxBitmap &bmp, wxCoord x, wxCoord y, bool 
 #ifdef __WIN32__
         // use MaskBlt() with ROP which doesn't do anything to dst in the mask
         // points
+        bool ok = false;
+
+#if wxUSE_SYSTEM_OPTIONS
         // On some systems, MaskBlt succeeds yet is much much slower
         // than the wxWidgets fall-back implementation. So we need
         // to be able to switch this on and off at runtime.
-        bool ok = false;
-#if wxUSE_SYSTEM_OPTIONS
-        if (wxSystemOptions::GetOptionInt(wxT("no-maskblt")) == 0)
-#endif
+        //
+        // NB: don't query the value of the option every time but do it only
+        //     once as otherwise it can have real (and bad) performance
+        //     implications (see #11172)
+        static bool
+            s_maskBltAllowed = wxSystemOptions::GetOptionInt("no-maskblt") == 0;
+        if ( s_maskBltAllowed )
+#endif // wxUSE_SYSTEM_OPTIONS
         {
             HDC cdc = GetHdc();
             HDC hdcMem = ::CreateCompatibleDC(GetHdc());
@@ -1571,7 +1476,7 @@ void wxMSWDCImpl::SetFont(const wxFont& font)
         HGDIOBJ hfont = ::SelectObject(GetHdc(), GetHfontOf(font));
         if ( hfont == HGDI_ERROR )
         {
-            wxLogLastError(_T("SelectObject(font)"));
+            wxLogLastError(wxT("SelectObject(font)"));
         }
         else // selected ok
         {
@@ -1587,7 +1492,7 @@ void wxMSWDCImpl::SetFont(const wxFont& font)
         {
             if ( ::SelectObject(GetHdc(), (HPEN) m_oldFont) == HGDI_ERROR )
             {
-                wxLogLastError(_T("SelectObject(old font)"));
+                wxLogLastError(wxT("SelectObject(old font)"));
             }
 
             m_oldFont = 0;
@@ -1609,7 +1514,7 @@ void wxMSWDCImpl::SetPen(const wxPen& pen)
         HGDIOBJ hpen = ::SelectObject(GetHdc(), GetHpenOf(pen));
         if ( hpen == HGDI_ERROR )
         {
-            wxLogLastError(_T("SelectObject(pen)"));
+            wxLogLastError(wxT("SelectObject(pen)"));
         }
         else // selected ok
         {
@@ -1625,7 +1530,7 @@ void wxMSWDCImpl::SetPen(const wxPen& pen)
         {
             if ( ::SelectObject(GetHdc(), (HPEN) m_oldPen) == HGDI_ERROR )
             {
-                wxLogLastError(_T("SelectObject(old pen)"));
+                wxLogLastError(wxT("SelectObject(old pen)"));
             }
 
             m_oldPen = 0;
@@ -1645,26 +1550,33 @@ void wxMSWDCImpl::SetBrush(const wxBrush& brush)
     if ( brush.IsOk() )
     {
         // we must make sure the brush is aligned with the logical coordinates
-        // before selecting it
+        // before selecting it or using the same brush for the background of
+        // different windows would result in discontinuities
+        wxSize sizeBrushBitmap = wxDefaultSize;
         wxBitmap *stipple = brush.GetStipple();
         if ( stipple && stipple->IsOk() )
+            sizeBrushBitmap = stipple->GetSize();
+        else if ( brush.IsHatch() )
+            sizeBrushBitmap = wxSize(8, 8);
+
+        if ( sizeBrushBitmap.IsFullySpecified() )
         {
             if ( !::SetBrushOrgEx
                     (
                         GetHdc(),
-                        m_deviceOriginX % stipple->GetWidth(),
-                        m_deviceOriginY % stipple->GetHeight(),
+                        m_deviceOriginX % sizeBrushBitmap.x,
+                        m_deviceOriginY % sizeBrushBitmap.y,
                         NULL                    // [out] previous brush origin
                     ) )
             {
-                wxLogLastError(_T("SetBrushOrgEx()"));
+                wxLogLastError(wxT("SetBrushOrgEx()"));
             }
         }
 
         HGDIOBJ hbrush = ::SelectObject(GetHdc(), GetHbrushOf(brush));
         if ( hbrush == HGDI_ERROR )
         {
-            wxLogLastError(_T("SelectObject(brush)"));
+            wxLogLastError(wxT("SelectObject(brush)"));
         }
         else // selected ok
         {
@@ -1680,7 +1592,7 @@ void wxMSWDCImpl::SetBrush(const wxBrush& brush)
         {
             if ( ::SelectObject(GetHdc(), (HPEN) m_oldBrush) == HGDI_ERROR )
             {
-                wxLogLastError(_T("SelectObject(old brush)"));
+                wxLogLastError(wxT("SelectObject(old brush)"));
             }
 
             m_oldBrush = 0;
@@ -1816,7 +1728,7 @@ void wxMSWDCImpl::DoGetTextExtent(const wxString& string, wxCoord *x, wxCoord *y
     HFONT hfontOld;
     if ( font )
     {
-        wxASSERT_MSG( font->IsOk(), _T("invalid font in wxMSWDCImpl::GetTextExtent") );
+        wxASSERT_MSG( font->IsOk(), wxT("invalid font in wxMSWDCImpl::GetTextExtent") );
 
         hfontOld = (HFONT)::SelectObject(GetHdc(), GetHfontOf(*font));
     }
@@ -1829,7 +1741,7 @@ void wxMSWDCImpl::DoGetTextExtent(const wxString& string, wxCoord *x, wxCoord *y
     const size_t len = string.length();
     if ( !::GetTextExtentPoint32(GetHdc(), string.wx_str(), len, &sizeRect) )
     {
-        wxLogLastError(_T("GetTextExtentPoint32()"));
+        wxLogLastError(wxT("GetTextExtentPoint32()"));
     }
 
 #if !defined(_WIN32_WCE) || (_WIN32_WCE >= 400)
@@ -1860,17 +1772,21 @@ void wxMSWDCImpl::DoGetTextExtent(const wxString& string, wxCoord *x, wxCoord *y
     }
 #endif // !defined(_WIN32_WCE) || (_WIN32_WCE >= 400)
 
-    TEXTMETRIC tm;
-    ::GetTextMetrics(GetHdc(), &tm);
-
     if (x)
         *x = sizeRect.cx;
     if (y)
         *y = sizeRect.cy;
-    if (descent)
-        *descent = tm.tmDescent;
-    if (externalLeading)
-        *externalLeading = tm.tmExternalLeading;
+
+    if ( descent || externalLeading )
+    {
+        TEXTMETRIC tm;
+        ::GetTextMetrics(GetHdc(), &tm);
+
+        if (descent)
+            *descent = tm.tmDescent;
+        if (externalLeading)
+            *externalLeading = tm.tmExternalLeading;
+    }
 
     if ( hfontOld )
     {
@@ -1989,7 +1905,7 @@ void wxMSWDCImpl::SetMapMode(wxMappingMode mode)
                 break;
 
             default:
-                wxFAIL_MSG( _T("unknown mapping mode in SetMapMode") );
+                wxFAIL_MSG( wxT("unknown mapping mode in SetMapMode") );
         }
     }
 
@@ -2080,7 +1996,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
                          wxRasterOperationMode rop, bool useMask,
                          wxCoord xsrcMask, wxCoord ysrcMask)
 {
-    wxCHECK_MSG( source, false, _T("wxMSWDCImpl::Blit(): NULL wxDC pointer") );
+    wxCHECK_MSG( source, false, wxT("wxMSWDCImpl::Blit(): NULL wxDC pointer") );
 
     WXMICROWIN_CHECK_HDC_RET(false)
 
@@ -2216,9 +2132,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
                 wxLogLastError(wxT("BitBlt"));
             }
 
-#ifndef __WXWINCE__
-            StretchBltModeChanger changeMode(dc_buffer, COLORONCOLOR);
-#endif
+            SET_STRETCH_BLT_MODE(GetHdc());
 
             // copy src to buffer using selected raster op
             if ( !::StretchBlt(dc_buffer, 0, 0, dstWidth, dstHeight,
@@ -2286,7 +2200,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
                              sizeof(ds),
                              &ds) == sizeof(ds) )
             {
-                StretchBltModeChanger changeMode(GetHdc(), COLORONCOLOR);
+                SET_STRETCH_BLT_MODE(GetHdc());
 
                 // Figure out what co-ordinate system we're supposed to specify
                 // ysrc in.
@@ -2325,9 +2239,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
 #endif
         // __WXWINCE__
         {
-#ifndef __WXWINCE__
-            StretchBltModeChanger changeMode(GetHdc(), COLORONCOLOR);
-#endif
+            SET_STRETCH_BLT_MODE(GetHdc());
 
             if ( !::StretchBlt
                     (
@@ -2338,7 +2250,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
                         dwRop
                     ) )
             {
-                wxLogLastError(_T("StretchBlt"));
+                wxLogLastError(wxT("StretchBlt"));
             }
             else
             {
@@ -2351,7 +2263,7 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
             if ( !::BitBlt(GetHdc(), xdest, ydest, dstWidth, dstHeight,
                            hdcSrc, xsrc, ysrc, dwRop) )
             {
-                wxLogLastError(_T("BitBlt"));
+                wxLogLastError(wxT("BitBlt"));
             }
             else
             {
@@ -2388,7 +2300,7 @@ void wxMSWDCImpl::DoGetSizeMM(int *w, int *h) const
     {
         int wTotal = ::GetDeviceCaps(GetHdc(), HORZRES);
 
-        wxCHECK_RET( wTotal, _T("0 width device?") );
+        wxCHECK_RET( wTotal, wxT("0 width device?") );
 
         *w = (wPixels * ::GetDeviceCaps(GetHdc(), HORZSIZE)) / wTotal;
     }
@@ -2397,7 +2309,7 @@ void wxMSWDCImpl::DoGetSizeMM(int *w, int *h) const
     {
         int hTotal = ::GetDeviceCaps(GetHdc(), VERTRES);
 
-        wxCHECK_RET( hTotal, _T("0 height device?") );
+        wxCHECK_RET( hTotal, wxT("0 height device?") );
 
         *h = (hPixels * ::GetDeviceCaps(GetHdc(), VERTSIZE)) / hTotal;
     }
@@ -2561,8 +2473,8 @@ static bool AlphaBlt(HDC hdcDst,
                      HDC hdcSrc,
                      const wxBitmap& bmp)
 {
-    wxASSERT_MSG( bmp.IsOk() && bmp.HasAlpha(), _T("AlphaBlt(): invalid bitmap") );
-    wxASSERT_MSG( hdcDst && hdcSrc, _T("AlphaBlt(): invalid HDC") );
+    wxASSERT_MSG( bmp.IsOk() && bmp.HasAlpha(), wxT("AlphaBlt(): invalid bitmap") );
+    wxASSERT_MSG( hdcDst && hdcSrc, wxT("AlphaBlt(): invalid HDC") );
 
     // do we have AlphaBlend() and company in the headers?
 #if defined(AC_SRC_OVER) && wxUSE_DYNLIB_CLASS
@@ -2572,7 +2484,7 @@ static bool AlphaBlt(HDC hdcDst,
                                         BLENDFUNCTION);
 
     static AlphaBlend_t
-        pfnAlphaBlend = (AlphaBlend_t)wxMSIMG32DLL.GetSymbol(_T("AlphaBlend"));
+        pfnAlphaBlend = (AlphaBlend_t)wxMSIMG32DLL.GetSymbol(wxT("AlphaBlend"));
     if ( pfnAlphaBlend )
     {
         BLENDFUNCTION bf;
@@ -2589,7 +2501,7 @@ static bool AlphaBlt(HDC hdcDst,
             return true;
         }
 
-        wxLogLastError(_T("AlphaBlend"));
+        wxLogLastError(wxT("AlphaBlend"));
     }
 #else
     wxUnusedVar(hdcSrc);
@@ -2627,7 +2539,7 @@ wxAlphaBlend(HDC hdcDst, int xDst, int yDst,
 
     if ( !::BitBlt(hdcMem, 0, 0, dstWidth, dstHeight, hdcDst, xDst, yDst, SRCCOPY) )
     {
-        wxLogLastError(_T("BitBlt"));
+        wxLogLastError(wxT("BitBlt"));
     }
 
     // combine them with the source bitmap using alpha
@@ -2635,7 +2547,7 @@ wxAlphaBlend(HDC hdcDst, int xDst, int yDst,
                      dataSrc((wxBitmap &)bmpSrc);
 
     wxCHECK_RET( dataDst && dataSrc,
-                    _T("failed to get raw data in wxAlphaBlend") );
+                    wxT("failed to get raw data in wxAlphaBlend") );
 
     wxAlphaPixelData::Iterator pDst(dataDst),
                                pSrc(dataSrc);
@@ -2669,7 +2581,7 @@ wxAlphaBlend(HDC hdcDst, int xDst, int yDst,
     // and finally blit them back to the destination DC
     if ( !::BitBlt(hdcDst, xDst, yDst, dstWidth, dstHeight, hdcMem, 0, 0, SRCCOPY) )
     {
-        wxLogLastError(_T("BitBlt"));
+        wxLogLastError(wxT("BitBlt"));
     }
 }
 
@@ -2687,7 +2599,7 @@ void wxMSWDCImpl::DoGradientFillLinear (const wxRect& rect,
     typedef BOOL
         (WINAPI *GradientFill_t)(HDC, PTRIVERTEX, ULONG, PVOID, ULONG, ULONG);
     static GradientFill_t pfnGradientFill =
-        (GradientFill_t)wxMSIMG32DLL.GetSymbol(_T("GradientFill"));
+        (GradientFill_t)wxMSIMG32DLL.GetSymbol(wxT("GradientFill"));
 
     if ( pfnGradientFill )
     {
@@ -2732,7 +2644,7 @@ void wxMSWDCImpl::DoGradientFillLinear (const wxRect& rect,
             return;
         }
 
-        wxLogLastError(_T("GradientFill"));
+        wxLogLastError(wxT("GradientFill"));
     }
 #endif // wxUSE_DYNLIB_CLASS
 
@@ -2745,7 +2657,7 @@ static DWORD wxGetDCLayout(HDC hdc)
 {
     typedef DWORD (WINAPI *GetLayout_t)(HDC);
     static GetLayout_t
-        wxDL_INIT_FUNC(s_pfn, GetLayout, wxDynamicLibrary(_T("gdi32.dll")));
+        wxDL_INIT_FUNC(s_pfn, GetLayout, wxDynamicLibrary(wxT("gdi32.dll")));
 
     return s_pfnGetLayout ? s_pfnGetLayout(hdc) : (DWORD)-1;
 }
@@ -2764,7 +2676,7 @@ void wxMSWDCImpl::SetLayoutDirection(wxLayoutDirection dir)
 {
     typedef DWORD (WINAPI *SetLayout_t)(HDC, DWORD);
     static SetLayout_t
-        wxDL_INIT_FUNC(s_pfn, SetLayout, wxDynamicLibrary(_T("gdi32.dll")));
+        wxDL_INIT_FUNC(s_pfn, SetLayout, wxDynamicLibrary(wxT("gdi32.dll")));
     if ( !s_pfnSetLayout )
         return;
 

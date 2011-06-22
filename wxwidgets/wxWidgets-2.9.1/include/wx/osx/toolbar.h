@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/toolbar.h
+// Name:        wx/osx/toolbar.h
 // Purpose:     wxToolBar class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: toolbar.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,12 +44,16 @@ class WXDLLIMPEXP_CORE wxToolBar: public wxToolBarBase
             const wxString& name = wxToolBarNameStr);
 
     virtual void SetWindowStyleFlag(long style);
+    
+    virtual bool Destroy();
 
     // override/implement base class virtuals
     virtual wxToolBarToolBase *FindToolForPosition(wxCoord x, wxCoord y) const;
 
+#ifndef __WXOSX_IPHONE__
     virtual bool Show(bool show = true);
     virtual bool IsShown() const;
+#endif
     virtual bool Realize();
 
     virtual void SetToolBitmapSize(const wxSize& size);
@@ -60,15 +64,18 @@ class WXDLLIMPEXP_CORE wxToolBar: public wxToolBarBase
     virtual void SetToolNormalBitmap(int id, const wxBitmap& bitmap);
     virtual void SetToolDisabledBitmap(int id, const wxBitmap& bitmap);
 
+#ifndef __WXOSX_IPHONE__
     // Add all the buttons
 
     virtual wxString MacGetToolTipString( wxPoint &where ) ;
     void OnPaint(wxPaintEvent& event) ;
     void OnMouse(wxMouseEvent& event) ;
     virtual void MacSuperChangedPosition() ;
-
+#endif
+    
 #if wxOSX_USE_NATIVE_TOOLBAR
     bool MacInstallNativeToolbar(bool usesNative);
+    void MacUninstallNativeToolbar();
     bool MacWantsNativeToolbar();
     bool MacTopLevelHasNativeToolbar(bool *ownToolbarInstalled) const;
 #endif
@@ -76,8 +83,10 @@ protected:
     // common part of all ctors
     void Init();
 
-    virtual void DoGetSize(int *width, int *height) const;
+#ifndef __WXOSX_IPHONE__
+   virtual void DoGetSize(int *width, int *height) const;
     virtual wxSize DoGetBestSize() const;
+#endif
     virtual bool DoInsertTool(size_t pos, wxToolBarToolBase *tool);
     virtual bool DoDeleteTool(size_t pos, wxToolBarToolBase *tool);
 
@@ -100,6 +109,9 @@ protected:
 #if wxOSX_USE_NATIVE_TOOLBAR
     bool m_macUsesNativeToolbar ;
     void* m_macToolbar ;
+#endif
+#ifdef __WXOSX_IPHONE__
+    WX_UIView m_macToolbar; 
 #endif
 };
 

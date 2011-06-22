@@ -2,7 +2,7 @@
 // Name:        src/gtk/frame.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: frame.cpp 58246 2009-01-20 18:33:33Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +23,10 @@
 #if wxUSE_LIBHILDON
     #include <hildon-widgets/hildon-window.h>
 #endif // wxUSE_LIBHILDON
+
+#if wxUSE_LIBHILDON2
+    #include <hildon/hildon.h>
+#endif // wxUSE_LIBHILDON2
 
 // ----------------------------------------------------------------------------
 // event tables
@@ -79,7 +83,9 @@ void wxFrame::DoGetClientSize( int *width, int *height ) const
         {
             GtkRequisition req;
             gtk_widget_size_request(m_frameMenuBar->m_widget, &req);
+#if !wxUSE_LIBHILDON && !wxUSE_LIBHILDON2
             *height -= req.height;
+#endif
         }
 #endif // wxUSE_MENUS_NATIVE
 
@@ -163,7 +169,7 @@ static wxAcceleratorTable wxCreateAcceleratorTableForMenuBar(wxMenuBar* menuBar)
         wxAcceleratorEntry* entry = (wxAcceleratorEntry*) accelEntries.Item(i)->GetData();
         entries[i] = (*entry);
         delete entry;
-        
+
     }
 
     wxAcceleratorTable table(n, entries);
@@ -272,15 +278,13 @@ void wxFrame::DetachMenuBar()
 
     if ( m_frameMenuBar )
     {
-#if wxUSE_LIBHILDON
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
         hildon_window_set_menu(HILDON_WINDOW(m_widget), NULL);
-#else // !wxUSE_LIBHILDON
-        m_frameMenuBar->UnsetInvokingWindow( this );
-
+#else // !wxUSE_LIBHILDON && !wxUSE_LIBHILDON2
         gtk_widget_ref( m_frameMenuBar->m_widget );
 
         gtk_container_remove( GTK_CONTAINER(m_mainWidget), m_frameMenuBar->m_widget );
-#endif // wxUSE_LIBHILDON/!wxUSE_LIBHILDON
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2 /!wxUSE_LIBHILDON && !wxUSE_LIBHILDON2
     }
 
     wxFrameBase::DetachMenuBar();
@@ -295,12 +299,10 @@ void wxFrame::AttachMenuBar( wxMenuBar *menuBar )
 
     if (m_frameMenuBar)
     {
-#if wxUSE_LIBHILDON
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
         hildon_window_set_menu(HILDON_WINDOW(m_widget),
                                GTK_MENU(m_frameMenuBar->m_menubar));
-#else // !wxUSE_LIBHILDON
-        m_frameMenuBar->SetInvokingWindow( this );
-
+#else // !wxUSE_LIBHILDON && !wxUSE_LIBHILDON2
         m_frameMenuBar->SetParent(this);
 
         // menubar goes into top of vbox (m_mainWidget)
@@ -322,7 +324,7 @@ void wxFrame::AttachMenuBar( wxMenuBar *menuBar )
         gtk_widget_set_size_request(menuBar->m_widget, -1, -1);
 
         gtk_widget_show( m_frameMenuBar->m_widget );
-#endif // wxUSE_LIBHILDON/!wxUSE_LIBHILDON
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2/!wxUSE_LIBHILDON && !wxUSE_LIBHILDON2
     }
     // make sure next size_allocate causes a wxSizeEvent
     m_oldClientWidth = 0;

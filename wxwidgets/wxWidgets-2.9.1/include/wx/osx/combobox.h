@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/combobox.h
+// Name:        wx/osx/combobox.h
 // Purpose:     wxComboBox class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: combobox.h 60155 2009-04-14 20:11:16Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,13 +14,17 @@
 
 #include "wx/containr.h"
 #include "wx/choice.h"
+#include "wx/textctrl.h"
 
 WXDLLIMPEXP_DATA_CORE(extern const char) wxComboBoxNameStr[];
+
+WX_DEFINE_ARRAY( char * , wxComboBoxDataArray ) ;
 
 // forward declaration of private implementation classes
 
 class wxComboBoxText;
 class wxComboBoxChoice;
+class wxComboWidgetImpl;
 
 // Combobox item
 class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
@@ -30,9 +34,11 @@ class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
  public:
     virtual ~wxComboBox();
 
+#if wxOSX_USE_CARBON
     // forward these functions to all subcontrols
     virtual bool Enable(bool enable = true);
     virtual bool Show(bool show = true);
+#endif
 
     // callback functions
     virtual void DelegateTextChanged( const wxString& value );
@@ -85,17 +91,22 @@ class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
            const wxString& name = wxComboBoxNameStr);
 
     virtual int GetSelection() const;
+    virtual void GetSelection(long *from, long *to) const;
     virtual void SetSelection(int n);
+    virtual void SetSelection(long from, long to);
     virtual int FindString(const wxString& s, bool bCase = false) const;
     virtual wxString GetString(unsigned int n) const;
     virtual wxString GetStringSelection() const;
     virtual void SetString(unsigned int n, const wxString& s);
 
+    virtual unsigned int GetCount() const;
+    
+// these methods are provided by wxTextEntry for the native impl.
+#if wxOSX_USE_CARBON
     // Text field functions
     virtual void SetValue(const wxString& value);
     virtual wxString GetValue() const;
     virtual void WriteText(const wxString& text);
-    virtual void GetSelection(long *from, long *to) const;
 
     // Clipboard operations
     virtual void Copy();
@@ -107,11 +118,8 @@ class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
     virtual wxTextPos GetLastPosition() const;
     virtual void Replace(long from, long to, const wxString& value);
     virtual void Remove(long from, long to);
-    virtual void SetSelection(long from, long to);
     virtual void SetEditable(bool editable);
     virtual bool IsEditable() const;
-
-    virtual unsigned int GetCount() const;
 
     virtual void Undo();
     virtual void Redo();
@@ -125,14 +133,24 @@ class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
 
     virtual wxClientDataType GetClientDataType() const;
 
+    virtual wxTextWidgetImpl* GetTextPeer() const;
+#endif // wxOSX_USE_CARBON
+
+
+
     // osx specific event handling common for all osx-ports
 
     virtual bool        OSXHandleClicked( double timestampsec );
 
+#if wxOSX_USE_CARBON
     wxCONTROL_ITEMCONTAINER_CLIENTDATAOBJECT_RECAST
 
     WX_DECLARE_CONTROL_CONTAINER();
+#endif
 
+#if wxOSX_USE_COCOA
+    wxComboWidgetImpl* GetComboPeer() const;
+#endif
 protected:
     // common part of all ctors
     void Init();
@@ -142,12 +160,16 @@ protected:
     virtual void DoClear();
 
     // wxTextEntry functions
+#if wxOSX_USE_CARBON
     virtual wxString DoGetValue() const;
+#endif
     virtual wxWindow *GetEditableWindow() { return this; }
 
     // override the base class virtuals involved in geometry calculations
     virtual wxSize DoGetBestSize() const;
+#if wxOSX_USE_CARBON
     virtual void DoMoveWindow(int x, int y, int width, int height);
+#endif
 
     virtual int DoInsertItems(const wxArrayStringsAdapter& items,
                               unsigned int pos,
@@ -156,7 +178,9 @@ protected:
     virtual void DoSetItemClientData(unsigned int n, void* clientData);
     virtual void * DoGetItemClientData(unsigned int n) const;
 
+#if wxOSX_USE_CARBON
     virtual void SetClientDataType(wxClientDataType clientDataItemsType);
+#endif
 
     virtual void EnableTextChangedEvents(bool enable);
 
@@ -164,7 +188,11 @@ protected:
     wxComboBoxText*     m_text;
     wxComboBoxChoice*   m_choice;
 
+    wxComboBoxDataArray m_datas;
+
+#if wxOSX_USE_CARBON
     DECLARE_EVENT_TABLE()
+#endif
 };
 
 #endif // _WX_COMBOBOX_H_

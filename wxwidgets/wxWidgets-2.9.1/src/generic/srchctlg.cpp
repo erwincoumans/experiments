@@ -3,9 +3,9 @@
 // Purpose:     implements wxSearchCtrl as a composite control
 // Author:      Vince Harron
 // Created:     2006-02-19
-// RCS-ID:      $Id: srchctlg.cpp 59265 2009-03-02 13:31:29Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   Vince Harron
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h".
@@ -241,6 +241,14 @@ protected:
     {
         wxCommandEvent event(m_eventType, m_search->GetId());
         event.SetEventObject(m_search);
+
+        if ( m_eventType == wxEVT_COMMAND_SEARCHCTRL_SEARCH_BTN )
+        {
+            // it's convenient to have the string to search for directly in the
+            // event instead of having to retrieve it from the control in the
+            // event handler code later, so provide it here
+            event.SetString(m_search->GetValue());
+        }
 
         GetEventHandler()->ProcessEvent(event);
 

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: stringimpl.h 54862 2008-07-30 22:11:06Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@
 
 // implementation only
 #define   wxASSERT_VALID_INDEX(i) \
-    wxASSERT_MSG( (size_t)(i) <= length(), _T("invalid index in wxString") )
+    wxASSERT_MSG( (size_t)(i) <= length(), wxT("invalid index in wxString") )
 
 
 // ----------------------------------------------------------------------------
@@ -94,8 +94,10 @@ extern WXDLLIMPEXP_DATA_BASE(const wxStringCharType*) wxEmptyStringImpl;
     #undef wxUSE_STD_STRING
     #define wxUSE_STD_STRING 1
 
+    // the versions of std::string included with gcc 2.95 and VC6 (for which
+    // _MSC_VER == 1200) and eVC4 (_MSC_VER == 1201) lack clear() method
     #if (defined(__GNUG__) && (__GNUG__ < 3)) || \
-        (defined(_MSC_VER) && (_MSC_VER <= 1200))
+        !wxCHECK_VISUALC_VERSION(7) || defined(__EVC4__)
         #define wxSTRING_BASE_HASNT_CLEAR
     #endif
 
@@ -298,7 +300,7 @@ public:
   wxStringImpl(const wxStringImpl& stringSrc)
   {
     wxASSERT_MSG( stringSrc.GetStringData()->IsValid(),
-                  _T("did you forget to call UngetWriteBuf()?") );
+                  wxT("did you forget to call UngetWriteBuf()?") );
 
     if ( stringSrc.empty() ) {
       // nothing to do for an empty string
@@ -321,7 +323,7 @@ public:
   wxStringImpl(const wxStringImpl& str, size_t nPos, size_t nLen)
   {
     wxASSERT_MSG( str.GetStringData()->IsValid(),
-                  _T("did you forget to call UngetWriteBuf()?") );
+                  wxT("did you forget to call UngetWriteBuf()?") );
     Init();
     size_t strLen = str.length() - nPos; nLen = strLen < nLen ? strLen : nLen;
     InitWith(str.c_str(), nPos, nLen);
@@ -339,23 +341,24 @@ public:
       { return wxStdString(c_str(), length()); }
 #endif
 
+#if defined(__VISUALC__) && (__VISUALC__ >= 1200)
+    // disable warning about Unlock() below not being inlined (first, it
+    // seems to be inlined nevertheless and second, even if it isn't, there
+    // is nothing we can do about this
+    #pragma warning(push)
+    #pragma warning (disable:4714)
+#endif
 
     // dtor is not virtual, this class must not be inherited from!
   ~wxStringImpl()
   {
-#if defined(__VISUALC__) && (__VISUALC__ >= 1200)
-      //RN - according to the above VC++ does indeed inline this,
-      //even though it spits out two warnings
-      #pragma warning (disable:4714)
-#endif
-
       GetStringData()->Unlock();
   }
 
 #if defined(__VISUALC__) && (__VISUALC__ >= 1200)
-    //re-enable inlining warning
-    #pragma warning (default:4714)
+    #pragma warning(pop)
 #endif
+
   // overloaded assignment
     // from another wxString
   wxStringImpl& operator=(const wxStringImpl& stringSrc);

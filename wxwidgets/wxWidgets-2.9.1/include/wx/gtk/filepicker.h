@@ -5,7 +5,7 @@
 // Modified by:
 // Created:     14/4/2006
 // Copyright:   (c) Francesco Montorsi
-// RCS-ID:      $Id: filepicker.h 58873 2009-02-13 09:33:15Z RR $
+// RCS-ID:      $Id$
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +61,7 @@ protected:                                                                    \
 class WXDLLIMPEXP_CORE wxFileButton : public wxGenericFileButton
 {
 public:
-    wxFileButton() { m_dialog = NULL; }
+    wxFileButton() { Init(); }
     wxFileButton(wxWindow *parent,
                  wxWindowID id,
                  const wxString& label = wxFilePickerWidgetLabel,
@@ -74,7 +74,8 @@ public:
                  const wxValidator& validator = wxDefaultValidator,
                  const wxString& name = wxFilePickerWidgetNameStr)
     {
-        m_dialog = NULL;
+        Init();
+        m_pickerStyle = style;
         Create(parent, id, label, path, message, wildcard,
                pos, size, style, validator, name);
     }
@@ -105,7 +106,13 @@ public:     // overrides
     FILEDIRBTN_OVERRIDES
 
 protected:
+    virtual bool GTKShouldConnectSizeRequest() const { return false; }
+
     wxDialog *m_dialog;
+
+private:
+    // common part of all ctors
+    void Init() { m_dialog = NULL; }
 
     DECLARE_DYNAMIC_CLASS(wxFileButton)
 };
@@ -131,6 +138,8 @@ public:
                 const wxString& name = wxFilePickerWidgetNameStr)
     {
         Init();
+
+        m_pickerStyle = style;
 
         Create(parent, id, label, path, message, wxEmptyString,
                 pos, size, style, validator, name);

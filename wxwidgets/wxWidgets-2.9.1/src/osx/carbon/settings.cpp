@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: settings.cpp 59820 2009-03-24 23:13:02Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
         // case wxSYS_COLOUR_MAX:
         default:
             resultColor = *wxWHITE;
-            // wxCHECK_MSG( index >= wxSYS_COLOUR_MAX, false, _T("unknown system colour index") );
+            // wxCHECK_MSG( index >= wxSYS_COLOUR_MAX, false, wxT("unknown system colour index") );
             break ;
     }
 
@@ -159,7 +159,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
 wxFont wxSystemSettingsNative::GetFont(wxSystemFont index)
 {
     wxFont font;
-    
+
     switch (index)
     {
         case wxSYS_ANSI_VAR_FONT :
@@ -252,7 +252,7 @@ int wxSystemSettingsNative::GetMetric(wxSystemMetric index, wxWindow* WXUNUSED(w
 #if wxOSX_USE_CARBON
             return (int)(GetDblTime() * 1000. / 60.);
 #else
-            // default on mac is 30 ticks, we shouldn't really use wxSYS_DCLICK_MSEC anyway 
+            // default on mac is 30 ticks, we shouldn't really use wxSYS_DCLICK_MSEC anyway
             // but rather rely on the 'click-count' by the system delivered in a mouse event
             return 500;
 #endif

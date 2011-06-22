@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/corefoundation/cfstring.h
+// Name:        wx/osx/core/cfstring.h
 // Purpose:     wxCFStringRef and other string functions
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     2004-10-29 (from code in wx/mac/carbon/private.h)
-// RCS-ID:      $Id: cfstring.h 58587 2009-02-01 09:17:20Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 // Usage:       Darwin (base library)
@@ -49,18 +49,18 @@ public:
 
 #if wxOSX_USE_COCOA_OR_IPHONE
     wxCFStringRef(NSString* ref)
-        : wxCFRef< CFStringRef >((CFStringRef) ref) 
+        : wxCFRef< CFStringRef >((CFStringRef) ref)
     {
     }
 #endif
 
     wxCFStringRef(CFStringRef ref)
-        : wxCFRef< CFStringRef >(ref) 
+        : wxCFRef< CFStringRef >(ref)
     {
     }
 
     wxCFStringRef(const wxCFStringRef& otherRef )
-        : wxCFRef< CFStringRef >(otherRef) 
+        : wxCFRef< CFStringRef >(otherRef)
     {
     }
 
@@ -68,7 +68,12 @@ public:
     {
     }
 
-    wxString AsString( wxFontEncoding encoding = wxFONTENCODING_DEFAULT ) ;
+    wxString AsString( wxFontEncoding encoding = wxFONTENCODING_DEFAULT ) const;
+
+    static wxString AsString( CFStringRef ref, wxFontEncoding encoding = wxFONTENCODING_DEFAULT ) ;
+#if wxOSX_USE_COCOA_OR_IPHONE
+    static wxString AsString( NSString* ref, wxFontEncoding encoding = wxFONTENCODING_DEFAULT ) ;
+#endif
 
 #if wxOSX_USE_COCOA_OR_IPHONE
     NSString* AsNSString() const { return (NSString*)(CFStringRef) *this; }

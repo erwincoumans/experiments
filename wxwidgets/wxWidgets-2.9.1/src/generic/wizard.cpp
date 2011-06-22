@@ -8,7 +8,7 @@
 //              3) Fixed ShowPage() bug on displaying bitmaps
 //              Robert Vazan (sizers)
 // Created:     15.08.99
-// RCS-ID:      $Id: wizard.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,6 +86,7 @@ wxDEFINE_EVENT( wxEVT_WIZARD_PAGE_CHANGING, wxWizardEvent );
 wxDEFINE_EVENT( wxEVT_WIZARD_CANCEL, wxWizardEvent );
 wxDEFINE_EVENT( wxEVT_WIZARD_FINISHED, wxWizardEvent );
 wxDEFINE_EVENT( wxEVT_WIZARD_HELP, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_PAGE_SHOWN, wxWizardEvent );
 
 BEGIN_EVENT_TABLE(wxWizard, wxDialog)
     EVT_BUTTON(wxID_CANCEL, wxWizard::OnCancel)
@@ -369,8 +370,8 @@ void wxWizard::AddStaticLine(wxBoxSizer *mainColumn)
 void wxWizard::AddBackNextPair(wxBoxSizer *buttonRow)
 {
     wxASSERT_MSG( m_btnNext && m_btnPrev,
-                  _T("You must create the buttons before calling ")
-                  _T("wxWizard::AddBackNextPair") );
+                  wxT("You must create the buttons before calling ")
+                  wxT("wxWizard::AddBackNextPair") );
 
     // margin between Back and Next buttons
 #ifdef __WXMAC__
@@ -431,7 +432,7 @@ void wxWizard::AddButtonRow(wxBoxSizer *mainColumn)
     wxButton *btnHelp=0;
 #ifdef __WXMAC__
     if (GetExtraStyle() & wxWIZARD_EX_HELPBUTTON)
-        btnHelp=new wxButton(this, wxID_HELP, _("&Help"), wxDefaultPosition, wxDefaultSize, buttonStyle);
+        btnHelp=new wxButton(this, wxID_HELP, wxEmptyString, wxDefaultPosition, wxDefaultSize, buttonStyle);
 #endif
 
     m_btnNext = new wxButton(this, wxID_FORWARD, _("&Next >"));
@@ -662,6 +663,10 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
             m_sizerPage->RecalcSizes();
     }
 
+    wxWizardEvent pageShownEvent(wxEVT_WIZARD_PAGE_SHOWN, GetId(),
+        goingForward, m_page);
+    m_page->GetEventHandler()->ProcessEvent(pageShownEvent);
+
     return true;
 }
 
@@ -778,7 +783,7 @@ void wxWizard::OnBackOrNext(wxCommandEvent& event)
                   (event.GetEventObject() == m_btnPrev),
                   wxT("unknown button") );
 
-    wxCHECK_RET( m_page, _T("should have a valid current page") );
+    wxCHECK_RET( m_page, wxT("should have a valid current page") );
 
     // ask the current page first: notice that we do it before calling
     // GetNext/Prev() because the data transfered from the controls of the page
@@ -916,7 +921,7 @@ bool wxWizard::DoLayoutAdaptation()
 
     // Size event doesn't get sent soon enough on wxGTK
     DoLayout();
-    
+
     SetLayoutAdaptationDone(true);
 
     return true;

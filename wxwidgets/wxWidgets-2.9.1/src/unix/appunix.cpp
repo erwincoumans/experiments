@@ -3,7 +3,7 @@
 // Purpose:     wxAppConsole with wxMainLoop implementation
 // Author:      Lukasz Michalski
 // Created:     28/01/2005
-// RCS-ID:      $Id: appunix.cpp 48936 2007-09-25 14:39:47Z JJ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Lukasz Michalski
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +23,11 @@
 
 #include <signal.h>
 #include <unistd.h>
+
+#ifndef SA_RESTART
+    // don't use for systems which don't define it (at least VMS and QNX)
+    #define SA_RESTART 0
+#endif
 
 // use unusual names for arg[cv] to avoid clashes with wxApp members with the
 // same names
@@ -78,12 +83,8 @@ bool wxAppConsole::SetSignalHandler(int signal, SignalHandler handler)
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = (SignalHandler_t)&wxAppConsole::HandleSignal;
-#ifdef __VMS
-   sa.sa_flags = 0;
-#else
-   sa.sa_flags = SA_RESTART;
-#endif
-   int res = sigaction(signal, &sa, 0);
+    sa.sa_flags = SA_RESTART;
+    int res = sigaction(signal, &sa, 0);
     if ( res != 0 )
     {
         wxLogSysError(_("Failed to install signal handler"));

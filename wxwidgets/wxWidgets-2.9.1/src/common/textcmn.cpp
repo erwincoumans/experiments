@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     13.07.99
-// RCS-ID:      $Id: textcmn.cpp 60279 2009-04-22 07:57:34Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -333,7 +333,7 @@ wxFont wxTextAttr::GetFont() const
     if (HasFontEncoding())
         encoding = GetFontEncoding();
 
-    int fontFamily = wxFONTFAMILY_DEFAULT;
+    wxFontFamily fontFamily = wxFONTFAMILY_DEFAULT;
     if (HasFontFamily())
         fontFamily = GetFontFamily();
 
@@ -366,7 +366,16 @@ bool wxTextAttr::GetFontAttributes(const wxFont& font, int flags)
         m_fontEncoding = font.GetEncoding();
 
     if (flags & wxTEXT_ATTR_FONT_FAMILY)
-        m_fontFamily = font.GetFamily();
+    {
+        // wxFont might not know its family, avoid setting m_fontFamily to an
+        // invalid value and rather pretend that we don't have any font family
+        // information at all in this case
+        const wxFontFamily fontFamily = font.GetFamily();
+        if ( fontFamily == wxFONTFAMILY_UNKNOWN )
+            flags &= ~wxTEXT_ATTR_FONT_FAMILY;
+        else
+            m_fontFamily = fontFamily;
+    }
 
     m_flags |= flags;
 
@@ -736,7 +745,7 @@ bool wxTextCtrlBase::SetDefaultStyle(const wxTextAttr& style)
 // file IO functions
 // ----------------------------------------------------------------------------
 
-bool wxTextCtrlBase::DoLoadFile(const wxString& filename, int WXUNUSED(fileType))
+bool wxTextAreaBase::DoLoadFile(const wxString& filename, int WXUNUSED(fileType))
 {
 #if wxUSE_FFILE
     wxFFile file(filename);
@@ -747,18 +756,34 @@ bool wxTextCtrlBase::DoLoadFile(const wxString& filename, int WXUNUSED(fileType)
         {
             SetValue(text);
 
-            DiscardEdits();
-
-            m_filename = filename;
-
             return true;
         }
     }
-
-    wxLogError(_("File couldn't be loaded."));
 #endif // wxUSE_FFILE
 
     return false;
+}
+
+bool wxTextCtrlBase::DoLoadFile(const wxString& filename, int fileType)
+{
+    if ( wxTextAreaBase::DoLoadFile(filename, fileType) )
+    {
+        DiscardEdits();
+        m_filename = filename;
+        return true;
+    }
+    wxLogError(_("File couldn't be loaded."));
+    return false;
+}
+
+bool wxTextAreaBase::DoSaveFile(const wxString& filename, int WXUNUSED(fileType))
+{
+#if wxUSE_FFILE
+    wxFFile file(filename, wxT("w"));
+    return file.IsOpened() && file.Write(GetValue(), *wxConvCurrent);
+#else
+    return false;
+#endif // wxUSE_FFILE
 }
 
 bool wxTextAreaBase::SaveFile(const wxString& filename, int fileType)
@@ -775,11 +800,9 @@ bool wxTextAreaBase::SaveFile(const wxString& filename, int fileType)
     return DoSaveFile(filenameToUse, fileType);
 }
 
-bool wxTextCtrlBase::DoSaveFile(const wxString& filename, int WXUNUSED(fileType))
+bool wxTextCtrlBase::DoSaveFile(const wxString& filename, int fileType)
 {
-#if wxUSE_FFILE
-    wxFFile file(filename, _T("w"));
-    if ( file.IsOpened() && file.Write(GetValue()) )
+    if ( wxTextAreaBase::DoSaveFile(filename, fileType) )
     {
         // if it worked, save for future calls
         m_filename = filename;
@@ -789,10 +812,6 @@ bool wxTextCtrlBase::DoSaveFile(const wxString& filename, int WXUNUSED(fileType)
 
         return true;
     }
-#endif // wxUSE_FFILE
-
-    wxLogError(_("The text couldn't be saved."));
-
     return false;
 }
 
@@ -859,32 +878,32 @@ bool wxTextCtrlBase::EmulateKeyPress(const wxKeyEvent& event)
         case WXK_NUMPAD7:
         case WXK_NUMPAD8:
         case WXK_NUMPAD9:
-            ch = (wxChar)(_T('0') + keycode - WXK_NUMPAD0);
+            ch = (wxChar)(wxT('0') + keycode - WXK_NUMPAD0);
             break;
 
         case WXK_MULTIPLY:
         case WXK_NUMPAD_MULTIPLY:
-            ch = _T('*');
+            ch = wxT('*');
             break;
 
         case WXK_ADD:
         case WXK_NUMPAD_ADD:
-            ch = _T('+');
+            ch = wxT('+');
             break;
 
         case WXK_SUBTRACT:
         case WXK_NUMPAD_SUBTRACT:
-            ch = _T('-');
+            ch = wxT('-');
             break;
 
         case WXK_DECIMAL:
         case WXK_NUMPAD_DECIMAL:
-            ch = _T('.');
+            ch = wxT('.');
             break;
 
         case WXK_DIVIDE:
         case WXK_NUMPAD_DIVIDE:
-            ch = _T('/');
+            ch = wxT('/');
             break;
 
         case WXK_DELETE:
@@ -926,7 +945,7 @@ bool wxTextCtrlBase::EmulateKeyPress(const wxKeyEvent& event)
             }
             else
             {
-                ch = _T('\0');
+                ch = wxT('\0');
             }
     }
 
@@ -985,25 +1004,6 @@ wxTextAreaBase::HitTest(const wxPoint& WXUNUSED(pt), long * WXUNUSED(pos)) const
 {
     // not implemented
     return wxTE_HT_UNKNOWN;
-}
-
-// ----------------------------------------------------------------------------
-// events
-// ----------------------------------------------------------------------------
-
-/* static */
-bool wxTextCtrlBase::SendTextUpdatedEvent(wxWindow *win)
-{
-    wxCommandEvent event(wxEVT_COMMAND_TEXT_UPDATED, win->GetId());
-
-    // do not do this as it could be very inefficient if the text control
-    // contains a lot of text and we're not using ref-counted wxString
-    // implementation -- instead, event.GetString() will query the control for
-    // its current text if needed
-    //event.SetString(win->GetValue());
-
-    event.SetEventObject(win);
-    return win->GetEventHandler()->ProcessEvent(event);
 }
 
 #else // !wxUSE_TEXTCTRL

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: msgdlg.cpp 55571 2008-09-12 15:47:06Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,6 +30,7 @@
 
 #ifndef WX_PRECOMP
     #include "wx/app.h"
+    #include "wx/intl.h"
     #include "wx/utils.h"
     #include "wx/dialog.h"
     #if wxUSE_MSGBOX_HOOK
@@ -200,9 +201,9 @@ void wxMessageDialog::ReplaceStaticWithEdit()
     // find the static control to replace: normally there are two of them, the
     // icon and the text itself so search for all of them and ignore the icon
     // ones
-    HWND hwndStatic = ::FindWindowEx(GetHwnd(), NULL, _T("STATIC"), NULL);
+    HWND hwndStatic = ::FindWindowEx(GetHwnd(), NULL, wxT("STATIC"), NULL);
     if ( ::GetWindowLong(hwndStatic, GWL_STYLE) & SS_ICON )
-        hwndStatic = ::FindWindowEx(GetHwnd(), hwndStatic, _T("STATIC"), NULL);
+        hwndStatic = ::FindWindowEx(GetHwnd(), hwndStatic, wxT("STATIC"), NULL);
 
     if ( !hwndStatic )
     {
@@ -245,11 +246,12 @@ void wxMessageDialog::ReplaceStaticWithEdit()
     // ignored by the static control but result in extra lines and hence extra
     // scrollbar position in the edit one
     wxString text(wxGetWindowText(hwndStatic));
-    for ( wxString::iterator i = text.end() - 1; i != text.begin(); --i )
+    for ( wxString::reverse_iterator i = text.rbegin(); i != text.rend(); ++i )
     {
         if ( *i != '\n' )
         {
-            text.erase(i + 1, text.end());
+            // found last non-newline char, remove everything after it and stop
+            text.erase(i.base() + 1, text.end());
             break;
         }
     }
@@ -257,7 +259,7 @@ void wxMessageDialog::ReplaceStaticWithEdit()
     // do create the new control
     HWND hwndEdit = ::CreateWindow
                       (
-                        _T("EDIT"),
+                        wxT("EDIT"),
                         wxTextBuffer::Translate(text).wx_str(),
                         WS_CHILD | WS_VSCROLL | WS_VISIBLE |
                         ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
@@ -265,7 +267,7 @@ void wxMessageDialog::ReplaceStaticWithEdit()
                         rc.right - rc.left, rc.bottom - rc.top,
                         GetHwnd(),
                         NULL,
-                        wxhInstance,
+                        wxGetInstance(),
                         NULL
                       );
 
@@ -441,9 +443,36 @@ int wxMessageDialog::ShowModal()
     }
 
     // use the top level window as parent if none specified
-    if ( !m_parent )
-        m_parent = FindSuitableParent();
+    m_parent = GetParentForModalDialog();
     HWND hWnd = m_parent ? GetHwndOf(m_parent) : NULL;
+
+#if wxUSE_INTL
+    // native message box always uses the current user locale but the program
+    // may be using a different one and in this case we need to manually
+    // translate the button labels to avoid mismatch between the language of
+    // the message box text and its buttons
+    wxLocale * const loc = wxGetLocale();
+    if ( loc && loc->GetLanguage() != wxLocale::GetSystemLanguage() )
+    {
+        if ( m_dialogStyle & wxYES_NO )
+        {
+            // use the strings with mnemonics here as the native message box
+            // does
+            SetYesNoLabels(_("&Yes"), _("&No"));
+        }
+
+        // we may or not have the Ok/Cancel buttons but either we do have them
+        // or we already made the labels custom because we called
+        // SetYesNoLabels() above so doing this does no harm -- and is
+        // necessary in wxYES_NO | wxCANCEL case
+        //
+        // note that we don't use mnemonics here for consistency with the
+        // native message box (which probably doesn't use them because
+        // Enter/Esc keys can be already used to dismiss the message box
+        // using keyboard)
+        SetOKCancelLabels(_("OK"), _("Cancel"));
+    }
+#endif // wxUSE_INTL
 
     // translate wx style in MSW
     unsigned int msStyle;
@@ -477,14 +506,25 @@ int wxMessageDialog::ShowModal()
         }
     }
 
-    if (wxStyle & wxICON_EXCLAMATION)
-        msStyle |= MB_ICONEXCLAMATION;
-    else if (wxStyle & wxICON_HAND)
-        msStyle |= MB_ICONHAND;
-    else if (wxStyle & wxICON_INFORMATION)
-        msStyle |= MB_ICONINFORMATION;
-    else if (wxStyle & wxICON_QUESTION)
-        msStyle |= MB_ICONQUESTION;
+    // set the icon style
+    switch ( GetEffectiveIcon() )
+    {
+        case wxICON_ERROR:
+            msStyle |= MB_ICONHAND;
+            break;
+
+        case wxICON_WARNING:
+            msStyle |= MB_ICONEXCLAMATION;
+            break;
+
+        case wxICON_QUESTION:
+            msStyle |= MB_ICONQUESTION;
+            break;
+
+        case wxICON_INFORMATION:
+            msStyle |= MB_ICONINFORMATION;
+            break;
+    }
 
     if ( wxStyle & wxSTAY_ON_TOP )
         msStyle |= MB_TOPMOST;
@@ -528,7 +568,7 @@ int wxMessageDialog::ShowModal()
     switch (msAns)
     {
         default:
-            wxFAIL_MSG(_T("unexpected ::MessageBox() return code"));
+            wxFAIL_MSG(wxT("unexpected ::MessageBox() return code"));
             // fall through
 
         case IDCANCEL:

@@ -5,7 +5,7 @@
 // Modified by:
 // Created:     Aug-31-2006
 // Copyright:   (c) Jaakko Salli
-// RCS-ID:      $Id: bmpcbox.h 56651 2008-11-02 22:16:14Z FM $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -18,8 +18,8 @@
 #if wxUSE_BITMAPCOMBOBOX
 
 #include "wx/bitmap.h"
-#include "wx/window.h"
 
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 class WXDLLIMPEXP_FWD_CORE wxItemContainer;
 
 // Define wxBITMAPCOMBOBOX_OWNERDRAWN_BASED for platforms which
@@ -27,6 +27,8 @@ class WXDLLIMPEXP_FWD_CORE wxItemContainer;
 // (either native or generic).
 #if !defined(__WXGTK20__) || defined(__WXUNIVERSAL__)
     #define wxBITMAPCOMBOBOX_OWNERDRAWN_BASED
+
+class WXDLLIMPEXP_FWD_CORE wxDC;
 #endif
 
 extern WXDLLIMPEXP_DATA_ADV(const char) wxBitmapComboBoxNameStr[];

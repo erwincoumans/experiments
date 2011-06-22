@@ -3,7 +3,7 @@
 // Purpose:     wxStopWatch and global time-related functions
 // Author:      Julian Smart (wxTimer), Sylvain Bougnoux (wxStopWatch)
 // Created:     26.06.03 (extracted from wx/timer.h)
-// RCS-ID:      $Id: stopwatch.h 47510 2007-07-16 21:14:53Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998-2003 Julian Smart, Sylvain Bougnoux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,7 +40,7 @@ public:
     void Resume()
     {
         wxASSERT_MSG( m_pauseCount > 0,
-                      _T("Resuming stop watch which is not paused") );
+                      wxT("Resuming stop watch which is not paused") );
 
         if ( --m_pauseCount == 0 )
             Start(m_pause);

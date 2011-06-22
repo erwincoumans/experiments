@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: fontdlgg.cpp 46494 2007-06-16 17:32:09Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -282,11 +282,11 @@ void wxGenericFontDialog::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
 
 bool wxGenericFontDialog::DoCreate(wxWindow *parent)
 {
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, 0);
 
-    if ( !wxDialog::Create( parent , wxID_ANY , _T("Choose Font") ,
+    if ( !wxDialog::Create( parent , wxID_ANY , wxT("Choose Font") ,
                             wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE,
-        _T("fontdialog") ) )
+        wxT("fontdialog") ) )
     {
         wxFAIL_MSG( wxT("wxFontDialog creation failed") );
         return false;

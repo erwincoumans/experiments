@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: tif_ovrcache.c 47655 2007-07-22 15:36:51Z VZ $
+ * $Id$
  *
  * Project:  TIFF Overview Builder
  * Purpose:  Library functions to maintain two rows of tiles or two strips

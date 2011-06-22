@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Francesco Montorsi
 // Created:
-// RCS-ID:      $Id: colour.h 54125 2008-06-11 19:17:41Z SC $
+// RCS-ID:      $Id$
 // Copyright:   Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,7 +14,6 @@
 
 #include "wx/defs.h"
 #include "wx/gdiobj.h"
-
 
 class WXDLLIMPEXP_FWD_CORE wxColour;
 
@@ -43,6 +42,10 @@ class WXDLLIMPEXP_FWD_CORE wxColour;
 
 const unsigned char wxALPHA_TRANSPARENT = 0;
 const unsigned char wxALPHA_OPAQUE = 0xff;
+
+// a valid but fully transparent colour
+#define wxTransparentColour wxColour(0, 0, 0, wxALPHA_TRANSPARENT)
+#define wxTransparentColor wxTransparentColour
 
 // ----------------------------------------------------------------------------
 // wxVariant support
@@ -90,7 +93,7 @@ public:
              ChannelType green,
              ChannelType blue,
              ChannelType alpha = wxALPHA_OPAQUE)
-        { InitRGBA(red,green,blue, alpha); }
+        { InitRGBA(red, green, blue, alpha); }
 
     // implemented in colourcmn.cpp
     bool Set(const wxString &str)
@@ -119,6 +122,27 @@ public:
     // implemented in colourcmn.cpp
     virtual wxString GetAsString(long flags = wxC2S_NAME | wxC2S_CSS_SYNTAX) const;
 
+    void SetRGB(wxUint32 colRGB)
+    {
+        Set((ChannelType)(0xFF & colRGB),
+            (ChannelType)(0xFF & (colRGB >> 8)),
+            (ChannelType)(0xFF & (colRGB >> 16)));
+    }
+
+    void SetRGBA(wxUint32 colRGBA)
+    {
+        Set((ChannelType)(0xFF & colRGBA),
+            (ChannelType)(0xFF & (colRGBA >> 8)),
+            (ChannelType)(0xFF & (colRGBA >> 16)),
+            (ChannelType)(0xFF & (colRGBA >> 24)));
+    }
+
+    wxUint32 GetRGB() const
+        { return Red() | (Green() << 8) | (Blue() << 16); }
+
+    wxUint32 GetRGBA() const
+        { return Red() | (Green() << 8) | (Blue() << 16) | (Alpha() << 24); }
+
 #if !wxCOLOUR_IS_GDIOBJECT
     virtual bool IsOk() const= 0;
 
@@ -126,6 +150,22 @@ public:
     // because it's still widely used)
     bool Ok() const { return IsOk(); }
 #endif
+
+    // manipulation
+    // ------------
+
+    // These methods are static because they are mostly used
+    // within tight loops (where we don't want to instantiate wxColour's)
+
+    static void          MakeMono    (unsigned char* r, unsigned char* g, unsigned char* b, bool on);
+    static void          MakeDisabled(unsigned char* r, unsigned char* g, unsigned char* b, unsigned char brightness = 255);
+    static void          MakeGrey    (unsigned char* r, unsigned char* g, unsigned char* b); // integer version
+    static void          MakeGrey    (unsigned char* r, unsigned char* g, unsigned char* b,
+                                      double weight_r, double weight_g, double weight_b); // floating point version
+    static unsigned char AlphaBlend  (unsigned char fg, unsigned char bg, double alpha);
+    static void          ChangeLightness(unsigned char* r, unsigned char* g, unsigned char* b, int ialpha);
+
+    wxColour ChangeLightness(int ialpha) const;
 
     // old, deprecated
     // ---------------

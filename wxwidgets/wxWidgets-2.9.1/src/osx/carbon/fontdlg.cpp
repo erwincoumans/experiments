@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: fontdlg.cpp 61284 2009-07-02 14:12:05Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -257,8 +257,9 @@ int wxFontDialog::ShowModal()
     if ( !FPIsFontPanelVisible() )
         FPShowHideFontPanel();
 #endif
+    wxDialog::OSXBeginModalDialog();
     int retval = RunMixedFontDialog(this);
-
+    wxDialog::OSXEndModalDialog();
 #if wxOSX_USE_CARBON
     ::RemoveEventHandler(handler);
 #endif
@@ -512,7 +513,7 @@ void wxFontDialog::CreateControls()
     wxStaticText* itemStaticText8 = new wxStaticText( itemDialog1, wxID_STATIC, _("Size:"), wxDefaultPosition, wxDefaultSize, 0 );
     itemFlexGridSizer4->Add(itemStaticText8, 0, wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    m_sizeCtrl = new wxSpinCtrl( itemDialog1, wxID_FONTDIALOG_FONTSIZE, _T("12"), wxDefaultPosition, wxSize(60, -1), wxSP_ARROW_KEYS, 1, 300, 12 );
+    m_sizeCtrl = new wxSpinCtrl( itemDialog1, wxID_FONTDIALOG_FONTSIZE, wxT("12"), wxDefaultPosition, wxSize(60, -1), wxSP_ARROW_KEYS, 1, 300, 12 );
     m_sizeCtrl->SetHelpText(_("The font size in points."));
     if (ShowToolTips())
         m_sizeCtrl->SetToolTip(_("The font size in points."));
@@ -588,7 +589,7 @@ void wxFontDialog::CreateControls()
     wxFontEnumerator enumerator;
     enumerator.EnumerateFacenames();
     wxArrayString facenames = enumerator.GetFacenames();
-    if (facenames)
+    if (!facenames.empty())
     {
         facenames.Add(_("<Any>"));
         facenames.Add(_("<Any Roman>"));

@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>, Lindsay Mathieson <???>
 // Modified by:
 // Created:     11/07/04
-// RCS-ID:      $Id: activex.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Lindsay Mathieson, (c) 2005 Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,14 +36,14 @@
 #include "wx/msw/private.h" // for wxCopyRectToRECT
 
 // autointerfaces that we only use here
-WX_DECLARE_AUTOOLE(wxAutoIOleInPlaceSite, IOleInPlaceSite)
-WX_DECLARE_AUTOOLE(wxAutoIOleDocument, IOleDocument)
-WX_DECLARE_AUTOOLE(wxAutoIPersistStreamInit, IPersistStreamInit)
-WX_DECLARE_AUTOOLE(wxAutoIAdviseSink, IAdviseSink)
-WX_DECLARE_AUTOOLE(wxAutoIProvideClassInfo, IProvideClassInfo)
-WX_DECLARE_AUTOOLE(wxAutoITypeInfo, ITypeInfo)
-WX_DECLARE_AUTOOLE(wxAutoIConnectionPoint, IConnectionPoint)
-WX_DECLARE_AUTOOLE(wxAutoIConnectionPointContainer, IConnectionPointContainer)
+typedef wxAutoOleInterface<IOleInPlaceSite> wxAutoIOleInPlaceSite;
+typedef wxAutoOleInterface<IOleDocument> wxAutoIOleDocument;
+typedef wxAutoOleInterface<IPersistStreamInit> wxAutoIPersistStreamInit;
+typedef wxAutoOleInterface<IAdviseSink> wxAutoIAdviseSink;
+typedef wxAutoOleInterface<IProvideClassInfo> wxAutoIProvideClassInfo;
+typedef wxAutoOleInterface<ITypeInfo> wxAutoITypeInfo;
+typedef wxAutoOleInterface<IConnectionPoint> wxAutoIConnectionPoint;
+typedef wxAutoOleInterface<IConnectionPointContainer> wxAutoIConnectionPointContainer;
 
 wxDEFINE_EVENT( wxEVT_ACTIVEX, wxActiveXEvent );
 
@@ -904,9 +904,13 @@ wxActiveXContainer::~wxActiveXContainer()
 }
 
 // VZ: we might want to really report an error instead of just asserting here
-#define CHECK_HR(hr) \
-    wxASSERT_LEVEL_2_MSG( SUCCEEDED(hr), \
-            wxString::Format("HRESULT = %X", (unsigned)(hr)) )
+#if wxDEBUG_LEVEL
+    #define CHECK_HR(hr) \
+        wxASSERT_LEVEL_2_MSG( SUCCEEDED(hr), \
+                wxString::Format("HRESULT = %X", (unsigned)(hr)) )
+#else
+    #define CHECK_HR(hr) wxUnusedVar(hr)
+#endif
 
 //---------------------------------------------------------------------------
 // wxActiveXContainer::CreateActiveX
@@ -1018,11 +1022,14 @@ void wxActiveXContainer::CreateActiveX(REFIID iid, IUnknown* pUnk)
                     cpContainer->FindConnectionPoint(ta->guid, cp.GetRef());
                 CHECK_HR(hret);
 
-                IDispatch* disp;
-                m_frameSite->QueryInterface(IID_IDispatch, (void**)&disp);
-                hret = cp->Advise(new wxActiveXEvents(this, ta->guid),
-                                  &adviseCookie);
-                CHECK_HR(hret);
+                if ( cp )
+                {
+                    IDispatch* disp;
+                    m_frameSite->QueryInterface(IID_IDispatch, (void**)&disp);
+                    hret = cp->Advise(new wxActiveXEvents(this, ta->guid),
+                                      &adviseCookie);
+                    CHECK_HR(hret);
+                }
             }
         }
 

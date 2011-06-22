@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Vadim Zeitlin to check error codes, added Detach() method
 // Created:     24/06/98
-// RCS-ID:      $Id: process.cpp 59784 2009-03-23 16:23:44Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ void wxProcess::Detach()
 {
     // we just detach from the next handler of the chain (i.e. our "parent" -- see ctor)
     // not also from the previous handler like wxEvtHandler::Unlink() would do:
-    
+
     if (m_nextHandler)
         m_nextHandler->SetPreviousHandler(m_previousHandler);
 
@@ -168,7 +168,7 @@ bool wxProcess::Exists(int pid)
         default:
         case wxKILL_ERROR:
         case wxKILL_BAD_SIGNAL:
-            wxFAIL_MSG( _T("unexpected wxProcess::Kill() return code") );
+            wxFAIL_MSG( wxT("unexpected wxProcess::Kill() return code") );
             // fall through
 
         case wxKILL_NO_PROCESS:

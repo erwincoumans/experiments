@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: app.h 58911 2009-02-15 14:25:08Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ public:
 
     // this suffix should be appended to all our Win32 class names to obtain a
     // variant registered without CS_[HV]REDRAW styles
-    static const wxChar *GetNoRedrawClassSuffix() { return _T("NR"); }
+    static const wxChar *GetNoRedrawClassSuffix() { return wxT("NR"); }
 
     // get the name of the registered Win32 class with the given (unique) base
     // name: this function constructs the unique class name using this name as
@@ -127,7 +127,7 @@ inline int wxApp::GetShell32Version()
 #endif // __WXWINCE__
 
 // ----------------------------------------------------------------------------
-// MSW-specific wxEntry() overload and IMPLEMENT_WXWIN_MAIN definition
+// MSW-specific wxEntry() overload and wxIMPLEMENT_WXWIN_MAIN definition
 // ----------------------------------------------------------------------------
 
 // we need HINSTANCE declaration to define WinMain()
@@ -164,38 +164,42 @@ extern WXDLLIMPEXP_CORE int
     // command line flag is used, the linker expects to find wWinMain instead
     // of WinMain. This flag causes the compiler to define _UNICODE and
     // UNICODE symbols and there's no way to detect its use, so we have to
-    // define both WinMain and wWinMain so that IMPLEMENT_WXWIN_MAIN works
+    // define both WinMain and wWinMain so that wxIMPLEMENT_WXWIN_MAIN works
     // for both code compiled with and without -WU.
     // See http://sourceforge.net/tracker/?func=detail&atid=309863&aid=1935997&group_id=9863
     // for more details.
-    #define IMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD                        \
+    #define wxIMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD                      \
         extern "C" int WINAPI wWinMain(HINSTANCE hInstance,                 \
                                       HINSTANCE hPrevInstance,              \
                                       wchar_t * WXUNUSED(lpCmdLine),        \
                                       int nCmdShow)                         \
         {                                                                   \
+            wxDISABLE_DEBUG_SUPPORT();                                      \
+                                                                            \
             /* NB: wxEntry expects lpCmdLine argument to be char*, not */   \
             /*     wchar_t*, but fortunately it's not used anywhere    */   \
             /*     and we can simply pass NULL in:                     */   \
             return wxEntry(hInstance, hPrevInstance, NULL, nCmdShow);       \
         }
 #else
-    #define IMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD
+    #define wxIMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD
 #endif // defined(__BORLANDC__) && wxUSE_UNICODE
 
-#define IMPLEMENT_WXWIN_MAIN \
+#define wxIMPLEMENT_WXWIN_MAIN                                              \
     extern "C" int WINAPI WinMain(HINSTANCE hInstance,                      \
                                   HINSTANCE hPrevInstance,                  \
                                   wxCmdLineArgType WXUNUSED(lpCmdLine),     \
                                   int nCmdShow)                             \
     {                                                                       \
+        wxDISABLE_DEBUG_SUPPORT();                                          \
+                                                                            \
         /* NB: We pass NULL in place of lpCmdLine to behave the same as  */ \
         /*     Borland-specific wWinMain() above. If it becomes needed   */ \
         /*     to pass lpCmdLine to wxEntry() here, you'll have to fix   */ \
         /*     wWinMain() above too.                                     */ \
         return wxEntry(hInstance, hPrevInstance, NULL, nCmdShow);           \
     }                                                                       \
-    IMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD
+    wxIMPLEMENT_WXWIN_MAIN_BORLAND_NONSTANDARD
 
 
 #endif // _WX_APP_H_

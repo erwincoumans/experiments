@@ -3,7 +3,7 @@
 // Purpose:     XML resources
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xmlres.h 59931 2009-03-29 21:25:23Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,6 +34,7 @@
 class WXDLLIMPEXP_FWD_BASE wxFileName;
 
 class WXDLLIMPEXP_FWD_CORE wxIconBundle;
+class WXDLLIMPEXP_FWD_CORE wxImageList;
 class WXDLLIMPEXP_FWD_CORE wxMenu;
 class WXDLLIMPEXP_FWD_CORE wxMenuBar;
 class WXDLLIMPEXP_FWD_CORE wxDialog;
@@ -64,7 +65,7 @@ class wxXmlResourceDataRecords;
 #define WX_XMLRES_CURRENT_VERSION_MINOR            5
 #define WX_XMLRES_CURRENT_VERSION_RELEASE          3
 #define WX_XMLRES_CURRENT_VERSION_REVISION         0
-#define WX_XMLRES_CURRENT_VERSION_STRING       _T("2.5.3.0")
+#define WX_XMLRES_CURRENT_VERSION_STRING       wxT("2.5.3.0")
 
 #define WX_XMLRES_CURRENT_VERSION \
                 (WX_XMLRES_CURRENT_VERSION_MAJOR * 256*256*256 + \
@@ -187,13 +188,40 @@ public:
     // Load an object from the resource specifying both the resource name and
     // the classname.  This lets you load nonstandard container windows.
     wxObject *LoadObject(wxWindow *parent, const wxString& name,
-                         const wxString& classname);
+                         const wxString& classname)
+    {
+        return DoLoadObject(parent, name, classname, false /* !recursive */);
+    }
 
     // Load an object from the resource specifying both the resource name and
     // the classname.  This form lets you finish the creation of an existing
     // instance.
-    bool LoadObject(wxObject *instance, wxWindow *parent, const wxString& name,
-                    const wxString& classname);
+    bool LoadObject(wxObject *instance,
+                    wxWindow *parent,
+                    const wxString& name,
+                    const wxString& classname)
+    {
+        return DoLoadObject(instance, parent, name, classname, false);
+    }
+
+    // These versions of LoadObject() look for the object with the given name
+    // recursively (breadth first) and can be used to instantiate an individual
+    // control defined anywhere in an XRC file. No check is done that the name
+    // is unique, it's up to the caller to ensure this.
+    wxObject *LoadObjectRecursively(wxWindow *parent,
+                                    const wxString& name,
+                                    const wxString& classname)
+    {
+        return DoLoadObject(parent, name, classname, true /* recursive */);
+    }
+
+    bool LoadObjectRecursively(wxObject *instance,
+                               wxWindow *parent,
+                               const wxString& name,
+                               const wxString& classname)
+    {
+        return DoLoadObject(instance, parent, name, classname, true);
+    }
 
     // Loads a bitmap resource from a file.
     wxBitmap LoadBitmap(const wxString& name);
@@ -308,7 +336,11 @@ protected:
     // (Uses only 'handlerToUse' if != NULL)
     wxObject *CreateResFromNode(wxXmlNode *node, wxObject *parent,
                                 wxObject *instance = NULL,
-                                wxXmlResourceHandler *handlerToUse = NULL);
+                                wxXmlResourceHandler *handlerToUse = NULL)
+    {
+        return node ? DoCreateResFromNode(*node, parent, instance, handlerToUse)
+                    : NULL;
+    }
 
     // Helper of Load() and Unload(): returns the URL corresponding to the
     // given file if it's indeed a file, otherwise returns the original string
@@ -324,6 +356,24 @@ protected:
 private:
     wxXmlResourceDataRecords& Data() { return *m_data; }
     const wxXmlResourceDataRecords& Data() const { return *m_data; }
+
+    // the real implementation of CreateResFromNode(): this should be only
+    // called if node is non-NULL
+    wxObject *DoCreateResFromNode(wxXmlNode& node,
+                                  wxObject *parent,
+                                  wxObject *instance,
+                                  wxXmlResourceHandler *handlerToUse = NULL);
+
+    // common part of LoadObject() and LoadObjectRecursively()
+    wxObject *DoLoadObject(wxWindow *parent,
+                           const wxString& name,
+                           const wxString& classname,
+                           bool recursive);
+    bool DoLoadObject(wxObject *instance,
+                      wxWindow *parent,
+                      const wxString& name,
+                      const wxString& classname,
+                      bool recursive);
 
 private:
     long m_version;
@@ -442,7 +492,7 @@ protected:
     // wxXML_ENTITY_NODE name="tag", content=""
     //    |-- wxXML_TEXT_NODE or
     //        wxXML_CDATA_SECTION_NODE name="" content="content"
-    wxString GetNodeContent(wxXmlNode *node);
+    wxString GetNodeContent(const wxXmlNode *node);
 
     // Check to see if a parameter exists.
     bool HasParam(const wxString& param);
@@ -452,6 +502,9 @@ protected:
 
     // Finds the parameter value or returns the empty string.
     wxString GetParamValue(const wxString& param);
+
+    // Returns the parameter value from given node.
+    wxString GetParamValue(const wxXmlNode* node);
 
     // Add a style flag (e.g. wxMB_DOCKABLE) to the list of flags
     // understood by this handler.
@@ -504,14 +557,27 @@ protected:
                        const wxArtClient& defaultArtClient = wxART_OTHER,
                        wxSize size = wxDefaultSize);
 
+    // Gets a bitmap from an XmlNode.
+    wxBitmap GetBitmap(const wxXmlNode* node,
+                       const wxArtClient& defaultArtClient = wxART_OTHER,
+                       wxSize size = wxDefaultSize);
+
     // Gets an icon.
     wxIcon GetIcon(const wxString& param = wxT("icon"),
+                   const wxArtClient& defaultArtClient = wxART_OTHER,
+                   wxSize size = wxDefaultSize);
+
+    // Gets an icon from an XmlNode.
+    wxIcon GetIcon(const wxXmlNode* node,
                    const wxArtClient& defaultArtClient = wxART_OTHER,
                    wxSize size = wxDefaultSize);
 
     // Gets an icon bundle.
     wxIconBundle GetIconBundle(const wxString& param,
                                const wxArtClient& defaultArtClient = wxART_OTHER);
+
+    // Gets an image list.
+    wxImageList *GetImageList(const wxString& param = wxT("imagelist"));
 
 #if wxUSE_ANIMATIONCTRL
     // Gets an animation.

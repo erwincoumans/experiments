@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by: Francesco Montorsi
 // Created:     14.10.01
-// RCS-ID:      $Id: statbar.cpp 59566 2009-03-15 17:54:05Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -34,6 +34,74 @@
 
 const char wxStatusBarNameStr[] = "statusBar";
 
+// ============================================================================
+// wxStatusBarPane implementation
+// ============================================================================
+
+bool wxStatusBarPane::SetText(const wxString& text)
+{
+    if ( text == m_text )
+        return false;
+
+    /*
+        If we have a message to restore on the stack, we update it to
+        correspond to the current one so that a sequence of calls such as
+
+        1. SetStatusText("foo")
+        2. PushStatusText("bar")
+        3. SetStatusText("new foo")
+        4. PopStatusText()
+
+        doesn't overwrite the "new foo" which should be shown at the end with
+        the old value "foo". This would be unexpected and hard to avoid,
+        especially when PushStatusText() is used internally by wxWidgets
+        without knowledge of the user program, as it is for showing the menu
+        and toolbar help strings.
+
+        By updating the top of the stack we ensure that the next call to
+        PopStatusText() basically becomes a NOP without breaking the balance
+        between the calls to push and pop as we would have done if we really
+        called PopStatusText() here.
+     */
+    if ( !m_arrStack.empty() )
+    {
+        m_arrStack.back() = text;
+    }
+
+    m_text = text;
+
+    return true;
+}
+
+bool wxStatusBarPane::PushText(const wxString& text)
+{
+    // save the currently shown text
+    m_arrStack.push_back(m_text);
+
+    // and update the new one if necessary
+    if ( text == m_text )
+        return false;
+
+    m_text = text;
+
+    return true;
+}
+
+bool wxStatusBarPane::PopText()
+{
+    wxCHECK_MSG( !m_arrStack.empty(), false, "no status message to pop" );
+
+    const wxString text = m_arrStack.back();
+
+    m_arrStack.pop_back();
+
+    if ( text == m_text )
+        return false;
+
+    m_text = text;
+
+    return true;
+}
 
 // ============================================================================
 // wxStatusBarBase implementation
@@ -42,7 +110,7 @@ const char wxStatusBarNameStr[] = "statusBar";
 IMPLEMENT_DYNAMIC_CLASS(wxStatusBar, wxWindow)
 
 #include "wx/arrimpl.cpp" // This is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(wxStatusBarPaneArray)
+WX_DEFINE_EXPORTED_OBJARRAY(wxStatusBarPaneArray)
 
 
 // ----------------------------------------------------------------------------
@@ -69,7 +137,7 @@ wxStatusBarBase::~wxStatusBarBase()
 
 void wxStatusBarBase::SetFieldsCount(int number, const int *widths)
 {
-    wxCHECK_RET( number > 0, _T("invalid field number in SetFieldsCount") );
+    wxCHECK_RET( number > 0, wxT("invalid field number in SetFieldsCount") );
 
     if ( (size_t)number > m_panes.GetCount() )
     {
@@ -93,7 +161,7 @@ void wxStatusBarBase::SetFieldsCount(int number, const int *widths)
 void wxStatusBarBase::SetStatusWidths(int WXUNUSED_UNLESS_DEBUG(n),
                                     const int widths[])
 {
-    wxASSERT_MSG( (size_t)n == m_panes.GetCount(), _T("field number mismatch") );
+    wxASSERT_MSG( (size_t)n == m_panes.GetCount(), wxT("field number mismatch") );
 
     if (widths == NULL)
     {
@@ -104,7 +172,7 @@ void wxStatusBarBase::SetStatusWidths(int WXUNUSED_UNLESS_DEBUG(n),
     else
     {
         for ( size_t i = 0; i < m_panes.GetCount(); i++ )
-            m_panes[i].m_nWidth = widths[i];
+            m_panes[i].SetWidth(widths[i]);
 
         m_bSameWidthForAllPanes = false;
     }
@@ -116,12 +184,12 @@ void wxStatusBarBase::SetStatusWidths(int WXUNUSED_UNLESS_DEBUG(n),
 void wxStatusBarBase::SetStatusStyles(int WXUNUSED_UNLESS_DEBUG(n),
                                     const int styles[])
 {
-    wxCHECK_RET( styles, _T("NULL pointer in SetStatusStyles") );
+    wxCHECK_RET( styles, wxT("NULL pointer in SetStatusStyles") );
 
-    wxASSERT_MSG( (size_t)n == m_panes.GetCount(), _T("field number mismatch") );
+    wxASSERT_MSG( (size_t)n == m_panes.GetCount(), wxT("field number mismatch") );
 
     for ( size_t i = 0; i < m_panes.GetCount(); i++ )
-        m_panes[i].m_nStyle = styles[i];
+        m_panes[i].SetStyle(styles[i]);
 
     // update the display after the widths changed
     Refresh();
@@ -186,28 +254,54 @@ wxArrayInt wxStatusBarBase::CalculateAbsWidths(wxCoord widthTotal) const
 }
 
 // ----------------------------------------------------------------------------
-// status text stacks
+// setting/getting status text
+// ----------------------------------------------------------------------------
+
+void wxStatusBarBase::SetStatusText(const wxString& text, int number)
+{
+    wxCHECK_RET( (unsigned)number < m_panes.size(),
+                    "invalid status bar field index" );
+
+    if ( m_panes[number].SetText(text) )
+        DoUpdateStatusText(number);
+}
+
+wxString wxStatusBarBase::GetStatusText(int number) const
+{
+    wxCHECK_MSG( (unsigned)number < m_panes.size(), wxString(),
+                    "invalid status bar field index" );
+
+    return m_panes[number].GetText();
+}
+
+void wxStatusBarBase::SetEllipsizedFlag(int number, bool isEllipsized)
+{
+    wxCHECK_RET( (unsigned)number < m_panes.size(),
+                    "invalid status bar field index" );
+
+    m_panes[number].SetIsEllipsized(isEllipsized);
+}
+
+// ----------------------------------------------------------------------------
+// pushing/popping status text
 // ----------------------------------------------------------------------------
 
 void wxStatusBarBase::PushStatusText(const wxString& text, int number)
 {
-    // save current status text in the stack
-    m_panes[number].m_arrStack.push_back(GetStatusText(number));
+    wxCHECK_RET( (unsigned)number < m_panes.size(),
+                    "invalid status bar field index" );
 
-    SetStatusText(text, number);
-        // update current status text (eventually also in the native control)
+    if ( m_panes[number].PushText(text) )
+        DoUpdateStatusText(number);
 }
 
 void wxStatusBarBase::PopStatusText(int number)
 {
-    wxASSERT_MSG(m_panes[number].m_arrStack.GetCount() == 1,
-                 "can't pop any further string");
+    wxCHECK_RET( (unsigned)number < m_panes.size(),
+                    "invalid status bar field index" );
 
-    wxString text = m_panes[number].m_arrStack.back();
-    m_panes[number].m_arrStack.pop_back();  // also remove it from the stack
-
-    // restore the popped status text in the pane
-    SetStatusText(text, number);
+    if ( m_panes[number].PopText() )
+        DoUpdateStatusText(number);
 }
 
 #endif // wxUSE_STATUSBAR

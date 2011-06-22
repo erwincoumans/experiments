@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/wx/stackwalk.h
+// Name:        wx/stackwalk.h
 // Purpose:     wxStackWalker and related classes, common part
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2005-01-07
-// RCS-ID:      $Id: stackwalk.h 58095 2009-01-14 15:01:23Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

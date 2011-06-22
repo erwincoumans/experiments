@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/2/2000
-// RCS-ID:      $Id: dragimgg.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -358,8 +358,7 @@ bool wxGenericDragImage::EndDrag()
 #else
         m_windowDC->DestroyClippingRegion();
 #endif
-        delete m_windowDC;
-        m_windowDC = NULL;
+        wxDELETE(m_windowDC);
     }
 
 #ifndef wxHAS_NATIVE_OVERLAY

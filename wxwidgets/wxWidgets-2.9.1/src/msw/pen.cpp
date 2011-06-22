@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin: refactored wxPen code to wxPenRefData
 // Created:     04/01/98
-// RCS-ID:      $Id: pen.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -218,7 +218,7 @@ static int ConvertPenStyle(wxPenStyle style)
             return PS_NULL;
 
         default:
-            wxFAIL_MSG( _T("unknown pen style") );
+            wxFAIL_MSG( wxT("unknown pen style") );
             // fall through
 
 #ifdef wxHAVE_EXT_CREATE_PEN
@@ -258,7 +258,7 @@ static int ConvertJoinStyle(wxPenJoin join)
             return PS_JOIN_MITER;
 
         default:
-            wxFAIL_MSG( _T("unknown pen join style") );
+            wxFAIL_MSG( wxT("unknown pen join style") );
             // fall through
 
         case wxJOIN_ROUND:
@@ -277,7 +277,7 @@ static int ConvertCapStyle(wxPenCap cap)
             return PS_ENDCAP_FLAT;
 
         default:
-            wxFAIL_MSG( _T("unknown pen cap style") );
+            wxFAIL_MSG( wxT("unknown pen cap style") );
             // fall through
 
         case wxCAP_ROUND:

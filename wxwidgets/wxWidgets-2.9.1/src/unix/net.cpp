@@ -1,11 +1,11 @@
 // -*- c++ -*- ///////////////////////////////////////////////////////////////
 // Name:        unix/net.cpp
 // Purpose:     Network related wxWindows classes and functions
-// Author:      Karsten Ballüder
+// Author:      Karsten BallÃ¼der
 // Modified by:
 // Created:     03.10.99
-// RCS-ID:      $Id: net.cpp 57869 2009-01-07 01:01:35Z FM $
-// Copyright:   (c) Karsten Ballüder
+// RCS-ID:      $Id$
+// Copyright:   (c) Karsten BallÃ¼der
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -79,7 +79,7 @@ public:
        wxDialUpManager methods.
    */
    virtual bool IsOk() const
-      { return TRUE; }
+      { return true; }
 
    /** The simplest way to initiate a dial up: this function dials the given
        ISP (exact meaning of the parameter depends on the platform), returns
@@ -95,7 +95,7 @@ public:
 
    /// Hang up the currently active dial up connection.
    virtual bool HangUp();
-   
+
    // returns TRUE if the computer is connected to the network: under Windows,
    // this just means that a RAS connection exists, under Unix we check that
    // the "well-known host" (as specified by SetWellKnownHost) is reachable
@@ -112,7 +112,7 @@ public:
    // so, in general, the user should be allowed to override it. This function
    // allows to forcefully set the online status - whatever our internal
    // algorithm may think about it.
-   virtual void SetOnlineStatus(bool isOnline = TRUE)
+   virtual void SetOnlineStatus(bool isOnline = true)
       { m_IsOnline = isOnline; }
 
    // set misc wxDialUpManager options
@@ -143,9 +143,9 @@ public:
       { m_ConnectCommand = command; m_HangUpCommand = hupcmd; }
 
 private:
-   /// -1: don´t know, 0 = no, 1 = yes
+   /// -1: don't know, 0 = no, 1 = yes
    int m_IsOnline;
-   
+
    ///  Can we use ifconfig to list active devices?
    int m_CanUseIfconfig;
    /// The path to ifconfig
@@ -180,11 +180,11 @@ public:
    AutoCheckTimer(wxDialUpManagerImpl *dupman)
       {
          m_dupman = dupman;
-         m_started = FALSE;
+         m_started = false;
       }
 
    virtual bool Start( int millisecs = -1 )
-      { m_started = TRUE; return wxTimer::Start(millisecs, FALSE); }
+      { m_started = true; return wxTimer::Start(millisecs, false); }
 
    virtual void Notify()
       { wxLogTrace("Checking dial up network status."); m_dupman->CheckStatus(); }
@@ -202,7 +202,7 @@ wxDialUpManagerImpl::Dial(const wxString &isp,
                           const wxString & WXUNUSED(password))
 {
    if(m_IsOnline == 1)
-      return FALSE;
+      return false;
    m_IsOnline = -1;
    m_ISPname = isp;
    wxString cmd;
@@ -217,7 +217,7 @@ bool
 wxDialUpManagerImpl::HangUp(void)
 {
    if(m_IsOnline == 0)
-      return FALSE;
+      return false;
    m_IsOnline = -1;
    wxString cmd;
    if(m_HangUpCommand.Find("%s"))
@@ -236,8 +236,7 @@ wxDialUpManagerImpl::EnableAutoCheckOnlineStatus(size_t nSeconds)
    bool rc = m_timer->Start(nSeconds*1000);
    if(! rc)
    {
-      delete m_timer;
-      m_timer = NULL;
+      wxDELETE(m_timer);
    }
    return rc;
 }
@@ -247,8 +246,7 @@ wxDialUpManagerImpl::DisableAutoCheckOnlineStatus()
 {
    wxASSERT(m_timer != NULL);
    m_timer->Stop();
-   delete m_timer;
-   m_timer = NULL;
+   wxDELETE(m_timer);
 }
 
 
@@ -299,7 +297,7 @@ wxDialUpManagerImpl::CheckStatus(void) const
   3. check /proc/net/dev on linux??
      This method should be preferred, if possible. Need to do more
      testing.
-    
+
 */
 
 void
@@ -318,17 +316,17 @@ wxDialUpManagerImpl::CheckStatusInternal(void)
    }
 
    wxLogNull ln; // suppress all error messages
-   // Let´s try the ifconfig method first, should be fastest:
+   // Let's try the ifconfig method first, should be fastest:
    if(m_CanUseIfconfig != 0) // unknown or yes
    {
       wxASSERT(m_IfconfigPath.length());
-      
+
       wxString tmpfile = wxFileName::CreateTempFileName("_wxdialuptest");
       wxString cmd = "/bin/sh -c \'";
       cmd << m_IfconfigPath << " >" << tmpfile <<  '\'';
       /* I tried to add an option to wxExecute() to not close stdout,
          so we could let ifconfig write directly to the tmpfile, but
-         this does not work. That should be faster, as it doesn´t call 
+         this does not work. That should be faster, as it doesn't call
          the shell first. I have no idea why. :-(  (KB) */
 #if 0
       // temporarily redirect stdout/stderr:
@@ -378,7 +376,7 @@ wxDialUpManagerImpl::CheckStatusInternal(void)
          // else m_IsOnline remains -1 as we don't know for sure
       }
       else // could not run ifconfig correctly
-         m_CanUseIfconfig = 0; // don´t try again
+         m_CanUseIfconfig = 0; // don't try again
       (void) wxRemoveFile(tmpfile);
       if(m_IsOnline != -1) // we are done
          return;
@@ -388,22 +386,22 @@ wxDialUpManagerImpl::CheckStatusInternal(void)
    // This can be used under Win 9x, too!
    struct hostent     *hp;
    struct sockaddr_in  serv_addr;
-   int	sockfd;
+   int sockfd;
 
    m_IsOnline = 0; // assume false
    if((hp = gethostbyname(m_BeaconHost)) == NULL)
       return; // no DNS no net
-   
-   serv_addr.sin_family		= hp->h_addrtype;
+
+   serv_addr.sin_family = hp->h_addrtype;
    memcpy(&serv_addr.sin_addr,hp->h_addr, hp->h_length);
-   serv_addr.sin_port		= htons(m_BeaconPort);
-   if( ( sockfd = socket(hp->h_addrtype, SOCK_STREAM, 0)) < 0) 
-   {	
+   serv_addr.sin_port = htons(m_BeaconPort);
+   if( ( sockfd = socket(hp->h_addrtype, SOCK_STREAM, 0)) < 0)
+   {
       //  sys_error("cannot create socket for gw");
       return;
    }
    if( connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-   {	
+   {
       //sys_error("cannot connect to server");
       return;
    }

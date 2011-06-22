@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/30
-// RCS-ID:      $Id: button.mm 47986 2007-08-09 17:30:51Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

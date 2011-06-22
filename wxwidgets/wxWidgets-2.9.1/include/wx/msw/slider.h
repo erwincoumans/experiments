@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: slider.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ protected:
     void Init();
 
     // format an integer value as string
-    static wxString Format(int n) { return wxString::Format(_T("%d"), n); }
+    static wxString Format(int n) { return wxString::Format(wxT("%d"), n); }
 
     // get the boundig box for the slider and possible labels
     wxRect GetBoundingBox() const;

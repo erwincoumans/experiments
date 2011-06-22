@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Created:     01/02/97
 // Modified:    22/10/98 - almost total rewrite, simpler interface (VZ)
-// Id:          $Id: treectlg.cpp 59644 2009-03-20 13:56:57Z SC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -541,7 +541,7 @@ void wxTreeTextCtrl::OnKeyUp( wxKeyEvent &event )
         wxPoint myPos = GetPosition();
         wxSize mySize = GetSize();
         int sx, sy;
-        GetTextExtent(GetValue() + _T("M"), &sx, &sy);
+        GetTextExtent(GetValue() + wxT("M"), &sx, &sy);
         if (myPos.x + sx > parentSize.x)
             sx = parentSize.x - myPos.x;
         if (mySize.x > sx)
@@ -973,17 +973,11 @@ void wxGenericTreeCtrl::Init()
     m_lastOnSame = false;
 
 #if defined( __WXMAC__ )
-    m_normalFont.CreateSystemFont(wxOSX_SYSTEM_FONT_VIEWS);
+    m_normalFont = wxFont(wxOSX_SYSTEM_FONT_VIEWS);
 #else
     m_normalFont = wxSystemSettings::GetFont( wxSYS_DEFAULT_GUI_FONT );
 #endif
-    m_boldFont = wxFont(m_normalFont.GetPointSize(),
-                        m_normalFont.GetFamily(),
-                        m_normalFont.GetStyle(),
-                        wxBOLD,
-                        m_normalFont.GetUnderlined(),
-                        m_normalFont.GetFaceName(),
-                        m_normalFont.GetEncoding());
+    m_boldFont = m_normalFont.Bold();
 }
 
 bool wxGenericTreeCtrl::Create(wxWindow *parent,
@@ -1000,7 +994,7 @@ bool wxGenericTreeCtrl::Create(wxWindow *parent,
 
     if (major < 10)
         style |= wxTR_ROW_LINES;
-        
+
     if (style & wxTR_HAS_BUTTONS)
         style |= wxTR_NO_LINES;
 #endif // __WXMAC__
@@ -1298,14 +1292,8 @@ bool wxGenericTreeCtrl::SetFont( const wxFont &font )
 {
     wxTreeCtrlBase::SetFont(font);
 
-    m_normalFont = font ;
-    m_boldFont = wxFont(m_normalFont.GetPointSize(),
-                        m_normalFont.GetFamily(),
-                        m_normalFont.GetStyle(),
-                        wxBOLD,
-                        m_normalFont.GetUnderlined(),
-                        m_normalFont.GetFaceName(),
-                        m_normalFont.GetEncoding());
+    m_normalFont = font;
+    m_boldFont = m_normalFont.Bold();
 
     if (m_anchor)
         m_anchor->RecursiveResetTextSize();
@@ -1779,7 +1767,7 @@ void wxGenericTreeCtrl::Delete(const wxTreeItemId& itemId)
     }
 
     wxGenericTreeItem *parent = item->GetParent();
-    
+
     // if the selected item will be deleted, select the parent ...
     wxGenericTreeItem *to_be_selected = parent;
     if (parent)
@@ -1854,9 +1842,9 @@ void wxGenericTreeCtrl::Expand(const wxTreeItemId& itemId)
 {
     wxGenericTreeItem *item = (wxGenericTreeItem*) itemId.m_pItem;
 
-    wxCHECK_RET( item, _T("invalid item in wxGenericTreeCtrl::Expand") );
+    wxCHECK_RET( item, wxT("invalid item in wxGenericTreeCtrl::Expand") );
     wxCHECK_RET( !HasFlag(wxTR_HIDE_ROOT) || itemId != GetRootItem(),
-                 _T("can't expand hidden root") );
+                 wxT("can't expand hidden root") );
 
     if ( !item->HasPlus() )
         return;
@@ -1891,7 +1879,7 @@ void wxGenericTreeCtrl::Expand(const wxTreeItemId& itemId)
 void wxGenericTreeCtrl::Collapse(const wxTreeItemId& itemId)
 {
     wxCHECK_RET( !HasFlag(wxTR_HIDE_ROOT) || itemId != GetRootItem(),
-                 _T("can't collapse hidden root") );
+                 wxT("can't collapse hidden root") );
 
     wxGenericTreeItem *item = (wxGenericTreeItem*) itemId.m_pItem;
 
@@ -1953,6 +1941,20 @@ void wxGenericTreeCtrl::Unselect()
     }
 }
 
+void wxGenericTreeCtrl::ClearFocusedItem()
+{
+    wxTreeItemId item = GetFocusedItem();
+    if ( item.IsOk() )
+        SelectItem(item, false);
+}
+
+void wxGenericTreeCtrl::SetFocusedItem(const wxTreeItemId& item)
+{
+    wxCHECK_RET( item.IsOk(), wxT("invalid tree item") );
+
+    SelectItem(item, true);
+}
+
 void wxGenericTreeCtrl::UnselectAllChildren(wxGenericTreeItem *item)
 {
     if (item->IsSelected())
@@ -1982,6 +1984,42 @@ void wxGenericTreeCtrl::UnselectAll()
         UnselectAllChildren((wxGenericTreeItem*) rootItem.m_pItem);
     }
 }
+
+void wxGenericTreeCtrl::SelectChildren(const wxTreeItemId& parent)
+{
+    wxCHECK_RET( HasFlag(wxTR_MULTIPLE),
+                 "this only works with multiple selection controls" );
+
+    UnselectAll();
+
+    if ( !HasChildren(parent) )
+        return;
+
+
+    wxArrayGenericTreeItems&
+        children = ((wxGenericTreeItem*) parent.m_pItem)->GetChildren();
+    size_t count = children.GetCount();
+
+    wxGenericTreeItem *
+        item = (wxGenericTreeItem*) ((wxTreeItemId)children[0]).m_pItem;
+    wxTreeEvent event(wxEVT_COMMAND_TREE_SEL_CHANGING, this, item);
+    event.m_itemOld = m_current;
+
+    if ( GetEventHandler()->ProcessEvent( event ) && !event.IsAllowed() )
+        return;
+
+    for ( size_t n = 0; n < count; ++n )
+    {
+        m_current = m_key_current = children[n];
+        m_current->SetHilight(true);
+        RefreshSelected();
+    }
+
+
+    event.SetEventType(wxEVT_COMMAND_TREE_SEL_CHANGED);
+    GetEventHandler()->ProcessEvent( event );
+}
+
 
 // Recursive function !
 // To stop we must have crt_item<last_item
@@ -2146,15 +2184,16 @@ void wxGenericTreeCtrl::DoSelectItem(const wxTreeItemId& itemId,
 
 void wxGenericTreeCtrl::SelectItem(const wxTreeItemId& itemId, bool select)
 {
+    wxGenericTreeItem * const item = (wxGenericTreeItem*) itemId.m_pItem;
+    wxCHECK_RET( item, wxT("SelectItem(): invalid tree item") );
+
     if ( select )
     {
-        DoSelectItem(itemId, !HasFlag(wxTR_MULTIPLE));
+        if ( !item->IsSelected() )
+            DoSelectItem(itemId, !HasFlag(wxTR_MULTIPLE));
     }
     else // deselect
     {
-        wxGenericTreeItem *item = (wxGenericTreeItem*) itemId.m_pItem;
-        wxCHECK_RET( item, wxT("SelectItem(): invalid tree item") );
-
         wxTreeEvent event(wxEVT_COMMAND_TREE_SEL_CHANGING, this, item);
         if ( GetEventHandler()->ProcessEvent( event ) && !event.IsAllowed() )
             return;
@@ -2230,61 +2269,42 @@ void wxGenericTreeCtrl::EnsureVisible(const wxTreeItemId& item)
 
 void wxGenericTreeCtrl::ScrollTo(const wxTreeItemId &item)
 {
-    if (!item.IsOk()) return;
+    if (!item.IsOk())
+        return;
 
-    // We have to call this here because the label in
-    // question might just have been added and no screen
-    // update taken place.
+    // update the control before scrolling it
     if (m_dirty)
 #if defined( __WXMSW__ ) || defined(__WXMAC__)
         Update();
 #else
         DoDirtyProcessing();
 #endif
+
     wxGenericTreeItem *gitem = (wxGenericTreeItem*) item.m_pItem;
 
-    // now scroll to the item
-    int item_y = gitem->GetY();
+    int itemY = gitem->GetY();
 
     int start_x = 0;
     int start_y = 0;
     GetViewStart( &start_x, &start_y );
-    start_y *= PIXELS_PER_UNIT;
 
-    int client_h = 0;
-    int client_w = 0;
-    GetClientSize( &client_w, &client_h );
+    const int clientHeight = GetClientSize().y;
 
-    if (item_y < start_y+3)
+    const int itemHeight = GetLineHeight(gitem) + 2;
+
+    if ( itemY + itemHeight > start_y*PIXELS_PER_UNIT + clientHeight )
     {
-        // going down
-        int x = 0;
-        int y = 0;
-        m_anchor->GetSize( x, y, this );
-        y += PIXELS_PER_UNIT+2; // one more scrollbar unit + 2 pixels
-        x += PIXELS_PER_UNIT+2; // one more scrollbar unit + 2 pixels
-        int x_pos = GetScrollPos( wxHORIZONTAL );
-        // Item should appear at top
-        SetScrollbars( PIXELS_PER_UNIT, PIXELS_PER_UNIT,
-                       x/PIXELS_PER_UNIT, y/PIXELS_PER_UNIT,
-                       x_pos, item_y/PIXELS_PER_UNIT );
+        // need to scroll up by enough to show this item fully
+        itemY += itemHeight - clientHeight;
     }
-    else if (item_y+GetLineHeight(gitem) > start_y+client_h)
+    else if ( itemY > start_y*PIXELS_PER_UNIT )
     {
-        // going up
-        int x = 0;
-        int y = 0;
-        m_anchor->GetSize( x, y, this );
-        y += PIXELS_PER_UNIT+2; // one more scrollbar unit + 2 pixels
-        x += PIXELS_PER_UNIT+2; // one more scrollbar unit + 2 pixels
-        item_y += PIXELS_PER_UNIT+2;
-        int x_pos = GetScrollPos( wxHORIZONTAL );
-        // Item should appear at bottom
-        SetScrollbars( PIXELS_PER_UNIT, PIXELS_PER_UNIT,
-                       x/PIXELS_PER_UNIT, y/PIXELS_PER_UNIT,
-                       x_pos,
-                       (item_y+GetLineHeight(gitem)-client_h)/PIXELS_PER_UNIT );
+        // item is already fully visible, don't do anything
+        return;
     }
+    //else: scroll down to make this item the top one displayed
+
+    Scroll(-1, itemY/PIXELS_PER_UNIT);
 }
 
 // FIXME: tree sorting functions are not reentrant and not MT-safe!
@@ -3044,6 +3064,21 @@ void wxGenericTreeCtrl::OnChar( wxKeyEvent &event )
     // end   : go to last item without opening parents
     // alnum : start or continue searching for the item with this prefix
     int keyCode = event.GetKeyCode();
+
+#ifdef __WXOSX__
+    // Make the keys work as they do in the native control:
+    // right => expand
+    // left => collapse if current item is expanded
+    if (keyCode == WXK_RIGHT)
+    {
+        keyCode = '+';
+    }
+    else if (keyCode == WXK_LEFT && IsExpanded(m_current))
+    {
+        keyCode = '-';
+    }
+#endif // __WXOSX__
+
     switch ( keyCode )
     {
         case '+':
@@ -3374,7 +3409,7 @@ bool wxGenericTreeCtrl::GetBoundingRect(const wxTreeItemId& item,
 wxTextCtrl *wxGenericTreeCtrl::EditLabel(const wxTreeItemId& item,
                                   wxClassInfo * WXUNUSED(textCtrlClass))
 {
-    wxCHECK_MSG( item.IsOk(), NULL, _T("can't edit an invalid item") );
+    wxCHECK_MSG( item.IsOk(), NULL, wxT("can't edit an invalid item") );
 
     wxGenericTreeItem *itemEdit = (wxGenericTreeItem *)item.m_pItem;
 
@@ -3414,7 +3449,7 @@ wxTextCtrl* wxGenericTreeCtrl::GetEditControl() const
 void wxGenericTreeCtrl::EndEditLabel(const wxTreeItemId& WXUNUSED(item),
                                      bool discardChanges)
 {
-    wxCHECK_RET( m_textCtrl, _T("not editing label") );
+    wxCHECK_RET( m_textCtrl, wxT("not editing label") );
 
     m_textCtrl->EndEdit(discardChanges);
 }

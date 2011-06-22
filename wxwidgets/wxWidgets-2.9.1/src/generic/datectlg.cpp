@@ -4,7 +4,7 @@
 // Author:      Andreas Pflug
 // Modified by:
 // Created:     2005-01-19
-// RCS-ID:      $Id: datectlg.cpp 54407 2008-06-28 18:58:07Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Andreas Pflug <pgadmin@pse-consulting.de>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -110,7 +110,7 @@ public:
         else // invalid date
         {
             wxASSERT_MSG( HasDPFlag(wxDP_ALLOWNONE),
-                            _T("this control must have a valid date") );
+                            wxT("this control must have a valid date") );
 
             m_combo->SetText(wxEmptyString);
         }
@@ -260,8 +260,8 @@ private:
 
         if (year_cnt == 1 && month_cnt == 1 && day_cnt == 1)
             return fmt;
-        else
-            return x_format;
+
+        return x_format;
     }
 
     bool SetFormat(const wxString& fmt)
@@ -271,7 +271,7 @@ private:
         if ( m_combo )
         {
             wxArrayString allowedChars;
-            for ( wxChar c = _T('0'); c <= _T('9'); c++ )
+            for ( wxChar c = wxT('0'); c <= wxT('9'); c++ )
                 allowedChars.Add(wxString(c, 1));
 
             const wxChar *p2 = m_format.c_str();
@@ -364,7 +364,7 @@ bool wxDatePickerCtrlGeneric::Create(wxWindow *parent,
                                      const wxString& name)
 {
     wxASSERT_MSG( !(style & wxDP_SPIN),
-                  _T("wxDP_SPIN style not supported, use wxDP_DEFAULT") );
+                  wxT("wxDP_SPIN style not supported, use wxDP_DEFAULT") );
 
     if ( !wxControl::Create(parent, id, pos, size,
                             style | wxCLIP_CHILDREN | wxWANTS_CHARS | wxBORDER_NONE,

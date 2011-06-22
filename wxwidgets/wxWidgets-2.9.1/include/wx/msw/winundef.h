@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     16.05.99
-// RCS-ID:      $Id: winundef.h 36044 2005-10-31 19:35:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -123,11 +123,11 @@
 
     inline HWND APIENTRY FindText(LPFINDREPLACE lpfindreplace)
     {
-        #ifdef UNICODE
+        #ifdef _UNICODE
             return FindTextW(lpfindreplace);
         #else
             return FindTextA(lpfindreplace);
-        #endif // !UNICODE
+        #endif
     }
 #endif
 

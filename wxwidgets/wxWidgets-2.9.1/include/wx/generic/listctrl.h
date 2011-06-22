@@ -3,7 +3,7 @@
 // Purpose:     Generic list control
 // Author:      Robert Roebling
 // Created:     01/02/97
-// RCS-ID:      $Id: listctrl.h 58645 2009-02-04 10:07:58Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +79,7 @@ public:
     bool SetItemState( long item, long state, long stateMask);
     bool SetItemImage( long item, int image, int selImage = -1 );
     bool SetItemColumnImage( long item, long column, int image );
-    wxString GetItemText( long item ) const;
+    wxString GetItemText( long item, int col = 0 ) const;
     void SetItemText( long item, const wxString& str );
     wxUIntPtr GetItemData( long item ) const;
     bool SetItemPtrData(long item, wxUIntPtr data);
@@ -121,7 +121,7 @@ public:
     void SetItemCount(long count);
 
     wxTextCtrl *EditLabel(long item,
-                          wxClassInfo* textControlClass = CLASSINFO(wxTextCtrl));
+                          wxClassInfo* textControlClass = wxCLASSINFO(wxTextCtrl));
     wxTextCtrl* GetEditControl() const;
     void Edit( long item ) { EditLabel(item); }
 
@@ -138,10 +138,7 @@ public:
     long InsertColumn( long col, const wxString& heading,
                        int format = wxLIST_FORMAT_LEFT, int width = -1 );
     bool ScrollList( int dx, int dy );
-    bool SortItems( wxListCtrlCompare fn, long data );
-    bool Update( long item );
-    // Must provide overload to avoid hiding it (and warnings about it)
-    virtual void Update() { wxControl::Update(); }
+    bool SortItems( wxListCtrlCompare fn, wxIntPtr data );
 
     // are we in report mode?
     bool InReportView() const { return HasFlag(wxLC_REPORT); }
@@ -162,6 +159,10 @@ public:
     wxDEPRECATED( int GetItemSpacing( bool isSmall ) const );
 #endif // WXWIN_COMPATIBILITY_2_6
 
+
+    // overridden base class virtuals
+    // ------------------------------
+
     virtual wxVisualAttributes GetDefaultAttributes() const
     {
         return GetClassDefaultAttributes(GetWindowVariant());
@@ -170,8 +171,14 @@ public:
     static wxVisualAttributes
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
 
+    virtual void Update();
+
+
     // implementation only from now on
     // -------------------------------
+
+    // generic version extension, don't use in portable code
+    bool Update( long item );
 
     void OnInternalIdle( );
 
@@ -205,7 +212,6 @@ public:
                          m_ownsImageListState;
     wxListHeaderWindow  *m_headerWin;
     wxListMainWindow    *m_mainWin;
-    wxCoord              m_headerHeight;
 
 protected:
     virtual bool DoPopupMenu( wxMenu *menu, int x, int y );
@@ -215,7 +221,7 @@ protected:
     virtual void DoClientToScreen( int *x, int *y ) const;
     virtual void DoScreenToClient( int *x, int *y ) const;
 
-    virtual wxSize DoGetBestSize() const;
+    virtual wxSize DoGetBestClientSize() const;
 
     // return the text for the given column of the given item
     virtual wxString OnGetItemText(long item, long column) const;
@@ -236,11 +242,12 @@ protected:
 
     virtual wxBorder GetDefaultBorder() const;
 
+    virtual wxSize GetSizeAvailableForScrollTarget(const wxSize& size);
+
 private:
     void CreateOrDestroyHeaderWindowAsNeeded();
     void OnScroll( wxScrollWinEvent& event );
     void OnSize( wxSizeEvent &event );
-    virtual wxSize GetSizeAvailableForScrollTarget(const wxSize& size);
 
     // we need to return a special WM_GETDLGCODE value to process just the
     // arrows but let the other navigation characters through

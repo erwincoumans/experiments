@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Mickael Gilabert
 // Created:     28/06/1998
-// RCS-ID:      $Id: datstrm.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -78,7 +78,7 @@ public:
     wxDataInputStream& operator>>(float& f);
 
     void BigEndianOrdered(bool be_order) { m_be_order = be_order; }
-    
+
 #if wxUSE_UNICODE
     void SetConv( const wxMBConv &conv );
     wxMBConv *GetConv() const { return m_conv; }

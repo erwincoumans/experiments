@@ -11,14 +11,13 @@
 
 #include "wx/wxprec.h"
 
-#include "wx/wxprec.h"
-
 #include "wx/utils.h"
 
 #ifndef WX_PRECOMP
     #include "wx/intl.h"
     #include "wx/app.h"
     #if wxUSE_GUI
+        #include "wx/dialog.h"
         #include "wx/toplevel.h"
         #include "wx/font.h"
     #endif
@@ -46,41 +45,31 @@ void wxBell()
     NSBeep();
 }
 
-// ----------------------------------------------------------------------------
-// Common Event Support
-// ----------------------------------------------------------------------------
-
-void wxMacWakeUp()
-{
-	NSEvent* wakeupEvent = [NSEvent otherEventWithType:NSApplicationDefined location:NSZeroPoint 
-										 modifierFlags:NSAnyEventMask timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
-	[NSApp postEvent:wakeupEvent atStart:NO];
-}
-
 #endif // wxUSE_BASE
 
 #if wxUSE_GUI
 
-@interface wxNSAppController : NSObject
+@interface wxNSAppController : NSObject wxOSX_10_6_AND_LATER(<NSApplicationDelegate>)
 {
 }
 
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender;
+- (void)applicationWillFinishLaunching:(NSApplication *)sender;
+
 - (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename;
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender;
 - (BOOL)application:(NSApplication *)sender printFile:(NSString *)filename;
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender;
 - (void)handleGetURLEvent:(NSAppleEventDescriptor *)event
-    withReplyEvent:(NSAppleEventDescriptor *)replyEvent;
+           withReplyEvent:(NSAppleEventDescriptor *)replyEvent;
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender;
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender;
+- (void)applicationWillTerminate:(NSApplication *)sender;
 @end
 
 @implementation wxNSAppController
 
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
-{
-    wxUnusedVar(sender);
-    // let wx do this, not cocoa
-    return NO;
+- (void)applicationWillFinishLaunching:(NSApplication *)application {	
+    wxUnusedVar(application);
 }
 
 - (BOOL)application:(NSApplication *)sender openFile:(NSString *)filename;
@@ -106,6 +95,23 @@ void wxMacWakeUp()
     return YES;
 }
 
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag
+{
+    wxUnusedVar(flag);
+    wxUnusedVar(sender);
+    wxTheApp->MacReopenApp() ;
+    return NO;
+}
+
+- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event
+           withReplyEvent:(NSAppleEventDescriptor *)replyEvent
+{
+    wxUnusedVar(replyEvent);
+    NSString* url = [[event descriptorAtIndex:1] stringValue];
+    wxCFStringRef cf(wxCFRetain(url));
+    wxTheApp->MacOpenURL(cf.AsString()) ;
+}
+
 /*
     Allowable return values are:
         NSTerminateNow - it is ok to proceed with termination
@@ -116,41 +122,33 @@ void wxMacWakeUp()
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
 {
     wxUnusedVar(sender);
-    wxWindow* win = wxTheApp->GetTopWindow() ;
-    if ( win )
-    {
-        wxCommandEvent exitEvent(wxEVT_COMMAND_MENU_SELECTED, wxApp::s_macExitMenuItemId);
-        if (!win->GetEventHandler()->ProcessEvent(exitEvent))
-            win->Close(true) ;
-    }
-    else
-    {
-         wxTheApp->ExitMainLoop() ;
-    }
-    return NSTerminateCancel;
+    wxCloseEvent event;
+    wxTheApp->OnQueryEndSession(event);
+    if ( event.GetVeto() )
+        return NSTerminateCancel;
+    
+    return NSTerminateNow;
 }
 
-- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag
+- (void)applicationWillTerminate:(NSApplication *)application {
+    wxUnusedVar(application);
+    wxCloseEvent event;
+    event.SetCanVeto(false);
+    wxTheApp->OnEndSession(event);
+}
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
 {
-    wxUnusedVar(flag);
     wxUnusedVar(sender);
-    wxTheApp->MacReopenApp() ;
+    // let wx do this, not cocoa
     return NO;
 }
 
-- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event
-    withReplyEvent:(NSAppleEventDescriptor *)replyEvent
-{
-    wxUnusedVar(replyEvent);
-    NSString* url = [[event descriptorAtIndex:1] stringValue];
-    wxCFStringRef cf(wxCFRetain(url));
-    wxTheApp->MacOpenURL(cf.AsString()) ;
-}
 @end
 
-/* 
+/*
     allows ShowModal to work when using sheets.
-    see include/wx/osx/cocoa/private.h for more info 
+    see include/wx/osx/cocoa/private.h for more info
 */
 @implementation ModalDialogDelegate
 - (id)init
@@ -158,10 +156,16 @@ void wxMacWakeUp()
     [super init];
     sheetFinished = NO;
     resultCode = -1;
+    impl = 0;
     return self;
 }
 
-- (BOOL)finished 
+- (void)setImplementation: (wxDialog *)dialog
+{
+    impl = dialog;
+}
+
+- (BOOL)finished
 {
     return sheetFinished;
 }
@@ -187,6 +191,9 @@ void wxMacWakeUp()
     // NSAlerts don't need nor respond to orderOut
     if ([sheet respondsToSelector:@selector(orderOut:)])
         [sheet orderOut: self];
+        
+    if (impl)
+        impl->ModalFinishedCallback(sheet, returnCode);
 }
 @end
 
@@ -198,12 +205,17 @@ bool wxApp::DoInitGui()
     if (!sm_isEmbedded)
     {
         wxNSAppController* controller = [[wxNSAppController alloc] init];
-        [[NSApplication sharedApplication] setDelegate:controller];
+        [NSApp setDelegate:controller];
 
         NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
         [appleEventManager setEventHandler:controller andSelector:@selector(handleGetURLEvent:withReplyEvent:)
             forEventClass:kInternetEventClass andEventID:kAEGetURL];
+   
+        // calling finishLaunching so early before running the loop seems to trigger some 'MenuManager compatibility' which leads
+        // to the duplication of menus under 10.5 and a warning under 10.6
+#if 0
         [NSApp finishLaunching];
+#endif
     }
     return true;
 }
@@ -235,6 +247,34 @@ void wxGetMousePosition( int* x, int* y )
     if ( y )
         *y = pt.y;
 };
+
+#if wxOSX_USE_COCOA && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_6
+
+wxMouseState wxGetMouseState()
+{
+    wxMouseState ms;
+    
+    wxPoint pt = wxGetMousePosition();
+    ms.SetX(pt.x);
+    ms.SetY(pt.y);
+    
+    NSUInteger modifiers = [NSEvent modifierFlags];
+    NSUInteger buttons = [NSEvent pressedMouseButtons];
+    
+    ms.SetLeftDown( (buttons & 0x01) != 0 );
+    ms.SetMiddleDown( (buttons & 0x04) != 0 );
+    ms.SetRightDown( (buttons & 0x02) != 0 );
+    
+    ms.SetControlDown(modifiers & NSControlKeyMask);
+    ms.SetShiftDown(modifiers & NSShiftKeyMask);
+    ms.SetAltDown(modifiers & NSAlternateKeyMask);
+    ms.SetMetaDown(modifiers & NSCommandKeyMask);
+    
+    return ms;
+}
+
+
+#endif
 
 wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer *timer)
 {
@@ -300,7 +340,7 @@ wxBitmap wxWindowDCImpl::DoGetAsBitmap(const wxRect *subrect) const
     // called from OnPaint, even with the window's paint dc as source (see wxHTMLWindow)
     NSBitmapImageRep *rep = [[[NSBitmapImageRep alloc] initWithFocusedViewRect: [view bounds]] retain];
     [view unlockFocus];
-    
+
     wxBitmap bitmap(width, height);
     if ( [rep respondsToSelector:@selector(CGImage)] )
     {

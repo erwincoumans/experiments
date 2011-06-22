@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     13.07.99
-// RCS-ID:      $Id: textctrl.h 59263 2009-03-02 12:25:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -214,7 +214,7 @@ enum wxTextAttrFlags
     wxTEXT_ATTR_PARAGRAPH = \
         (wxTEXT_ATTR_ALIGNMENT|wxTEXT_ATTR_LEFT_INDENT|wxTEXT_ATTR_RIGHT_INDENT|wxTEXT_ATTR_TABS|\
             wxTEXT_ATTR_PARA_SPACING_BEFORE|wxTEXT_ATTR_PARA_SPACING_AFTER|wxTEXT_ATTR_LINE_SPACING|\
-            wxTEXT_ATTR_BULLET|wxTEXT_ATTR_PARAGRAPH_STYLE_NAME|wxTEXT_ATTR_LIST_STYLE_NAME|wxTEXT_ATTR_OUTLINE_LEVEL),
+            wxTEXT_ATTR_BULLET|wxTEXT_ATTR_PARAGRAPH_STYLE_NAME|wxTEXT_ATTR_LIST_STYLE_NAME|wxTEXT_ATTR_OUTLINE_LEVEL|wxTEXT_ATTR_PAGE_BREAK),
 
     wxTEXT_ATTR_ALL = (wxTEXT_ATTR_CHARACTER|wxTEXT_ATTR_PARAGRAPH)
 };
@@ -582,11 +582,13 @@ public:
     virtual wxTextCtrlHitTestResult HitTest(const wxPoint& pt,
                                             wxTextCoord *col,
                                             wxTextCoord *row) const;
+    virtual wxString GetValue() const = 0;
+    virtual void SetValue(const wxString& value) = 0;
 
 protected:
     // implementation of loading/saving
-    virtual bool DoLoadFile(const wxString& file, int fileType) = 0;
-    virtual bool DoSaveFile(const wxString& file, int fileType) = 0;
+    virtual bool DoLoadFile(const wxString& file, int fileType);
+    virtual bool DoSaveFile(const wxString& file, int fileType);
 
 
     // the name of the last file loaded with LoadFile() which will be used by
@@ -610,6 +612,16 @@ class WXDLLIMPEXP_CORE wxTextCtrlIface : public wxTextAreaBase,
 {
 public:
     wxTextCtrlIface() { }
+
+    // wxTextAreaBase overrides
+    virtual wxString GetValue() const
+    {
+       return wxTextEntryBase::GetValue();
+    }
+    virtual void SetValue(const wxString& value)
+    {
+       wxTextEntryBase::SetValue(value);
+    }
 
 private:
     wxDECLARE_NO_COPY_CLASS(wxTextCtrlIface);
@@ -653,11 +665,6 @@ public:
     virtual bool EmulateKeyPress(const wxKeyEvent& event);
 
 
-    // generate the wxEVT_COMMAND_TEXT_UPDATED event, like SetValue() does and
-    // return true if the event was processed
-    static bool SendTextUpdatedEvent(wxWindow *win);
-    bool SendTextUpdatedEvent() { return SendTextUpdatedEvent(this); }
-
     // do the window-specific processing after processing the update event
     virtual void DoUpdateWindowUI(wxUpdateUIEvent& event);
 
@@ -683,6 +690,28 @@ public:
     virtual bool GetStyle(long position, wxTextAttr& style);
     virtual bool SetDefaultStyle(const wxTextAttr& style);
 
+    // wxTextAreaBase overrides
+    virtual wxString GetValue() const
+    {
+       return wxTextEntry::GetValue();
+    }
+    virtual void SetValue(const wxString& value)
+    {
+       wxTextEntry::SetValue(value);
+    }
+
+    // wxWindow overrides
+    virtual wxVisualAttributes GetDefaultAttributes() const
+    {
+        return GetClassDefaultAttributes(GetWindowVariant());
+    }
+
+    static wxVisualAttributes
+    GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL)
+    {
+        return GetCompositeControlsDefaultAttributes(variant);
+    }
+
 protected:
     // override streambuf method
 #if wxHAS_TEXT_WINDOW_STREAM
@@ -692,7 +721,6 @@ protected:
     virtual bool DoLoadFile(const wxString& file, int fileType);
     virtual bool DoSaveFile(const wxString& file, int fileType);
 
-private:
     // implement the wxTextEntry pure virtual method
     virtual wxWindow *GetEditableWindow() { return this; }
 

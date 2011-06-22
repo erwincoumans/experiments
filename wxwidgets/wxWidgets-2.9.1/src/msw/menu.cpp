@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin
 // Created:     04/01/98
-// RCS-ID:      $Id: menu.cpp 59764 2009-03-23 12:09:58Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -82,7 +82,7 @@
 // ----------------------------------------------------------------------------
 
 // the (popup) menu title has this special id
-static const UINT idMenuTitle = (UINT)-3;
+static const int idMenuTitle = wxID_NONE;
 
 // ----------------------------------------------------------------------------
 // private functions
@@ -106,7 +106,31 @@ void SetDefaultMenuItem(HMENU WXUNUSED_IN_WINCE(hmenu),
     {
         wxLogLastError(wxT("SetMenuItemInfo"));
     }
-#endif
+#endif // !__WXWINCE__
+}
+
+// make the given menu item owner-drawn
+void SetOwnerDrawnMenuItem(HMENU WXUNUSED_IN_WINCE(hmenu),
+                           UINT WXUNUSED_IN_WINCE(id),
+                           ULONG_PTR WXUNUSED_IN_WINCE(data),
+                           BOOL WXUNUSED_IN_WINCE(byPositon = FALSE))
+{
+#ifndef __WXWINCE__
+    MENUITEMINFO mii;
+    wxZeroMemory(mii);
+    mii.cbSize = sizeof(MENUITEMINFO);
+    mii.fMask = MIIM_FTYPE | MIIM_DATA;
+    mii.fType = MFT_OWNERDRAW;
+    mii.dwItemData = data;
+
+    if ( reinterpret_cast<wxMenuItem*>(data)->IsSeparator() )
+        mii.fType |= MFT_SEPARATOR;
+
+    if ( !::SetMenuItemInfo(hmenu, id, byPositon, &mii) )
+    {
+        wxLogLastError(wxT("SetMenuItemInfo"));
+    }
+#endif // !__WXWINCE__
 }
 
 #ifdef __WXWINCE__
@@ -118,18 +142,17 @@ UINT GetMenuState(HMENU hMenu, UINT id, UINT flags)
     info.fMask = MIIM_STATE;
     // MF_BYCOMMAND is zero so test MF_BYPOSITION
     if ( !::GetMenuItemInfo(hMenu, id, flags & MF_BYPOSITION ? TRUE : FALSE , & info) )
+    {
         wxLogLastError(wxT("GetMenuItemInfo"));
+    }
     return info.fState;
 }
 #endif // __WXWINCE__
 
-bool IsLessThanStdSize(const wxBitmap& bmp)
+inline bool IsGreaterThanStdSize(const wxBitmap& bmp)
 {
-    // FIXME: these +4 are chosen so that 16*16 bitmaps pass this test with
-    //        default SM_CXMENUCHECK value but I have no idea what do we really
-    //        need to use here
-    return bmp.GetWidth() < ::GetSystemMetrics(SM_CXMENUCHECK) + 4 &&
-            bmp.GetHeight() < ::GetSystemMetrics(SM_CYMENUCHECK) + 4;
+    return bmp.GetWidth() > ::GetSystemMetrics(SM_CXMENUCHECK) ||
+            bmp.GetHeight() > ::GetSystemMetrics(SM_CYMENUCHECK);
 }
 
 } // anonymous namespace
@@ -242,6 +265,12 @@ void wxMenu::Init()
     m_doBreak = false;
     m_startRadioGroup = -1;
 
+#if wxUSE_OWNER_DRAWN
+    m_ownerDrawn = false;
+    m_maxBitmapWidth = 0;
+    m_maxAccelWidth = -1;
+#endif // wxUSE_OWNER_DRAWN
+
     // create the menu
     m_hMenu = (WXHMENU)CreatePopupMenu();
     if ( !m_hMenu )
@@ -252,8 +281,9 @@ void wxMenu::Init()
     // if we have a title, insert it in the beginning of the menu
     if ( !m_title.empty() )
     {
-        Append(idMenuTitle, m_title);
-        AppendSeparator();
+        const wxString title = m_title;
+        m_title.clear(); // so that SetTitle() knows there was no title before
+        SetTitle(title);
     }
 }
 
@@ -358,6 +388,8 @@ void wxMenu::UpdateAccel(wxMenuItem *item)
         {
             GetMenuBar()->RebuildAccelTable();
         }
+
+        ResetMaxAccelWidth();
     }
     //else: it is a separator, they can't have accels, nothing to do
 }
@@ -397,8 +429,11 @@ HBITMAP GetHBitmapForMenu(wxMenuItem *pItem, bool checked = true)
                 pItem->SetBitmap(img, checked);
             }
 
-            return GetHbitmapOf(pItem->GetBitmap());
+            return GetHbitmapOf(pItem->GetBitmap(checked));
         }
+        //else: bitmap is not set
+
+        return NULL;
     }
 #endif // wxUSE_IMAGE
 
@@ -465,25 +500,9 @@ bool wxMenu::DoInsertOrAppend(wxMenuItem *pItem, size_t pos)
 #if wxUSE_OWNER_DRAWN
     // Under older systems mixing owner-drawn and non-owner-drawn items results
     // in inconsistent margins, so we force this one to be owner-drawn if any
-    // other items already are. Later we might want to use a boolean in the
-    // wxMenu to avoid search. Also we might make this fix unnecessary by
-    // getting the correct margin using NONCLIENTMETRICS.
-    static const wxWinVersion winver = wxGetWinVersion();
-    if ( winver < wxWinVersion_XP &&
-            !pItem->IsOwnerDrawn() && !pItem->IsSeparator() )
-    {
-        // Check if any other items are ownerdrawn, and make ownerdrawn if so
-        wxMenuItemList::compatibility_iterator node = GetMenuItems().GetFirst();
-        while (node)
-        {
-            if (node->GetData()->IsOwnerDrawn())
-            {
-                pItem->SetOwnerDrawn(true);
-                break;
-            }
-            node = node->GetNext();
-        }
-    }
+    // other items already are.
+    if ( m_ownerDrawn )
+        pItem->SetOwnerDrawn(true);
 #endif // wxUSE_OWNER_DRAWN
 
     // check if we have something more than a simple text item
@@ -491,90 +510,100 @@ bool wxMenu::DoInsertOrAppend(wxMenuItem *pItem, size_t pos)
     if ( pItem->IsOwnerDrawn() )
     {
 #ifndef __DMC__
-        // MIIM_BITMAP only works under WinME/2000+ so we always use owner
-        // drawn item under the previous versions and we also have to use them
-        // in any case if the item has custom colours or font
-        bool mustUseOwnerDrawn = winver < wxWinVersion_98 ||
-                                 pItem->GetTextColour().Ok() ||
-                                 pItem->GetBackgroundColour().Ok() ||
-                                 pItem->GetFont().Ok();
-        if ( !mustUseOwnerDrawn )
+
+        if ( !m_ownerDrawn && !pItem->IsSeparator() )
         {
-            const wxBitmap& bmpUnchecked = pItem->GetBitmap(false),
-                            bmpChecked = pItem->GetBitmap(true);
-            if ( (bmpUnchecked.Ok() && !IsLessThanStdSize(bmpUnchecked)) ||
-                    (bmpChecked.Ok() && !IsLessThanStdSize(bmpChecked)) )
+            // MIIM_BITMAP only works under WinME/2000+ so we always use owner
+            // drawn item under the previous versions and we also have to use
+            // them in any case if the item has custom colours or font
+            static const wxWinVersion winver = wxGetWinVersion();
+            bool mustUseOwnerDrawn = winver < wxWinVersion_98 ||
+                                     pItem->GetTextColour().Ok() ||
+                                     pItem->GetBackgroundColour().Ok() ||
+                                     pItem->GetFont().Ok();
+
+            if ( !mustUseOwnerDrawn )
             {
-                mustUseOwnerDrawn = true;
-            }
-        }
+                const wxBitmap& bmpUnchecked = pItem->GetBitmap(false),
+                                bmpChecked   = pItem->GetBitmap(true);
 
-        // use InsertMenuItem() if possible as it's guaranteed to look correct
-        // while our owner-drawn code is not
-        if ( !mustUseOwnerDrawn )
-        {
-            WinStruct<MENUITEMINFO> mii;
-            mii.fMask = MIIM_STRING | MIIM_DATA;
-
-            if ( pItem->GetBitmap().IsOk() )
-            {
-                mii.fMask |= MIIM_BITMAP;
-                mii.hbmpItem = GetHBitmapForMenu(pItem);
-            }
-
-            if ( pItem->IsCheckable() )
-            {
-                mii.fMask |= MIIM_CHECKMARKS;
-                mii.hbmpChecked = GetHBitmapForMenu(pItem, true);
-                mii.hbmpUnchecked = GetHBitmapForMenu(pItem, false);
-            }
-
-            mii.cch = itemText.length();
-            mii.dwTypeData = const_cast<wxChar *>(itemText.wx_str());
-
-            if ( flags & MF_POPUP )
-            {
-                mii.fMask |= MIIM_SUBMENU;
-                mii.hSubMenu = GetHmenuOf(pItem->GetSubMenu());
-            }
-            else
-            {
-                mii.fMask |= MIIM_ID;
-                mii.wID = id;
-            }
-
-            mii.dwItemData = reinterpret_cast<ULONG_PTR>(pItem);
-
-            ok = ::InsertMenuItem(GetHmenu(), pos, TRUE /* by pos */, &mii);
-            if ( !ok )
-            {
-                wxLogLastError(wxT("InsertMenuItem()"));
-            }
-            else // InsertMenuItem() ok
-            {
-                // we need to remove the extra indent which is reserved for
-                // the checkboxes by default as it looks ugly unless check
-                // boxes are used together with bitmaps and this is not the
-                // case in wx API
-                WinStruct<MENUINFO> mi;
-
-                // don't call SetMenuInfo() directly, this would prevent
-                // the app from starting up under Windows 95/NT 4
-                typedef BOOL (WINAPI *SetMenuInfo_t)(HMENU, MENUINFO *);
-
-                wxDynamicLibrary dllUser(_T("user32"));
-                wxDYNLIB_FUNCTION(SetMenuInfo_t, SetMenuInfo, dllUser);
-                if ( pfnSetMenuInfo )
+                if ( (bmpUnchecked.Ok() && IsGreaterThanStdSize(bmpUnchecked)) ||
+                     (bmpChecked.Ok()   && IsGreaterThanStdSize(bmpChecked)) )
                 {
-                    mi.fMask = MIM_STYLE;
-                    mi.dwStyle = MNS_CHECKORBMP;
-                    if ( !(*pfnSetMenuInfo)(GetHmenu(), &mi) )
-                        wxLogLastError(_T("SetMenuInfo(MNS_NOCHECK)"));
+                    mustUseOwnerDrawn = true;
+                }
+            }
+
+            // use InsertMenuItem() if possible as it's guaranteed to look
+            // correct while our owner-drawn code is not
+            if ( !mustUseOwnerDrawn )
+            {
+                WinStruct<MENUITEMINFO> mii;
+                mii.fMask = MIIM_STRING | MIIM_DATA;
+
+                // don't set hbmpItem for the checkable items as it would
+                // be used for both checked and unchecked state
+                if ( pItem->IsCheckable() )
+                {
+                    mii.fMask |= MIIM_CHECKMARKS;
+                    mii.hbmpChecked = GetHBitmapForMenu(pItem, true);
+                    mii.hbmpUnchecked = GetHBitmapForMenu(pItem, false);
+                }
+                else if ( pItem->GetBitmap().IsOk() )
+                {
+                    mii.fMask |= MIIM_BITMAP;
+                    mii.hbmpItem = GetHBitmapForMenu(pItem);
                 }
 
-                // tell the item that it's not really owner-drawn but only
-                // needs to draw its bitmap, the rest is done by Windows
-                pItem->ResetOwnerDrawn();
+                mii.cch = itemText.length();
+                mii.dwTypeData = const_cast<wxChar *>(itemText.wx_str());
+
+                if ( flags & MF_POPUP )
+                {
+                    mii.fMask |= MIIM_SUBMENU;
+                    mii.hSubMenu = GetHmenuOf(pItem->GetSubMenu());
+                }
+                else
+                {
+                    mii.fMask |= MIIM_ID;
+                    mii.wID = id;
+                }
+
+                mii.dwItemData = reinterpret_cast<ULONG_PTR>(pItem);
+
+                ok = ::InsertMenuItem(GetHmenu(), pos, TRUE /* by pos */, &mii);
+                if ( !ok )
+                {
+                    wxLogLastError(wxT("InsertMenuItem()"));
+                }
+                else // InsertMenuItem() ok
+                {
+                    // we need to remove the extra indent which is reserved for
+                    // the checkboxes by default as it looks ugly unless check
+                    // boxes are used together with bitmaps and this is not the
+                    // case in wx API
+                    WinStruct<MENUINFO> mi;
+
+                    // don't call SetMenuInfo() directly, this would prevent
+                    // the app from starting up under Windows 95/NT 4
+                    typedef BOOL (WINAPI *SetMenuInfo_t)(HMENU, MENUINFO *);
+
+                    wxDynamicLibrary dllUser(wxT("user32"));
+                    wxDYNLIB_FUNCTION(SetMenuInfo_t, SetMenuInfo, dllUser);
+                    if ( pfnSetMenuInfo )
+                    {
+                        mi.fMask = MIM_STYLE;
+                        mi.dwStyle = MNS_CHECKORBMP;
+                        if ( !(*pfnSetMenuInfo)(GetHmenu(), &mi) )
+                        {
+                            wxLogLastError(wxT("SetMenuInfo(MNS_NOCHECK)"));
+                        }
+                    }
+
+                    // tell the item that it's not really owner-drawn but only
+                    // needs to draw its bitmap, the rest is done by Windows
+                    pItem->SetOwnerDrawn(false);
+                }
             }
         }
 #endif // __DMC__
@@ -584,6 +613,60 @@ bool wxMenu::DoInsertOrAppend(wxMenuItem *pItem, size_t pos)
             // item draws itself, pass pointer to it in data parameter
             flags |= MF_OWNERDRAW;
             pData = (LPCTSTR)pItem;
+
+            bool updateAllMargins = false;
+
+            // get size of bitmap always return valid value (0 for invalid bitmap),
+            // so we don't needed check if bitmap is valid ;)
+            int uncheckedW = pItem->GetBitmap(false).GetWidth();
+            int checkedW   = pItem->GetBitmap(true).GetWidth();
+
+            if ( m_maxBitmapWidth < uncheckedW )
+            {
+                m_maxBitmapWidth = uncheckedW;
+                updateAllMargins = true;
+            }
+
+            if ( m_maxBitmapWidth < checkedW )
+            {
+                m_maxBitmapWidth = checkedW;
+                updateAllMargins = true;
+            }
+
+            // make other item ownerdrawn and update margin width for equals alignment
+            if ( !m_ownerDrawn || updateAllMargins )
+            {
+                // we must use position in SetOwnerDrawnMenuItem because
+                // all separators have the same id
+                int pos = 0;
+                wxMenuItemList::compatibility_iterator node = GetMenuItems().GetFirst();
+                while (node)
+                {
+                    wxMenuItem* item = node->GetData();
+
+                    if ( !item->IsOwnerDrawn())
+                    {
+                        item->SetOwnerDrawn(true);
+                        SetOwnerDrawnMenuItem(GetHmenu(), pos,
+                                              reinterpret_cast<ULONG_PTR>(item), TRUE);
+                    }
+
+                    item->SetMarginWidth(m_maxBitmapWidth);
+
+                    node = node->GetNext();
+                    pos++;
+                }
+
+                // set menu as ownerdrawn
+                m_ownerDrawn = true;
+
+                ResetMaxAccelWidth();
+            }
+            // only update our margin for equals alignment to other item
+            else if ( !updateAllMargins )
+            {
+                pItem->SetMarginWidth(m_maxBitmapWidth);
+            }
         }
     }
     else
@@ -612,7 +695,7 @@ bool wxMenu::DoInsertOrAppend(wxMenuItem *pItem, size_t pos)
 
 
     // if we just appended the title, highlight it
-    if ( id == idMenuTitle )
+    if ( id == (UINT_PTR)idMenuTitle )
     {
         // visually select the menu title
         SetDefaultMenuItem(GetHmenu(), id);
@@ -635,7 +718,7 @@ void wxMenu::EndRadioGroup()
 
 wxMenuItem* wxMenu::DoAppend(wxMenuItem *item)
 {
-    wxCHECK_MSG( item, NULL, _T("NULL item in wxMenu::DoAppend") );
+    wxCHECK_MSG( item, NULL, wxT("NULL item in wxMenu::DoAppend") );
 
     bool check = false;
 
@@ -667,7 +750,7 @@ wxMenuItem* wxMenu::DoAppend(wxMenuItem *item)
             }
             else
             {
-                wxFAIL_MSG( _T("where is the radio group start item?") );
+                wxFAIL_MSG( wxT("where is the radio group start item?") );
             }
         }
     }
@@ -722,6 +805,8 @@ wxMenuItem *wxMenu::DoRemove(wxMenuItem *item)
         delete m_accels[n];
 
         m_accels.RemoveAt(n);
+
+        ResetMaxAccelWidth();
     }
     //else: this item doesn't have an accel, nothing to do
 #endif // wxUSE_ACCEL
@@ -773,6 +858,34 @@ wxAcceleratorTable *wxMenu::CreateAccelTable() const
 #endif // wxUSE_ACCEL
 
 // ---------------------------------------------------------------------------
+// ownerdrawn helpers
+// ---------------------------------------------------------------------------
+
+#if wxUSE_OWNER_DRAWN
+
+void wxMenu::CalculateMaxAccelWidth()
+{
+    wxASSERT_MSG( m_maxAccelWidth == -1, wxT("it's really needed?") );
+
+    wxMenuItemList::compatibility_iterator node = GetMenuItems().GetFirst();
+    while (node)
+    {
+        wxMenuItem* item = node->GetData();
+
+        if ( item->IsOwnerDrawn() )
+        {
+            int width = item->MeasureAccelWidth();
+            if (width > m_maxAccelWidth )
+                m_maxAccelWidth = width;
+        }
+
+        node = node->GetNext();
+    }
+}
+
+#endif // wxUSE_OWNER_DRAWN
+
+// ---------------------------------------------------------------------------
 // set wxMenu title
 // ---------------------------------------------------------------------------
 
@@ -788,7 +901,7 @@ void wxMenu::SetTitle(const wxString& label)
         if ( !label.empty() )
         {
             if ( !::InsertMenu(hMenu, 0u, MF_BYPOSITION | MF_STRING,
-                               idMenuTitle, m_title.wx_str()) ||
+                               (UINT_PTR)idMenuTitle, m_title.wx_str()) ||
                  !::InsertMenu(hMenu, 1u, MF_BYPOSITION, (unsigned)-1, NULL) )
             {
                 wxLogLastError(wxT("InsertMenu"));
@@ -824,7 +937,7 @@ void wxMenu::SetTitle(const wxString& label)
 #else
             if ( !ModifyMenu(hMenu, 0u,
                              MF_BYPOSITION | MF_STRING,
-                             idMenuTitle, m_title.wx_str()) )
+                             (UINT_PTR)idMenuTitle, m_title.wx_str()) )
             {
                 wxLogLastError(wxT("ModifyMenu"));
             }
@@ -836,7 +949,7 @@ void wxMenu::SetTitle(const wxString& label)
     // put the title string in bold face
     if ( !m_title.empty() )
     {
-        SetDefaultMenuItem(GetHmenu(), idMenuTitle);
+        SetDefaultMenuItem(GetHmenu(), (UINT_PTR)idMenuTitle);
     }
 #endif // Win32
 }
@@ -850,7 +963,7 @@ bool wxMenu::MSWCommand(WXUINT WXUNUSED(param), WXWORD id_)
     const int id = (signed short)id_;
 
     // ignore commands from the menu title
-    if ( id != (int)idMenuTitle )
+    if ( id != idMenuTitle )
     {
         // update the check item when it's clicked
         wxMenuItem * const item = FindItem(id);
@@ -864,20 +977,6 @@ bool wxMenu::MSWCommand(WXUINT WXUNUSED(param), WXWORD id_)
     }
 
     return true;
-}
-
-// ---------------------------------------------------------------------------
-// other
-// ---------------------------------------------------------------------------
-
-wxWindow *wxMenu::GetWindow() const
-{
-    if ( m_invokingWindow != NULL )
-        return m_invokingWindow;
-    else if ( GetMenuBar() != NULL)
-        return GetMenuBar()->GetFrame();
-
-    return NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -1446,9 +1545,13 @@ bool wxMenuBar::AddAdornments(long style)
     if (style & wxCLOSE_BOX)
     {
         if (!CommandBar_AddAdornments((HWND) m_commandBar, 0, 0))
+        {
             wxLogLastError(wxT("CommandBar_AddAdornments"));
+        }
         else
+        {
             return true;
+        }
     }
     return false;
 }

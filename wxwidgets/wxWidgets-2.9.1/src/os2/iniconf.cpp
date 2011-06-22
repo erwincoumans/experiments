@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/09/99
-// RCS-ID:      $Id: iniconf.cpp 49836 2007-11-11 22:29:50Z SN $
+// RCS-ID:      $Id$
 // Copyright:   David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -372,7 +372,9 @@ bool wxIniConfig::Write(const wxString& szKey, const wxString& WXUNUSED(szValue)
 //                                       szValue, m_strLocalFilename) != 0;
 
     if ( !bOk )
+    {
         wxLogLastError(wxT("WritePrivateProfileString"));
+    }
 
     return bOk;
 }
@@ -417,7 +419,9 @@ bool wxIniConfig::DeleteEntry(const wxString& szKey, bool bGroupIfEmptyAlso)
                       //                             NULL, m_strLocalFilename) != 0;
 
     if ( !bOk )
+    {
         wxLogLastError(wxT("WritePrivateProfileString"));
+    }
 
     return bOk;
 }
@@ -432,7 +436,9 @@ bool wxIniConfig::DeleteGroup(const wxString& szKey)
                     //                             NULL, m_strLocalFilename) != 0;
 
   if ( !bOk )
+  {
     wxLogLastError(wxT("WritePrivateProfileString"));
+  }
 
   return bOk;
 }

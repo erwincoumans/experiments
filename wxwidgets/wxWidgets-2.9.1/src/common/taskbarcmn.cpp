@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/04/2003
-// RCS-ID:      $Id: taskbarcmn.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart, 2003
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////
@@ -18,6 +18,8 @@
 
 #if wxUSE_TASKBARICON
 
+#include "wx/taskbar.h"
+
 #ifndef WX_PRECOMP
     #include "wx/app.h"
     #include "wx/list.h"
@@ -28,8 +30,6 @@ extern WXDLLIMPEXP_DATA_CORE(wxList) wxPendingDelete;
 
 // DLL options compatibility check:
 WX_CHECK_BUILD_OPTIONS("wxAdvanced")
-
-#include "wx/taskbar.h"
 
 wxDEFINE_EVENT( wxEVT_TASKBAR_MOVE, wxTaskBarIconEvent );
 wxDEFINE_EVENT( wxEVT_TASKBAR_LEFT_DOWN, wxTaskBarIconEvent );

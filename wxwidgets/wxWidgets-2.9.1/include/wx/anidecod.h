@@ -2,7 +2,7 @@
 // Name:        wx/anidecod.h
 // Purpose:     wxANIDecoder, ANI reader for wxImage and wxAnimation
 // Author:      Francesco Montorsi
-// CVS-ID:      $Id: anidecod.h 58757 2009-02-08 11:45:59Z VZ $
+// CVS-ID:      $Id$
 // Copyright:   (c) 2006 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +44,7 @@ public:
     virtual wxColour GetTransparentColour(unsigned int frame) const;
 
     // implementation of wxAnimationDecoder's pure virtuals
-    virtual bool CanRead( wxInputStream& stream ) const;
+
     virtual bool Load( wxInputStream& stream );
 
     bool ConvertToImage(unsigned int frame, wxImage *image) const;
@@ -55,6 +55,10 @@ public:
         { return wxANIMATION_TYPE_ANI; }
 
 private:
+    // wxAnimationDecoder pure virtual:
+    virtual bool DoCanRead( wxInputStream& stream ) const;
+            // modifies current stream position (see wxAnimationDecoder::CanRead)
+
     // frames stored as wxImage(s): ANI files are meant to be used mostly for animated
     // cursors and thus they do not use any optimization to encode differences between
     // two frames: they are just a list of images to display sequentially.

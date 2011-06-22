@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: statbox.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +44,7 @@ class WXDLLIMPEXP_CORE wxStaticBox: public wxControl
     virtual void ProcessCommand(wxCommandEvent& WXUNUSED(event)) {};
 
     virtual void GetBordersForSizer(int *borderTop, int *borderOther) const;
-    
+
     virtual bool AcceptsFocus() const { return false; }
 
     // protect native font of box

@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: dcmemory.cpp 51054 2008-01-06 22:37:10Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -29,25 +29,25 @@ IMPLEMENT_ABSTRACT_CLASS(wxMemoryDCImpl, wxPMDCImpl)
 // Memory DC
 /////////////////////////////////////////////////////////////////////////////
 
-wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner ) 
+wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner )
         : wxPMDCImpl( owner )
 {
-    CreateCompatible(NULL); 
-    Init(); 
+    CreateCompatible(NULL);
+    Init();
 }
 
-wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxBitmap& bitmap ) 
-        : wxPMDCImpl( owner ) 
-{ 
-    CreateCompatible(NULL); 
-    Init(); 
+wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxBitmap& bitmap )
+        : wxPMDCImpl( owner )
+{
+    CreateCompatible(NULL);
+    Init();
     DoSelect(bitmap);
 }
 
 wxMemoryDCImpl::wxMemoryDCImpl( wxMemoryDC *owner, wxDC *pOldDC)
-        : wxPMDCImpl( owner ) 
+        : wxPMDCImpl( owner )
 {
-    wxCHECK_RET( pOldDC, _T("NULL dc in wxMemoryDC ctor") );
+    wxCHECK_RET( pOldDC, wxT("NULL dc in wxMemoryDC ctor") );
 
     CreateCompatible(pOldDC);
     Init();

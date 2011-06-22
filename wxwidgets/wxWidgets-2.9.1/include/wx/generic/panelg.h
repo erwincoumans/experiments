@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: panelg.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -70,14 +70,25 @@ public:
     // implementation from now on
     // --------------------------
 
-        // calls layout for layout constraints and sizers
-    void OnSize(wxSizeEvent& event);
-
     virtual void InitDialog();
 
 #ifdef __WXUNIVERSAL__
     virtual bool IsCanvasWindow() const { return true; }
 #endif
+
+#ifdef __WXMSW__
+    // This is a hack to support inheriting of background through child
+    // wxPanel: at least wxNotebook needs this under wxMSW as its background
+    // should apply to its children which are usually wxPanels which normally
+    // don't have a transparent background. Calling this function allows to
+    // change this for the panels which are used as notebook pages.
+    void MSWSetTransparentBackground(bool isTransparent = true)
+    {
+        m_isTransparent = isTransparent;
+    }
+
+    virtual bool HasTransparentBackground() { return m_isTransparent; }
+#endif // __WXMSW__
 
     WX_DECLARE_CONTROL_CONTAINER();
 
@@ -87,6 +98,11 @@ protected:
 
     // choose the default border for this window
     virtual wxBorder GetDefaultBorder() const { return wxWindowBase::GetDefaultBorder(); }
+
+private:
+#ifdef __WXMSW__
+    bool m_isTransparent;
+#endif // __WXMSW__
 
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxPanel)
     DECLARE_EVENT_TABLE()

@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     ??/??/98
-// RCS-ID:      $Id: statbox.cpp 39615 2006-06-07 13:26:00Z ABX $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: dc.cpp 57907 2009-01-08 14:21:53Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -2160,10 +2160,10 @@ void wxPMDCImpl::DoGetTextExtent(
     //
     if (!m_hPS)
     {
-	(void)wxMessageBox( _T("wxWidgets core library")
-			    ,"Using uninitialized DC for measuring text!\n"
-			    ,wxICON_INFORMATION
-			    );
+    (void)wxMessageBox( wxT("wxWidgets core library")
+                ,"Using uninitialized DC for measuring text!\n"
+                ,wxICON_INFORMATION
+                );
     }
 
     bRc = ::GpiQueryTextBox( m_hPS
@@ -2177,8 +2177,8 @@ void wxPMDCImpl::DoGetTextExtent(
        vErrorCode = ::WinGetLastError(wxGetInstance());
        sError = wxPMErrorToStr(vErrorCode);
        // DEBUG
-       wxSprintf(zMsg, _T("GpiQueryTextBox for %s: failed with Error: %lx - %s"), rsString.c_str(), vErrorCode, sError.c_str());
-       (void)wxMessageBox( _T("wxWidgets core library")
+       wxSprintf(zMsg, wxT("GpiQueryTextBox for %s: failed with Error: %lx - %s"), rsString.c_str(), vErrorCode, sError.c_str());
+       (void)wxMessageBox( wxT("wxWidgets core library")
                           ,zMsg
                           ,wxICON_INFORMATION
                          );

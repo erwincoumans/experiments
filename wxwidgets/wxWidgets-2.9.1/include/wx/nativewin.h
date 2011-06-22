@@ -3,7 +3,7 @@
 // Purpose:     classes allowing to wrap a native window handle
 // Author:      Vadim Zeitlin
 // Created:     2008-03-05
-// RCS-ID:      $Id: nativewin.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,6 +145,9 @@ public:
         return false;
     }
 
+#ifdef __WXMSW__
+    virtual bool IsShown() const;
+#endif // __WXMSW__
 
     // this is an implementation detail: called when the native window is
     // destroyed by an outside agency; deletes the C++ object too but can in

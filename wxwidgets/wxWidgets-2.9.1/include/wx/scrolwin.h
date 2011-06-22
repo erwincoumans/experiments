@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/scrolwin.h
+// Name:        wx/scrolwin.h
 // Purpose:     wxScrolledWindow, wxScrolledControl and wxScrollHelper
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     30.08.00
-// RCS-ID:      $Id: scrolwin.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -107,6 +107,17 @@ public:
     // Clear() is necessary. Disable for when the scroll increment is used to
     // actually scroll a non-constant distance
     virtual void EnableScrolling(bool x_scrolling, bool y_scrolling);
+
+    // Disable use of keyboard keys for scrolling. By default cursor movement
+    // keys (including Home, End, Page Up and Down) are used to scroll the
+    // window appropriately. If the derived class uses these keys for something
+    // else, e.g. changing the currently selected item, this function can be
+    // used to disable this behaviour as it's not only not necessary then but
+    // can actually be actively harmful if another object forwards a keyboard
+    // event corresponding to one of the above keys to us using
+    // ProcessWindowEvent() because the event will always be processed which
+    // can be undesirable.
+    void DisableKeyboardScrolling() { m_kbdScrollingEnabled = false; }
 
     // Get the view start
     void GetViewStart(int *x, int *y) const { DoGetViewStart(x, y); }
@@ -284,6 +295,8 @@ protected:
     bool                  m_xScrollingEnabled;
     bool                  m_yScrollingEnabled;
 
+    bool                  m_kbdScrollingEnabled;
+
 #if wxUSE_MOUSEWHEEL
     int m_wheelRotation;
 #endif // wxUSE_MOUSEWHEEL
@@ -333,9 +346,9 @@ struct WXDLLIMPEXP_CORE wxScrolledT_Helper
 // but wxScrolledWindow includes wxControlContainer functionality and that's
 // not always desirable.
 template<class T>
-class WXDLLIMPEXP_CORE wxScrolled : public T,
-                                    public wxScrollHelper,
-                                    private wxScrolledT_Helper
+class wxScrolled : public T,
+                   public wxScrollHelper,
+                   private wxScrolledT_Helper
 {
 public:
     wxScrolled() : wxScrollHelper(this) { }
@@ -404,16 +417,17 @@ private:
 
     // VC++ 6 gives warning for the declaration of template member function
     // without definition
-#if !defined(__VISUALC__) || wxCHECK_VISUALC_VERSION(7)
+#ifndef __VISUALC6__
     wxDECLARE_NO_COPY_CLASS(wxScrolled);
 #endif
 };
 
-// VC++ <= 6 requires this; it's unlikely any other specializations would
-// be needed by user code _and_ they were using VC6, so we list only wxWindow
-// (typical use) and wxPanel (wxScrolledWindow use) specializations here
-WXDLLIMPEXP_TEMPLATE_INSTANCE_CORE( wxScrolled<wxPanel> )
-WXDLLIMPEXP_TEMPLATE_INSTANCE_CORE( wxScrolled<wxWindow> )
+#ifdef __VISUALC6__
+    // disable the warning about non dll-interface class used as base for
+    // dll-interface class: it's harmless in this case
+    #pragma warning(push)
+    #pragma warning(disable:4275)
+#endif
 
 // for compatibility with existing code, we provide wxScrolledWindow
 // "typedef" for wxScrolled<wxPanel>. It's not a real typedef because we
@@ -435,5 +449,9 @@ public:
 };
 
 typedef wxScrolled<wxWindow> wxScrolledCanvas;
+
+#ifdef __VISUALC6__
+    #pragma warning(pop)
+#endif
 
 #endif // _WX_SCROLWIN_H_BASE_

@@ -2,7 +2,7 @@
 // Name:        src/common/imagxpm.cpp
 // Purpose:     wxXPMHandler
 // Author:      Vaclav Slavik, Robert Roebling
-// RCS-ID:      $Id: imagxpm.cpp 57873 2009-01-07 01:47:47Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -218,6 +218,7 @@ bool wxXPMHandler::DoCanRead(wxInputStream& stream)
 {
     wxXPMDecoder decoder;
     return decoder.CanRead(stream);
+         // it's ok to modify the stream position here
 }
 
 #endif  // wxUSE_STREAMS

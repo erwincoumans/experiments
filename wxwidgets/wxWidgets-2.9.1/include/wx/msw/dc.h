@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dc.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -215,7 +215,7 @@ public:
 
     virtual bool DoBlit(wxCoord xdest, wxCoord ydest, wxCoord width, wxCoord height,
                         wxDC *source, wxCoord xsrc, wxCoord ysrc,
-                        wxRasterOperationMode rop = wxCOPY, bool useMask = false, 
+                        wxRasterOperationMode rop = wxCOPY, bool useMask = false,
                         wxCoord xsrcMask = wxDefaultCoord, wxCoord ysrcMask = wxDefaultCoord);
 
     virtual bool DoStretchBlit(wxCoord xdest, wxCoord ydest,
@@ -338,7 +338,7 @@ public:
     virtual void DoGetSize(int *w, int *h) const
     {
         wxASSERT_MSG( m_size.IsFullySpecified(),
-                      _T("size of this DC hadn't been set and is unknown") );
+                      wxT("size of this DC hadn't been set and is unknown") );
 
         if ( w )
             *w = m_size.x;

@@ -3,7 +3,7 @@
 // Purpose:     wxIconBundle
 // Author:      Mattia Barbon, Vadim Zeitlin
 // Created:     23.03.2002
-// RCS-ID:      $Id: iconbndl.cpp 59929 2009-03-29 21:19:40Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Mattia barbon
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,6 +25,8 @@
     #include "wx/image.h"
     #include "wx/stream.h"
 #endif
+
+#include "wx/wfstream.h"
 
 #include "wx/arrimpl.cpp"
 WX_DEFINE_OBJARRAY(wxIconArray)
@@ -55,19 +57,22 @@ wxIconBundle::wxIconBundle()
 {
 }
 
+#if wxUSE_STREAMS && wxUSE_IMAGE
+
+#if wxUSE_FFILE || wxUSE_FILE
 wxIconBundle::wxIconBundle(const wxString& file, wxBitmapType type)
             : wxGDIObject()
 {
     AddIcon(file, type);
 }
+#endif // wxUSE_FFILE || wxUSE_FILE
 
-#if wxUSE_STREAMS
 wxIconBundle::wxIconBundle(wxInputStream& stream, wxBitmapType type)
             : wxGDIObject()
 {
     AddIcon(stream, type);
 }
-#endif // wxUSE_STREAMS
+#endif // wxUSE_STREAMS && wxUSE_IMAGE
 
 wxIconBundle::wxIconBundle(const wxIcon& icon)
             : wxGDIObject()
@@ -90,40 +95,56 @@ void wxIconBundle::DeleteIcons()
     UnRef();
 }
 
+#if wxUSE_STREAMS && wxUSE_IMAGE
+
 namespace
 {
 
 // Adds icon from 'input' to the bundle. Shows 'errorMessage' on failure
 // (it must contain "%d", because it is used to report # of image in the file
 // that failed to load):
-template<typename T>
 void DoAddIcon(wxIconBundle& bundle,
-               T& input, wxBitmapType type,
+               wxInputStream& input,
+               wxBitmapType type,
                const wxString& errorMessage)
 {
-#if wxUSE_IMAGE && (!defined(__WXMSW__) || wxUSE_WXDIB)
     wxImage image;
+
+    const wxFileOffset posOrig = input.TellI();
 
     const size_t count = wxImage::GetImageCount(input, type);
     for ( size_t i = 0; i < count; ++i )
     {
+        if ( i )
+        {
+            // the call to LoadFile() for the first sub-image updated the
+            // stream position but we need to start reading the subsequent
+            // sub-image at the image beginning too
+            input.SeekI(posOrig);
+        }
+
         if ( !image.LoadFile(input, type, i) )
         {
             wxLogError(errorMessage, i);
             continue;
         }
 
+        if ( type == wxBITMAP_TYPE_ANY )
+        {
+            // store the type so that we don't need to try all handlers again
+            // for the subsequent images, they should all be of the same type
+            type = image.GetType();
+        }
+
         wxIcon tmp;
         tmp.CopyFromBitmap(wxBitmap(image));
         bundle.AddIcon(tmp);
     }
-#else // !wxUSE_IMAGE
-    wxUnusedVar(input);
-    wxUnusedVar(type);
-#endif // wxUSE_IMAGE/!wxUSE_IMAGE
 }
 
 } // anonymous namespace
+
+#if wxUSE_FFILE || wxUSE_FILE
 
 void wxIconBundle::AddIcon(const wxString& file, wxBitmapType type)
 {
@@ -140,20 +161,27 @@ void wxIconBundle::AddIcon(const wxString& file, wxBitmapType type)
     }
 #endif // __WXMAC__
 
+#if wxUSE_FFILE
+    wxFFileInputStream stream(file);
+#elif wxUSE_FILE
+    wxFileInputStream stream(file);
+#endif
     DoAddIcon
     (
         *this,
-        file, type,
+        stream, type,
         wxString::Format(_("Failed to load image %%d from file '%s'."), file)
     );
 }
 
-#if wxUSE_STREAMS
+#endif // wxUSE_FFILE || wxUSE_FILE
+
 void wxIconBundle::AddIcon(wxInputStream& stream, wxBitmapType type)
 {
     DoAddIcon(*this, stream, type, _("Failed to load image %d from stream."));
 }
-#endif // wxUSE_STREAMS
+
+#endif // wxUSE_STREAMS && wxUSE_IMAGE
 
 wxIcon wxIconBundle::GetIcon(const wxSize& size) const
 {
@@ -218,7 +246,7 @@ wxIcon wxIconBundle::GetIconOfExactSize(const wxSize& size) const
 
 void wxIconBundle::AddIcon(const wxIcon& icon)
 {
-    wxCHECK_RET( icon.IsOk(), _T("invalid icon") );
+    wxCHECK_RET( icon.IsOk(), wxT("invalid icon") );
 
     AllocExclusive();
 
@@ -249,7 +277,7 @@ size_t wxIconBundle::GetIconCount() const
 
 wxIcon wxIconBundle::GetIconByIndex(size_t n) const
 {
-    wxCHECK_MSG( n < GetIconCount(), wxNullIcon, _T("invalid index") );
+    wxCHECK_MSG( n < GetIconCount(), wxNullIcon, wxT("invalid index") );
 
     return M_ICONBUNDLEDATA->m_icons[n];
 }

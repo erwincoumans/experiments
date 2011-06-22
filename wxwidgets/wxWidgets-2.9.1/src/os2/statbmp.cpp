@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     11/27/99
-// RCS-ID:      $Id: statbmp.cpp 39085 2006-05-06 21:51:49Z ABX $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -43,7 +43,7 @@ static wxGDIImage* ConvertImage(
     if(!bIsIcon )
     {
         wxASSERT_MSG( wxDynamicCast(&rBitmap, wxBitmap),
-                      _T("not an icon and not a bitmap?") );
+                      wxT("not an icon and not a bitmap?") );
 
         const wxBitmap&             rBmp = (const wxBitmap&)rBitmap;
         wxMask*                     pMask = rBmp.GetMask();
@@ -141,9 +141,7 @@ bool wxStaticBitmap::ImageIsOk() const
 
 void wxStaticBitmap::Free()
 {
-    if (m_pImage)
-        delete m_pImage;
-    m_pImage = NULL;
+    wxDELETE(m_pImage);
 } // end of wxStaticBitmap::Free
 
 wxSize wxStaticBitmap::DoGetBestSize() const

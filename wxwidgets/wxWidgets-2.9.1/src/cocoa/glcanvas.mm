@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/09/29
-// RCS-ID:      $Id: glcanvas.mm 45388 2007-04-10 17:38:55Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

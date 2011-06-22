@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by: JS Lair (99/11/15) adding the cyclic group notion for radiobox
 // Created:     01/01/98
-// RCS-ID:      $Id: radiobut.cpp 60007 2009-04-04 09:05:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,14 +16,14 @@
 #include "wx/radiobut.h"
 #include "wx/osx/private.h"
 
-wxWidgetImplType* wxWidgetImpl::CreateRadioButton( wxWindowMac* wxpeer, 
-                                    wxWindowMac* parent, 
-                                    wxWindowID WXUNUSED(id), 
+wxWidgetImplType* wxWidgetImpl::CreateRadioButton( wxWindowMac* wxpeer,
+                                    wxWindowMac* parent,
+                                    wxWindowID WXUNUSED(id),
                                     const wxString& WXUNUSED(label),
-                                    const wxPoint& pos, 
+                                    const wxPoint& pos,
                                     const wxSize& size,
-                                    long WXUNUSED(style), 
-                                    long WXUNUSED(extraStyle)) 
+                                    long WXUNUSED(style),
+                                    long WXUNUSED(extraStyle))
 {
     Rect bounds = wxMacGetBoundsForControl( wxpeer , pos , size ) ;
     wxMacControl* peer = new wxMacControl(wxpeer) ;

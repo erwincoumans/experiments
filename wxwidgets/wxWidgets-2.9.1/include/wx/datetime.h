@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.02.99
-// RCS-ID:      $Id: datetime.h 60103 2009-04-12 04:03:18Z RD $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -128,8 +128,8 @@ WXDLLIMPEXP_BASE struct tm *wxGmtime_r(const time_t*, struct tm*);
 // wxInvalidDateTime)
 class WXDLLIMPEXP_FWD_BASE wxDateTime;
 
-extern WXDLLIMPEXP_DATA_BASE(const char *) wxDefaultDateTimeFormat;
-extern WXDLLIMPEXP_DATA_BASE(const char *) wxDefaultTimeSpanFormat;
+extern WXDLLIMPEXP_DATA_BASE(const char) wxDefaultDateTimeFormat[];
+extern WXDLLIMPEXP_DATA_BASE(const char) wxDefaultTimeSpanFormat[];
 extern WXDLLIMPEXP_DATA_BASE(const wxDateTime) wxDefaultDateTime;
 
 #define wxInvalidDateTime wxDefaultDateTime
@@ -139,11 +139,12 @@ extern WXDLLIMPEXP_DATA_BASE(const wxDateTime) wxDefaultDateTime;
 // conditional compilation
 // ----------------------------------------------------------------------------
 
-// everyone has strftime except Win CE unless VC8 is used
-#if !defined(__WXWINCE__) || defined(__VISUALC8__)
-    #ifndef HAVE_STRFTIME
-        #define HAVE_STRFTIME
-    #endif
+// if configure detected strftime(), we have it too
+#ifdef HAVE_STRFTIME
+    #define wxHAS_STRFTIME
+// suppose everyone else has strftime except Win CE unless VC8 is used
+#elif !defined(__WXWINCE__) || defined(__VISUALC8__)
+    #define wxHAS_STRFTIME
 #endif
 
 // ----------------------------------------------------------------------------
@@ -246,7 +247,7 @@ public:
         // adoption of the Gregorian calendar (see IsGregorian())
         //
         // All data and comments taken verbatim from "The Calendar FAQ (v 2.0)"
-        // by Claus T�ndering, http://www.pip.dknet.dk/~c-t/calendar.html
+        // by Claus Tøndering, http://www.pip.dknet.dk/~c-t/calendar.html
         // except for the comments "we take".
         //
         // Symbol "->" should be read as "was followed by" in the comments
@@ -946,12 +947,15 @@ public:
     // SYSTEMTIME format
     // ------------------------------------------------------------------------
 #ifdef __WXMSW__
-
     // convert SYSTEMTIME to wxDateTime
-    wxDateTime& SetFromMSWSysTime(const struct _SYSTEMTIME&);
+    wxDateTime& SetFromMSWSysTime(const struct _SYSTEMTIME& st);
 
     // convert wxDateTime to SYSTEMTIME
-    void GetAsMSWSysTime(struct _SYSTEMTIME*) const;
+    void GetAsMSWSysTime(struct _SYSTEMTIME* st) const;
+
+    // same as above but only take date part into account, time is always zero
+    wxDateTime& SetFromMSWSysDate(const struct _SYSTEMTIME& st);
+    void GetAsMSWSysDate(struct _SYSTEMTIME* st) const;
 #endif // __WXMSW__
 
     // comparison (see also functions below for operator versions)
@@ -984,37 +988,37 @@ public:
 
     inline bool operator<(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() < dt.GetValue();
     }
 
     inline bool operator<=(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() <= dt.GetValue();
     }
 
     inline bool operator>(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() > dt.GetValue();
     }
 
     inline bool operator>=(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() >= dt.GetValue();
     }
 
     inline bool operator==(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() == dt.GetValue();
     }
 
     inline bool operator!=(const wxDateTime& dt) const
     {
-        wxASSERT_MSG( IsValid() && dt.IsValid(), _T("invalid wxDateTime") );
+        wxASSERT_MSG( IsValid() && dt.IsValid(), wxT("invalid wxDateTime") );
         return GetValue() != dt.GetValue();
     }
 
@@ -1721,7 +1725,9 @@ protected:
 
 inline bool wxDateTime::IsInStdRange() const
 {
-    return m_time >= 0l && (m_time / TIME_T_FACTOR) < LONG_MAX;
+    // currently we don't know what is the real type of time_t so prefer to err
+    // on the safe side and limit it to 32 bit values which is safe everywhere
+    return m_time >= 0l && (m_time / TIME_T_FACTOR) < wxINT32_MAX;
 }
 
 /* static */
@@ -1781,7 +1787,7 @@ inline wxDateTime::wxDateTime(double jdn)
 
 inline wxDateTime& wxDateTime::Set(const Tm& tm)
 {
-    wxASSERT_MSG( tm.IsValid(), _T("invalid broken down date/time") );
+    wxASSERT_MSG( tm.IsValid(), wxT("invalid broken down date/time") );
 
     return Set(tm.mday, (Month)tm.mon, tm.year,
                tm.hour, tm.min, tm.sec, tm.msec);
@@ -1812,14 +1818,14 @@ inline wxDateTime::wxDateTime(wxDateTime_t day,
 
 inline wxLongLong wxDateTime::GetValue() const
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
 
     return m_time;
 }
 
 inline time_t wxDateTime::GetTicks() const
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
     if ( !IsInStdRange() )
     {
         return (time_t)-1;
@@ -1887,21 +1893,21 @@ inline wxDateTime wxDateTime::GetYearDay(wxDateTime_t yday) const
 
 inline bool wxDateTime::IsEqualTo(const wxDateTime& datetime) const
 {
-    wxASSERT_MSG( IsValid() && datetime.IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid() && datetime.IsValid(), wxT("invalid wxDateTime"));
 
     return m_time == datetime.m_time;
 }
 
 inline bool wxDateTime::IsEarlierThan(const wxDateTime& datetime) const
 {
-    wxASSERT_MSG( IsValid() && datetime.IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid() && datetime.IsValid(), wxT("invalid wxDateTime"));
 
     return m_time < datetime.m_time;
 }
 
 inline bool wxDateTime::IsLaterThan(const wxDateTime& datetime) const
 {
-    wxASSERT_MSG( IsValid() && datetime.IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid() && datetime.IsValid(), wxT("invalid wxDateTime"));
 
     return m_time > datetime.m_time;
 }
@@ -1958,14 +1964,14 @@ inline bool wxDateTime::IsEqualUpTo(const wxDateTime& dt,
 
 inline wxDateTime wxDateTime::Add(const wxTimeSpan& diff) const
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
 
     return wxDateTime(m_time + diff.GetValue());
 }
 
 inline wxDateTime& wxDateTime::Add(const wxTimeSpan& diff)
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
 
     m_time += diff.GetValue();
 
@@ -1979,14 +1985,14 @@ inline wxDateTime& wxDateTime::operator+=(const wxTimeSpan& diff)
 
 inline wxDateTime wxDateTime::Subtract(const wxTimeSpan& diff) const
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
 
     return wxDateTime(m_time - diff.GetValue());
 }
 
 inline wxDateTime& wxDateTime::Subtract(const wxTimeSpan& diff)
 {
-    wxASSERT_MSG( IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid(), wxT("invalid wxDateTime"));
 
     m_time -= diff.GetValue();
 
@@ -2000,7 +2006,7 @@ inline wxDateTime& wxDateTime::operator-=(const wxTimeSpan& diff)
 
 inline wxTimeSpan wxDateTime::Subtract(const wxDateTime& datetime) const
 {
-    wxASSERT_MSG( IsValid() && datetime.IsValid(), _T("invalid wxDateTime"));
+    wxASSERT_MSG( IsValid() && datetime.IsValid(), wxT("invalid wxDateTime"));
 
     return wxTimeSpan(GetValue() - datetime.GetValue());
 }

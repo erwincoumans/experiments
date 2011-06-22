@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     24.06.2003 (extracted from src/unix/utilsunx.cpp)
-// RCS-ID:      $Id: pipe.h 40518 2006-08-08 13:06:05Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,10 +46,10 @@ public:
         {
             wxLogSysError(_("Pipe creation failed"));
 
-            return FALSE;
+            return false;
         }
 
-        return TRUE;
+        return true;
     }
 
     // return TRUE if we were created successfully

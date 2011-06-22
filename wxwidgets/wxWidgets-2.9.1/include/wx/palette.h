@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:
-// RCS-ID:      $Id: palette.h 54125 2008-06-11 19:17:41Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,7 +25,7 @@ class WXDLLIMPEXP_CORE wxPaletteBase: public wxGDIObject
 public:
     virtual ~wxPaletteBase() { }
 
-    virtual int GetColoursCount() const { wxFAIL_MSG( _T("not implemented") ); return 0; }
+    virtual int GetColoursCount() const { wxFAIL_MSG( wxT("not implemented") ); return 0; }
 };
 
 #if defined(__WXPALMOS__)

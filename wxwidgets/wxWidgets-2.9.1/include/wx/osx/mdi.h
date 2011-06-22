@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/osx/carbon/mdi.h
+// Name:        wx/osx/mdi.h
 // Purpose:     MDI (Multiple Document Interface) classes.
 // Author:      Stefan Csomor
 // Modified by: 2008-10-31 Vadim Zeitlin: derive from the base classes
 // Created:     1998-01-01
-// RCS-ID:      $Id: mdi.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence

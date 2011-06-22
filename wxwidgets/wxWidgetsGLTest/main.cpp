@@ -44,6 +44,8 @@ bool MyApp::OnInit()
 	
     frame->SetSizer(sizer);
     frame->SetAutoLayout(true);
+	frame->Maximize(true);
+	frame->SetSize(0,0,800,600);
 	
     frame->Show();
     return true;

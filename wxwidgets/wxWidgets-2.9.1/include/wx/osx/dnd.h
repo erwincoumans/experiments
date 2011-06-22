@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/dnd.h
+// Name:        wx/osx/dnd.h
 // Purpose:     Declaration of the wxDropTarget, wxDropSource class etc.
 // Author:      Stefan Csomor
-// RCS-ID:      $Id: dnd.h 58783 2009-02-08 23:21:22Z KO $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ class WXDLLIMPEXP_CORE wxDropTarget: public wxDropTargetBase
     virtual bool OnDrop(wxCoord x, wxCoord y);
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def);
     virtual bool GetData();
-    // NOTE: This is needed by the generic wxDataViewCtrl, not sure how to implement. 
+    // NOTE: This is needed by the generic wxDataViewCtrl, not sure how to implement.
     virtual wxDataFormat GetMatchingPair();
 
     bool CurrentDragHasSupportedFormat() ;
@@ -96,6 +96,7 @@ public:
     wxWindow*     GetWindow() { return m_window ; }
     void SetCurrentDragPasteboard( void* dragpasteboard ) { m_currentDragPasteboard = dragpasteboard ; }
     bool MacInstallDefaultCursor(wxDragResult effect) ;
+    static wxDropSource* GetCurrentDropSource();
   protected :
 
     wxWindow        *m_window;

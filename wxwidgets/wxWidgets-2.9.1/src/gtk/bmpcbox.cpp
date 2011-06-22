@@ -3,7 +3,7 @@
 // Purpose:     wxBitmapComboBox
 // Author:      Jaakko Salli
 // Created:     2008-05-19
-// RCS-ID:      $Id: bmpcbox.cpp 60399 2009-04-26 19:41:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -162,6 +162,19 @@ GdkWindow *wxBitmapComboBox::GTKGetWindow(wxArrayGdkWindows& windows) const
         return wxComboBox::GTKGetWindow(windows);
 
     return wxChoice::GTKGetWindow(windows);
+}
+
+wxSize wxBitmapComboBox::DoGetBestSize() const
+{
+    wxSize best = wxComboBox::DoGetBestSize();
+
+    int delta = GetBitmapSize().y - GetCharHeight();
+    if ( delta > 0 )
+    {
+        best.y += delta;
+        CacheBestSize(best);
+    }
+    return best;
 }
 
 // ----------------------------------------------------------------------------

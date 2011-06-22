@@ -4,7 +4,7 @@
 // Author:      Evgeniy Tarassov, Vadim Zeitlin
 // Modified by:
 // Created:     2005-09-15
-// RCS-ID:      $Id: treebook.h 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -131,7 +131,6 @@ public:
     virtual wxString GetPageText(size_t n) const;
     virtual int GetPageImage(size_t n) const;
     virtual bool SetPageImage(size_t n, int imageId);
-    virtual wxSize CalcSizeFromPage(const wxSize& sizePage) const;
     virtual int SetSelection(size_t n) { return DoSetSelection(n, SetSelection_SendEvent); }
     virtual int ChangeSelection(size_t n) { return DoSetSelection(n); }
     virtual int HitTest(const wxPoint& pt, long *flags = NULL) const;

@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: dialog.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -95,14 +95,6 @@ public:
 #endif // WXWIN_COMPATIBILITY_2_6
 
 protected:
-    //
-    // find the window to use as parent for this dialog if none has been
-    // specified explicitly by the user
-    //
-    // may return NULL
-    //
-    wxWindow *FindSuitableParent() const;
-
     //
     // Common part of all ctors
     //

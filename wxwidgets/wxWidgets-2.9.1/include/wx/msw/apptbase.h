@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.06.2003
-// RCS-ID:      $Id: apptbase.h 56994 2008-11-28 12:47:07Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,9 +25,6 @@ public:
     // called before starting to wait for the child termination, may return
     // some opaque data which will be passed later to AfterChildWaitLoop()
     virtual void *BeforeChildWaitLoop() = 0;
-
-    // process pending Windows messages, even in console app
-    virtual void AlwaysYield() = 0;
 
     // called after starting to wait for the child termination, the parameter
     // is the return value of BeforeChildWaitLoop()

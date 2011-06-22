@@ -5,7 +5,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2004-11-16
-// RCS-ID:      $Id: colordlgosx.mm 61299 2009-07-03 07:16:53Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:       wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,21 +32,16 @@
 
 IMPLEMENT_DYNAMIC_CLASS(wxColourDialog, wxDialog)
 
-// Cocoa headers
-#include "wx/cocoa/autorelease.h"
-#include "wx/cocoa/string.h"
+#include "wx/osx/private.h"
 
-#import <AppKit/NSFont.h>
-#import <AppKit/NSFontManager.h>
-#import <AppKit/NSFontPanel.h>
-#import <AppKit/NSColor.h>
-#import <AppKit/NSColorPanel.h>
+#import <Foundation/Foundation.h>
+#import <AppKit/AppKit.h>
 
 // ---------------------------------------------------------------------------
 // wxCPWCDelegate - Window Closed delegate
 // ---------------------------------------------------------------------------
 
-@interface wxCPWCDelegate : NSObject
+@interface wxCPWCDelegate : NSObject wxOSX_10_6_AND_LATER(<NSWindowDelegate>)
 {
     bool m_bIsClosed;
 }
@@ -146,6 +141,7 @@ int wxColourDialog::ShowModal()
             //
             //	Start the color panel modal loop
             //
+            wxDialog::OSXBeginModalDialog();
             NSModalSession session = [NSApp beginModalSessionForWindow:theColorPanel];
             for (;;)
             {
@@ -156,6 +152,7 @@ int wxColourDialog::ShowModal()
                     break;
             }
             [NSApp endModalSession:session];
+            wxDialog::OSXEndModalDialog();
 
     //free up the memory for the delegates - we don't need them anymore
     [theColorPanel setDelegate:nil];

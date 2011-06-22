@@ -3,7 +3,7 @@
 // Purpose:     Header to provide some xlocale wrappers
 // Author:      Brian Vanderburg II, Vadim Zeitlin
 // Created:     2008-01-07
-// RCS-ID:      $Id: xlocale.h 59637 2009-03-20 01:27:56Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Brian Vanderburg II
 //                  2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
@@ -18,7 +18,7 @@
     using decimal point &c.
 
     TODO: Currently only the character classification and transformation
-          functions and number <-> string functions, are implemented, 
+          functions and number <-> string functions, are implemented,
           we also need at least
             - formatted IO: scanf_l(), printf_l() &c
             - time: strftime_l(), strptime_l()
@@ -246,7 +246,7 @@ extern WXDLLIMPEXP_DATA_BASE(wxXLocale) wxNullXLocale;
         { return wxCRT_Strtoul_lA(c, endptr, base, loc.Get()); }
 
     #if wxUSE_UNICODE
-    
+
         // ctype functions
         #define wxCRT_Isalnum_lW wxXLOCALE_IDENT(iswalnum_l)
         #define wxCRT_Isalpha_lW wxXLOCALE_IDENT(iswalpha_l)
@@ -302,8 +302,14 @@ extern WXDLLIMPEXP_DATA_BASE(wxXLocale) wxNullXLocale;
             { return wxCRT_Strtol_lW(c, endptr, base, loc.Get()); }
         inline unsigned long wxStrtoul_l(const wchar_t *c, wchar_t **endptr, int base, const wxXLocale& loc)
             { return wxCRT_Strtoul_lW(c, endptr, base, loc.Get()); }
-
-    #endif // wxUSE_UNICDE (ctype functions)
+    #else // !wxUSE_UNICODE
+        inline double wxStrtod_l(const char *c, char **endptr, const wxXLocale& loc)
+            { return wxCRT_Strtod_lA(c, endptr, loc.Get()); }
+        inline long wxStrtol_l(const char *c, char **endptr, int base, const wxXLocale& loc)
+            { return wxCRT_Strtol_lA(c, endptr, base, loc.Get()); }
+        inline unsigned long wxStrtoul_l(const char *c, char **endptr, int base, const wxXLocale& loc)
+            { return wxCRT_Strtoul_lA(c, endptr, base, loc.Get()); }
+    #endif // wxUSE_UNICODE
 #else // !wxHAS_XLOCALE_SUPPORT
     // ctype functions
     int WXDLLIMPEXP_BASE wxIsalnum_l(const wxUniChar& c, const wxXLocale& loc);
@@ -329,7 +335,7 @@ extern WXDLLIMPEXP_DATA_BASE(wxXLocale) wxNullXLocale;
     unsigned long WXDLLIMPEXP_BASE wxStrtoul_l(const char* str, char **endptr, int base, const wxXLocale& loc);
 
 #endif // wxHAS_XLOCALE_SUPPORT/!wxHAS_XLOCALE_SUPPORT
-    
+
 #endif // wxUSE_XLOCALE
 
 #endif // _WX_XLOCALE_H_

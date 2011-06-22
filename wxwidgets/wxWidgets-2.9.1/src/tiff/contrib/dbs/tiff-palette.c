@@ -1,4 +1,4 @@
-/* $Id: tiff-palette.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 /*
  * tiff-palette.c -- create a Class P (palette) TIFF file

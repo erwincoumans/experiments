@@ -5,7 +5,7 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Julian Smart
-// RCS-ID:      $Id: glcanvas.h 59913 2009-03-29 17:13:27Z SC $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +52,7 @@ enum
     WX_GL_SAMPLES          // 4 for 2x2 antialising supersampling on most graphics cards
 };
 
-#define wxGLCanvasName _T("GLCanvas")
+#define wxGLCanvasName wxT("GLCanvas")
 
 // ----------------------------------------------------------------------------
 // wxGLContextBase: OpenGL rendering context
@@ -118,11 +118,9 @@ public:
     // miscellaneous helper functions
     // ------------------------------
 
-#ifndef wxHAS_OPENGL_ES 
     // call glcolor() for the colour with the given name, return false if
     // colour not found
     bool SetColour(const wxString& colour);
-#endif
 
     // return true if the extension with given name is supported
     //
@@ -214,6 +212,33 @@ private:
 };
 
 #endif // !wxGL_APP_DEFINED
+
+// ----------------------------------------------------------------------------
+// wxGLAPI: an API wrapper that allows the use of 'old' APIs even on OpenGL
+// platforms that don't support it natively anymore, if the APIs are available
+// it's a mere redirect
+// ----------------------------------------------------------------------------
+
+#ifndef wxUSE_OPENGL_EMULATION
+    #define wxUSE_OPENGL_EMULATION 0
+#endif
+
+class WXDLLIMPEXP_GL wxGLAPI : public wxObject
+{
+public:
+    wxGLAPI();
+    ~wxGLAPI();
+
+    static void glFrustum(GLfloat left, GLfloat right, GLfloat bottom, 
+                            GLfloat top, GLfloat zNear, GLfloat zFar);
+    static void glBegin(GLenum mode);
+    static void glTexCoord2f(GLfloat s, GLfloat t);
+    static void glVertex3f(GLfloat x, GLfloat y, GLfloat z);
+    static void glNormal3f(GLfloat nx, GLfloat ny, GLfloat nz);
+    static void glColor4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+    static void glColor3f(GLfloat r, GLfloat g, GLfloat b);
+    static void glEnd();
+};
 
 #endif // wxUSE_GLCANVAS
 

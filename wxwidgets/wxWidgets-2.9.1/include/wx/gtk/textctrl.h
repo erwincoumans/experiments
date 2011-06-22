@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// Id:          $Id: textctrl.h 59263 2009-03-02 12:25:01Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -63,6 +63,7 @@ public:
     virtual void DiscardEdits();
 
     virtual bool SetStyle(long start, long end, const wxTextAttr& style);
+    virtual bool GetStyle(long position, wxTextAttr& style);
 
     // translate between the position (which is just an index in the text ctrl
     // considering all its contents as a single strings) and (x, y) coordinates
@@ -178,6 +179,7 @@ protected:
 private:
     // overridden wxTextEntry virtual methods
     virtual GtkEditable *GetEditable() const;
+    virtual GtkEntry *GetEntry() const;
     virtual void EnableTextChangedEvents(bool enable);
 
     // change the font for everything in this control
@@ -215,8 +217,6 @@ private:
 
     // For wxTE_AUTO_URL
     void OnUrlMouseEvent(wxMouseEvent&);
-    GdkCursor *m_gdkHandCursor;
-    GdkCursor *m_gdkXTermCursor;
 
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxTextCtrl)

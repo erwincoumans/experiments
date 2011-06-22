@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/3/2006 2:28:21 PM
-// RCS-ID:      $Id: richtextindentspage.h 59816 2009-03-24 19:09:52Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@ class wxRichTextCtrl;
 
 ////@begin control identifiers
 #define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_STYLE wxRESIZE_BORDER|wxTAB_TRAVERSAL
-#define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_TITLE _T("")
+#define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_TITLE wxEmptyString
 #define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_IDNAME ID_RICHTEXTINDENTSSPACINGPAGE
 #define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_SIZE wxSize(400, 300)
 #define SYMBOL_WXRICHTEXTINDENTSSPACINGPAGE_POSITION wxDefaultPosition

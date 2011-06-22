@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     11/6/98
-// RCS-ID:      $Id: automtn.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,8 +21,6 @@
     #undef wxUSE_OLE_AUTOMATION
     #define wxUSE_OLE_AUTOMATION 0
 #endif
-
-#if wxUSE_OLE_AUTOMATION
 
 #ifndef WX_PRECOMP
     #include "wx/log.h"
@@ -56,13 +54,16 @@
 #include "wx/datetime.h"
 #endif // wxUSE_DATETIME
 
-static void ClearVariant(VARIANTARG *pvarg) ;
-static void ReleaseVariant(VARIANTARG *pvarg) ;
-// static void ShowException(LPOLESTR szMember, HRESULT hr, EXCEPINFO *pexcep, unsigned int uiArgErr);
+#if wxUSE_OLE_AUTOMATION
 
-/*
- * wxAutomationObject
- */
+// Report an OLE error to the user via wxLog.
+static void
+ShowException(const wxString& member,
+              HRESULT hr,
+              EXCEPINFO *pexcep,
+              unsigned int uiArgErr);
+
+// wxAutomationObject
 
 wxAutomationObject::wxAutomationObject(WXIDISPATCH* dispatchPtr)
 {
@@ -103,7 +104,7 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
     }
 
     VARIANTARG vReturn;
-    ClearVariant(& vReturn);
+    VariantInit(& vReturn);
 
     VARIANTARG* vReturnPtr = & vReturn;
 
@@ -139,7 +140,6 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
     HRESULT hr;
     DISPPARAMS dispparams;
     unsigned int uiArgErr;
-    EXCEPINFO excep;
 
     // Get the IDs for the member and its arguments.  GetIDsOfNames expects the
     // member name as the first name, followed by argument names (if any).
@@ -147,7 +147,7 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
                                 1 + namedArgCount, LOCALE_SYSTEM_DEFAULT, dispIds);
     if (FAILED(hr))
     {
-//        ShowException(szMember, hr, NULL, 0);
+        ShowException(member, hr, NULL, 0);
         delete[] argNames;
         delete[] dispIds;
         return false;
@@ -181,7 +181,8 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
     dispparams.cArgs = noArgs;
     dispparams.cNamedArgs = namedArgCount;
 
-    excep.pfnDeferredFillIn = NULL;
+    EXCEPINFO excep;
+    wxZeroMemory(excep);
 
     hr = ((IDispatch*)m_dispatchPtr)->Invoke(dispIds[0], IID_NULL, LOCALE_SYSTEM_DEFAULT,
                         (WORD)action, &dispparams, vReturnPtr, &excep, &uiArgErr);
@@ -194,13 +195,13 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
     delete[] dispIds;
 
     for (i = 0; i < noArgs; i++)
-        ReleaseVariant(& oleArgs[i]) ;
+        VariantClear(& oleArgs[i]) ;
     delete[] oleArgs;
 
     if (FAILED(hr))
     {
         // display the exception information if appropriate:
-//        ShowException((const char*) member, hr, &excep, uiArgErr);
+        ShowException(member, hr, &excep, uiArgErr);
 
         // free exception structure information
         SysFreeString(excep.bstrSource);
@@ -208,7 +209,7 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
         SysFreeString(excep.bstrHelpFile);
 
         if (vReturnPtr)
-            ReleaseVariant(vReturnPtr);
+            VariantClear(vReturnPtr);
         return false;
     }
     else
@@ -222,7 +223,7 @@ bool wxAutomationObject::Invoke(const wxString& member, int action,
             {
                 vReturn.pdispVal = NULL;
             }
-            ReleaseVariant(& vReturn);
+            VariantClear(& vReturn);
         }
     }
     return true;
@@ -495,25 +496,32 @@ bool wxAutomationObject::GetInstance(const wxString& classId) const
     if (m_dispatchPtr)
         return false;
 
+    HRESULT hr;
     CLSID clsId;
     IUnknown * pUnk = NULL;
 
     wxBasicString unicodeName(classId);
 
-    if (FAILED(CLSIDFromProgID((BSTR) unicodeName, &clsId)))
+    hr = CLSIDFromProgID((BSTR) unicodeName, &clsId);
+    if (FAILED(hr))
     {
+        ShowException(classId, hr, NULL, 0);
         wxLogWarning(wxT("Cannot obtain CLSID from ProgID"));
         return false;
     }
 
-    if (FAILED(GetActiveObject(clsId, NULL, &pUnk)))
+    hr = GetActiveObject(clsId, NULL, &pUnk);
+    if (FAILED(hr))
     {
+        ShowException(classId, hr, NULL, 0);
         wxLogWarning(wxT("Cannot find an active object"));
         return false;
     }
 
-    if (pUnk->QueryInterface(IID_IDispatch, (LPVOID*) &m_dispatchPtr) != S_OK)
+    hr = pUnk->QueryInterface(IID_IDispatch, (LPVOID*) &m_dispatchPtr);
+    if (FAILED(hr))
     {
+        ShowException(classId, hr, NULL, 0);
         wxLogWarning(wxT("Cannot find IDispatch interface"));
         return false;
     }
@@ -528,12 +536,15 @@ bool wxAutomationObject::CreateInstance(const wxString& classId) const
     if (m_dispatchPtr)
         return false;
 
+    HRESULT hr;
     CLSID clsId;
 
     wxBasicString unicodeName(classId);
 
-    if (FAILED(CLSIDFromProgID((BSTR) unicodeName, &clsId)))
+    hr = CLSIDFromProgID((BSTR) unicodeName, &clsId);
+    if (FAILED(hr))
     {
+        ShowException(classId, hr, NULL, 0);
         wxLogWarning(wxT("Cannot obtain CLSID from ProgID"));
         return false;
     }
@@ -543,439 +554,92 @@ bool wxAutomationObject::CreateInstance(const wxString& classId) const
     // NB: using CLSCTX_INPROC_HANDLER results in failure when getting
     //     Automation interface for Microsoft Office applications so don't use
     //     CLSCTX_ALL which includes it
-    if (FAILED(CoCreateInstance(clsId, NULL, CLSCTX_SERVER, IID_IDispatch,
-                                (void**)&m_dispatchPtr)))
+    hr = CoCreateInstance(clsId, NULL, CLSCTX_SERVER, IID_IDispatch,
+                                (void**)&m_dispatchPtr);
+    if (FAILED(hr))
     {
-        wxLogWarning(wxT("Cannot start an instance of this class."));
+        ShowException(classId, hr, NULL, 0);
+        wxLogWarning(wxT("Could not start an instance of this class."));
         return false;
     }
 
     return true;
 }
 
-
-WXDLLEXPORT bool wxConvertVariantToOle(const wxVariant& variant, VARIANTARG& oleVariant)
+static void
+ShowException(const wxString& member,
+              HRESULT hr,
+              EXCEPINFO *pexcep,
+              unsigned int uiArgErr)
 {
-    ClearVariant(&oleVariant);
-    if (variant.IsNull())
-    {
-        oleVariant.vt = VT_NULL;
-        return true;
-    }
-
-    wxString type(variant.GetType());
-
-
-    if (type == wxT("long"))
-    {
-        oleVariant.vt = VT_I4;
-        oleVariant.lVal = variant.GetLong() ;
-    }
-    // cVal not always present
-#ifndef __GNUWIN32__
-    else if (type == wxT("char"))
-    {
-        oleVariant.vt=VT_I1;            // Signed Char
-        oleVariant.cVal=variant.GetChar();
-    }
-#endif
-    else if (type == wxT("double"))
-    {
-        oleVariant.vt = VT_R8;
-        oleVariant.dblVal = variant.GetDouble();
-    }
-    else if (type == wxT("bool"))
-    {
-        oleVariant.vt = VT_BOOL;
-        // 'bool' required for VC++ 4 apparently
-#if (defined(__VISUALC__) && (__VISUALC__ <= 1000))
-        oleVariant.bool = variant.GetBool();
-#else
-        oleVariant.boolVal = variant.GetBool();
-#endif
-    }
-    else if (type == wxT("string"))
-    {
-        wxString str( variant.GetString() );
-        oleVariant.vt = VT_BSTR;
-        oleVariant.bstrVal = wxConvertStringToOle(str);
-    }
-#if wxUSE_DATETIME
-    else if (type == wxT("datetime"))
-    {
-        wxDateTime date( variant.GetDateTime() );
-        oleVariant.vt = VT_DATE;
-
-        long dosDateTime = date.GetAsDOS();
-        short dosDate = short((dosDateTime & 0xFFFF0000) >> 16);
-        short dosTime = short(dosDateTime & 0xFFFF);
-
-        DosDateTimeToVariantTime(dosDate, dosTime, & oleVariant.date);
-    }
-#endif
-    else if (type == wxT("void*"))
-    {
-        oleVariant.vt = VT_DISPATCH;
-        oleVariant.pdispVal = (IDispatch*) variant.GetVoidPtr();
-    }
-    else if (type == wxT("list") || type == wxT("stringlist"))
-    {
-        oleVariant.vt = VT_VARIANT | VT_ARRAY;
-
-        SAFEARRAY *psa;
-        SAFEARRAYBOUND saBound;
-        VARIANTARG *pvargBase;
-        VARIANTARG *pvarg;
-        int i, j;
-
-        int iCount = variant.GetCount();
-
-        saBound.lLbound = 0;
-        saBound.cElements = iCount;
-
-        psa = SafeArrayCreate(VT_VARIANT, 1, &saBound);
-        if (psa == NULL)
-            return false;
-
-        SafeArrayAccessData(psa, (void**)&pvargBase);
-
-        pvarg = pvargBase;
-        for (i = 0; i < iCount; i++)
-        {
-            // copy each string in the list of strings
-            wxVariant eachVariant(variant[i]);
-            if (!wxConvertVariantToOle(eachVariant, * pvarg))
-            {
-                // memory failure:  back out and free strings alloc'ed up to
-                // now, and then the array itself.
-                pvarg = pvargBase;
-                for (j = 0; j < i; j++)
-                {
-                    SysFreeString(pvarg->bstrVal);
-                    pvarg++;
-                }
-                SafeArrayDestroy(psa);
-                return false;
-            }
-            pvarg++;
-        }
-
-        SafeArrayUnaccessData(psa);
-
-        oleVariant.parray = psa;
-    }
-    else
-    {
-        oleVariant.vt = VT_NULL;
-        return false;
-    }
-    return true;
-}
-
-#ifndef VT_TYPEMASK
-#define VT_TYPEMASK 0xfff
-#endif
-
-WXDLLEXPORT bool
-wxConvertOleToVariant(const VARIANTARG& oleVariant, wxVariant& variant)
-{
-    bool ok = true;
-    if ( oleVariant.vt & VT_ARRAY )
-    {
-
-        // Compute the total number of elements in all array dimensions
-        int cElements = 1;
-        for ( int cDims = 0; cDims < oleVariant.parray->cDims; cDims++ )
-            cElements *= oleVariant.parray->rgsabound[cDims].cElements;
-
-        // Get a pointer to the data
-        void* pvdata;
-        HRESULT hr = SafeArrayAccessData(oleVariant.parray, &pvdata);
-        if ( FAILED(hr) )
-            return false;
-
-        switch (oleVariant.vt & VT_TYPEMASK)
-        {
-            case VT_VARIANT:
-                {
-                    variant.ClearList();
-                    VARIANTARG *variant_data=(VARIANTARG*)pvdata;
-                    for ( int i = 0; i < cElements; i++ )
-                    {
-                        VARIANTARG& oleElement = variant_data[i];
-                        wxVariant vElement;
-                        if ( !wxConvertOleToVariant(oleElement, vElement) )
-                        {
-                            ok = false;
-                            variant.ClearList();
-                            break;
-                        }
-
-                        variant.Append(vElement);
-                    }
-                }
-                break;
-
-            case VT_BSTR:
-                {
-                    wxArrayString strings;
-                    BSTR *string_val=(BSTR*)pvdata;
-                    for ( int i = 0; i < cElements; ++i )
-                    {
-                        wxString str=wxConvertStringFromOle(*string_val);
-                        strings.Add(str);
-                        ++string_val;
-                    }
-                    variant=strings;
-                }
-                break;
-
-            default:
-                wxLogDebug(_T("unhandled VT_ARRAY type %x in wxConvertOleToVariant"),
-                           oleVariant.vt & VT_TYPEMASK);
-                variant = wxVariant();
-                ok = false;
-                break;
-        }
-
-        SafeArrayUnaccessData(oleVariant.parray);
-    }
-    else if ( oleVariant.vt & VT_BYREF )
-    {
-        switch ( oleVariant.vt & VT_TYPEMASK )
-        {
-            case VT_VARIANT:
-                {
-                    VARIANTARG& oleReference = *((LPVARIANT)oleVariant.byref);
-                    if (!wxConvertOleToVariant(oleReference,variant))
-                        return false;
-                    break;
-                }
-
-            default:
-                wxLogError(wxT("wxAutomationObject::ConvertOleToVariant: [as yet] unhandled reference %X"),
-                            oleVariant.vt);
-                return false;
-        }
-    }
-    else // simply type (not array or reference)
-    {
-        switch ( oleVariant.vt & VT_TYPEMASK )
-        {
-            case VT_BSTR:
-                {
-                    wxString str(wxConvertStringFromOle(oleVariant.bstrVal));
-                    variant = str;
-                }
-                break;
-
-            case VT_DATE:
-#if wxUSE_DATETIME
-                {
-                    unsigned short dosDate = 0;
-                    unsigned short dosTime = 0;
-                    VariantTimeToDosDateTime(oleVariant.date, & dosDate, & dosTime);
-
-                    long dosDateTime = (dosDate << 16) | dosTime;
-                    wxDateTime date;
-                    date.SetFromDOS(dosDateTime);
-                    variant = date;
-                }
-#endif // wxUSE_DATETIME
-                break;
-
-            case VT_I4:
-                variant = (long) oleVariant.lVal;
-                break;
-
-            case VT_I2:
-                variant = (long) oleVariant.iVal;
-                break;
-
-            case VT_BOOL:
-                variant = oleVariant.boolVal != 0;
-                break;
-
-            case VT_R8:
-                variant = oleVariant.dblVal;
-                break;
-
-            case VT_DISPATCH:
-                variant = (void*) oleVariant.pdispVal;
-                break;
-
-            case VT_NULL:
-                variant.MakeNull();
-                break;
-
-            case VT_EMPTY:
-                break;    // Ignore Empty Variant, used only during destruction of objects
-
-            default:
-                wxLogError(wxT("wxAutomationObject::ConvertOleToVariant: Unknown variant value type %X -> %X"),
-                           oleVariant.vt,oleVariant.vt&VT_TYPEMASK);
-                return false;
-        }
-    }
-
-    return ok;
-}
-
-/*
- *  ClearVariant
- *
- *  Zeros a variant structure without regard to current contents
- */
-static void ClearVariant(VARIANTARG *pvarg)
-{
-    pvarg->vt = VT_EMPTY;
-    pvarg->wReserved1 = 0;
-    pvarg->wReserved2 = 0;
-    pvarg->wReserved3 = 0;
-    pvarg->lVal = 0;
-}
-
-/*
- *  ReleaseVariant
- *
- *  Clears a particular variant structure and releases any external objects
- *  or memory contained in the variant.  Supports the data types listed above.
- */
-static void ReleaseVariant(VARIANTARG *pvarg)
-{
-    VARTYPE vt;
-    VARIANTARG _huge *pvargArray;
-    LONG lLBound, lUBound, l;
-
-    vt = (VARTYPE)(pvarg->vt & 0xfff);        // mask off flags
-
-    // check if an array.  If so, free its contents, then the array itself.
-    if (V_ISARRAY(pvarg))
-    {
-        // variant arrays are all this routine currently knows about.  Since a
-        // variant can contain anything (even other arrays), call ourselves
-        // recursively.
-        if (vt == VT_VARIANT)
-        {
-            SafeArrayGetLBound(pvarg->parray, 1, &lLBound);
-            SafeArrayGetUBound(pvarg->parray, 1, &lUBound);
-
-            if (lUBound > lLBound)
-            {
-                lUBound -= lLBound;
-
-                SafeArrayAccessData(pvarg->parray, (void**)&pvargArray);
-
-                for (l = 0; l < lUBound; l++)
-                {
-                    ReleaseVariant(pvargArray);
-                    pvargArray++;
-                }
-
-                SafeArrayUnaccessData(pvarg->parray);
-            }
-        }
-        else
-        {
-            wxLogWarning(wxT("ReleaseVariant: Array contains non-variant type"));
-        }
-
-        // Free the array itself.
-        SafeArrayDestroy(pvarg->parray);
-    }
-    else
-    {
-        switch (vt)
-        {
-            case VT_DISPATCH:
-                if (pvarg->pdispVal)
-                    pvarg->pdispVal->Release();
-                break;
-
-            case VT_BSTR:
-                SysFreeString(pvarg->bstrVal);
-                break;
-
-            case VT_I2:
-            case VT_I4:
-            case VT_BOOL:
-            case VT_R8:
-            case VT_ERROR:        // to avoid erroring on an error return from Excel
-            case VT_EMPTY:
-            case VT_DATE:
-                // no work for these types
-                break;
-
-            default:
-                wxLogWarning(wxT("ReleaseVariant: Unknown type"));
-                break;
-        }
-    }
-
-    ClearVariant(pvarg);
-}
-
-#if 0
-
-void ShowException(LPOLESTR szMember, HRESULT hr, EXCEPINFO *pexcep, unsigned int uiArgErr)
-{
-    TCHAR szBuf[512];
-
+    wxString message;
     switch (GetScode(hr))
     {
         case DISP_E_UNKNOWNNAME:
-            wsprintf(szBuf, L"%s: Unknown name or named argument.", szMember);
+            message = wxT("Unknown name or named argument.");
             break;
 
         case DISP_E_BADPARAMCOUNT:
-            wsprintf(szBuf, L"%s: Incorrect number of arguments.", szMember);
+            message = wxT("Incorrect number of arguments.");
             break;
 
         case DISP_E_EXCEPTION:
-            wsprintf(szBuf, L"%s: Error %d: ", szMember, pexcep->wCode);
-            if (pexcep->bstrDescription != NULL)
-                lstrcat(szBuf, pexcep->bstrDescription);
-            else
-                lstrcat(szBuf, L"<<No Description>>");
+            {
+                message = wxT("Error Code (");
+                message << pexcep->wCode ;// unsigned short
+                message += wxT(")");
+                if (pexcep->bstrDescription != NULL)
+                    message += pexcep->bstrDescription;
+                else
+                    message += wxT("<<No Description>>");
+            }
             break;
 
         case DISP_E_MEMBERNOTFOUND:
-            wsprintf(szBuf, L"%s: method or property not found.", szMember);
+            message = wxT("Method or property not found.");
             break;
 
         case DISP_E_OVERFLOW:
-            wsprintf(szBuf, L"%s: Overflow while coercing argument values.", szMember);
+            message = wxT("Overflow while coercing argument values.");
             break;
 
         case DISP_E_NONAMEDARGS:
-            wsprintf(szBuf, L"%s: Object implementation does not support named arguments.",
-                        szMember);
+            message = wxT("Object implementation does not support named arguments.");
             break;
 
         case DISP_E_UNKNOWNLCID:
-            wsprintf(szBuf, L"%s: The locale ID is unknown.", szMember);
+            message = wxT("The locale ID is unknown.");
             break;
 
         case DISP_E_PARAMNOTOPTIONAL:
-            wsprintf(szBuf, L"%s: Missing a required parameter.", szMember);
+            message = wxT("Missing a required parameter.");
             break;
 
         case DISP_E_PARAMNOTFOUND:
-            wsprintf(szBuf, L"%s: Argument not found, argument %d.", szMember, uiArgErr);
+            message = wxT("Argument not found, argument.");
+            message << uiArgErr;
             break;
 
         case DISP_E_TYPEMISMATCH:
-            wsprintf(szBuf, L"%s: Type mismatch, argument %d.", szMember, uiArgErr);
+            message = wxT("Type mismatch, argument.");
+            message << uiArgErr;
+            break;
+
+        case ERROR_FILE_NOT_FOUND:
+            message = wxT("The system cannot find the file specified.");
+            break;
+
+        case REGDB_E_CLASSNOTREG:
+            message = wxT("Class not registered.");
             break;
 
         default:
-            wsprintf(szBuf, L"%s: Unknown error occurred.", szMember);
+            message = wxT("Unknown error occurred. Return value is ");
+            message << hr;
             break;
     }
 
-    wxLogWarning(szBuf);
+    wxLogDebug("OLE Automation error in %s: %s", member, message);
 }
-
-#endif
 
 #endif // wxUSE_OLE_AUTOMATION

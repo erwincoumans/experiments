@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Mickael Gilabert
 // Created:     28/06/98
-// RCS-ID:      $Id: datstrm.cpp 59108 2009-02-23 21:15:45Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -551,7 +551,11 @@ void wxDataOutputStream::WriteDouble(double d)
 #else
   wxUnusedVar(d);
 #if !defined(__VMS__) && !defined(__GNUG__)
+#ifdef _MSC_VER
+# pragma message("wxDataOutputStream::WriteDouble() not using IeeeExtended - will not work!")
+#else
 # pragma warning "wxDataOutputStream::WriteDouble() not using IeeeExtended - will not work!"
+#endif
 #endif
    buf[0] = '\0';
 #endif

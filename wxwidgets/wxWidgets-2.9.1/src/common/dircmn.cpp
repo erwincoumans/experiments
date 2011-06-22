@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.05.01
-// RCS-ID:      $Id: dircmn.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -81,7 +81,7 @@ size_t wxDir::Traverse(wxDirTraverser& sink,
                        int flags) const
 {
     wxCHECK_MSG( IsOpened(), (size_t)-1,
-                 _T("dir must be opened before traversing it") );
+                 wxT("dir must be opened before traversing it") );
 
     // the total number of files found
     size_t nFiles = 0;
@@ -103,7 +103,7 @@ size_t wxDir::Traverse(wxDirTraverser& sink,
             switch ( sink.OnDir(fulldirname) )
             {
                 default:
-                    wxFAIL_MSG(_T("unexpected OnDir() return value") );
+                    wxFAIL_MSG(wxT("unexpected OnDir() return value") );
                     // fall through
 
                 case wxDIR_STOP:
@@ -131,7 +131,7 @@ size_t wxDir::Traverse(wxDirTraverser& sink,
                                 switch ( sink.OnOpenError(fulldirname) )
                                 {
                                     default:
-                                        wxFAIL_MSG(_T("unexpected OnOpenError() return value") );
+                                        wxFAIL_MSG(wxT("unexpected OnOpenError() return value") );
                                         // fall through
 
                                     case wxDIR_STOP:
@@ -180,7 +180,7 @@ size_t wxDir::Traverse(wxDirTraverser& sink,
                 break;
 
             wxASSERT_MSG( res == wxDIR_CONTINUE,
-                          _T("unexpected OnFile() return value") );
+                          wxT("unexpected OnFile() return value") );
 
             nFiles++;
 
@@ -223,7 +223,7 @@ size_t wxDir::GetAllFiles(const wxString& dirname,
                           const wxString& filespec,
                           int flags)
 {
-    wxCHECK_MSG( files, (size_t)-1, _T("NULL pointer in wxDir::GetAllFiles") );
+    wxCHECK_MSG( files, (size_t)-1, wxT("NULL pointer in wxDir::GetAllFiles") );
 
     size_t nFiles = 0;
 
@@ -300,11 +300,11 @@ public:
 
     virtual wxDirTraverseResult OnFile(const wxString& filename)
     {
-        wxULongLong sz = wxFileName::GetSize(filename);
-
         // wxFileName::GetSize won't use this class again as
         // we're passing it a file and not a directory;
         // thus we are sure to avoid an endless loop
+        wxULongLong sz = wxFileName::GetSize(filename);
+
         if (sz == wxInvalidSize)
         {
             // if the GetSize() failed (this can happen because e.g. a
@@ -327,7 +327,7 @@ public:
 
     wxULongLong GetTotalSize() const
         { return m_sz; }
-    wxArrayString &FilesSkipped()
+    const wxArrayString& GetSkippedFiles() const
         { return m_skippedFiles; }
 
 protected:
@@ -347,14 +347,35 @@ wxULongLong wxDir::GetTotalSize(const wxString &dirname, wxArrayString *filesSki
         return wxInvalidSize;
 
     wxDirTraverserSumSize traverser;
-    if (dir.Traverse(traverser) == (size_t)-1 ||
-        traverser.GetTotalSize() == 0)
+    if (dir.Traverse(traverser) == (size_t)-1 )
         return wxInvalidSize;
 
     if (filesSkipped)
-        *filesSkipped = traverser.FilesSkipped();
+        *filesSkipped = traverser.GetSkippedFiles();
 
     return traverser.GetTotalSize();
 }
 
+// ----------------------------------------------------------------------------
+// wxDir helpers
+// ----------------------------------------------------------------------------
+
+/* static */
+bool wxDir::Exists(const wxString& dir)
+{
+    return wxFileName::DirExists(dir);
+}
+
+/* static */
+bool wxDir::Make(const wxString &dir, int perm, int flags)
+{
+    return wxFileName::Mkdir(dir, perm, flags);
+}
+
+/* static */
+bool wxDir::Remove(const wxString &dir, int flags)
+{
+    return wxFileName::Rmdir(dir, flags);
+}
+    
 #endif // wxUSE_LONGLONG

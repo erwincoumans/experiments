@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.05.98
-// RCS-ID:      $Id: dataobj.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -59,7 +59,7 @@ public:
 
     #define wxGetFormatName(format) wxDataObject::GetFormatName(format)
 #else // !Debug
-    #define wxGetFormatName(format) _T("")
+    #define wxGetFormatName(format) wxT("")
 #endif // Debug/!Debug
     // they need to be accessed from wxIDataObject, so made them public,
     // or wxIDataObject friend

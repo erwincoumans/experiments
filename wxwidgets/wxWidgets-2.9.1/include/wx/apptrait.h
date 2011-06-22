@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.06.2003
-// RCS-ID:      $Id: apptrait.h 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,7 +25,7 @@ class WXDLLIMPEXP_FWD_BASE wxLog;
 class WXDLLIMPEXP_FWD_BASE wxMessageOutput;
 class WXDLLIMPEXP_FWD_BASE wxObject;
 class WXDLLIMPEXP_FWD_CORE wxRendererNative;
-class WXDLLIMPEXP_FWD_BASE wxStandardPathsBase;
+class WXDLLIMPEXP_FWD_BASE wxStandardPaths;
 class WXDLLIMPEXP_FWD_BASE wxString;
 class WXDLLIMPEXP_FWD_BASE wxTimer;
 class WXDLLIMPEXP_FWD_BASE wxTimerImpl;
@@ -75,7 +75,7 @@ public:
 
     // wxStandardPaths object is normally the same for wxBase and wxGUI
     // except in the case of wxMac and wxCocoa
-    virtual wxStandardPathsBase& GetStandardPaths();
+    virtual wxStandardPaths& GetStandardPaths();
 
 #if wxUSE_INTL
     // called during wxApp initialization to set the locale to correspond to
@@ -98,20 +98,6 @@ public:
 
     // return true if fprintf(stderr) goes somewhere, false otherwise
     virtual bool HasStderr() = 0;
-
-    // managing "pending delete" list: in GUI mode we can't immediately delete
-    // some objects because there may be unprocessed events for them and so we
-    // only do it during the next idle loop iteration while this is, of course,
-    // unnecessary in wxBase, so we have a few functions to abstract these
-    // operations
-
-    // add the object to the pending delete list in GUI, delete it immediately
-    // in wxBase
-    virtual void ScheduleForDestroy(wxObject *object) = 0;
-
-    // remove this object from the pending delete list in GUI, do nothing in
-    // wxBase
-    virtual void RemoveFromPendingDelete(wxObject *object) = 0;
 
 #if wxUSE_SOCKETS
     // this function is used by wxNet library to set the default socket manager
@@ -233,9 +219,6 @@ public:
     virtual bool ShowAssertDialog(const wxString& msg);
     virtual bool HasStderr();
 
-    virtual void ScheduleForDestroy(wxObject *object);
-    virtual void RemoveFromPendingDelete(wxObject *object);
-
     // the GetToolkitVersion for console application is always the same
     virtual wxPortId GetToolkitVersion(int *verMaj = NULL, int *verMin = NULL) const
     {
@@ -271,9 +254,6 @@ public:
 
     virtual bool ShowAssertDialog(const wxString& msg);
     virtual bool HasStderr();
-
-    virtual void ScheduleForDestroy(wxObject *object);
-    virtual void RemoveFromPendingDelete(wxObject *object);
 
     virtual bool IsUsingUniversalWidgets() const
     {

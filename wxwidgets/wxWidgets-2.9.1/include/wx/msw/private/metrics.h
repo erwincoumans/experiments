@@ -3,7 +3,7 @@
 // Purpose:     various helper functions to retrieve system metrics
 // Author:      Vadim Zeitlin
 // Created:     2008-09-05
-// RCS-ID:      $Id: metrics.h 55472 2008-09-05 13:26:45Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@ inline const NONCLIENTMETRICS& GetNonClientMetrics()
 #endif // WINVER >= 0x0600
         {
             // maybe we should initialize the struct with some defaults?
-            wxLogLastError(_T("SystemParametersInfo(SPI_GETNONCLIENTMETRICS)"));
+            wxLogLastError(wxT("SystemParametersInfo(SPI_GETNONCLIENTMETRICS)"));
         }
     }
 

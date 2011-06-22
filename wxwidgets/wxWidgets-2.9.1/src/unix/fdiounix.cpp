@@ -3,7 +3,7 @@
 // Purpose:     wxFDIOManager implementation for console Unix applications
 // Author:      Vadim Zeitlin
 // Created:     2009-08-17
-// RCS-ID:      $Id: fdiounix.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2009 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -22,6 +22,8 @@
 #ifdef __BORLANDC__
     #pragma hdrstop
 #endif
+
+#if wxUSE_SOCKETS
 
 #include "wx/apptrait.h"
 #include "wx/log.h"
@@ -99,3 +101,4 @@ wxFDIOManager *wxAppTraits::GetFDIOManager()
     return &s_manager;
 }
 
+#endif // wxUSE_SOCKETS

@@ -4,9 +4,9 @@
 // Author:      Marcin Malich
 // Modified by:
 // Created:     28.06.2008
-// RCS-ID:      $Id: private.cpp 58300 2009-01-22 14:11:12Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Marcin Malich <me@malcom.pl>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -122,20 +122,20 @@ static void CreateHeaderButtons()
         // Get the dummy tree widget, give it a column, and then use the
         // widget in the column header for the rendering code.
         GtkWidget* treewidget = GetTreeWidget();
-        
+
         GtkTreeViewColumn *column = gtk_tree_view_column_new();
         gtk_tree_view_append_column(GTK_TREE_VIEW(treewidget), column);
         s_first_button = column->button;
-        
+
         column = gtk_tree_view_column_new();
         gtk_tree_view_append_column(GTK_TREE_VIEW(treewidget), column);
         s_other_button = column->button;
-        
+
         column = gtk_tree_view_column_new();
         gtk_tree_view_append_column(GTK_TREE_VIEW(treewidget), column);
         s_last_button = column->button;
 }
-    
+
 GtkWidget *GetHeaderButtonWidgetFirst()
 {
     if (!s_first_button)

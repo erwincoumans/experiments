@@ -3,7 +3,7 @@
 // Purpose:     wxTimer implementation for non-GUI applications under Unix
 // Author:      Lukasz Michalski
 // Created:     15/01/2005
-// RCS-ID:      $Id: timerunx.cpp 58396 2009-01-25 14:21:23Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Lukasz Michalski
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -54,7 +54,7 @@ static inline wxString wxUsecClockAsString(wxUsecClock_t usec)
     #if wxUSE_LONGLONG
         return usec.ToString();
     #else // wxUsecClock_t == double
-        return wxString::Format(_T("%.0f"), usec);
+        return wxString::Format(wxT("%.0f"), usec);
     #endif
 }
 
@@ -86,7 +86,7 @@ void wxTimerScheduler::DoAddTimer(wxTimerSchedule *s)
     for ( node = m_timers.begin(); node != m_timers.end(); ++node )
     {
         wxASSERT_MSG( (*node)->m_timer != s->m_timer,
-                      _T("adding the same timer twice?") );
+                      wxT("adding the same timer twice?") );
 
         if ( (*node)->m_expiration > s->m_expiration )
             break;
@@ -115,7 +115,7 @@ void wxTimerScheduler::RemoveTimer(wxUnixTimerImpl *timer)
         }
     }
 
-    wxFAIL_MSG( _T("removing inexistent timer?") );
+    wxFAIL_MSG( wxT("removing inexistent timer?") );
 }
 
 bool wxTimerScheduler::GetNext(wxUsecClock_t *remaining) const
@@ -123,7 +123,7 @@ bool wxTimerScheduler::GetNext(wxUsecClock_t *remaining) const
     if ( m_timers.empty() )
       return false;
 
-    wxCHECK_MSG( remaining, false, _T("NULL pointer") );
+    wxCHECK_MSG( remaining, false, wxT("NULL pointer") );
 
     *remaining = (*m_timers.begin())->m_expiration - wxGetLocalTimeUsec();
     if ( *remaining < 0 )
@@ -241,7 +241,7 @@ bool wxUnixTimerImpl::IsRunning() const
 
 wxUnixTimerImpl::~wxUnixTimerImpl()
 {
-    wxASSERT_MSG( !m_isRunning, _T("must have been stopped before") );
+    wxASSERT_MSG( !m_isRunning, wxT("must have been stopped before") );
 }
 
 // ============================================================================

@@ -3,7 +3,7 @@
 // Purpose:     wxConvAuto class declaration
 // Author:      Vadim Zeitlin
 // Created:     2006-04-03
-// RCS-ID:      $Id: convauto.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Vadim Zeitlin
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -13,8 +13,6 @@
 
 #include "wx/strconv.h"
 #include "wx/fontenc.h"
-
-#if wxUSE_WCHAR_T
 
 // ----------------------------------------------------------------------------
 // wxConvAuto: uses BOM to automatically detect input encoding
@@ -75,6 +73,7 @@ private:
     // all currently recognized BOM values
     enum BOMType
     {
+        BOM_Unknown = -1,
         BOM_None,
         BOM_UTF32BE,
         BOM_UTF32LE,
@@ -106,8 +105,11 @@ private:
     void InitFromBOM(BOMType bomType);
 
     // create the correct conversion object for the BOM present in the
-    // beginning of the buffer; adjust the buffer to skip the BOM if found
-    void InitFromInput(const char **src, size_t *len);
+    // beginning of the buffer
+    //
+    // return false if the buffer is too short to allow us to determine if we
+    // have BOM or not
+    bool InitFromInput(const char *src, size_t len);
 
     // adjust src and len to skip over the BOM (identified by m_bomType) at the
     // start of the buffer
@@ -139,8 +141,6 @@ private:
 
     wxDECLARE_NO_ASSIGN_CLASS(wxConvAuto);
 };
-
-#endif // wxUSE_WCHAR_T
 
 #endif // _WX_CONVAUTO_H_
 

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:
-// RCS-ID:      $Id: msgdlg.h 59771 2009-03-23 13:10:19Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -68,8 +68,9 @@ public:
         // stock items id support
         wxString GetAsString() const
         {
-            return m_stockId == wxID_NONE ? m_label
-                                          : wxGetStockLabel(m_stockId);
+            return m_stockId == wxID_NONE
+                    ? m_label
+                    : wxGetStockLabel(m_stockId, wxSTOCK_FOR_BUTTON);
         }
 
         // return the stock id or wxID_NONE if this is not a stock label
@@ -158,7 +159,7 @@ public:
         wxASSERT_MSG( !(style & wxCANCEL_DEFAULT) || (style & wxCANCEL),
                       "wxCANCEL_DEFAULT is invalid without wxCANCEL" );
 
-        wxASSERT_MSG( !(style & wxCANCEL_DEFAULT) || !(style & wxNO),
+        wxASSERT_MSG( !(style & wxCANCEL_DEFAULT) || !(style & wxNO_DEFAULT),
                       "only one default button can be specified" );
 
         m_dialogStyle = style;
@@ -166,6 +167,26 @@ public:
 
 protected:
     long GetMessageDialogStyle() const { return m_dialogStyle; }
+
+    // based on message dialog style, returns exactly one of: wxICON_NONE,
+    // wxICON_ERROR, wxICON_WARNING, wxICON_QUESTION, wxICON_INFORMATION
+    long GetEffectiveIcon() const
+    {
+        if ( m_dialogStyle & wxICON_NONE )
+            return wxICON_NONE;
+        else if ( m_dialogStyle & wxICON_ERROR )
+            return wxICON_ERROR;
+        else if ( m_dialogStyle & wxICON_WARNING )
+            return wxICON_WARNING;
+        else if ( m_dialogStyle & wxICON_QUESTION )
+            return wxICON_QUESTION;
+        else if ( m_dialogStyle & wxICON_INFORMATION )
+            return wxICON_INFORMATION;
+        else if ( m_dialogStyle & wxYES )
+            return wxICON_QUESTION;
+        else
+            return wxICON_INFORMATION;
+    }
 
 
     // for the platforms not supporting separate main and extended messages
@@ -276,10 +297,10 @@ protected:
 private:
     // these functions may be overridden to provide different defaults for the
     // default button labels (this is used by wxGTK)
-    virtual wxString GetDefaultYesLabel() const { return _("Yes"); }
-    virtual wxString GetDefaultNoLabel() const { return _("No"); }
-    virtual wxString GetDefaultOKLabel() const { return _("OK"); }
-    virtual wxString GetDefaultCancelLabel() const { return _("Cancel"); }
+    virtual wxString GetDefaultYesLabel() const { return wxGetTranslation("Yes"); }
+    virtual wxString GetDefaultNoLabel() const { return wxGetTranslation("No"); }
+    virtual wxString GetDefaultOKLabel() const { return wxGetTranslation("OK"); }
+    virtual wxString GetDefaultCancelLabel() const { return wxGetTranslation("Cancel"); }
 
     // labels for the buttons, initially empty meaning that the defaults should
     // be used, use GetYes/No/OK/CancelLabel() to access them

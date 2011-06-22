@@ -4,7 +4,7 @@
 // Author:      David Webster (adapted from Robert Roebling's gtk port
 // Modified by:
 // Created:     10/21/99
-// RCS-ID:      $Id: dataobj2.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998, 1999 Vadim Zeitlin, Robert Roebling
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,7 +68,7 @@ public:
     // ----------------------------------
 
     void AddFile( const wxString &filename );
-    
+
     virtual size_t GetDataSize() const;
     virtual bool GetDataHere(void *buf) const;
     virtual bool SetData(size_t len, const void *buf);

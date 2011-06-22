@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2008/02/14
-// RCS-ID:      $Id: scrollview.h 60399 2009-04-26 19:41:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003- David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_COCOA_SCROLLVIEW_H__

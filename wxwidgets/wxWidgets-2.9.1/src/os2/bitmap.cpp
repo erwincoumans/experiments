@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     08/08/99
-// RCS-ID:      $Id: bitmap.cpp 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -84,11 +84,7 @@ void wxBitmapRefData::Free()
             wxLogLastError(wxT("GpiDeleteBitmap(hbitmap)"));
         }
     }
-    if (m_pBitmapMask)
-    {
-        delete m_pBitmapMask;
-        m_pBitmapMask = NULL;
-    }
+    wxDELETE(m_pBitmapMask);
 } // end of wxBitmapRefData::Free
 
 // ----------------------------------------------------------------------------
@@ -917,7 +913,7 @@ wxImage wxBitmap::ConvertToImage() const
     // May already be selected into a PS
     //
     pDC = GetSelectedInto();
-    const wxPMDCImpl *impl; 
+    const wxPMDCImpl *impl;
     if (pDC != NULL &&
         (impl = wxDynamicCast( pDC->GetImpl(), wxPMDCImpl )) != NULL)
     {
@@ -1553,7 +1549,7 @@ HBITMAP wxInvertMask(
 {
     HBITMAP                         hBmpInvMask = 0;
 
-    wxCHECK_MSG( hBmpMask, 0, _T("invalid bitmap in wxInvertMask") );
+    wxCHECK_MSG( hBmpMask, 0, wxT("invalid bitmap in wxInvertMask") );
 
     //
     // Get width/height from the bitmap if not given
@@ -1615,7 +1611,7 @@ HBITMAP wxInvertMask(
 
 HBITMAP wxCopyBmp( HBITMAP hBmp, bool flip, int nWidth, int nHeight )
 {
-    wxCHECK_MSG( hBmp, 0, _T("invalid bitmap in wxCopyBmp") );
+    wxCHECK_MSG( hBmp, 0, wxT("invalid bitmap in wxCopyBmp") );
 
     //
     // Get width/height from the bitmap if not given

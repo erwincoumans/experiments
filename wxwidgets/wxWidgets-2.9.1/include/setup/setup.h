@@ -23,6 +23,13 @@
     #define wxUSE_GUI            1
 #endif // wxUSE_GUI
 
+#define wxUSE_ANY 1
+#define wxUSE_FILE_HISTORY 1
+#define wxUSE_FSWATCHER 0
+#define wxUSE_INFOBAR 1
+#define wxUSE_RIBBON 0
+#define wxUSE_UIACTIONSIMULATOR 0
+
 // ----------------------------------------------------------------------------
 // compatibility settings
 // ----------------------------------------------------------------------------

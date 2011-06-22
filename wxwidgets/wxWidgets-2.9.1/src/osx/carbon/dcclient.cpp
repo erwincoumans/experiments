@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcclient.cpp 60007 2009-04-04 09:05:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ wxWindowDCImpl::wxWindowDCImpl( wxDC *owner, wxWindow *window )
    : wxGCDCImpl( owner )
 {
     m_window = window;
-    
+
     m_ok = true ;
 
     m_window->GetSize( &m_width , &m_height);
@@ -107,7 +107,7 @@ wxBitmap wxWindowDCImpl::DoGetAsBitmap(const wxRect *subrect) const
     ControlRef handle = (ControlRef) m_window->GetHandle();
     if ( !handle )
         return wxNullBitmap;
-    
+
     HIRect rect;
     CGImageRef image;
     CGContextRef context;
@@ -119,11 +119,11 @@ wxBitmap wxWindowDCImpl::DoGetAsBitmap(const wxRect *subrect) const
     int height = subrect !=  NULL ? subrect->height : (int)rect.size.height ;
 
     wxBitmap bmp = wxBitmap(width, height, 32);
-    
+
     context = (CGContextRef)bmp.GetHBITMAP();
-    
+
     CGContextSaveGState(context);
-    
+
     CGContextTranslateCTM( context, 0,  height );
     CGContextScaleCTM( context, 1, -1 );
 
@@ -150,7 +150,7 @@ wxClientDCImpl::wxClientDCImpl( wxDC *owner )
 wxClientDCImpl::wxClientDCImpl( wxDC *owner, wxWindow *window ) :
     wxWindowDCImpl( owner, window )
 {
-    wxCHECK_RET( window, _T("invalid window in wxClientDCImpl") );
+    wxCHECK_RET( window, wxT("invalid window in wxClientDCImpl") );
     wxPoint origin = window->GetClientAreaOrigin() ;
     m_window->GetClientSize( &m_width , &m_height);
     if ( !m_window->IsShownOnScreen() )
@@ -161,6 +161,8 @@ wxClientDCImpl::wxClientDCImpl( wxDC *owner, wxWindow *window ) :
 
 wxClientDCImpl::~wxClientDCImpl()
 {
+    if( GetGraphicsContext() && GetGraphicsContext()->GetNativeContext() )
+        Flush();
 }
 
 /*
@@ -177,7 +179,7 @@ wxPaintDCImpl::wxPaintDCImpl( wxDC *owner )
 wxPaintDCImpl::wxPaintDCImpl( wxDC *owner, wxWindow *window ) :
     wxWindowDCImpl( owner, window )
 {
-    wxASSERT_MSG( window->MacGetCGContextRef() != NULL, _T("using wxPaintDC without being in a native paint event") );
+    wxASSERT_MSG( window->MacGetCGContextRef() != NULL, wxT("using wxPaintDC without being in a native paint event") );
     wxPoint origin = window->GetClientAreaOrigin() ;
     m_window->GetClientSize( &m_width , &m_height);
     SetDeviceOrigin( origin.x, origin.y );

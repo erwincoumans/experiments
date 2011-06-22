@@ -5,7 +5,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: colordlg.cpp 59179 2009-02-27 05:27:38Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:       wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -48,18 +48,20 @@ bool wxColourDialog::Create(wxWindow *parent, wxColourData *data)
 int wxColourDialog::ShowModal()
 {
     RGBColor currentColor ;
-    
+
     m_colourData.m_dataColour.GetRGBColor( &currentColor );
     NColorPickerInfo info;
     OSStatus err ;
     memset(&info, 0, sizeof(info)) ;
     // TODO : use parent to determine better position and then kAtSpecifiedOrigin
-    info.placeWhere = kCenterOnMainScreen ; 
+    info.placeWhere = kCenterOnMainScreen ;
     info.flags = kColorPickerDialogIsMoveable | kColorPickerDialogIsModal ;
     info.theColor.color.rgb.red =  currentColor.red ;
     info.theColor.color.rgb.green =  currentColor.green ;
     info.theColor.color.rgb.blue =  currentColor.blue ;
+    wxDialog::OSXBeginModalDialog();
     err = NPickColor(&info);
+    wxDialog::OSXEndModalDialog();
     if ((err == noErr) && info.newColorChosen)
     {
         currentColor.red = info.theColor.color.rgb.red ;

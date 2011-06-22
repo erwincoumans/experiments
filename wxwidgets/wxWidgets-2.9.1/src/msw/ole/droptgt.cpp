@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:
-// RCS-ID:      $Id: droptgt.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,7 +102,7 @@ static DWORD ConvertDragResultToEffect(wxDragResult result);
 // Params  : [in] DWORD flags                 kbd & mouse flags as passed to
 //                                            IDropTarget methods
 //           [in] wxDragResult defaultAction  the default action of the drop target
-//           [in] DWORD pdwEffect             the supported actions of the drop 
+//           [in] DWORD pdwEffect             the supported actions of the drop
 //                                            source passed to IDropTarget methods
 // Notes   : We do "move" normally and "copy" if <Ctrl> is pressed,
 //           which is the standard behaviour (currently there is no
@@ -169,7 +169,7 @@ STDMETHODIMP wxIDropTarget::DragEnter(IDataObject *pIDataSource,
     wxLogTrace(wxTRACE_OleCalls, wxT("IDropTarget::DragEnter"));
 
     wxASSERT_MSG( m_pIDataObject == NULL,
-                  _T("drop target must have data object") );
+                  wxT("drop target must have data object") );
 
     // show the list of formats supported by the source data object for the
     // debugging purposes, this is quite useful sometimes - please don't remove
@@ -180,7 +180,7 @@ STDMETHODIMP wxIDropTarget::DragEnter(IDataObject *pIDataSource,
         FORMATETC fmt;
         while ( penumFmt->Next(1, &fmt, NULL) == S_OK )
         {
-            wxLogDebug(_T("Drop source supports format %s"),
+            wxLogDebug(wxT("Drop source supports format %s"),
                        wxDataObject::GetFormatName(fmt.cfFormat));
         }
 
@@ -188,7 +188,7 @@ STDMETHODIMP wxIDropTarget::DragEnter(IDataObject *pIDataSource,
     }
     else
     {
-        wxLogLastError(_T("IDataObject::EnumFormatEtc"));
+        wxLogLastError(wxT("IDataObject::EnumFormatEtc"));
     }
 #endif // 0
 
@@ -201,7 +201,7 @@ STDMETHODIMP wxIDropTarget::DragEnter(IDataObject *pIDataSource,
 
     // for use in OnEnter and OnDrag calls
     m_pTarget->MSWSetDataSource(pIDataSource);
-    
+
     // get hold of the data object
     m_pIDataObject = pIDataSource;
     m_pIDataObject->AddRef();

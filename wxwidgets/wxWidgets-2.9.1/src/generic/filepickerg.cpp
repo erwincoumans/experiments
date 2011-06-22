@@ -4,7 +4,7 @@
 // Author:      Francesco Montorsi
 // Modified by:
 // Created:     15/04/2006
-// RCS-ID:      $Id: filepickerg.cpp 52836 2008-03-26 15:49:31Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,15 +40,22 @@ IMPLEMENT_DYNAMIC_CLASS(wxGenericDirButton, wxButton)
 // wxGenericFileButton
 // ----------------------------------------------------------------------------
 
-bool wxGenericFileDirButton::Create( wxWindow *parent, wxWindowID id,
-                        const wxString &label, const wxString &path,
-                        const wxString &message, const wxString &wildcard,
-                        const wxPoint &pos, const wxSize &size, long style,
-                        const wxValidator& validator, const wxString &name)
+bool wxGenericFileDirButton::Create(wxWindow *parent,
+                                    wxWindowID id,
+                                    const wxString& label,
+                                    const wxString& path,
+                                    const wxString& message,
+                                    const wxString& wildcard,
+                                    const wxPoint& pos,
+                                    const wxSize& size,
+                                    long style,
+                                    const wxValidator& validator,
+                                    const wxString& name)
 {
+    m_pickerStyle = style;
+
     // create this button
-    if (!wxButton::Create(parent, id, label, pos, size, style,
-                          validator, name))
+    if ( !wxButton::Create(parent, id, label, pos, size, 0, validator, name) )
     {
         wxFAIL_MSG( wxT("wxGenericFileButton creation failed") );
         return false;

@@ -1,10 +1,10 @@
 /*
  * Name:        wx/chartype.h
  * Purpose:     Declarations of wxChar and related types
- * Author:      Joel Farley, Ove Kåven
+ * Author:      Joel Farley, Ove KÃ¥ven
  * Modified by: Vadim Zeitlin, Robert Roebling, Ron Lee
  * Created:     1998/06/12
- * RCS-ID:      $Id: chartype.h 54802 2008-07-29 11:01:16Z RR $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 1998-2006 wxWidgets dev team
  * Licence:     wxWindows licence
  */
@@ -59,37 +59,35 @@
     #endif
 #endif
 
-#if wxUSE_WCHAR_T
-    #ifdef HAVE_WCHAR_H
-        /* the current (as of Nov 2002) version of cygwin has a bug in its */
-        /* wchar.h -- there is no extern "C" around the declarations in it */
-        /* and this results in linking errors later; also, at least on some */
-        /* Cygwin versions, wchar.h requires sys/types.h */
-        #ifdef __CYGWIN__
-            #include <sys/types.h>
-            #ifdef __cplusplus
-                extern "C" {
-            #endif
-        #endif /* Cygwin */
+#ifdef HAVE_WCHAR_H
+    /* the current (as of Nov 2002) version of cygwin has a bug in its */
+    /* wchar.h -- there is no extern "C" around the declarations in it */
+    /* and this results in linking errors later; also, at least on some */
+    /* Cygwin versions, wchar.h requires sys/types.h */
+    #ifdef __CYGWIN__
+        #include <sys/types.h>
+        #ifdef __cplusplus
+            extern "C" {
+        #endif
+    #endif /* Cygwin */
 
-        #include <wchar.h>
+    #include <wchar.h>
 
-        #if defined(__CYGWIN__) && defined(__cplusplus)
-            }
-        #endif /* Cygwin and C++ */
+    #if defined(__CYGWIN__) && defined(__cplusplus)
+        }
+    #endif /* Cygwin and C++ */
 
-    #elif defined(HAVE_WCSTR_H)
-        /* old compilers have relevant declarations here */
-        #include <wcstr.h>
-    #elif defined(__FreeBSD__) || defined(__DARWIN__) || defined(__EMX__)
-        /* include stdlib.h for wchar_t */
-        #include <stdlib.h>
-    #endif /* HAVE_WCHAR_H */
+#elif defined(HAVE_WCSTR_H)
+    /* old compilers have relevant declarations here */
+    #include <wcstr.h>
+#elif defined(__FreeBSD__) || defined(__DARWIN__) || defined(__EMX__)
+    /* include stdlib.h for wchar_t */
+    #include <stdlib.h>
+#endif /* HAVE_WCHAR_H */
 
-    #ifdef HAVE_WIDEC_H
-        #include <widec.h>
-    #endif
-#endif /* wxUSE_WCHAR_T */
+#ifdef HAVE_WIDEC_H
+    #include <widec.h>
+#endif
 
 /* -------------------------------------------------------------------------- */
 /* define wxHAVE_TCHAR_SUPPORT for the compilers which support the TCHAR type */
@@ -222,7 +220,7 @@
 
 
 /* ------------------------------------------------------------------------- */
-/* define _T() and related macros                                            */
+/* define wxT() and related macros                                           */
 /* ------------------------------------------------------------------------- */
 
 /* BSD systems define _T() to be something different in ctype.h, override it */
@@ -231,15 +229,19 @@
     #undef _T
 #endif
 
-/* could already be defined by tchar.h (it's quasi standard) */
-#ifndef _T
+/*
+   wxT ("wx text") macro turns a literal string constant into a wide char
+   constant. It is mostly unnecessary with wx 2.9 but defined for
+   compatibility.
+ */
+#ifndef wxT
     #if !wxUSE_UNICODE
-        #define _T(x) x
+        #define wxT(x) x
     #else /* Unicode */
         /* use wxCONCAT_HELPER so that x could be expanded if it's a macro */
-        #define _T(x) wxCONCAT_HELPER(L, x)
+        #define wxT(x) wxCONCAT_HELPER(L, x)
     #endif /* ASCII/Unicode */
-#endif /* !defined(_T) */
+#endif /* !defined(wxT) */
 
 /*
    wxS ("wx string") macro can be used to create literals using the same
@@ -253,13 +255,25 @@
     #define wxS(x) x
 #endif
 
-/* although global macros with such names are normally bad, we want to have  */
-/* another name for _T() which should be used to avoid confusion between     */
-/* _T() and _() in wxWidgets sources */
-#define wxT(x)       _T(x)
+/*
+    _T() is a synonym for wxT() familiar to Windows programmers. As this macro
+    has even higher risk of conflicting with system headers, its use is
+    discouraged and you may predefine wxNO__T to disable it. Additionally, we
+    do it ourselves for Sun CC which is known to use it in its standard headers
+    (see #10660).
+ */
+#if defined(__SUNPRO_C) || defined(__SUNPRO_CC)
+    #ifndef wxNO__T
+        #define wxNO__T
+    #endif
+#endif
+
+#if !defined(_T) && !defined(wxNO__T)
+    #define _T(x) wxT(x)
+#endif
 
 /* a helper macro allowing to make another macro Unicode-friendly, see below */
-#define wxAPPLY_T(x) _T(x)
+#define wxAPPLY_T(x) wxT(x)
 
 /* Unicode-friendly __FILE__, __DATE__ and __TIME__ analogs */
 #ifndef __TFILE__

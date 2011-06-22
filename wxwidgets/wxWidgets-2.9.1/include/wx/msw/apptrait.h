@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     21.06.2003
-// RCS-ID:      $Id: apptrait.h 53730 2008-05-23 23:28:13Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,7 +21,6 @@ class WXDLLIMPEXP_BASE wxConsoleAppTraits : public wxConsoleAppTraitsBase
 public:
     virtual wxEventLoopBase *CreateEventLoop();
     virtual void *BeforeChildWaitLoop();
-    virtual void AlwaysYield();
     virtual void AfterChildWaitLoop(void *data);
 #if wxUSE_TIMER
     virtual wxTimerImpl *CreateTimerImpl(wxTimer *timer);
@@ -41,7 +40,6 @@ class WXDLLIMPEXP_CORE wxGUIAppTraits : public wxGUIAppTraitsBase
 public:
     virtual wxEventLoopBase *CreateEventLoop();
     virtual void *BeforeChildWaitLoop();
-    virtual void AlwaysYield();
     virtual void AfterChildWaitLoop(void *data);
 #if wxUSE_TIMER
     virtual wxTimerImpl *CreateTimerImpl(wxTimer *timer);

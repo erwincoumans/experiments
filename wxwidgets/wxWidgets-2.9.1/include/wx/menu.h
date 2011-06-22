@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     26.10.99
-// RCS-ID:      $Id: menu.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,6 +27,7 @@
 // included wx/menu.h
 #include "wx/menuitem.h"
 
+class WXDLLIMPEXP_FWD_CORE wxFrame;
 class WXDLLIMPEXP_FWD_CORE wxMenu;
 class WXDLLIMPEXP_FWD_CORE wxMenuBarBase;
 class WXDLLIMPEXP_FWD_CORE wxMenuBar;
@@ -254,9 +255,20 @@ public:
     void SetEventHandler(wxEvtHandler *handler) { m_eventHandler = handler; }
     wxEvtHandler *GetEventHandler() const { return m_eventHandler; }
 
-    // invoking window
-    void SetInvokingWindow(wxWindow *win) { m_invokingWindow = win; }
+    // Invoking window: this is set by wxWindow::PopupMenu() before showing a
+    // popup menu and reset after it's hidden. Notice that you probably want to
+    // use GetWindow() below instead of GetInvokingWindow() as the latter only
+    // returns non-NULL for the top level menus
+    //
+    // NB: avoid calling SetInvokingWindow() directly if possible, use
+    //     wxMenuInvokingWindowSetter class below instead
+    void SetInvokingWindow(wxWindow *win);
     wxWindow *GetInvokingWindow() const { return m_invokingWindow; }
+
+    // the window associated with this menu: this is the invoking window for
+    // popup menus or the top level window to which the menu bar is attached
+    // for menus which are part of a menu bar
+    wxWindow *GetWindow() const;
 
     // style
     long GetStyle() const { return m_style; }
@@ -498,7 +510,9 @@ public:
 
 #if WXWIN_COMPATIBILITY_2_8
     // get or change the label of the menu at given position
+    // Deprecated in favour of SetMenuLabel
     wxDEPRECATED( void SetLabelTop(size_t pos, const wxString& label) );
+    // Deprecated in favour of GetMenuLabelText
     wxDEPRECATED( wxString GetLabelTop(size_t pos) const );
 #endif
 
@@ -540,7 +554,35 @@ protected:
 #endif
 #endif // wxUSE_BASE_CLASSES_ONLY/!wxUSE_BASE_CLASSES_ONLY
 
+// ----------------------------------------------------------------------------
+// Helper class used in the implementation only: sets the invoking window of
+// the given menu in its ctor and resets it in dtor.
+// ----------------------------------------------------------------------------
+
+class wxMenuInvokingWindowSetter
+{
+public:
+    // Ctor sets the invoking window for the given menu.
+    //
+    // The menu lifetime must be greater than that of this class.
+    wxMenuInvokingWindowSetter(wxMenu& menu, wxWindow *win)
+        : m_menu(menu)
+    {
+        menu.SetInvokingWindow(win);
+    }
+
+    // Dtor resets the invoking window.
+    ~wxMenuInvokingWindowSetter()
+    {
+        m_menu.SetInvokingWindow(NULL);
+    }
+
+private:
+    wxMenu& m_menu;
+
+    wxDECLARE_NO_COPY_CLASS(wxMenuInvokingWindowSetter);
+};
+
 #endif // wxUSE_MENUS
 
-#endif
-    // _WX_MENU_H_BASE_
+#endif // _WX_MENU_H_BASE_

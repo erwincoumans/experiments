@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.08.03
-// RCS-ID:      $Id: listbkg.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -155,28 +155,6 @@ long wxListbook::GetListCtrlReportViewFlags() const
 // wxListbook geometry management
 // ----------------------------------------------------------------------------
 
-wxSize wxListbook::GetControllerSize() const
-{
-    const wxSize sizeClient = GetClientSize(),
-                 sizeBorder = m_bookctrl->GetSize() - m_bookctrl->GetClientSize(),
-                 sizeList = GetListView()->GetViewRect().GetSize() + sizeBorder;
-
-    wxSize size;
-
-    if ( IsVertical() )
-    {
-        size.x = sizeClient.x;
-        size.y = sizeList.y;
-    }
-    else // left/right aligned
-    {
-        size.x = sizeList.x;
-        size.y = sizeClient.y;
-    }
-
-    return size;
-}
-
 void wxListbook::OnSize(wxSizeEvent& event)
 {
     // arrange the icons before calling SetClientSize(), otherwise it wouldn't
@@ -230,24 +208,6 @@ int wxListbook::HitTest(const wxPoint& pt, long *flags) const
     return pagePos;
 }
 
-wxSize wxListbook::CalcSizeFromPage(const wxSize& sizePage) const
-{
-    // we need to add the size of the list control and the border between
-    const wxSize sizeList = GetControllerSize();
-
-    wxSize size = sizePage;
-    if ( IsVertical() )
-    {
-        size.y += sizeList.y + GetInternalBorder();
-    }
-    else // left/right aligned
-    {
-        size.x += sizeList.x + GetInternalBorder();
-    }
-
-    return size;
-}
-
 void wxListbook::UpdateSize()
 {
     // we should find a more elegant way to force a layout than generating this
@@ -298,28 +258,14 @@ bool wxListbook::SetPageImage(size_t n, int imageId)
 
 void wxListbook::SetImageList(wxImageList *imageList)
 {
+#ifdef CAN_USE_REPORT_VIEW
     wxListView * const list = GetListView();
 
-#ifdef CAN_USE_REPORT_VIEW
     // If imageList presence has changed, we update the list control view
     if ( (imageList != NULL) != (GetImageList() != NULL) )
     {
-        wxArrayString labels;
-        labels.Alloc(GetPageCount());
-
-        wxArrayInt imageIds;
-        imageIds.Alloc(GetPageCount());
-
+        // Preserve the selection which is lost when changing the mode
         const int oldSel = GetSelection();
-        size_t i;
-
-        // Grab snapshot of all list control items before changing the window
-        // style (which deletes the items)
-        for ( i = 0; i < GetPageCount(); i++ )
-        {
-           labels.Add(GetPageText(i));
-           imageIds.Add(GetPageImage(i));
-        }
 
         // Update the style to use icon view for images, report view otherwise
         long style = wxLC_SINGLE_SEL;
@@ -335,12 +281,6 @@ void wxListbook::SetImageList(wxImageList *imageList)
         list->SetWindowStyleFlag(style);
         if ( !imageList )
             list->InsertColumn(0, wxT("Pages"));
-
-        // Add back the list control items
-        for ( i = 0; i < GetPageCount(); i++ )
-        {
-           list->InsertItem(i, labels[i], imageIds[i]);
-        }
 
         // Restore selection
         if ( oldSel != wxNOT_FOUND )

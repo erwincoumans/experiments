@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: brush.cpp 52636 2008-03-20 15:08:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -192,7 +192,7 @@ HBRUSH wxBrushRefData::GetHBRUSH()
                     break;
 
                 default:
-                    wxFAIL_MSG( _T("unknown brush style") );
+                    wxFAIL_MSG( wxT("unknown brush style") );
                     // fall through
 
                 case wxBRUSHSTYLE_SOLID:
@@ -209,7 +209,7 @@ HBRUSH wxBrushRefData::GetHBRUSH()
 
         if ( !m_hBrush )
         {
-            wxLogLastError(_T("CreateXXXBrush()"));
+            wxLogLastError(wxT("CreateXXXBrush()"));
         }
     }
 
@@ -277,28 +277,28 @@ wxGDIRefData *wxBrush::CloneGDIRefData(const wxGDIRefData *data) const
 
 wxColour wxBrush::GetColour() const
 {
-    wxCHECK_MSG( Ok(), wxNullColour, _T("invalid brush") );
+    wxCHECK_MSG( Ok(), wxNullColour, wxT("invalid brush") );
 
     return M_BRUSHDATA->GetColour();
 }
 
 wxBrushStyle wxBrush::GetStyle() const
 {
-    wxCHECK_MSG( Ok(), wxBRUSHSTYLE_INVALID, _T("invalid brush") );
+    wxCHECK_MSG( Ok(), wxBRUSHSTYLE_INVALID, wxT("invalid brush") );
 
     return M_BRUSHDATA->GetStyle();
 }
 
 wxBitmap *wxBrush::GetStipple() const
 {
-    wxCHECK_MSG( Ok(), NULL, _T("invalid brush") );
+    wxCHECK_MSG( Ok(), NULL, wxT("invalid brush") );
 
     return M_BRUSHDATA->GetStipple();
 }
 
 WXHANDLE wxBrush::GetResourceHandle() const
 {
-    wxCHECK_MSG( Ok(), FALSE, _T("invalid brush") );
+    wxCHECK_MSG( Ok(), FALSE, wxT("invalid brush") );
 
     return (WXHANDLE)M_BRUSHDATA->GetHBRUSH();
 }

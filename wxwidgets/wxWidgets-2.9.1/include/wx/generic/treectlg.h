@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: treectlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997,1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -120,6 +120,10 @@ public:
         return m_current;
     }
     virtual size_t GetSelections(wxArrayTreeItemIds&) const;
+    virtual wxTreeItemId GetFocusedItem() const { return m_current; }
+
+    virtual void ClearFocusedItem();
+    virtual void SetFocusedItem(const wxTreeItemId& item);
 
     virtual wxTreeItemId GetItemParent(const wxTreeItemId& item) const;
     virtual wxTreeItemId GetFirstChild(const wxTreeItemId& item,
@@ -154,12 +158,13 @@ public:
     virtual void Unselect();
     virtual void UnselectAll();
     virtual void SelectItem(const wxTreeItemId& item, bool select = true);
+    virtual void SelectChildren(const wxTreeItemId& parent);
 
     virtual void EnsureVisible(const wxTreeItemId& item);
     virtual void ScrollTo(const wxTreeItemId& item);
 
     virtual wxTextCtrl *EditLabel(const wxTreeItemId& item,
-                          wxClassInfo* textCtrlClass = CLASSINFO(wxTextCtrl));
+                          wxClassInfo* textCtrlClass = wxCLASSINFO(wxTextCtrl));
     virtual wxTextCtrl *GetEditControl() const;
     virtual void EndEditLabel(const wxTreeItemId& item,
                               bool discardChanges = false);
@@ -257,12 +262,12 @@ protected:
     wxCursor             m_oldCursor;  // cursor is changed while dragging
     wxGenericTreeItem   *m_oldSelection;
     wxGenericTreeItem   *m_underMouse; // for visual effects
-    
+
     enum { NoEffect, BorderEffect, AboveEffect, BelowEffect } m_dndEffect;
-    wxGenericTreeItem   *m_dndEffectItem; 
-    
+    wxGenericTreeItem   *m_dndEffectItem;
+
     wxTreeTextCtrl      *m_textCtrl;
-    
+
 
     wxTimer             *m_renameTimer;
 
@@ -275,7 +280,7 @@ protected:
     // the common part of all ctors
     void Init();
 
-    // overridden wxWindow methods 
+    // overridden wxWindow methods
     virtual void DoThaw();
 
     // misc helpers

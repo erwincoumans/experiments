@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: dcscreen.cpp 60764 2009-05-27 12:37:08Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,10 +30,14 @@ IMPLEMENT_ABSTRACT_CLASS(wxScreenDCImpl, wxWindowDCImpl)
 wxScreenDCImpl::wxScreenDCImpl( wxDC *owner ) :
    wxWindowDCImpl( owner )
 {
+#if wxOSX_USE_COCOA_OR_CARBON
     CGRect cgbounds ;
     cgbounds = CGDisplayBounds(CGMainDisplayID());
     m_width = (wxCoord)cgbounds.size.width;
     m_height = (wxCoord)cgbounds.size.height;
+#else
+    wxDisplaySize( &m_width, &m_height );
+#endif
 #if wxOSX_USE_COCOA_OR_IPHONE
     SetGraphicsContext( wxGraphicsContext::Create() );
 #else
@@ -52,46 +56,50 @@ wxScreenDCImpl::wxScreenDCImpl( wxDC *owner ) :
 
 wxScreenDCImpl::~wxScreenDCImpl()
 {
-    delete m_graphicContext;
-    m_graphicContext = NULL;
+    wxDELETE(m_graphicContext);
 #if wxOSX_USE_COCOA_OR_IPHONE
 #else
     DisposeWindow((WindowRef) m_overlayWindow );
 #endif
 }
 
+#if wxOSX_USE_IPHONE
+// Apple has allowed usage of this API as of 15th Dec 2009w
+extern CGImageRef UIGetScreenImage();
+#endif
+
 // TODO Switch to CGWindowListCreateImage for 10.5 and above
 
 wxBitmap wxScreenDCImpl::DoGetAsBitmap(const wxRect *subrect) const
 {
-    CGRect srcRect = CGRectMake(0, 0, m_width, m_height);
-    if (subrect)
-    {
-        srcRect.origin.x = subrect->GetX();
-        srcRect.origin.y = subrect->GetY();
-        srcRect.size.width = subrect->GetWidth();
-        srcRect.size.height = subrect->GetHeight();
-    }
-    wxBitmap bmp = wxBitmap(srcRect.size.width, srcRect.size.height, 32);
-#if wxOSX_USE_IPHONE
-#else
+    wxRect rect = subrect ? *subrect : wxRect(0, 0, m_width, m_height);
+
+    wxBitmap bmp(rect.GetSize(), 32);
+
+#if !wxOSX_USE_IPHONE
+    CGRect srcRect = CGRectMake(rect.x, rect.y, rect.width, rect.height);
+
     CGContextRef context = (CGContextRef)bmp.GetHBITMAP();
-    
+
     CGContextSaveGState(context);
-    
+
     CGContextTranslateCTM( context, 0,  m_height );
     CGContextScaleCTM( context, 1, -1 );
-    
+
     if ( subrect )
         srcRect = CGRectOffset( srcRect, -subrect->x, -subrect->y ) ;
-    
+
     CGImageRef image = grabViaOpenGL(kCGNullDirectDisplay, srcRect);
-    
+
     wxASSERT_MSG(image, wxT("wxScreenDC::GetAsBitmap - unable to get screenshot."));
-    
+
     CGContextDrawImage(context, srcRect, image);
     
+    CGImageRelease(image);
+
     CGContextRestoreGState(context);
+#else
+    // TODO implement using UIGetScreenImage, CGImageCreateWithImageInRect, CGContextDrawImage
 #endif
     return bmp;
 }

@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2006-12-20
-// RCS-ID:      $Id: fontutilcmn.cpp 44288 2007-01-22 14:05:07Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin, Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

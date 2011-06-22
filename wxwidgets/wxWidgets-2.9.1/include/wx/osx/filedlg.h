@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: filedlg.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,12 +38,21 @@ public:
     virtual void GetFilenames(wxArrayString& files) const { files = m_fileNames ; }
 
     virtual int ShowModal();
+    
+#if wxOSX_USE_COCOA
+    virtual void ShowWindowModal();
+    virtual void ModalFinishedCallback(void* panel, int resultCode);
+#endif
 
+    virtual bool SupportsExtraControl() const;
+    
 protected:
     // not supported for file dialog, RR
     virtual void DoSetSize(int WXUNUSED(x), int WXUNUSED(y),
                            int WXUNUSED(width), int WXUNUSED(height),
                            int WXUNUSED(sizeFlags) = wxSIZE_AUTO) {}
+    
+    void SetupExtraControls(WXWindow nativeWindow);
 };
 
 #endif // _WX_FILEDLG_H_

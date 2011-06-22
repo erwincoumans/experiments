@@ -20,8 +20,8 @@
     #define wxOSX_USE_NATIVE_TOOLBAR 1
 #endif
 
-/* 
- * text rendering system 
+/*
+ * text rendering system
  */
 
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
@@ -38,6 +38,18 @@
     #endif
     #define wxOSX_USE_ATSU_TEXT 1
 
+#endif
+
+/*
+ * Audio System
+ */
+
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
+    #define wxOSX_USE_QUICKTIME 0
+    #define wxOSX_USE_AUDIOTOOLBOX 1
+#else // platform < 10.5
+    #define wxOSX_USE_QUICKTIME 1
+    #define wxOSX_USE_AUDIOTOOLBOX 0
 #endif
 
 /*

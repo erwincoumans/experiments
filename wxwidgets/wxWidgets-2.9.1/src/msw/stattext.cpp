@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: stattext.cpp 57627 2008-12-29 00:39:12Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -101,6 +101,11 @@ bool wxStaticText::Create(wxWindow *parent,
     // need to do many operation on it for ellipsization&markup support
     SetLabel(label);
 
+    // as we didn't pass the correct label to MSWCreateControl(), it didn't set
+    // the initial size correctly -- do it now
+    InvalidateBestSize();
+    SetInitialSize(size);
+
     // NOTE: if the label contains ampersand characters which are interpreted as
     //       accelerators, they will be rendered (at least on WinXP) only if the
     //       static text is placed inside a window class which correctly handles
@@ -142,7 +147,7 @@ WXDWORD wxStaticText::MSWGetStyle(long style, WXDWORD *exstyle) const
     return msStyle;
 }
 
-wxSize wxStaticText::DoGetBestSize() const
+wxSize wxStaticText::DoGetBestClientSize() const
 {
     wxClientDC dc(const_cast<wxStaticText *>(this));
     wxFont font(GetFont());
@@ -159,40 +164,7 @@ wxSize wxStaticText::DoGetBestSize() const
         widthTextMax += 2;
 #endif // __WXWINCE__
 
-    // border takes extra space
-    //
-    // TODO: this is probably not wxStaticText-specific and should be moved
-    wxCoord border;
-    switch ( GetBorder() )
-    {
-        case wxBORDER_STATIC:
-        case wxBORDER_SIMPLE:
-            border = 1;
-            break;
-
-        case wxBORDER_SUNKEN:
-            border = 2;
-            break;
-
-        case wxBORDER_RAISED:
-        case wxBORDER_DOUBLE:
-            border = 3;
-            break;
-
-        default:
-            wxFAIL_MSG( _T("unknown border style") );
-            // fall through
-
-        case wxBORDER_NONE:
-            border = 0;
-    }
-
-    widthTextMax += 2*border;
-    heightTextTotal += 2*border;
-
-    wxSize best(widthTextMax, heightTextTotal);
-    CacheBestSize(best);
-    return best;
+    return wxSize(widthTextMax, heightTextTotal);
 }
 
 void wxStaticText::DoSetSize(int x, int y, int w, int h, int sizeFlags)
@@ -242,13 +214,13 @@ void wxStaticText::SetLabel(const wxString& label)
     }
 #endif // SS_ENDELLIPSIS
 
-    // this call will save the label in m_labelOrig and set it into this window
-    // (through wxWindow::SetLabel)
+    // save the label in m_labelOrig with both the markup (if any) and 
+    // the mnemonics characters (if any)
     m_labelOrig = label;
 
 #ifdef SS_ENDELLIPSIS
     if ( styleReal & SS_ENDELLIPSIS )
-        DoSetLabel(RemoveMarkup(label));
+        DoSetLabel(GetLabelWithoutMarkup());
     else
 #endif // SS_ENDELLIPSIS
         DoSetLabel(GetEllipsizedLabelWithoutMarkup());

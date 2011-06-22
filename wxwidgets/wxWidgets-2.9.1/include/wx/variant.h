@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/09/98
-// RCS-ID:      $Id: variant.h 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,6 +21,7 @@
 #include "wx/arrstr.h"
 #include "wx/list.h"
 #include "wx/cpp.h"
+#include "wx/longlong.h"
 
 #if wxUSE_DATETIME
     #include "wx/datetime.h"
@@ -28,14 +29,12 @@
 
 #include "wx/iosfwrap.h"
 
+class wxAny;
+
 /*
  * wxVariantData stores the actual data in a wxVariant object,
  * to allow it to store any type of data.
  * Derive from this to provide custom data handling.
- *
- * NB: To prevent addition of extra vtbl pointer to wxVariantData,
- *     we don't multiple-inherit from wxObjectRefData. Instead,
- *     we simply replicate the wxObject ref-counting scheme.
  *
  * NB: When you construct a wxVariantData, it will have refcount
  *     of one. Refcount will not be further increased when
@@ -55,11 +54,11 @@
  * overloading wxVariant with unnecessary functionality.
  */
 
-class WXDLLIMPEXP_BASE wxVariantData
+class WXDLLIMPEXP_BASE wxVariantData : public wxObjectRefData
 {
     friend class wxVariant;
 public:
-    wxVariantData() : m_count(1) { }
+    wxVariantData() { }
 
     // Override these to provide common functionality
     virtual bool Eq(wxVariantData& data) const = 0;
@@ -77,27 +76,20 @@ public:
     // If it based on wxObject return the ClassInfo.
     virtual wxClassInfo* GetValueClassInfo() { return NULL; }
 
-    // Implement this to make wxVariant::AllocExcusive work. Returns
+    // Implement this to make wxVariant::UnShare work. Returns
     // a copy of the data.
     virtual wxVariantData* Clone() const { return NULL; }
 
-    void IncRef() { m_count++; }
-    void DecRef()
-    {
-        if ( --m_count == 0 )
-            delete this;
-    }
-
-    int GetRefCount() const { return m_count; }
+#if wxUSE_ANY
+    // Converts value to wxAny, if possible. Return true if successful.
+    virtual bool GetAsAny(wxAny* WXUNUSED(any)) const { return false; }
+#endif
 
 protected:
     // Protected dtor should make some incompatible code
     // break more louder. That is, they should do data->DecRef()
     // instead of delete data.
     virtual ~wxVariantData() { }
-
-private:
-    int     m_count;
 };
 
 /*
@@ -116,6 +108,9 @@ public:
 
     wxVariant(const wxVariant& variant);
     wxVariant(wxVariantData* data, const wxString& name = wxEmptyString);
+#if wxUSE_ANY
+    wxVariant(const wxAny& any);
+#endif
     virtual ~wxVariant();
 
     // generic assignment
@@ -137,14 +132,14 @@ public:
 
     // For compatibility with wxWidgets <= 2.6, this doesn't increase
     // reference count.
-    wxVariantData* GetData() const { return m_data; }
+    wxVariantData* GetData() const
+    {
+        return (wxVariantData*) m_refData;
+    }
     void SetData(wxVariantData* data) ;
 
     // make a 'clone' of the object
-    void Ref(const wxVariant& clone);
-
-    // destroy a reference
-    void UnRef();
+    void Ref(const wxVariant& clone) { wxObject::Ref(clone); }
 
     // ensure that the data is exclusive to this variant, and not shared
     bool Unshare();
@@ -164,6 +159,10 @@ public:
 
     // write contents to a string (e.g. for debugging)
     wxString MakeString() const;
+
+#if wxUSE_ANY
+    wxAny GetAny() const;
+#endif
 
     // double
     wxVariant(double val, const wxString& name = wxEmptyString);
@@ -231,6 +230,26 @@ public:
     inline operator wxString () const {  return MakeString(); }
     wxString GetString() const;
 
+#if wxUSE_STD_STRING
+    wxVariant(const std::string& val, const wxString& name = wxEmptyString);
+    bool operator==(const std::string& value) const
+        { return operator==(wxString(value)); }
+    bool operator!=(const std::string& value) const
+        { return operator!=(wxString(value)); }
+    wxVariant& operator=(const std::string& value)
+        { return operator=(wxString(value)); }
+    operator std::string() const { return (operator wxString()).ToStdString(); }
+
+    wxVariant(const wxStdWideString& val, const wxString& name = wxEmptyString);
+    bool operator==(const wxStdWideString& value) const
+        { return operator==(wxString(value)); }
+    bool operator!=(const wxStdWideString& value) const
+        { return operator!=(wxString(value)); }
+    wxVariant& operator=(const wxStdWideString& value)
+        { return operator=(wxString(value)); }
+    operator wxStdWideString() const { return (operator wxString()).ToStdWstring(); }
+#endif // wxUSE_STD_STRING
+
     // wxUniChar
     wxVariant(const wxUniChar& val, const wxString& name = wxEmptyString);
     wxVariant(const wxUniCharRef& val, const wxString& name = wxEmptyString);
@@ -276,6 +295,23 @@ public:
     void operator= (wxObject* value);
     wxObject* GetWxObjectPtr() const;
 
+#if wxUSE_LONGLONG
+    // wxLongLong
+    wxVariant(wxLongLong, const wxString& name = wxEmptyString);
+    bool operator==(wxLongLong value) const;
+    bool operator!=(wxLongLong value) const;
+    void operator=(wxLongLong value);
+    operator wxLongLong() const { return GetLongLong(); }
+    wxLongLong GetLongLong() const;
+
+    // wxULongLong
+    wxVariant(wxULongLong, const wxString& name = wxEmptyString);
+    bool operator==(wxULongLong value) const;
+    bool operator!=(wxULongLong value) const;
+    void operator=(wxULongLong value);
+    operator wxULongLong() const { return GetULongLong(); }
+    wxULongLong GetULongLong() const;
+#endif
 
     // ------------------------------
     // list operations
@@ -323,15 +359,102 @@ public:
 #if wxUSE_DATETIME
     bool Convert(wxDateTime* value) const;
 #endif // wxUSE_DATETIME
+#if wxUSE_LONGLONG
+    bool Convert(wxLongLong* value) const;
+    bool Convert(wxULongLong* value) const;
+#endif // wxUSE_LONGLONG
 
 // Attributes
 protected:
-    wxVariantData*  m_data;
+    virtual wxObjectRefData *CreateRefData() const;
+    virtual wxObjectRefData *CloneRefData(const wxObjectRefData *data) const;
+
     wxString        m_name;
 
 private:
     DECLARE_DYNAMIC_CLASS(wxVariant)
 };
+
+
+//
+// wxVariant <-> wxAny conversion code
+//
+#if wxUSE_ANY
+
+#include "wx/any.h"
+
+// In order to convert wxAny to wxVariant, we need to be able to associate
+// wxAnyValueType with a wxVariantData factory function.
+typedef wxVariantData* (*wxVariantDataFactory)(const wxAny& any);
+
+// Actual Any-to-Variant registration must be postponed to a time when all
+// global variables have been initialized. Hence this arrangement.
+// wxAnyToVariantRegistration instances are kept in global scope and
+// wxAnyValueTypeGlobals in any.cpp will use their data when the time is
+// right.
+class WXDLLIMPEXP_BASE wxAnyToVariantRegistration
+{
+public:
+    wxAnyToVariantRegistration(wxVariantDataFactory factory);
+    virtual ~wxAnyToVariantRegistration();
+
+    virtual wxAnyValueType* GetAssociatedType() = 0;
+    wxVariantDataFactory GetFactory() const { return m_factory; }
+private:
+    wxVariantDataFactory    m_factory;
+};
+
+template<typename T>
+class wxAnyToVariantRegistrationImpl : public wxAnyToVariantRegistration
+{
+public:
+    wxAnyToVariantRegistrationImpl(wxVariantDataFactory factory)
+        : wxAnyToVariantRegistration(factory)
+    {
+    }
+
+    virtual wxAnyValueType* GetAssociatedType()
+    {
+        return wxAnyValueTypeImpl<T>::GetInstance();
+    }
+private:
+};
+
+#define DECLARE_WXANY_CONVERSION() \
+virtual bool GetAsAny(wxAny* any) const; \
+static wxVariantData* VariantDataFactory(const wxAny& any);
+
+#define _REGISTER_WXANY_CONVERSION(T, CLASSNAME, FUNC) \
+static wxAnyToVariantRegistrationImpl<T> \
+    gs_##CLASSNAME##AnyToVariantRegistration = \
+    wxAnyToVariantRegistrationImpl<T>(&FUNC);
+
+#define REGISTER_WXANY_CONVERSION(T, CLASSNAME) \
+_REGISTER_WXANY_CONVERSION(T, CLASSNAME, CLASSNAME::VariantDataFactory)
+
+#define IMPLEMENT_TRIVIAL_WXANY_CONVERSION(T, CLASSNAME) \
+bool CLASSNAME::GetAsAny(wxAny* any) const \
+{ \
+    *any = m_value; \
+    return true; \
+} \
+wxVariantData* CLASSNAME::VariantDataFactory(const wxAny& any) \
+{ \
+    return new CLASSNAME(wxANY_AS(any, T)); \
+} \
+REGISTER_WXANY_CONVERSION(T, CLASSNAME)
+
+// This is needed for wxVariantList conversion
+WX_DECLARE_LIST_WITH_DECL(wxAny, wxAnyList, class WXDLLIMPEXP_BASE);
+
+#else // if !wxUSE_ANY
+
+#define DECLARE_WXANY_CONVERSION()
+#define REGISTER_WXANY_CONVERSION(T, CLASSNAME)
+#define IMPLEMENT_TRIVIAL_WXANY_CONVERSION(T, CLASSNAME)
+
+#endif // wxUSE_ANY/!wxUSE_ANY
+
 
 #define DECLARE_VARIANT_OBJECT(classname) \
     DECLARE_VARIANT_OBJECT_EXPORTED(classname, wxEMPTY_PARAMETER_VALUE)
@@ -359,6 +482,7 @@ public:\
 \
     virtual wxVariantData* Clone() const { return new classname##VariantData(m_value); } \
 \
+    DECLARE_WXANY_CONVERSION() \
 protected:\
     classname m_value; \
 };\
@@ -387,7 +511,8 @@ expdecl wxVariant& operator << ( wxVariant &variant, const classname &value )\
     classname##VariantData *data = new classname##VariantData( value );\
     variant.SetData( data );\
     return variant;\
-}
+} \
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(classname, classname##VariantData)
 
 // implements a wxVariantData-derived class using for the Eq() method the
 // operator== which must have been provided by "classname"

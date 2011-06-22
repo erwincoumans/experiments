@@ -2,7 +2,7 @@
 // Name:        common/calctrlcmn.cpp
 // Author:      Marcin Wojdyr
 // Created:     2008-03-26
-// RCS-ID:      $Id: calctrlcmn.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (C) Marcin Wojdyr
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

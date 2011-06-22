@@ -2,7 +2,7 @@
 // Name:        src/html/htmltag.cpp
 // Purpose:     wxHtmlTag class (represents single tag)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmltag.cpp 54899 2008-08-01 14:19:22Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +23,8 @@
 #endif
 
 #include "wx/html/htmlpars.h"
+#include "wx/html/styleparams.h"
+
 #include "wx/vector.h"
 
 #include <stdio.h> // for vsscanf
@@ -63,8 +65,8 @@ class wxHtmlTagsCacheData : public wxVector<wxHtmlCacheItem>
 
 bool wxIsCDATAElement(const wxChar *tag)
 {
-    return (wxStrcmp(tag, _T("SCRIPT")) == 0) ||
-           (wxStrcmp(tag, _T("STYLE")) == 0);
+    return (wxStrcmp(tag, wxT("SCRIPT")) == 0) ||
+           (wxStrcmp(tag, wxT("STYLE")) == 0);
 }
 
 bool wxIsCDATAElement(const wxString& tag)
@@ -103,7 +105,7 @@ wxHtmlTagsCache::wxHtmlTagsCache(const wxString& source)
             {
                 tagBuffer[i] = (wxChar)wxToupper(*pos);
             }
-            tagBuffer[i] = _T('\0');
+            tagBuffer[i] = wxT('\0');
 
             Cache()[tg].Name = new wxChar[i+1];
             memcpy(Cache()[tg].Name, tagBuffer, (i+1)*sizeof(wxChar));
@@ -203,8 +205,7 @@ wxHtmlTagsCache::wxHtmlTagsCache(const wxString& source)
     for ( wxHtmlTagsCacheData::iterator i = Cache().begin();
           i != Cache().end(); ++i )
     {
-        delete[] i->Name;
-        i->Name = NULL;
+        wxDELETEA(i->Name);
     }
 }
 
@@ -430,6 +431,32 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
 #if WXWIN_COMPATIBILITY_2_8
     m_sourceStart = source->begin();
 #endif
+
+    // Try to parse any style parameters that can be handled simply by
+    // converting them to the equivalent HTML 3 attributes: this is a far cry
+    // from perfect but better than nothing.
+    static const struct EquivAttr
+    {
+        const char *style;
+        const char *attr;
+    } equivAttrs[] =
+    {
+        { "text-align",         "ALIGN"         },
+        { "width",              "WIDTH"         },
+        { "vertical-align",     "VALIGN"        },
+        { "background",         "BGCOLOR"       },
+    };
+
+    wxHtmlStyleParams styleParams(*this);
+    for ( unsigned n = 0; n < WXSIZEOF(equivAttrs); n++ )
+    {
+        const EquivAttr& ea = equivAttrs[n];
+        if ( styleParams.HasParam(ea.style) && !HasParam(ea.attr) )
+        {
+            m_ParamNames.Add(ea.attr);
+            m_ParamValues.Add(styleParams.GetParam(ea.style));
+        }
+    }
 }
 
 wxHtmlTag::~wxHtmlTag()
@@ -481,14 +508,13 @@ int wxHtmlTag::ScanParam(const wxString& par,
     return wxSscanf(parval, format, param);
 }
 
-bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
+/* static */
+bool wxHtmlTag::ParseAsColour(const wxString& str, wxColour *clr)
 {
-    wxCHECK_MSG( clr, false, _T("invalid colour argument") );
-
-    wxString str = GetParam(par);
+    wxCHECK_MSG( clr, false, wxT("invalid colour argument") );
 
     // handle colours defined in HTML 4.0 first:
-    if (str.length() > 1 && str[0] != _T('#'))
+    if (str.length() > 1 && str[0] != wxT('#'))
     {
         #define HTML_COLOUR(name, r, g, b)              \
             if (str.IsSameAs(wxS(name), false))         \
@@ -520,6 +546,12 @@ bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
         return true;
 
     return false;
+}
+
+bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
+{
+    const wxString str = GetParam(par);
+    return !str.empty() && ParseAsColour(str, clr);
 }
 
 bool wxHtmlTag::GetParamAsInt(const wxString& par, int *clr) const

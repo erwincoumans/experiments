@@ -4,7 +4,7 @@
 // Author:      Marco Cavallini (MCK) - wx@koansoftware.com
 // Modified by: Vadim Zeitlin for VC8 support
 // Created:     31-08-2003
-// RCS-ID:      $Id: time.cpp 43076 2006-11-04 23:27:15Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Marco Cavallini
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Authors:     Lukasz Michalski
 // Created:     April 2007
 // Copyright:   (c) Lukasz Michalski
-// RCS-ID:      $Id: epolldispatcher.h 58487 2009-01-29 00:26:40Z VS $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 

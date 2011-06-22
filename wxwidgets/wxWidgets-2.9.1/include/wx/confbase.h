@@ -5,7 +5,7 @@
 // Author:      Karsten Ballueder & Vadim Zeitlin
 // Modified by:
 // Created:     07.04.98 (adapted from appconf.h)
-// RCS-ID:      $Id: confbase.h 59045 2009-02-20 06:48:26Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997 Karsten Ballueder   Ballueder@usa.net
 //                       Vadim Zeitlin      <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
@@ -32,13 +32,13 @@ class WXDLLIMPEXP_FWD_BASE wxArrayString;
 
 /// separates group and entry names (probably shouldn't be changed)
 #ifndef wxCONFIG_PATH_SEPARATOR
-  #define   wxCONFIG_PATH_SEPARATOR     _T('/')
+  #define   wxCONFIG_PATH_SEPARATOR     wxT('/')
 #endif
 
 /// introduces immutable entries
 // (i.e. the ones which can't be changed from the local config file)
 #ifndef wxCONFIG_IMMUTABLE_PREFIX
-  #define   wxCONFIG_IMMUTABLE_PREFIX   _T('!')
+  #define   wxCONFIG_IMMUTABLE_PREFIX   wxT('!')
 #endif
 
 #if wxUSE_CONFIG
@@ -181,6 +181,10 @@ public:
   bool Read(const wxString& key, double* val) const;
   bool Read(const wxString& key, double* val, double defVal) const;
 
+    // read a float
+  bool Read(const wxString& key, float* val) const;
+  bool Read(const wxString& key, float* val, float defVal) const;
+
     // read a bool
   bool Read(const wxString& key, bool* val) const;
   bool Read(const wxString& key, bool* val, bool defVal) const;
@@ -217,7 +221,7 @@ public:
   }
 #endif // wxHAS_CONFIG_TEMPLATE_RW
 
-  // convenience functions returning directly the value 
+  // convenience functions returning directly the value
   wxString Read(const wxString& key,
                 const wxString& defVal = wxEmptyString) const
     { wxString s; (void)Read(key, &s, defVal); return s; }
@@ -226,10 +230,8 @@ public:
   // template Read() would be used
   wxString Read(const wxString& key, const char* defVal) const
     { return Read(key, wxString(defVal)); }
-#if wxUSE_WCHAR_T
   wxString Read(const wxString& key, const wchar_t* defVal) const
     { return Read(key, wxString(defVal)); }
-#endif
 
   long ReadLong(const wxString& key, long defVal) const
     { long l; (void)Read(key, &l, defVal); return l; }
@@ -273,10 +275,8 @@ public:
     { return Write(key, wxString(value)); }
   bool Write(const wxString& key, const unsigned char *value)
     { return Write(key, wxString(value)); }
-#if wxUSE_WCHAR_T
   bool Write(const wxString& key, const wchar_t *value)
     { return Write(key, wxString(value)); }
-#endif
 
 
   // we also have to provide specializations for other types which we want to

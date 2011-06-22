@@ -7,7 +7,7 @@
 // Author:      Jason Bagley
 // Modified by: Ryan Norton (To make it work :), plus bug fixes)
 // Created:     2004-30-01
-// RCS-ID:      $Id: drawer.cpp 60007 2009-04-04 09:05:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jason Bagley; Art & Logic, Inc.
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -140,7 +140,7 @@ bool wxDrawerWindow::SetPreferredEdge(wxDirection edge)
 {
     const OSStatus status = ::SetDrawerPreferredEdge((WindowRef)GetWXWindow(),
      DirectionToWindowEdge(edge));
-	return (noErr == status);
+    return (noErr == status);
 }
 
 

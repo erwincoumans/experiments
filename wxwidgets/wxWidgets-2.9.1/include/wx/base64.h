@@ -3,7 +3,7 @@
 // Purpose:     declaration of BASE64 encoding/decoding functionality
 // Author:      Charles Reimers, Vadim Zeitlin
 // Created:     2007-06-18
-// RCS-ID:      $Id: base64.h 49095 2007-10-08 23:41:50Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -88,6 +88,17 @@ wxBase64Decode(void *dst, size_t dstLen,
                const char *src, size_t srcLen = wxNO_LEN,
                wxBase64DecodeMode mode = wxBase64DecodeMode_Strict,
                size_t *posErr = NULL);
+
+inline size_t
+wxBase64Decode(void *dst, size_t dstLen,
+               const wxString& src,
+               wxBase64DecodeMode mode = wxBase64DecodeMode_Strict,
+               size_t *posErr = NULL)
+{
+    // don't use str.length() here as the ASCII buffer is shorter than it for
+    // strings with embedded NULs
+    return wxBase64Decode(dst, dstLen, src.ToAscii(), wxNO_LEN, mode, posErr);
+}
 
 // decode the contents of the given string; the returned buffer is empty if an
 // error occurs during decoding

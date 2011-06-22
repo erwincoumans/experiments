@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Mike Wetherell
 // Created:     11/07/98
-// RCS-ID:      $Id: zstream.cpp 59370 2009-03-06 16:26:15Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -60,8 +60,8 @@ wxZlibClassFactory::wxZlibClassFactory()
 const wxChar * const *
 wxZlibClassFactory::GetProtocols(wxStreamProtocolType type) const
 {
-    static const wxChar *mimes[] = { _T("application/x-deflate"), NULL };
-    static const wxChar *encs[] =  { _T("deflate"), NULL };
+    static const wxChar *mimes[] = { wxT("application/x-deflate"), NULL };
+    static const wxChar *encs[] =  { wxT("deflate"), NULL };
     static const wxChar *empty[] = { NULL };
 
     switch (type) {
@@ -88,14 +88,14 @@ wxGzipClassFactory::wxGzipClassFactory()
 const wxChar * const *
 wxGzipClassFactory::GetProtocols(wxStreamProtocolType type) const
 {
-    static const wxChar *protos[] =     
-        { _T("gzip"), NULL };
-    static const wxChar *mimes[] =     
-        { _T("application/gzip"), _T("application/x-gzip"), NULL };
-    static const wxChar *encs[] = 
-        { _T("gzip"), NULL };
-    static const wxChar *exts[] =    
-        { _T(".gz"), _T(".gzip"), NULL };
+    static const wxChar *protos[] =
+        { wxT("gzip"), NULL };
+    static const wxChar *mimes[] =
+        { wxT("application/gzip"), wxT("application/x-gzip"), NULL };
+    static const wxChar *encs[] =
+        { wxT("gzip"), NULL };
+    static const wxChar *exts[] =
+        { wxT(".gz"), wxT(".gzip"), NULL };
     static const wxChar *empty[] =
         { NULL };
 
@@ -224,7 +224,9 @@ size_t wxZlibInputStream::OnSysRead(void *buffer, size_t size)
       // by the parent strean,
       m_lasterror = wxSTREAM_READ_ERROR;
       if (m_parent_i_stream->Eof())
+      {
           wxLogError(_("Can't read inflate stream: unexpected EOF in underlying stream."));
+      }
       break;
 
     default:
@@ -333,11 +335,8 @@ bool wxZlibOutputStream::Close()
  {
   DoFlush(true);
    deflateEnd(m_deflate);
-   delete m_deflate;
-
-  m_deflate = NULL;
-   delete[] m_z_buffer;
-  m_z_buffer = NULL;
+   wxDELETE(m_deflate);
+   wxDELETEA(m_z_buffer);
 
   return wxFilterOutputStream::Close() && IsOk();
  }

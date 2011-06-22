@@ -3,7 +3,7 @@
 // Purpose:     common (to all ports) wxStaticText functions
 // Author:      Vadim Zeitlin, Francesco Montorsi
 // Created:     2007-01-07 (extracted from dlgcmn.cpp)
-// RCS-ID:      $Id: stattextcmn.cpp 57658 2008-12-30 12:06:54Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999-2006 Vadim Zeitlin
 //              (c) 2007 Francesco Montorsi
 // Licence:     wxWindows licence
@@ -24,6 +24,7 @@
     #pragma hdrstop
 #endif
 
+#include "wx/textwrapper.h"
 #include "wx/private/stattext.h"
 
 #ifndef WX_PRECOMP
@@ -68,7 +69,7 @@ void wxTextWrapper::Wrap(wxWindow *win, const wxString& text, int widthMax)
             lineStart = p;
         }
 
-        if ( p == text.end() || *p == _T('\n') )
+        if ( p == text.end() || *p == wxT('\n') )
         {
             DoOutputLine(line);
 
@@ -77,7 +78,7 @@ void wxTextWrapper::Wrap(wxWindow *win, const wxString& text, int widthMax)
         }
         else // not EOL
         {
-            if ( *p == _T(' ') )
+            if ( *p == wxT(' ') )
                 lastSpace = p;
 
             line += *p;
@@ -126,7 +127,7 @@ protected:
 
     virtual void OnNewLine()
     {
-        m_text += _T('\n');
+        m_text += wxT('\n');
     }
 
 private:
@@ -153,15 +154,28 @@ wxString wxStaticTextBase::GetLabelText() const
     return RemoveMnemonics(ret);
 }
 
-/*static*/
+void wxStaticTextBase::SetLabelText(const wxString& text)
+{
+    wxString str = text;
+
+    if (HasFlag(wxST_MARKUP))
+        str = EscapeMarkup(str);        // escapes markup and the & characters (which are also mnemonics)
+    else
+        str = EscapeMnemonics(text);    // escape only the mnemonics
+    SetLabel(str);
+}
+
+/* static */
 wxString wxStaticTextBase::GetLabelText(const wxString& label)
 {
-    // remove markup
     wxString ret = RemoveMarkup(label);
+        // always remove the markup (this function is static 
+        // and cannot check for wxST_MARKUP presence/absence)
+
     return RemoveMnemonics(ret);
 }
 
-/*static*/
+/* static */
 wxString wxStaticTextBase::RemoveMarkup(const wxString& text)
 {
     // strip out of "text" the markup for platforms which don't support it natively
@@ -290,6 +304,17 @@ void wxStaticTextBase::UpdateLabel()
     if (newlabel == DoGetLabel())
         return;
     DoSetLabel(newlabel);
+}
+
+wxString wxStaticTextBase::GetLabelWithoutMarkup() const
+{
+    wxString ret(m_labelOrig);
+
+    if (HasFlag(wxST_MARKUP))
+        ret = RemoveMarkup(ret);
+
+    // unlike GetLabelText() we don't remove the mnemonics here!
+    return ret;
 }
 
 wxString wxStaticTextBase::GetEllipsizedLabelWithoutMarkup() const

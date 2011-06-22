@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     18/03/2002
-// RCS-ID:      $Id: artstd.cpp 56372 2008-10-16 19:07:42Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -117,6 +117,7 @@ protected:
 #include "../../art/new.xpm"
 #include "../../art/undo.xpm"
 #include "../../art/redo.xpm"
+#include "../../art/close.xpm"
 #include "../../art/quit.xpm"
 #include "../../art/find.xpm"
 #include "../../art/findrepl.xpm"
@@ -175,6 +176,7 @@ wxBitmap wxDefaultArtProvider_CreateBitmap(const wxArtID& id)
     ART(wxART_DELETE,                              delete)
     ART(wxART_UNDO,                                undo)
     ART(wxART_REDO,                                redo)
+    ART(wxART_CLOSE,                               close)
     ART(wxART_QUIT,                                quit)
     ART(wxART_FIND,                                find)
     ART(wxART_FIND_AND_REPLACE,                    findrepl)
@@ -209,7 +211,7 @@ wxBitmap wxDefaultArtProvider::CreateBitmap(const wxArtID& id,
 
                 if ((bmp_h < bestSize.x) && (bmp_w < bestSize.y))
                 {
-                    // the caller wants default size, which is larger than 
+                    // the caller wants default size, which is larger than
                     // the image we have; to avoid degrading it visually by
                     // scaling it up, paste it into transparent image instead:
                     wxPoint offset((bestSize.x - bmp_w)/2, (bestSize.y - bmp_h)/2);

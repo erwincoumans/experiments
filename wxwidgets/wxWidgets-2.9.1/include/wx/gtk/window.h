@@ -2,7 +2,7 @@
 // Name:        wx/gtk/window.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: window.h 58877 2009-02-13 10:25:38Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -82,12 +82,6 @@ public:
 
     virtual int GetCharHeight() const;
     virtual int GetCharWidth() const;
-    virtual void GetTextExtent(const wxString& string,
-                               int *x, int *y,
-                               int *descent = NULL,
-                               int *externalLeading = NULL,
-                               const wxFont *theFont = (const wxFont *) NULL)
-                               const;
 
     virtual void SetScrollbar( int orient, int pos, int thumbVisible,
                                int range, bool refresh = true );
@@ -159,6 +153,12 @@ public:
     // same value should be immediately returned by the handler without doing
     // anything else. If it returns -1, the handler should continue as usual
     int GTKCallbackCommonPrologue(struct _GdkEventAny *event) const;
+
+    // Simplified form of GTKCallbackCommonPrologue() which can be used from
+    // GTK callbacks without return value to check if the event should be
+    // ignored: if this returns true, the event shouldn't be handled
+    bool GTKShouldIgnoreEvent() const;
+
 
     // override this if some events should never be consumed by wxWidgets but
     // but have to be left for the native control
@@ -279,10 +279,14 @@ public:
     // find the direction of the given scrollbar (must be one of ours)
     ScrollDir ScrollDirFromRange(GtkRange *range) const;
 
+    // set the current cursor for all GdkWindows making part of this widget
+    // (see GTKGetWindow)
+    void GTKUpdateCursor(bool update_self = true, bool recurse = true);
+
     // extra (wxGTK-specific) flags
     bool                 m_noExpose:1;          // wxGLCanvas has its own redrawing
     bool                 m_nativeSizeEvent:1;   // wxGLCanvas sends wxSizeEvent upon "alloc_size"
-    bool                 m_hasVMT:1;
+    bool                 m_hasVMT:1;            // set after PostCreation() is called
     bool                 m_isScrolling:1;       // dragging scrollbar thumb?
     bool                 m_clipPaintRegion:1;   // true after ScrollWindow()
     wxRegion             m_nativeUpdateRegion;  // not transformed for RTL
@@ -296,6 +300,11 @@ public:
 
 protected:
     // implement the base class pure virtuals
+    virtual void DoGetTextExtent(const wxString& string,
+                                 int *x, int *y,
+                                 int *descent = NULL,
+                                 int *externalLeading = NULL,
+                                 const wxFont *font = NULL) const;
     virtual void DoClientToScreen( int *x, int *y ) const;
     virtual void DoScreenToClient( int *x, int *y ) const;
     virtual void DoGetPosition( int *x, int *y ) const;
@@ -305,6 +314,7 @@ protected:
                            int width, int height,
                            int sizeFlags = wxSIZE_AUTO);
     virtual void DoSetClientSize(int width, int height);
+    virtual wxSize DoGetBorderSize() const;
     virtual void DoMoveWindow(int x, int y, int width, int height);
     virtual void DoEnable(bool enable);
 
@@ -318,8 +328,8 @@ protected:
     virtual void DoFreeze();
     virtual void DoThaw();
 
-    static void GTKFreezeWidget(GtkWidget *w);
-    static void GTKThawWidget(GtkWidget *w);
+    void GTKFreezeWidget(GtkWidget *w);
+    void GTKThawWidget(GtkWidget *w);
 
 #if wxUSE_TOOLTIPS
     virtual void DoSetToolTip( wxToolTip *tip );
@@ -352,11 +362,16 @@ protected:
     // sets the border of a given GtkScrolledWindow from a wx style
     static void GTKScrolledWindowSetBorder(GtkWidget* w, int style);
 
-    // set the current cursor for all GdkWindows making part of this widget
-    // (see GTKGetWindow)
+    // Connect the given function to the specified signal on m_widget.
     //
-    // should be called from OnInternalIdle() if it's overridden
-    void GTKUpdateCursor();
+    // This is just a wrapper for g_signal_connect() and returns the handler id
+    // just as it does.
+    gulong GTKConnectWidget(const char *signal, void (*callback)());
+
+    // Return true from here if PostCreation() should connect to size_request
+    // signal: this is done by default but doesn't work for some native
+    // controls which override this function to return false
+    virtual bool GTKShouldConnectSizeRequest() const { return !IsTopLevel(); }
 
     void ConstrainSize();
 

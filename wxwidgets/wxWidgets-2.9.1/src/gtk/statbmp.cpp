@@ -2,7 +2,7 @@
 // Name:        statbmp.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: statbmp.cpp 55288 2008-08-26 16:19:23Z PC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:           wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

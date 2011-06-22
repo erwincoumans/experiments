@@ -22,12 +22,14 @@
 
 IMPLEMENT_DYNAMIC_CLASS(wxBitmapButton, wxButton)
 
+
 #include "wx/osx/private.h"
 
 //---------------------------------------------------------------------------
 
 bool wxBitmapButton::Create( wxWindow *parent,
-                             wxWindowID id, const wxBitmap& bitmap,
+                             wxWindowID id,
+                             const wxBitmap& bitmap,
                              const wxPoint& pos,
                              const wxSize& size,
                              long style,
@@ -36,9 +38,8 @@ bool wxBitmapButton::Create( wxWindow *parent,
 {
     m_macIsUserPane = false;
 
-    // since bitmapbuttonbase is subclass of button calling wxBitmapButtonBase::Create
-    // essentially creates an additional button
-    if ( !wxControl::Create( parent, id, pos, size, style, validator, name ) )
+    if ( !wxBitmapButtonBase::Create(parent, id, pos, size, style,
+                                     validator, name) )
         return false;
 
     if ( style & wxBU_AUTODRAW )
@@ -52,7 +53,7 @@ bool wxBitmapButton::Create( wxWindow *parent,
         m_marginY = 0;
     }
 
-    m_bmpNormal = bitmap;
+    m_bitmaps[State_Normal] = bitmap;
 
     m_peer = wxWidgetImpl::CreateBitmapButton( this, parent, id, bitmap, pos, size, style, GetExtraStyle() );
 
@@ -61,26 +62,18 @@ bool wxBitmapButton::Create( wxWindow *parent,
     return true;
 }
 
-void wxBitmapButton::SetBitmapLabel( const wxBitmap& bitmap )
-{    
-    InvalidateBestSize();
-    
-    m_peer->SetBitmap( bitmap );
-}
-
 wxSize wxBitmapButton::DoGetBestSize() const
 {
-    wxSize best;
+    wxSize best(m_marginX, m_marginY);
 
-    best.x = 2 * m_marginX;
-    best.y = 2 * m_marginY;
-    if ( m_bmpNormal.Ok() )
+    best *= 2;
+
+    if ( GetBitmapLabel().IsOk() )
     {
-        best.x += m_bmpNormal.GetWidth();
-        best.y += m_bmpNormal.GetHeight();
+        best += GetBitmapLabel().GetSize();
     }
 
     return best;
 }
 
-#endif
+#endif // wxUSE_BMPBUTTON

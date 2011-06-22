@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxNotificationMessage for Windows
 // Author:      Vadim Zeitlin
 // Created:     2007-12-01
-// RCS-ID:      $Id: notifmsg.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -280,7 +280,7 @@ void wxBalloonNotifMsgImpl::SetUpIcon(wxWindow *win)
         if ( !icon.IsOk() )
         {
             // we really must have some icon
-            icon = wxIcon(_T("wxICON_AAA"));
+            icon = wxIcon(wxT("wxICON_AAA"));
         }
 
         m_icon->SetIcon(icon);
@@ -321,7 +321,7 @@ wxManualNotifMsgImpl::DoShow(const wxString& title,
                              int flags)
 {
     wxASSERT_MSG( timeout == wxNotificationMessage::Timeout_Never,
-                    _T("shouldn't be used") );
+                    wxT("shouldn't be used") );
 
     // base class creates the icon for us initially but we could have destroyed
     // it in DoClose(), recreate it if this was the case
@@ -368,7 +368,7 @@ wxAutoNotifMsgImpl::DoShow(const wxString& title,
                            int flags)
 {
     wxASSERT_MSG( timeout != wxNotificationMessage::Timeout_Never,
-                    _T("shouldn't be used") );
+                    wxT("shouldn't be used") );
 
     if ( timeout == wxNotificationMessage::Timeout_Auto )
     {

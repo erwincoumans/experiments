@@ -5,7 +5,7 @@
 // Modified by: Vadim Zeitlin on 31.08.00: wxScrollHelper allows to implement.
 //              Ron Lee on 10.4.02:  virtual size / auto scrollbars et al.
 // Created:     01/02/97
-// RCS-ID:      $Id: scrlwing.cpp 59108 2009-02-23 21:15:45Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,7 @@ void wxAutoScrollTimer::Notify()
         {
             // and then send a pseudo mouse-move event to refresh the selection
             wxMouseEvent event2(wxEVT_MOTION);
-            wxGetMousePosition(&event2.m_x, &event2.m_y);
+            event2.SetPosition(wxGetMousePosition());
 
             // the mouse event coordinates should be client, not screen as
             // returned by wxGetMousePosition
@@ -203,8 +203,13 @@ bool wxScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
     // user code defined OnPaint() in the derived class)
     m_hasDrawnWindow = true;
 
-    // pass it on to the real handler
-    bool processed = wxEvtHandler::ProcessEvent(event);
+    // Pass it on to the real handler: notice that we must not call
+    // ProcessEvent() on this object itself as it wouldn't pass it to the next
+    // handler (i.e. the real window) if we're called from a previous handler
+    // (as indicated by "process here only" flag being set) and we do want to
+    // execute the handler defined in the window we're associated with right
+    // now, without waiting until TryAfter() is called from wxEvtHandler.
+    bool processed = m_nextHandler->ProcessEvent(event);
 
     // always process the size events ourselves, even if the user code handles
     // them as well, as we need to AdjustScrollbars()
@@ -298,8 +303,18 @@ bool wxScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
         }
     }
 
-    if ( processed )
-        event.Skip(wasSkipped);
+    event.Skip(wasSkipped);
+
+    // We called ProcessEvent() on the next handler, meaning that we explicitly
+    // worked around the request to process the event in this handler only. As
+    // explained above, this is unfortunately really necessary but the trouble
+    // is that the event will continue to be post-processed by the previous
+    // handler resulting in duplicate calls to event handlers. Call the special
+    // function below to prevent this from happening, base class DoTryChain()
+    // will check for it and behave accordingly.
+    //
+    // And if we're not called from DoTryChain(), this won't do anything anyhow.
+    event.DidntHonourProcessOnlyIn();
 
     return processed;
 }
@@ -314,7 +329,7 @@ bool wxScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
 
 wxScrollHelperBase::wxScrollHelperBase(wxWindow *win)
 {
-    wxASSERT_MSG( win, _T("associated window can't be NULL in wxScrollHelper") );
+    wxASSERT_MSG( win, wxT("associated window can't be NULL in wxScrollHelper") );
 
     m_xScrollPixelsPerLine =
     m_yScrollPixelsPerLine =
@@ -327,6 +342,8 @@ wxScrollHelperBase::wxScrollHelperBase(wxWindow *win)
 
     m_xScrollingEnabled =
     m_yScrollingEnabled = true;
+
+    m_kbdScrollingEnabled = true;
 
     m_scaleX =
     m_scaleY = 1.0;
@@ -829,93 +846,76 @@ void wxScrollHelperBase::HandleOnPaint(wxPaintEvent& WXUNUSED(event))
 // this they always have the priority
 void wxScrollHelperBase::HandleOnChar(wxKeyEvent& event)
 {
-    int stx = 0, sty = 0,       // view origin
-        szx = 0, szy = 0,       // view size (total)
-        clix = 0, cliy = 0;     // view size (on screen)
-
-    GetViewStart(&stx, &sty);
-    GetTargetSize(&clix, &cliy);
-    m_targetWindow->GetVirtualSize(&szx, &szy);
-
-    if( m_xScrollPixelsPerLine )
+    if ( !m_kbdScrollingEnabled )
     {
-        clix /= m_xScrollPixelsPerLine;
-        szx /= m_xScrollPixelsPerLine;
-    }
-    else
-    {
-        clix = 0;
-        szx = -1;
-    }
-    if( m_yScrollPixelsPerLine )
-    {
-        cliy /= m_yScrollPixelsPerLine;
-        szy /= m_yScrollPixelsPerLine;
-    }
-    else
-    {
-        cliy = 0;
-        szy = -1;
+        event.Skip();
+        return;
     }
 
-    int xScrollOld = m_xScrollPosition,
-        yScrollOld = m_yScrollPosition;
+    // prepare the event this key press maps to
+    wxScrollWinEvent newEvent;
 
-    int dsty;
+    newEvent.SetPosition(0);
+    newEvent.SetEventObject(m_win);
+
+    // this is the default, it's changed to wxHORIZONTAL below if needed
+    newEvent.SetOrientation(wxVERTICAL);
+
+    // some key events result in scrolling in both horizontal and vertical
+    // direction, e.g. Ctrl-{Home,End}, if this flag is true we should generate
+    // a second event in horizontal direction in addition to the primary one
+    bool sendHorizontalToo = false;
+
     switch ( event.GetKeyCode() )
     {
         case WXK_PAGEUP:
-            dsty = sty - (5 * cliy / 6);
-            Scroll(-1, (dsty == -1) ? 0 : dsty);
+            newEvent.SetEventType(wxEVT_SCROLLWIN_PAGEUP);
             break;
 
         case WXK_PAGEDOWN:
-            Scroll(-1, sty + (5 * cliy / 6));
+            newEvent.SetEventType(wxEVT_SCROLLWIN_PAGEDOWN);
             break;
 
         case WXK_HOME:
-            Scroll(0, event.ControlDown() ? 0 : -1);
+            newEvent.SetEventType(wxEVT_SCROLLWIN_TOP);
+
+            sendHorizontalToo = event.ControlDown();
             break;
 
         case WXK_END:
-            Scroll(szx - clix, event.ControlDown() ? szy - cliy : -1);
-            break;
+            newEvent.SetEventType(wxEVT_SCROLLWIN_BOTTOM);
 
-        case WXK_UP:
-            Scroll(-1, sty - 1);
-            break;
-
-        case WXK_DOWN:
-            Scroll(-1, sty + 1);
+            sendHorizontalToo = event.ControlDown();
             break;
 
         case WXK_LEFT:
-            Scroll(stx - 1, -1);
+            newEvent.SetOrientation(wxHORIZONTAL);
+            // fall through
+
+        case WXK_UP:
+            newEvent.SetEventType(wxEVT_SCROLLWIN_LINEUP);
             break;
 
         case WXK_RIGHT:
-            Scroll(stx + 1, -1);
+            newEvent.SetOrientation(wxHORIZONTAL);
+            // fall through
+
+        case WXK_DOWN:
+            newEvent.SetEventType(wxEVT_SCROLLWIN_LINEDOWN);
             break;
 
         default:
-            // not for us
+            // not a scrolling key
             event.Skip();
+            return;
     }
 
-    if ( m_xScrollPosition != xScrollOld )
-    {
-        wxScrollWinEvent evt(wxEVT_SCROLLWIN_THUMBTRACK, m_xScrollPosition,
-                               wxHORIZONTAL);
-        evt.SetEventObject(m_win);
-        m_win->GetEventHandler()->ProcessEvent(evt);
-    }
+    m_win->ProcessWindowEvent(newEvent);
 
-    if ( m_yScrollPosition != yScrollOld )
+    if ( sendHorizontalToo )
     {
-        wxScrollWinEvent evt(wxEVT_SCROLLWIN_THUMBTRACK, m_yScrollPosition,
-                               wxVERTICAL);
-        evt.SetEventObject(m_win);
-        m_win->GetEventHandler()->ProcessEvent(evt);
+        newEvent.SetOrientation(wxHORIZONTAL);
+        m_win->ProcessWindowEvent(newEvent);
     }
 }
 
@@ -934,11 +934,7 @@ bool wxScrollHelperBase::SendAutoScrollEvents(wxScrollWinEvent& event) const
 void wxScrollHelperBase::StopAutoScrolling()
 {
 #if wxUSE_TIMER
-    if ( m_timerAutoScroll )
-    {
-        delete m_timerAutoScroll;
-        m_timerAutoScroll = NULL;
-    }
+    wxDELETE(m_timerAutoScroll);
 #endif
 }
 
@@ -990,7 +986,7 @@ void wxScrollHelperBase::HandleOnMouseLeave(wxMouseEvent& event)
                 // but seems to happen sometimes under wxMSW - maybe it's a bug
                 // there but for now just ignore it
 
-                //wxFAIL_MSG( _T("can't understand where has mouse gone") );
+                //wxFAIL_MSG( wxT("can't understand where has mouse gone") );
 
                 return;
             }
@@ -1073,7 +1069,7 @@ void wxScrollHelperBase::HandleOnChildFocus(wxChildFocusEvent& event)
     if ( win == m_targetWindow )
         return; // nothing to do
 
-#ifdef __WXMAC__
+#if defined( __WXOSX__ ) && wxUSE_SCROLLBAR
     if (wxDynamicCast(win, wxScrollBar))
         return;
 #endif

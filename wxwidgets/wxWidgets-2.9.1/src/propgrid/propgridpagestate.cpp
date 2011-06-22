@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2008-08-24
-// RCS-ID:      $Id: propgridpagestate.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -107,7 +107,8 @@ void wxPropertyGridIteratorBase::Assign( const wxPropertyGridIteratorBase& it )
 void wxPropertyGridIteratorBase::Prev()
 {
     wxPGProperty* property = m_property;
-    wxASSERT( property );
+    if ( !property )
+        return;
 
     wxPGProperty* parent = property->GetParent();
     wxASSERT( parent );
@@ -152,7 +153,8 @@ void wxPropertyGridIteratorBase::Prev()
 void wxPropertyGridIteratorBase::Next( bool iterateChildren )
 {
     wxPGProperty* property = m_property;
-    wxASSERT( property );
+    if ( !property )
+        return;
 
     if ( property->GetChildCount() &&
          wxPG_ITERATOR_PARENTEXMASK_TEST(property, m_parentExMask) &&
@@ -206,7 +208,6 @@ wxPropertyGridPageState::wxPropertyGridPageState()
     m_properties = &m_regularArray;
     m_abcArray = NULL;
     m_currentCategory = NULL;
-    m_selected = NULL;
     m_width = 0;
     m_virtualHeight = 0;
     m_lastCaptionBottomnest = 1;
@@ -216,6 +217,15 @@ wxPropertyGridPageState::wxPropertyGridPageState()
     m_colWidths.push_back( wxPG_DEFAULT_SPLITTERX );
     m_colWidths.push_back( wxPG_DEFAULT_SPLITTERX );
     m_fSplitterX = wxPG_DEFAULT_SPLITTERX;
+
+    m_columnProportions.push_back(1);
+    m_columnProportions.push_back(1);
+
+    m_isSplitterPreSet = false;
+    m_dontCenterSplitter = false;
+
+    // By default, we only have the 'value' column editable
+    m_editableColumns.push_back(1);
 }
 
 // -----------------------------------------------------------------------
@@ -274,7 +284,7 @@ void wxPropertyGridPageState::DoClear()
     }
     else
     {
-        m_selected = NULL;
+        m_selection.clear();
     }
 
     m_regularArray.Empty();
@@ -315,7 +325,11 @@ void wxPropertyGridPageState::CalculateFontAndBitmapStuff( int WXUNUSED(vspacing
 
 void wxPropertyGridPageState::SetVirtualWidth( int width )
 {
-    //wxASSERT( width >= 0 );
+    // Sometimes width less than 0 is offered. Let's make things easy for
+    // everybody and deal with it here.
+    if ( width < 0 )
+        width = 0;
+
     wxPropertyGrid* pg = GetGrid();
     int gw = pg->GetClientSize().x;
     if ( width < gw )
@@ -347,22 +361,21 @@ void wxPropertyGridPageState::OnClientWidthChange( int newWidth, int widthChange
             widthChange = 0;
         CheckColumnWidths(widthChange);
 
-        if ( !(GetGrid()->GetInternalFlags() & wxPG_FL_SPLITTER_PRE_SET) &&
-             (GetGrid()->GetInternalFlags() & wxPG_FL_DONT_CENTER_SPLITTER) )
+        if ( !m_isSplitterPreSet && m_dontCenterSplitter )
         {
             long timeSinceCreation = (::wxGetLocalTimeMillis() - GetGrid()->m_timeCreated).ToLong();
 
             // If too long, don't set splitter
-            if ( timeSinceCreation < 3000 )
+            if ( timeSinceCreation < 250 )
             {
-                if ( m_properties->GetChildCount() || timeSinceCreation > 750 )
+                if ( m_properties->GetChildCount() )
                 {
                     SetSplitterLeft( false );
                 }
                 else
                 {
                     DoSetSplitterPosition( newWidth / 2 );
-                    GetGrid()->ClearInternalFlag(wxPG_FL_SPLITTER_PRE_SET);
+                    m_isSplitterPreSet = false;
                 }
             }
         }
@@ -606,23 +619,6 @@ bool wxPropertyGridPageState::EnableCategories( bool enable )
 
 // -----------------------------------------------------------------------
 
-#if wxUSE_STL
-#include <algorithm>
-
-static bool wxPG_SortFunc_ByFunction(wxPGProperty *p1, wxPGProperty *p2)
-{
-    wxPropertyGrid* pg = p1->GetGrid();
-    wxPGSortCallback sortFunction = pg->GetSortFunction();
-    return sortFunction(pg, p1, p2) < 0;
-}
-
-static bool wxPG_SortFunc_ByLabel(wxPGProperty *p1, wxPGProperty *p2)
-{
-    return p1->GetLabel().CmpNoCase( p2->GetLabel() ) < 0;
-}
-
-#else
-
 static int wxPG_SortFunc_ByFunction(wxPGProperty **pp1, wxPGProperty **pp2)
 {
     wxPGProperty *p1 = *pp1;
@@ -639,6 +635,24 @@ static int wxPG_SortFunc_ByLabel(wxPGProperty **pp1, wxPGProperty **pp2)
     return p1->GetLabel().CmpNoCase( p2->GetLabel() );
 }
 
+#if 0
+//
+// For wxVector w/ wxUSE_STL=1, you would use code like this instead:
+//
+
+#include <algorithm>
+
+static bool wxPG_SortFunc_ByFunction(wxPGProperty *p1, wxPGProperty *p2)
+{
+    wxPropertyGrid* pg = p1->GetGrid();
+    wxPGSortCallback sortFunction = pg->GetSortFunction();
+    return sortFunction(pg, p1, p2) < 0;
+}
+
+static bool wxPG_SortFunc_ByLabel(wxPGProperty *p1, wxPGProperty *p2)
+{
+    return p1->GetLabel().CmpNoCase( p2->GetLabel() ) < 0;
+}
 #endif
 
 void wxPropertyGridPageState::DoSortChildren( wxPGProperty* p,
@@ -659,18 +673,21 @@ void wxPropertyGridPageState::DoSortChildren( wxPGProperty* p,
          && !p->IsCategory() && !p->IsRoot() )
         return;
 
-#if wxUSE_STL
+    if ( GetGrid()->GetSortFunction() )
+        p->m_children.Sort( wxPG_SortFunc_ByFunction );
+    else
+        p->m_children.Sort( wxPG_SortFunc_ByLabel );
+
+#if 0
+    //
+    // For wxVector w/ wxUSE_STL=1, you would use code like this instead:
+    //
     if ( GetGrid()->GetSortFunction() )
         std::sort(p->m_children.begin(), p->m_children.end(),
                   wxPG_SortFunc_ByFunction);
     else
         std::sort(p->m_children.begin(), p->m_children.end(),
                   wxPG_SortFunc_ByLabel);
-#else
-    if ( GetGrid()->GetSortFunction() )
-        p->m_children.Sort( wxPG_SortFunc_ByFunction );
-    else
-        p->m_children.Sort( wxPG_SortFunc_ByLabel );
 #endif
 
     // Fix indices
@@ -727,11 +744,13 @@ wxPGProperty* wxPropertyGridPageState::DoGetItemAtY( int y ) const
 
 // -----------------------------------------------------------------------
 
-wxPropertyGridHitTestResult wxPropertyGridPageState::HitTest( const wxPoint&pt ) const
+wxPropertyGridHitTestResult
+wxPropertyGridPageState::HitTest( const wxPoint&pt ) const
 {
     wxPropertyGridHitTestResult result;
-    result.column = HitTestH( pt.x, &result.splitter, &result.splitterHitOffset );
-    result.property = DoGetItemAtY( pt.y );
+    result.m_column = HitTestH( pt.x, &result.m_splitter,
+                                &result.m_splitterHitOffset );
+    result.m_property = DoGetItemAtY( pt.y );
     return result;
 }
 
@@ -760,8 +779,10 @@ int wxPropertyGridPageState::GetColumnFitWidth(wxClientDC& dc,
             if ( col == 0 )
                 w += ( ((int)p->m_depth-1) * pg->m_subgroup_extramargin );
 
-            //
-            // TODO: Add bitmap support.
+            // account for the bitmap
+            if ( col == 1 )
+                w += p->GetImageOffset(pg->GetImageRect(p, -1).GetWidth());
+
 
             w += (wxPG_XBEFORETEXT*2);
 
@@ -796,7 +817,9 @@ int wxPropertyGridPageState::GetColumnMinWidth( int WXUNUSED(column) ) const
     return wxPG_DRAG_MARGIN;
 }
 
-void wxPropertyGridPageState::PropagateColSizeDec( int column, int decrease, int dir )
+void wxPropertyGridPageState::PropagateColSizeDec( int column,
+                                                   int decrease,
+                                                   int dir )
 {
     int origWidth = m_colWidths[column];
     m_colWidths[column] -= decrease;
@@ -820,7 +843,9 @@ void wxPropertyGridPageState::PropagateColSizeDec( int column, int decrease, int
         PropagateColSizeDec( column, more, dir );
 }
 
-void wxPropertyGridPageState::DoSetSplitterPosition( int newXPos, int splitterColumn, bool WXUNUSED(allPages), bool fromAutoCenter )
+void wxPropertyGridPageState::DoSetSplitterPosition( int newXPos,
+                                                     int splitterColumn,
+                                                     int flags )
 {
     wxPropertyGrid* pg = GetGrid();
 
@@ -855,11 +880,11 @@ void wxPropertyGridPageState::DoSetSplitterPosition( int newXPos, int splitterCo
     if ( splitterColumn == 0 )
         m_fSplitterX = (double) newXPos;
 
-    if ( !fromAutoCenter )
+    if ( !(flags & wxPG_SPLITTER_FROM_AUTO_CENTER) &&
+         !(flags & wxPG_SPLITTER_FROM_EVENT) )
     {
         // Don't allow initial splitter auto-positioning after this.
-        if ( pg->GetState() == this )
-            pg->SetInternalFlag(wxPG_FL_SPLITTER_PRE_SET);
+        m_isSplitterPreSet = true;
 
         CheckColumnWidths();
     }
@@ -880,7 +905,7 @@ void wxPropertyGridPageState::SetSplitterLeft( bool subProps )
         DoSetSplitterPosition( maxW );
     }
 
-    pg->SetInternalFlag(wxPG_FL_DONT_CENTER_SPLITTER);
+    m_dontCenterSplitter = true;
 }
 
 wxSize wxPropertyGridPageState::DoFitColumns( bool WXUNUSED(allowGridResize) )
@@ -911,7 +936,7 @@ wxSize wxPropertyGridPageState::DoFitColumns( bool WXUNUSED(allowGridResize) )
     int remaining = m_width - accWid;
     m_colWidths[GetColumnCount()-1] += remaining;
 
-    pg->SetInternalFlag(wxPG_FL_DONT_CENTER_SPLITTER);
+    m_dontCenterSplitter = true;
 
     int firstSplitterX = marginWidth + m_colWidths[0];
     m_fSplitterX = (double) firstSplitterX;
@@ -1024,47 +1049,85 @@ void wxPropertyGridPageState::CheckColumnWidths( int widthChange )
     }
 
     // Auto center splitter
-    if ( !(pg->GetInternalFlags() & wxPG_FL_DONT_CENTER_SPLITTER) &&
-         m_colWidths.size() == 2 )
+    if ( !m_dontCenterSplitter )
     {
-        float centerX = (float)(pg->m_width/2);
-        float splitterX;
-
-        if ( m_fSplitterX < 0.0 )
+        if ( m_colWidths.size() == 2 &&
+             m_columnProportions[0] == m_columnProportions[1] )
         {
-            splitterX = centerX;
-        }
-        else if ( widthChange )
-        {
-            //float centerX = float(pg->GetSize().x) * 0.5;
+            //
+            // When we have two columns of equal proportion, then use this
+            // code. It will look nicer when the scrollbar visibility is
+            // toggled on and off.
+            //
+            // TODO: Adapt this to generic recenter code.
+            //
+            float centerX = (float)(pg->m_width/2);
+            float splitterX;
 
-            // Recenter?
-            splitterX = m_fSplitterX + (float(widthChange) * 0.5);
-            float deviation = fabs(centerX - splitterX);
-
-            // If deviating from center, adjust towards it
-            if ( deviation > 20.0 )
-            {
-                if ( splitterX > centerX)
-                    splitterX -= 2;
-                else
-                    splitterX += 2;
-            }
-        }
-        else
-        {
-            // No width change, just keep sure we keep splitter position intact
-            splitterX = m_fSplitterX;
-            float deviation = fabs(centerX - splitterX);
-            if ( deviation > 50.0 )
+            if ( m_fSplitterX < 0.0 )
             {
                 splitterX = centerX;
             }
+            else if ( widthChange )
+            {
+                //float centerX = float(pg->GetSize().x) * 0.5;
+
+                // Recenter?
+                splitterX = m_fSplitterX + (float(widthChange) * 0.5);
+                float deviation = fabs(centerX - splitterX);
+
+                // If deviating from center, adjust towards it
+                if ( deviation > 20.0 )
+                {
+                    if ( splitterX > centerX)
+                        splitterX -= 2;
+                    else
+                        splitterX += 2;
+                }
+            }
+            else
+            {
+                // No width change, just keep sure we keep splitter position intact
+                splitterX = m_fSplitterX;
+                float deviation = fabs(centerX - splitterX);
+                if ( deviation > 50.0 )
+                {
+                    splitterX = centerX;
+                }
+            }
+
+            DoSetSplitterPosition((int)splitterX, 0,
+                                  wxPG_SPLITTER_FROM_AUTO_CENTER);
+
+            m_fSplitterX = splitterX; // needed to retain accuracy
         }
+        else
+        {
+            //
+            // Generic re-center code
+            //
+            ResetColumnSizes(wxPG_SPLITTER_FROM_AUTO_CENTER);
+        }
+    }
+}
 
-        DoSetSplitterPosition((int)splitterX, 0, false, true);
+void wxPropertyGridPageState::ResetColumnSizes( int setSplitterFlags )
+{
+    unsigned int i;
+    // Calculate sum of proportions
+    int psum = 0;
+    for ( i=0; i<m_colWidths.size(); i++ )
+        psum += m_columnProportions[i];
+    int puwid = (m_pPropGrid->m_width*256) / psum;
+    int cpos = 0;
 
-        m_fSplitterX = splitterX; // needed to retain accuracy
+    // Convert proportion to splitter positions
+    for ( i=0; i<(m_colWidths.size() - 1); i++ )
+    {
+        int cwid = (puwid*m_columnProportions[i]) / 256;
+        cpos += cwid;
+        DoSetSplitterPosition(cpos, i,
+                              setSplitterFlags);
     }
 }
 
@@ -1072,13 +1135,30 @@ void wxPropertyGridPageState::SetColumnCount( int colCount )
 {
     wxASSERT( colCount >= 2 );
     m_colWidths.SetCount( colCount, wxPG_DRAG_MARGIN );
+    m_columnProportions.SetCount( colCount, 1 );
     if ( m_colWidths.size() > (unsigned int)colCount )
-        m_colWidths.RemoveAt( m_colWidths.size(), m_colWidths.size() - colCount );
+        m_colWidths.RemoveAt( m_colWidths.size()-1,
+                              m_colWidths.size() - colCount );
 
     if ( m_pPropGrid->GetState() == this )
         m_pPropGrid->RecalculateVirtualSize();
     else
         CheckColumnWidths();
+}
+
+void wxPropertyGridPageState::DoSetColumnProportion( unsigned int column,
+                                                 int proportion )
+{
+    wxASSERT_MSG( proportion >= 1,
+                  "Column proportion must 1 or higher" );
+
+    if ( proportion < 1 )
+        proportion = 1;
+
+    while ( m_columnProportions.size() <= column )
+        m_columnProportions.push_back(1);
+
+    m_columnProportions[column] = proportion;
 }
 
 // Returns column index, -1 for margin
@@ -1129,6 +1209,29 @@ int wxPropertyGridPageState::HitTestH( int x, int* pSplitterHit, int* pSplitterH
     return col;
 }
 
+bool wxPropertyGridPageState::ArePropertiesAdjacent( wxPGProperty* prop1,
+                                                     wxPGProperty* prop2,
+                                                     int iterFlags ) const
+{
+    const wxPGProperty* ap1 =
+        wxPropertyGridConstIterator::OneStep(this,
+                                             iterFlags,
+                                             prop1,
+                                             1);
+    if ( ap1 && ap1 == prop2 )
+        return true;
+
+    const wxPGProperty* ap2 =
+        wxPropertyGridConstIterator::OneStep(this,
+                                             iterFlags,
+                                             prop1,
+                                             -1);
+    if ( ap2 && ap2 == prop2 )
+        return true;
+
+    return false;
+}
+
 // -----------------------------------------------------------------------
 // wxPropertyGridPageState property value setting and getting
 // -----------------------------------------------------------------------
@@ -1150,7 +1253,8 @@ bool wxPropertyGridPageState::DoSetPropertyValueString( wxPGProperty* p, const w
         if ( res )
         {
             p->SetValue(variant);
-            if ( m_selected==p && this==m_pPropGrid->GetState() )
+            if ( p == m_pPropGrid->GetSelection() &&
+                 this == m_pPropGrid->GetState() )
                 m_pPropGrid->RefreshEditor();
         }
 
@@ -1166,7 +1270,8 @@ bool wxPropertyGridPageState::DoSetPropertyValue( wxPGProperty* p, wxVariant& va
     if ( p )
     {
         p->SetValue(value);
-        if ( m_selected==p && this==m_pPropGrid->GetState() )
+        if ( p == m_pPropGrid->GetSelection() &&
+             this == m_pPropGrid->GetState() )
             m_pPropGrid->RefreshEditor();
 
         return true;
@@ -1190,6 +1295,54 @@ bool wxPropertyGridPageState::DoSetPropertyValueWxObjectPtr( wxPGProperty* p, wx
 
 // -----------------------------------------------------------------------
 // wxPropertyGridPageState property operations
+// -----------------------------------------------------------------------
+
+bool wxPropertyGridPageState::DoIsPropertySelected( wxPGProperty* prop ) const
+{
+    if ( wxPGFindInVector(m_selection, prop) != wxNOT_FOUND )
+        return true;
+
+    return false;
+}
+
+// -----------------------------------------------------------------------
+
+void wxPropertyGridPageState::DoRemoveFromSelection( wxPGProperty* prop )
+{
+    for ( unsigned int i=0; i<m_selection.size(); i++ )
+    {
+        if ( m_selection[i] == prop )
+        {
+            wxPropertyGrid* pg = m_pPropGrid;
+            if ( i == 0 && pg->GetState() == this )
+            {
+                // If first item (ie. one with the active editor) was
+                // deselected, then we need to take some extra measures.
+                wxArrayPGProperty sel = m_selection;
+                sel.erase( sel.begin() + i );
+
+                wxPGProperty* newFirst;
+                if ( sel.size() )
+                    newFirst = sel[0];
+                else
+                    newFirst = NULL;
+
+                pg->DoSelectProperty(newFirst,
+                                     wxPG_SEL_DONT_SEND_EVENT);
+
+                m_selection = sel;
+
+                pg->Refresh();
+            }
+            else
+            {
+                m_selection.erase( m_selection.begin() + i );
+            }
+            return;
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 
 bool wxPropertyGridPageState::DoCollapse( wxPGProperty* p )
@@ -1231,7 +1384,7 @@ bool wxPropertyGridPageState::DoSelectProperty( wxPGProperty* p, unsigned int fl
     if ( this == m_pPropGrid->GetState() )
         return m_pPropGrid->DoSelectProperty( p, flags );
 
-    m_selected = p;
+    DoSetSelection(p);
     return true;
 }
 
@@ -1239,18 +1392,7 @@ bool wxPropertyGridPageState::DoSelectProperty( wxPGProperty* p, unsigned int fl
 
 bool wxPropertyGridPageState::DoHideProperty( wxPGProperty* p, bool hide, int flags )
 {
-    if ( !hide )
-        p->ClearFlag( wxPG_PROP_HIDDEN );
-    else
-        p->SetFlag( wxPG_PROP_HIDDEN );
-
-    if ( flags & wxPG_RECURSE )
-    {
-        unsigned int i;
-        for ( i = 0; i < p->GetChildCount(); i++ )
-            DoHideProperty(p->Item(i), hide, flags | wxPG_RECURSE_STARTS);
-    }
-
+    p->DoHide(hide, flags);
     VirtualHeightChanged();
 
     return true;
@@ -1570,10 +1712,6 @@ bool wxPropertyGridPageState::PrepareToAddItem( wxPGProperty* property,
     }
 #endif // wxDEBUG_LEVEL
 
-    // Make sure nothing is selected.
-    if ( propGrid )
-        propGrid->ClearSelection(false);
-
     // NULL parent == root parent
     if ( !scheduledParent )
         scheduledParent = DoGetRoot();
@@ -1703,6 +1841,30 @@ void wxPropertyGridPageState::DoDelete( wxPGProperty* item, bool doDelete )
     wxCHECK_RET( item != &m_regularArray && item != m_abcArray,
         wxT("wxPropertyGrid: Do not attempt to remove the root item.") );
 
+    wxPropertyGrid* pg = GetGrid();
+
+    // Must defer deletion? Yes, if handling a wxPG event.
+    if ( pg && pg->m_processedEvent )
+    {
+        if ( doDelete )
+            pg->m_deletedProperties.push_back(item);
+        else
+            pg->m_removedProperties.push_back(item);
+
+        // Rename the property so it won't remain in the way
+        // of the user code.
+
+        // Let's trust that no sane property uses prefix like
+        // this. It would be anyway fairly inconvenient (in
+        // current code) to check whether a new name is used
+        // by another property with parent (due to the child
+        // name notation).
+        wxString newName = wxS("_&/_%$") + item->GetBaseName();
+        DoSetPropertyName(item, newName);
+
+        return;
+    }
+
     unsigned int indinparent = item->GetIndexInParent();
 
     wxPGProperty* pwc = (wxPGProperty*)item;
@@ -1710,6 +1872,23 @@ void wxPropertyGridPageState::DoDelete( wxPGProperty* item, bool doDelete )
 
     wxCHECK_RET( !parent->HasFlag(wxPG_PROP_AGGREGATE),
         wxT("wxPropertyGrid: Do not attempt to remove sub-properties.") );
+
+    wxASSERT( item->GetParentState() == this );
+
+    if ( DoIsPropertySelected(item) )
+    {
+        if ( pg && pg->GetState() == this )
+        {
+            pg->DoRemoveFromSelection(item,
+                wxPG_SEL_DELETING|wxPG_SEL_NOVALIDATE);
+        }
+        else
+        {
+            DoRemoveFromSelection(item);
+        }
+    }
+
+    item->SetFlag(wxPG_PROP_BEING_DELETED);
 
     // Delete children
     if ( item->GetChildCount() && !item->HasFlag(wxPG_PROP_AGGREGATE) )
@@ -1776,9 +1955,17 @@ void wxPropertyGridPageState::DoDelete( wxPGProperty* item, bool doDelete )
         }
     }
 
-    if ( item->GetBaseName().length() && 
+    if ( item->GetBaseName().length() &&
          (parent->IsCategory() || parent->IsRoot()) )
         m_dictName.erase(item->GetBaseName());
+
+    // We need to clear parent grid's m_propHover, if it matches item
+    if ( pg && pg->m_propHover == item )
+        pg->m_propHover = NULL;
+
+    // Mark the property as 'unattached'
+    item->m_parentState = NULL;
+    item->m_parent = NULL;
 
     // We can actually delete it now
     if ( doDelete )

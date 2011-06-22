@@ -2,7 +2,7 @@
 // Name:        src/html/m_style.cpp
 // Purpose:     wxHtml module for parsing <style> tag
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: m_style.cpp 45700 2007-04-27 21:35:43Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     10/07/1997
-// RCS-ID:      $Id: protocol.h 59404 2009-03-07 13:58:39Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -141,14 +141,14 @@ public: \
   static wxProtoInfo g_proto_##class;
 
 #define IMPLEMENT_PROTOCOL(class, name, serv, host) \
-wxProtoInfo class::g_proto_##class(name, serv, host, CLASSINFO(class)); \
-bool wxProtocolUse##class = TRUE;
+wxProtoInfo class::g_proto_##class(name, serv, host, wxCLASSINFO(class)); \
+bool wxProtocolUse##class = true;
 
 #define USE_PROTOCOL(class) \
     extern bool wxProtocolUse##class ; \
     static struct wxProtocolUserFor##class \
     { \
-        wxProtocolUserFor##class() { wxProtocolUse##class = TRUE; } \
+        wxProtocolUserFor##class() { wxProtocolUse##class = true; } \
     } wxProtocolDoUse##class;
 
 class WXDLLIMPEXP_NET wxProtoInfo : public wxObject

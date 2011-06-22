@@ -3,7 +3,7 @@
 // Purpose:     wxArtProvider instance with native Mac stock icons
 // Author:      Alan Shouls
 // Created:     2006-10-30
-// RCS-ID:      $Id: artmac.cpp 59930 2009-03-29 21:23:59Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWindows team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ protected:
 
 #define CREATE_STD_ICON(iconId, xpmRc) \
     { \
-        wxIconBundle icon(_T(iconId), wxBITMAP_TYPE_ICON_RESOURCE); \
+        wxIconBundle icon(wxT(iconId), wxBITMAP_TYPE_ICON_RESOURCE); \
         return icon; \
     }
 
@@ -72,20 +72,20 @@ static wxIconBundle wxMacArtProvider_CreateIconBundle(const wxArtID& id)
     ART_MSGBOX(wxART_NORMAL_FILE, wxICON_NORMAL_FILE, deffile)
     ART_MSGBOX(wxART_EXECUTABLE_FILE, wxICON_EXECUTABLE_FILE, exefile)
 
-    ART_MSGBOX(wxART_CDROM,       wxICON_CDROM,       cdrom) 
-    ART_MSGBOX(wxART_FLOPPY,      wxICON_FLOPPY,      floppy) 
-    ART_MSGBOX(wxART_HARDDISK,    wxICON_HARDDISK,    harddisk) 
-    ART_MSGBOX(wxART_REMOVABLE,   wxICON_REMOVABLE,   removable) 
- 
-    ART_MSGBOX(wxART_DELETE,      wxICON_DELETE,      delete) 
- 
-    ART_MSGBOX(wxART_GO_BACK,     wxICON_GO_BACK,     back) 
-    ART_MSGBOX(wxART_GO_FORWARD,  wxICON_GO_FORWARD,  forward) 
-    ART_MSGBOX(wxART_GO_HOME,     wxICON_GO_HOME,     home) 
+    ART_MSGBOX(wxART_CDROM,       wxICON_CDROM,       cdrom)
+    ART_MSGBOX(wxART_FLOPPY,      wxICON_FLOPPY,      floppy)
+    ART_MSGBOX(wxART_HARDDISK,    wxICON_HARDDISK,    harddisk)
+    ART_MSGBOX(wxART_REMOVABLE,   wxICON_REMOVABLE,   removable)
 
-    ART_MSGBOX(wxART_HELP_SETTINGS, wxICON_HELP_SETTINGS, htmoptns) 
-    ART_MSGBOX(wxART_HELP_PAGE,   wxICON_HELP_PAGE,   htmpage) 
- 	
+    ART_MSGBOX(wxART_DELETE,      wxICON_DELETE,      delete)
+
+    ART_MSGBOX(wxART_GO_BACK,     wxICON_GO_BACK,     back)
+    ART_MSGBOX(wxART_GO_FORWARD,  wxICON_GO_FORWARD,  forward)
+    ART_MSGBOX(wxART_GO_HOME,     wxICON_GO_HOME,     home)
+
+    ART_MSGBOX(wxART_HELP_SETTINGS, wxICON_HELP_SETTINGS, htmoptns)
+    ART_MSGBOX(wxART_HELP_PAGE,   wxICON_HELP_PAGE,   htmpage)
+
     return wxNullIconBundle;
 }
 
@@ -116,6 +116,14 @@ wxSize wxArtProvider::GetNativeSizeHint(const wxArtClient& client)
         // See http://developer.apple.com/documentation/UserExperience/Conceptual/AppleHIGuidelines/XHIGIcons/chapter_15_section_9.html:
         // "32 x 32 pixels is the recommended size"
         return wxSize(32, 32);
+    }
+    else if ( client == wxART_BUTTON || client == wxART_MENU )
+    {
+        // Mac UI doesn't use any images in neither buttons nor menus in
+        // general but the code using wxArtProvider can use wxART_BUTTON to
+        // find the icons of a roughly appropriate size for the buttons and
+        // 16x16 seems to be the best choice for this kind of use
+        return wxSize(16, 16);
     }
 
     return wxDefaultSize;

@@ -3,7 +3,7 @@
 // Purpose:     provides wxWrapSizer class for layout
 // Author:      Arne Steinarson
 // Created:     2008-05-08
-// RCS-ID:      $Id: wrapsizer.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Arne Steinarson
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

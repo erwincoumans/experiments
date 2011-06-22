@@ -5,7 +5,7 @@
 // Modified by: Robin Dunn (moved QT code from mediactrl.cpp)
 //
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrl_qt.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1068,11 +1068,7 @@ void wxQTMediaBackend::Cleanup()
 {
     m_bPlaying = false;
 
-    if (m_timer)
-    {
-        delete m_timer;
-        m_timer = NULL;
-    }
+    wxDELETE(m_timer);
 
     m_lib.StopMovie(m_movie);
 

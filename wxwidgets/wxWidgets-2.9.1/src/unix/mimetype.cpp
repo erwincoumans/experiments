@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     23.09.98
-// RCS-ID:      $Id: mimetype.cpp 58354 2009-01-24 14:10:55Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -161,7 +161,7 @@ void wxMimeTypesManagerImpl::LoadXDGApp(const wxString& filename)
 #if wxUSE_INTL // try "Name[locale name]" first
     wxLocale *locale = wxGetLocale();
     if ( locale )
-        nIndex = file.pIndexOf(_T("Name[")+locale->GetName()+_T("]="));
+        nIndex = file.pIndexOf(wxT("Name[")+locale->GetName()+wxT("]="));
 #endif // wxUSE_INTL
     if(nIndex == wxNOT_FOUND)
         nIndex = file.pIndexOf( wxT("Name=") );
@@ -173,7 +173,7 @@ void wxMimeTypesManagerImpl::LoadXDGApp(const wxString& filename)
     nIndex = wxNOT_FOUND;
 #if wxUSE_INTL // try "Icon[locale name]" first
     if ( locale )
-        nIndex = file.pIndexOf(_T("Icon[")+locale->GetName()+_T("]="));
+        nIndex = file.pIndexOf(wxT("Icon[")+locale->GetName()+wxT("]="));
 #endif // wxUSE_INTL
     if(nIndex == wxNOT_FOUND)
         nIndex = file.pIndexOf( wxT("Icon=") );
@@ -198,7 +198,7 @@ void wxMimeTypesManagerImpl::LoadXDGApp(const wxString& filename)
     sCmd.Replace(wxT("%i"), nameicon);
     sCmd.Replace(wxT("%m"), namemini);
 
-    wxStringTokenizer tokenizer(mimetypes, _T(";"));
+    wxStringTokenizer tokenizer(mimetypes, wxT(";"));
     while(tokenizer.HasMoreTokens()) {
         wxString mimetype = tokenizer.GetNextToken().Lower();
         nIndex = m_aTypes.Index(mimetype);
@@ -222,7 +222,7 @@ void wxMimeTypesManagerImpl::LoadXDGAppsFilesFromDir(const wxString& dirname)
 
     wxString filename;
     // Look into .desktop files
-    bool cont = dir.GetFirst(&filename, _T("*.desktop"), wxDIR_FILES);
+    bool cont = dir.GetFirst(&filename, wxT("*.desktop"), wxDIR_FILES);
     while (cont)
     {
         wxFileName p(dirname, filename);
@@ -267,7 +267,7 @@ void wxMimeTypesManagerImpl::LoadXDGGlobs(const wxString& filename)
        ext.Remove( 0, 2 );
        wxArrayString exts;
        exts.Add( ext );
-       
+
        AddToMimeData(mime, wxEmptyString, NULL, exts, wxEmptyString, true );
     }
 }
@@ -507,14 +507,19 @@ void wxMimeTypesManagerImpl::InitIfNeeded()
         // set the flag first to prevent recursion
         m_initialized = true;
 
-        wxString wm = wxTheApp->GetTraits()->GetDesktopEnvironment();
+        int mailcapStyles = wxMAILCAP_ALL;
+        if ( wxAppTraits * const traits = wxApp::GetTraitsIfExists() )
+        {
+            wxString wm = traits->GetDesktopEnvironment();
 
-        if (wm == wxT("KDE"))
-            Initialize( wxMAILCAP_KDE  );
-        else if (wm == wxT("GNOME"))
-            Initialize( wxMAILCAP_GNOME );
-        else
-            Initialize();
+            if ( wm == "KDE" )
+                mailcapStyles = wxMAILCAP_KDE;
+            else if ( wm == "GNOME" )
+                mailcapStyles = wxMAILCAP_GNOME;
+            //else: unknown, use the default
+        }
+
+        Initialize(mailcapStyles);
     }
 }
 
@@ -844,7 +849,7 @@ wxFileType * wxMimeTypesManagerImpl::GetFileTypeFromExtension(const wxString& ex
                 // found
                 wxFileType *fileType = new wxFileType;
                 fileType->m_impl->Init(this, n);
-                
+
                 return fileType;
             }
         }

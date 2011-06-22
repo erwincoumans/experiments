@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by: Hiroyuki Nakamura(maloninc)
 // Created:     2006-01-10
-// RCS-ID:      $Id: dirdlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ class WXDLLIMPEXP_CORE wxDirDialog: public wxDirDialogBase
 public:
     wxDirDialog(wxWindow *parent,
                 const wxString& message = wxDirSelectorPromptStr,
-                const wxString& defaultPath = _T(""),
+                const wxString& defaultPath = wxT(""),
                 long style = wxDD_DEFAULT_STYLE,
                 const wxPoint& pos = wxDefaultPosition,
                 const wxSize& size = wxDefaultSize,
@@ -34,7 +34,7 @@ public:
     virtual ~wxDirDialog();
 
     virtual int ShowModal();
-    
+
     inline WX_NSSavePanel GetNSSavePanel()
     {   return (WX_NSSavePanel)m_cocoaNSWindow; }
 

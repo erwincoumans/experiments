@@ -67,10 +67,9 @@ bool wxMacPrintDialog::Create( wxWindow *p, wxPrintDialogData *data )
 
 wxMacPrintDialog::~wxMacPrintDialog()
 {
-    if (m_destroyDC && m_printerDC)
+    if (m_destroyDC)
     {
-        delete m_printerDC;
-        m_printerDC = NULL;
+        wxDELETE(m_printerDC);
     }
 }
 
@@ -149,7 +148,7 @@ bool wxMacPageMarginsDialog::TransferToWindow()
   m_LeftMargin->SetFocus();
   return true;
   }
-  
+
 bool wxMacPageMarginsDialog::TransferDataFromWindow()
   {
   wxPoint topLeft, bottomRight;
@@ -161,7 +160,7 @@ bool wxMacPageMarginsDialog::TransferDataFromWindow()
   m_pageSetupDialogData->SetMarginBottomRight(bottomRight);
   return true;
   }
-  
+
 bool wxMacPageMarginsDialog::CheckValue(wxTextCtrl* textCtrl, int *value, int minValue, const wxString& name)
   {
   long lvalue;

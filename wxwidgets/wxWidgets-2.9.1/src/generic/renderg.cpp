@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.07.2003
-// RCS-ID:      $Id: renderg.cpp 59280 2009-03-02 20:09:10Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -32,6 +32,7 @@
     #include "wx/settings.h"
     #include "wx/gdicmn.h"
     #include "wx/module.h"
+    #include "wx/control.h"
 #endif //WX_PRECOMP
 
 #include "wx/splitter.h"
@@ -118,7 +119,15 @@ public:
 
     virtual void DrawTextCtrl(wxWindow* win, wxDC& dc, const wxRect& rect, int flags=0);
 
-    virtual void DrawRadioButton(wxWindow* win, wxDC& dc, const wxRect& rect, int flags=0);
+    virtual void DrawRadioBitmap(wxWindow* win, wxDC& dc, const wxRect& rect, int flags=0);
+
+#ifdef wxHAS_DRAW_TITLE_BAR_BITMAP
+    virtual void DrawTitleBarBitmap(wxWindow *win,
+                                    wxDC& dc,
+                                    const wxRect& rect,
+                                    wxTitleBarButton button,
+                                    int flags = 0);
+#endif // wxHAS_DRAW_TITLE_BAR_BITMAP
 
     virtual wxSplitterRenderParams GetSplitterParams(const wxWindow *win);
 
@@ -174,10 +183,7 @@ wxRendererNative& wxRendererNative::GetGeneric()
 
 void wxRendererGeneric::Cleanup()
 {
-    if (sm_rendererGeneric)
-        delete sm_rendererGeneric;
-
-    sm_rendererGeneric = NULL;
+    wxDELETE(sm_rendererGeneric);
 }
 
 wxRendererGeneric* wxRendererGeneric::sm_rendererGeneric = NULL;
@@ -316,53 +322,61 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
 
         wxColour c = (params && params->m_arrowColour.Ok()) ?
             params->m_arrowColour : wxSystemSettings::GetColour(wxSYS_COLOUR_3DSHADOW);
-        dc.SetPen(wxPen(c));
-        dc.SetBrush(wxBrush(c));
+
+        wxDCPenChanger setPen(dc, c);
+        wxDCBrushChanger setBrush(dc, c);
+
+        wxDCClipper clip(dc, rect);
         dc.DrawPolygon( 3, triPt, ar.x, ar.y);
     }
     labelWidth += arrowSpace;
 
-    const int margin = 5;   // number of pixels to reserve on either side of the label
     int bmpWidth = 0;
-
-    if ( params && params->m_labelBitmap.Ok() )
-        bmpWidth = params->m_labelBitmap.GetWidth() + 2;
-
-    labelWidth += bmpWidth + 2*margin;
 
     // draw the bitmap if there is one
     if ( params && params->m_labelBitmap.Ok() )
     {
-        int w, h, x, y;
-        w = params->m_labelBitmap.GetWidth();
-        h = params->m_labelBitmap.GetHeight();
+        int w = params->m_labelBitmap.GetWidth();
+        int h = params->m_labelBitmap.GetHeight();
 
-        x = margin + rect.x;
-        y = rect.y + wxMax(1, (rect.height - h) / 2);
+        const int margin = 1; // an extra pixel on either side of the bitmap
 
-        if (params->m_labelText.empty())
+        bmpWidth = w + 2*margin;
+        labelWidth += bmpWidth;
+
+        int x = rect.x + margin;
+        const int y = rect.y + wxMax(1, (rect.height - h) / 2);
+
+        const int extraSpace = rect.width - labelWidth;
+        if ( params->m_labelText.empty() && extraSpace > 0 )
         {
             // use the alignment flags
             switch (params->m_labelAlignment)
             {
                 default:
                 case wxALIGN_LEFT:
-                    x = rect.x + margin;
                     break;
+
                 case wxALIGN_CENTER:
-                    x = rect.x + wxMax(1, (rect.width - arrowSpace - w)/2);
+                    x += extraSpace/2;
                     break;
+
                 case wxALIGN_RIGHT:
-                    x = rect.x + wxMax(1, rect.width - arrowSpace - margin - w);
+                    x += extraSpace;
                     break;
             }
         }
+
+        wxDCClipper clip(dc, rect);
         dc.DrawBitmap(params->m_labelBitmap, x, y, true);
     }
 
     // Draw a label if one is given
     if ( params && !params->m_labelText.empty() )
     {
+        const int margin = 5;   // number of pixels to reserve on either side of the label
+        labelWidth += 2*margin;
+
         wxFont font  = params->m_labelFont.Ok() ?
             params->m_labelFont : win->GetFont();
         wxColour clr = params->m_labelColour.Ok() ?
@@ -374,44 +388,46 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
         dc.SetTextForeground(clr);
         dc.SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
 
-        int tw, th, td, x, y;
+        int tw, th, td;
         dc.GetTextExtent( label, &tw, &th, &td);
-        labelWidth += tw;
-        y = rect.y + wxMax(0, (rect.height - (th+td)) / 2);
-#ifdef __WXGTK__
-        y += 2; // No idea why.
-#endif
+
+        int x = rect.x + bmpWidth + margin;
+        const int y = rect.y + wxMax(0, (rect.height - (th+td)) / 2);
 
         // truncate and add an ellipsis (...) if the text is too wide.
-        int targetWidth = rect.width - arrowSpace - bmpWidth - 2*margin;
-        if ( tw > targetWidth )
+        const int availWidth = rect.width - labelWidth;
+        if ( tw > availWidth )
         {
-            int ellipsisWidth;
-            dc.GetTextExtent( wxT("..."), &ellipsisWidth, NULL);
-            do {
-                label.Truncate( label.length() - 1 );
-                dc.GetTextExtent( label, &tw, &th);
-            } while (tw + ellipsisWidth > targetWidth && label.length() );
-            label.append( wxT("...") );
-            tw += ellipsisWidth;
+            label = wxControl::Ellipsize(label,
+                                         dc,
+                                         wxELLIPSIZE_END,
+                                         availWidth,
+                                         wxELLIPSIZE_FLAGS_NONE);
+            tw = dc.GetTextExtent(label).x;
+        }
+        else // enough space, we can respect alignment
+        {
+            switch (params->m_labelAlignment)
+            {
+                default:
+                case wxALIGN_LEFT:
+                    break;
+
+                case wxALIGN_CENTER:
+                    x += (availWidth - tw)/2;
+                    break;
+
+                case wxALIGN_RIGHT:
+                    x += availWidth - tw;
+                    break;
+            }
         }
 
-        switch (params->m_labelAlignment)
-        {
-            default:
-            case wxALIGN_LEFT:
-                x = rect.x + margin;
-                break;
-            case wxALIGN_CENTER:
-                x = rect.x + wxMax(0, (rect.width - arrowSpace  - tw - bmpWidth)/2);
-                break;
-            case wxALIGN_RIGHT:
-                x = rect.x + wxMax(0, rect.width - arrowSpace - margin - tw - bmpWidth);
-                break;
-        }
+        dc.DrawText(label, x, y);
 
-        dc.DrawText(label, x + bmpWidth, y);
+        labelWidth += tw;
     }
+
     return labelWidth;
 }
 
@@ -647,17 +663,10 @@ wxRendererGeneric::DrawPushButton(wxWindow *win,
 }
 
 void
-#ifdef __WXMAC__
 wxRendererGeneric::DrawItemSelectionRect(wxWindow * win,
                                          wxDC& dc,
                                          const wxRect& rect,
                                          int flags)
-#else
-wxRendererGeneric::DrawItemSelectionRect(wxWindow * WXUNUSED(win),
-                                         wxDC& dc,
-                                         const wxRect& rect,
-                                         int flags)
-#endif
 {
     wxBrush brush;
     if ( flags & wxCONTROL_SELECTED )
@@ -687,6 +696,9 @@ wxRendererGeneric::DrawItemSelectionRect(wxWindow * WXUNUSED(win),
         dc.SetPen( *wxTRANSPARENT_PEN );
 
     dc.DrawRectangle( rect );
+
+    // it's unused everywhere except in wxOSX/Carbon
+    wxUnusedVar(win);
 }
 
 void
@@ -743,10 +755,10 @@ void wxRendererGeneric::DrawComboBox(wxWindow* WXUNUSED(win), wxDC& WXUNUSED(dc)
     wxFAIL_MSG("UNIMPLEMENTED: wxRendererGeneric::DrawComboBox");
 }
 
-void wxRendererGeneric::DrawRadioButton(wxWindow* WXUNUSED(win), wxDC& WXUNUSED(dc),
+void wxRendererGeneric::DrawRadioBitmap(wxWindow* WXUNUSED(win), wxDC& WXUNUSED(dc),
                            const wxRect& WXUNUSED(rect), int WXUNUSED(flags))
 {
-    wxFAIL_MSG("UNIMPLEMENTED: wxRendererGeneric::DrawRadioButton");
+    wxFAIL_MSG("UNIMPLEMENTED: wxRendererGeneric::DrawRadioBitmap");
 }
 
 void wxRendererGeneric::DrawTextCtrl(wxWindow* WXUNUSED(win), wxDC& WXUNUSED(dc),
@@ -755,7 +767,22 @@ void wxRendererGeneric::DrawTextCtrl(wxWindow* WXUNUSED(win), wxDC& WXUNUSED(dc)
     wxFAIL_MSG("UNIMPLEMENTED: wxRendererGeneric::DrawTextCtrl");
 }
 
+#ifdef wxHAS_DRAW_TITLE_BAR_BITMAP
 
+void wxRendererGeneric::DrawTitleBarBitmap(wxWindow * WXUNUSED(win),
+                                           wxDC& WXUNUSED(dc),
+                                           const wxRect& WXUNUSED(rect),
+                                           wxTitleBarButton WXUNUSED(button),
+                                           int WXUNUSED(flags))
+{
+    // no need to fail here, if wxHAS_DRAW_TITLE_BAR_BITMAP is defined this
+    // will be implemented in the native renderer and this version is never
+    // going to be used -- but we still need to define it to allow
+    // instantiation of this class (which would have been pure virtual
+    // otherwise)
+}
+
+#endif // wxHAS_DRAW_TITLE_BAR_BITMAP
 
 
 // ----------------------------------------------------------------------------

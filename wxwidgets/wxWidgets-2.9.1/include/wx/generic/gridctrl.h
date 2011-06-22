@@ -4,7 +4,7 @@
 // Author:      Paul Gammans, Roger Gammans
 // Modified by:
 // Created:     11/04/2001
-// RCS-ID:      $Id: gridctrl.h 58024 2009-01-11 15:49:37Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) The Computer Surgery (paul@compsurg.co.uk)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,8 +16,8 @@
 
 #if wxUSE_GRID
 
-#define wxGRID_VALUE_CHOICEINT    _T("choiceint")
-#define wxGRID_VALUE_DATETIME     _T("datetime")
+#define wxGRID_VALUE_CHOICEINT    wxT("choiceint")
+#define wxGRID_VALUE_DATETIME     wxT("datetime")
 
 
 // the default renderer for the cells containing string data
@@ -148,7 +148,7 @@ private:
 
 #include "wx/datetime.h"
 
-// the default renderer for the cells containing Time and dates..
+// the default renderer for the cells containing times and dates
 class WXDLLIMPEXP_ADV wxGridCellDateTimeRenderer : public wxGridCellStringRenderer
 {
 public:
@@ -170,7 +170,7 @@ public:
 
     virtual wxGridCellRenderer *Clone() const;
 
-    // parameters string format is "width[,precision]"
+    // output strptime()-like format string
     virtual void SetParameters(const wxString& params);
 
 protected:
@@ -184,7 +184,7 @@ protected:
 
 #endif // wxUSE_DATETIME
 
-// the default renderer for the cells containing Time and dates..
+// renders a number using the corresponding text string
 class WXDLLIMPEXP_ADV wxGridCellEnumRenderer : public wxGridCellStringRenderer
 {
 public:
@@ -205,7 +205,8 @@ public:
 
     virtual wxGridCellRenderer *Clone() const;
 
-    // parameters string format is "item1[,item2[...,itemN]]"
+    // parameters string format is "item1[,item2[...,itemN]]" where itemN will
+    // be used if the cell value is N-1
     virtual void SetParameters(const wxString& params);
 
 protected:

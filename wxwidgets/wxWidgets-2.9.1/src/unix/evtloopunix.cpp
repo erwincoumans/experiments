@@ -3,7 +3,7 @@
 // Purpose:     wxEventLoop implementation
 // Author:      Lukasz Michalski (lm@zork.pl)
 // Created:     2007-05-07
-// RCS-ID:      $Id: evtloopunix.cpp 58951 2009-02-16 17:19:17Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Zork Lukasz Michalski
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,6 +30,7 @@
 
 #include <errno.h>
 #include "wx/apptrait.h"
+#include "wx/scopedptr.h"
 #include "wx/thread.h"
 #include "wx/module.h"
 #include "wx/unix/pipe.h"
@@ -37,7 +38,11 @@
 #include "wx/unix/private/epolldispatcher.h"
 #include "wx/private/selectdispatcher.h"
 
-#define TRACE_EVENTS _T("events")
+#if wxUSE_EVENTLOOP_SOURCE
+    #include "wx/evtloopsrc.h"
+#endif // wxUSE_EVENTLOOP_SOURCE
+
+#define TRACE_EVENTS wxT("events")
 
 // ===========================================================================
 // wxEventLoop::PipeIOHandler implementation
@@ -176,8 +181,84 @@ wxConsoleEventLoop::wxConsoleEventLoop()
 
 wxConsoleEventLoop::~wxConsoleEventLoop()
 {
-    delete m_wakeupPipe;
+    if ( m_wakeupPipe )
+    {
+        if ( m_dispatcher )
+        {
+            m_dispatcher->UnregisterFD(m_wakeupPipe->GetReadFd());
+        }
+
+        delete m_wakeupPipe;
+    }
 }
+
+//-----------------------------------------------------------------------------
+// adding & removing sources
+//-----------------------------------------------------------------------------
+
+#if wxUSE_EVENTLOOP_SOURCE
+
+// This class is a temporary bridge between event loop sources and
+// FDIODispatcher. It is going to be removed soon, when all subject interfaces
+// are modified
+class wxFDIOEventLoopSourceHandler : public wxFDIOHandler
+{
+public:
+    wxFDIOEventLoopSourceHandler(wxEventLoopSourceHandler* handler) :
+        m_impl(handler) { }
+
+    virtual void OnReadWaiting()
+    {
+        m_impl->OnReadWaiting();
+    }
+    virtual void OnWriteWaiting()
+    {
+        m_impl->OnWriteWaiting();
+    }
+
+    virtual void OnExceptionWaiting()
+    {
+        m_impl->OnExceptionWaiting();
+    }
+
+protected:
+    wxEventLoopSourceHandler* m_impl;
+};
+
+wxEventLoopSource *
+wxConsoleEventLoop::AddSourceForFD(int fd,
+                                   wxEventLoopSourceHandler *handler,
+                                   int flags)
+{
+    wxCHECK_MSG( fd != -1, NULL, "can't monitor invalid fd" );
+
+    wxLogTrace(wxTRACE_EVT_SOURCE,
+                "Adding event loop source for fd=%d", fd);
+
+    // we need a bridge to wxFDIODispatcher
+    //
+    // TODO: refactor the code so that only wxEventLoopSourceHandler is used
+    wxScopedPtr<wxFDIOHandler>
+        fdioHandler(new wxFDIOEventLoopSourceHandler(handler));
+
+    if ( !m_dispatcher->RegisterFD(fd, fdioHandler.get(), flags) )
+        return NULL;
+
+    return new wxUnixEventLoopSource(m_dispatcher, fdioHandler.release(),
+                                     fd, handler, flags);
+}
+
+wxUnixEventLoopSource::~wxUnixEventLoopSource()
+{
+    wxLogTrace(wxTRACE_EVT_SOURCE,
+               "Removing event loop source for fd=%d", m_fd);
+
+    m_dispatcher->UnregisterFD(m_fd);
+
+    delete m_fdioHandler;
+}
+
+#endif // wxUSE_EVENTLOOP_SOURCE
 
 //-----------------------------------------------------------------------------
 // events dispatch and loop handling
@@ -200,7 +281,8 @@ bool wxConsoleEventLoop::Pending() const
 
 bool wxConsoleEventLoop::Dispatch()
 {
-    DispatchTimeout(wxFDIODispatcher::TIMEOUT_INFINITE);
+    DispatchTimeout(static_cast<unsigned long>(
+        wxFDIODispatcher::TIMEOUT_INFINITE));
 
     return true;
 }

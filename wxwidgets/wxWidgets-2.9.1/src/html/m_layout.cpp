@@ -2,7 +2,7 @@
 // Name:        src/html/m_layout.cpp
 // Purpose:     wxHtml module for basic paragraphs/layout handling
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: m_layout.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -285,7 +285,7 @@ TAG_HANDLER_BEGIN(TITLE, "TITLE")
         if (winIface)
         {
             wxString title(tag.GetBeginIter(), tag.GetEndIter1());
-#if !wxUSE_UNICODE && wxUSE_WCHAR_T
+#if !wxUSE_UNICODE
             const wxFontEncoding enc = m_WParser->GetInputEncoding();
             if ( enc != wxFONTENCODING_DEFAULT )
             {

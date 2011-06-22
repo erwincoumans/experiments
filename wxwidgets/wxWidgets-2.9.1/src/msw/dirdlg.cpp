@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dirdlg.cpp 44865 2007-03-17 10:26:10Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -100,19 +100,19 @@ void wxDirDialog::SetPath(const wxString& path)
     m_path = path;
 
     // SHBrowseForFolder doesn't like '/'s nor the trailing backslashes
-    m_path.Replace(_T("/"), _T("\\"));
+    m_path.Replace(wxT("/"), wxT("\\"));
     if ( !m_path.empty() )
     {
-        while ( *(m_path.end() - 1) == _T('\\') )
+        while ( *(m_path.end() - 1) == wxT('\\') )
         {
             m_path.erase(m_path.length() - 1);
         }
 
         // but the root drive should have a trailing slash (again, this is just
         // the way the native dialog works)
-        if ( *(m_path.end() - 1) == _T(':') )
+        if ( *(m_path.end() - 1) == wxT(':') )
         {
-            m_path += _T('\\');
+            m_path += wxT('\\');
         }
     }
 }

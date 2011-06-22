@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Ryan Norton
 // Created:     20/07/1997
-// RCS-ID:      $Id: url.h 47254 2007-07-09 10:09:52Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -48,11 +48,13 @@ class WXDLLIMPEXP_NET wxURL : public wxURI
 {
 public:
     wxURL(const wxString& sUrl = wxEmptyString);
-    wxURL(const wxURI& url);
+    wxURL(const wxURI& uri);
+    wxURL(const wxURL& url);
     virtual ~wxURL();
 
     wxURL& operator = (const wxString& url);
-    wxURL& operator = (const wxURI& url);
+    wxURL& operator = (const wxURI& uri);
+    wxURL& operator = (const wxURL& url);
 
     wxProtocol& GetProtocol()        { return *m_protocol; }
     wxURLError GetError() const      { return m_error; }
@@ -78,6 +80,7 @@ protected:
     static wxHTTP *ms_proxyDefault;
     static bool ms_useDefaultProxy;
     wxHTTP *m_proxy;
+    bool m_useProxy;
 #endif // wxUSE_PROTOCOL_HTTP
 
 #if wxUSE_URL_NATIVE
@@ -87,17 +90,18 @@ protected:
     // Creates on the heap and returns a native
     // implementation object for the current platform.
     static wxURLNativeImp *CreateNativeImpObject();
-#endif
+#endif // wxUSE_URL_NATIVE
+
     wxProtoInfo *m_protoinfo;
     wxProtocol *m_protocol;
 
     wxURLError m_error;
     wxString m_url;
-    bool m_useProxy;
 
     void Init(const wxString&);
     bool ParseURL();
     void CleanData();
+    void Free();
     bool FetchProtocol();
 
     friend class wxProtoInfo;

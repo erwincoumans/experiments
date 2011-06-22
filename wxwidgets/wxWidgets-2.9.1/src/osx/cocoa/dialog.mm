@@ -24,47 +24,24 @@
 
 extern wxList wxModalDialogs;
 
-void wxDialog::DoShowModal()
-{
-    wxCHECK_RET( !IsModal(), wxT("DoShowModal() called twice") );
-
-    wxModalDialogs.Append(this);
-
-    SetFocus() ;
-/*
-    WindowGroupRef windowGroup;
-    WindowGroupRef formerParentGroup;
-    bool resetGroupParent = false;
-
-    if ( GetParent() == NULL )
-    {
-        windowGroup = GetWindowGroup(windowRef) ;
-        formerParentGroup = GetWindowGroupParent( windowGroup );
-        SetWindowGroupParent( windowGroup, GetWindowGroupOfClass( kMovableModalWindowClass ) );
-        resetGroupParent = true;
-    }
-*/
+void wxDialog::DoShowWindowModal()
+{   
+    wxTopLevelWindow* parent = static_cast<wxTopLevelWindow*>(wxGetTopLevelParent(GetParent()));
+    
+    wxASSERT_MSG(parent, "ShowWindowModal requires the dialog to have a parent.");
+    
+    NSWindow* parentWindow = parent->GetWXWindow();
     NSWindow* theWindow = GetWXWindow();
     
-    NSModalSession session = [NSApp beginModalSessionForWindow:theWindow];
-    while (IsModal()) 
-    {
-        wxMacAutoreleasePool autoreleasepool;
-        // we cannot break based on the return value, because nested
-        // alerts might set this to stopped as well, so it would be
-        // unsafe
-        [NSApp runModalSession:session];
+    [NSApp beginSheet: theWindow
+            modalForWindow: parentWindow
+            modalDelegate: theWindow
+            didEndSelector: nil
+            contextInfo: nil];
+}
 
-        // do some idle processing 
-        if (wxTheApp) 
-            wxTheApp->ProcessIdle(); 
-    }
-    [NSApp endModalSession:session];
-
-/*
-    if ( resetGroupParent )
-    {
-        SetWindowGroupParent( windowGroup , formerParentGroup );
-    }
-*/
+void wxDialog::EndWindowModal()
+{
+    [NSApp endSheet: GetWXWindow()];
+    [GetWXWindow() orderOut:GetWXWindow()];
 }

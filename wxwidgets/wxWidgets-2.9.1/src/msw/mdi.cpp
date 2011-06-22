@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin on 2008-11-04 to use the base classes
 // Created:     04/01/98
-// RCS-ID:      $Id: mdi.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 //              (c) 2008-2009 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -138,6 +138,14 @@ END_EVENT_TABLE()
 // the children
 // ===========================================================================
 
+void wxMDIParentFrame::Init()
+{
+#if wxUSE_MENUS && wxUSE_ACCEL
+  // the default menu doesn't have any accelerators (even if we have it)
+  m_accelWindowMenu = NULL;
+#endif // wxUSE_MENUS && wxUSE_ACCEL
+}
+
 bool wxMDIParentFrame::Create(wxWindow *parent,
                               wxWindowID id,
                               const wxString& title,
@@ -162,11 +170,6 @@ bool wxMDIParentFrame::Create(wxWindow *parent,
       m_windowMenu->Append(wxID_MDI_WINDOW_PREV, _("&Previous"));
   }
 
-#if wxUSE_MENUS && wxUSE_ACCEL
-  // the default menu doesn't have any accelerators (even if we have it)
-  m_accelWindowMenu = NULL;
-#endif // wxUSE_MENUS && wxUSE_ACCEL
-
   if (!parent)
     wxTopLevelWindows.Append(this);
 
@@ -186,7 +189,7 @@ bool wxMDIParentFrame::Create(wxWindow *parent,
   msflags &= ~WS_VSCROLL;
   msflags &= ~WS_HSCROLL;
 
-  if ( !wxWindow::MSWCreate(wxApp::GetRegisteredClassName(_T("wxMDIFrame")),
+  if ( !wxWindow::MSWCreate(wxApp::GetRegisteredClassName(wxT("wxMDIFrame")),
                             title.wx_str(),
                             pos, size,
                             msflags,
@@ -366,8 +369,7 @@ void wxMDIParentFrame::SetWindowMenu(wxMenu* menu)
     }
 
 #if wxUSE_ACCEL
-    delete m_accelWindowMenu;
-    m_accelWindowMenu = NULL;
+    wxDELETE(m_accelWindowMenu);
 
     if ( menu && menu->HasAccels() )
         m_accelWindowMenu = menu->CreateAccelTable();
@@ -495,7 +497,7 @@ void wxMDIParentFrame::Cascade()
 void wxMDIParentFrame::Tile(wxOrientation orient)
 {
     wxASSERT_MSG( orient == wxHORIZONTAL || orient == wxVERTICAL,
-                  _T("invalid orientation value") );
+                  wxT("invalid orientation value") );
 
     ::SendMessage(GetWinHwnd(GetClientWindow()), WM_MDITILE,
                   orient == wxHORIZONTAL ? MDITILE_HORIZONTAL
@@ -570,19 +572,6 @@ WXLRESULT wxMDIParentFrame::MSWWindowProc(WXUINT message,
             }
 
             processed = true;
-            break;
-
-        case WM_ERASEBKGND:
-            processed = true;
-
-            // we erase background ourselves
-            rc = true;
-            break;
-
-        case WM_SIZE:
-            // though we don't (usually) resize the MDI client to exactly fit
-            // the client area we need to pass this one to DefFrameProc to
-            // allow the children to show
             break;
     }
 
@@ -696,7 +685,7 @@ bool wxMDIParentFrame::TryBefore(wxEvent& event)
     if ( event.GetEventType() == wxEVT_COMMAND_MENU_SELECTED )
     {
         wxMDIChildFrame * const child = GetActiveChild();
-        if ( child && child->ProcessEventHere(event) )
+        if ( child && child->ProcessWindowEventLocally(event) )
             return true;
     }
 
@@ -792,7 +781,7 @@ bool wxMDIChildFrame::Create(wxMDIParentFrame *parent,
   MDICREATESTRUCT mcs;
 
   wxString className =
-      wxApp::GetRegisteredClassName(_T("wxMDIChildFrame"), COLOR_WINDOW);
+      wxApp::GetRegisteredClassName(wxT("wxMDIChildFrame"), COLOR_WINDOW);
   if ( !(style & wxFULL_REPAINT_ON_RESIZE) )
       className += wxApp::GetNoRedrawClassSuffix();
 
@@ -846,7 +835,7 @@ bool wxMDIChildFrame::Create(wxMDIParentFrame *parent,
 
   if ( !m_hWnd )
   {
-      wxLogLastError(_T("WM_MDICREATE"));
+      wxLogLastError(wxT("WM_MDICREATE"));
       return false;
   }
 
@@ -900,6 +889,14 @@ bool wxMDIChildFrame::Show(bool show)
     MDISetMenu(parent->GetClientWindow(), NULL, NULL);
 
     return true;
+}
+
+void
+wxMDIChildFrame::DoSetSize(int x, int y, int width, int height, int sizeFlags)
+{
+    // we need to disable client area origin adjustments used for the child
+    // windows for the frame itself
+    wxMDIChildFrameBase::DoSetSize(x, y, width, height, sizeFlags);
 }
 
 // Set the client size (i.e. leave the calculation of borders etc.
@@ -1426,7 +1423,9 @@ void MDISetMenu(wxWindow *win, HMENU hmenuFrame, HMENU hmenuWindow)
         {
             DWORD err = ::GetLastError();
             if ( err )
-                wxLogApiError(_T("SendMessage(WM_MDISETMENU)"), err);
+            {
+                wxLogApiError(wxT("SendMessage(WM_MDISETMENU)"), err);
+            }
         }
     }
 
@@ -1464,7 +1463,7 @@ void MDIInsertWindowMenu(wxWindow *win, WXHMENU hMenu, HMENU menuWin)
                 inserted = true;
                 ::InsertMenu(hmenu, i, MF_BYPOSITION | MF_POPUP | MF_STRING,
                              (UINT_PTR)menuWin,
-                             wxGetTranslation(WINDOW_MENU_LABEL).wx_str());
+                             wxString(wxGetTranslation(WINDOW_MENU_LABEL)).wx_str());
                 break;
             }
         }
@@ -1473,7 +1472,7 @@ void MDIInsertWindowMenu(wxWindow *win, WXHMENU hMenu, HMENU menuWin)
         {
             ::AppendMenu(hmenu, MF_POPUP,
                          (UINT_PTR)menuWin,
-                         wxGetTranslation(WINDOW_MENU_LABEL).wx_str());
+                         wxString(wxGetTranslation(WINDOW_MENU_LABEL)).wx_str());
         }
     }
 

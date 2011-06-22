@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: filedlgwce.cpp 57873 2009-01-07 01:47:47Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -89,8 +89,8 @@ void wxFileDialog::GetPaths(wxArrayString& paths) const
     paths.Empty();
 
     wxString dir(m_dir);
-    if ( m_dir.Last() != _T('\\') )
-        dir += _T('\\');
+    if ( m_dir.Last() != wxT('\\') )
+        dir += wxT('\\');
 
     size_t count = m_fileNames.GetCount();
     for ( size_t n = 0; n < count; n++ )
@@ -107,7 +107,7 @@ void wxFileDialog::SetPath(const wxString& path)
     wxString ext;
     wxFileName::SplitPath(path, &m_dir, &m_fileName, &ext);
     if ( !ext.empty() )
-        m_fileName << _T('.') << ext;
+        m_fileName << wxT('.') << ext;
 }
 
 int wxFileDialog::ShowModal()

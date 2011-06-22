@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by: Paul Cornett
 // Created:     2004/05/29
-// RCS-ID:      $Id: taskbar.cpp 58822 2009-02-10 03:43:30Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik, 2004
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////

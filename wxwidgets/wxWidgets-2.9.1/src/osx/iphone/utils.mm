@@ -37,7 +37,7 @@
 
 #include <AudioToolbox/AudioServices.h>
 
-#if wxUSE_BASE
+#if 1 // wxUSE_BASE
 
 // Emit a beeeeeep
 void wxBell()
@@ -61,6 +61,10 @@ void wxBell()
 	wxTheApp->OnInit();
 }
 
+- (void)applicationWillTerminate:(UIApplication *)application { 
+    wxCloseEvent event;
+    wxTheApp->OnEndSession(event);
+}
 
 - (void)dealloc {
 	[super dealloc];
@@ -74,22 +78,28 @@ bool wxApp::CallOnInit()
     return true;
 }
 
-int wxApp::OnRun()
+bool wxApp::DoInitGui()
 {
-    wxMacAutoreleasePool pool;
-    char* appname = "test";
-    UIApplicationMain( 1, &appname, nil, @"wxAppDelegate" );
-    return 1;
+    return true;
 }
 
-void wxMacWakeUp()
+void wxApp::DoCleanUp()
 {
-    // TODO
 }
 
 #endif // wxUSE_BASE
 
 #if wxUSE_GUI
+
+// ----------------------------------------------------------------------------
+// Launch default browser
+// ----------------------------------------------------------------------------
+
+bool wxDoLaunchDefaultBrowser(const wxString& url, int flags)
+{
+    return [[UIApplication sharedApplication] openURL:[NSURL URLWithString:wxCFStringRef(url).AsNSString()]]
+        == YES;
+}
 
 // TODO : reorganize
 
@@ -127,22 +137,57 @@ extern CGSize MeasureTextInContext( UIFont *font, NSString* text )
 
 void wxClientDisplayRect(int *x, int *y, int *width, int *height)
 {
+#if 0
     CGRect r = [[UIScreen mainScreen] applicationFrame];
+    CGRect bounds = [[UIScreen mainScreen] bounds];
+    if ( bounds.size.height > r.size.height )
+    {
+        // portrait
+        if ( x )
+            *x = r.origin.x;
+        if ( y )
+            *y = r.origin.y;
+        if ( width )
+            *width = r.size.width;
+        if ( height )
+            *height = r.size.height;
+    }
+    else
+    {
+        // landscape
+        if ( x )
+            *x = r.origin.y;
+        if ( y )
+            *y = r.origin.x;
+        if ( width )
+            *width = r.size.height;
+        if ( height )
+            *height = r.size.width;
+    }
+#else
+    // it's easier to treat the status bar as an element of the toplevel window 
+    // instead of the desktop in order to support easy rotation
     if ( x )
-        *x = r.origin.x;
+        *x = 0;
     if ( y )
-        *y = r.origin.y;
-    if ( width )
-        *width = r.size.width;
-    if ( height )
-        *height = r.size.height;
-    
+        *y = 0;
+    wxDisplaySize(width, height);
+#endif
 }
 
 void wxGetMousePosition( int* x, int* y )
 {
-//    wxPoint pt = wxFromNSPoint(NULL, [NSEvent mouseLocation]);
+    if ( x )
+        *x = 0;
+    if ( y )
+        *y = 0;
 };
+
+wxMouseState wxGetMouseState()
+{
+    wxMouseState ms;
+    return ms;
+}    
 
 // Returns depth of screen
 int wxDisplayDepth()
@@ -153,12 +198,25 @@ int wxDisplayDepth()
 // Get size of display
 void wxDisplaySize(int *width, int *height)
 {
+    CGRect r = [[UIScreen mainScreen] applicationFrame];
     CGRect bounds = [[UIScreen mainScreen] bounds];
-    
-    if ( width )
-        *width = (int)bounds.size.width ;
-    if ( height )
-        *height = (int)bounds.size.height;
+
+    if ( UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]) )
+    {
+        // portrait
+        if ( width )
+            *width = (int)bounds.size.width ;
+        if ( height )
+            *height = (int)bounds.size.height;
+    }
+    else
+    {
+        // landscape
+        if ( width )
+            *width = (int)bounds.size.height ;
+        if ( height )
+            *height = (int)bounds.size.width;
+    }
 }
 
 wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer *timer)
@@ -215,21 +273,21 @@ wxBitmap wxWindowDCImpl::DoGetAsBitmap(const wxRect *subrect) const
     // call this method when a Blit is performed with it as a source.
     if (!m_window)
         return wxNullBitmap;
-        
+
     wxSize sz = m_window->GetSize();
-    
+
     int left = subrect != NULL ? subrect->x : 0 ;
     int top = subrect != NULL ? subrect->y : 0 ;
     int width = subrect != NULL ? subrect->width : sz.x;
     int height = subrect !=  NULL ? subrect->height : sz.y ;
-    
+
     wxBitmap bmp = wxBitmap(width, height, 32);
-    
+
     CGContextRef context = (CGContextRef)bmp.GetHBITMAP();
-    
+
     CGContextSaveGState(context);
-    
-    
+
+
     CGContextTranslateCTM( context, 0,  height );
     CGContextScaleCTM( context, 1, -1 );
 
@@ -251,10 +309,11 @@ wxOperatingSystemId wxGetOsVersion(int *verMaj, int *verMin)
     // get OS version
     int major, minor;
 
-    wxString release = wxCFStringRef( [ [UIDevice currentDevice] systemVersion] ).AsString() ;
+    wxString release = wxCFStringRef( wxCFRetain( [ [UIDevice currentDevice] systemVersion] ) ).AsString() ;
 
     if ( release.empty() ||
-         wxSscanf(release.c_str(), wxT("%d.%d"), &major, &minor) != 2 )
+        // TODO use wx method
+         scanf(release.c_str(), wxT("%d.%d"), &major, &minor) != 2 )
     {
         // failed to get version string or unrecognized format
         major =
@@ -271,7 +330,7 @@ wxOperatingSystemId wxGetOsVersion(int *verMaj, int *verMin)
 
 wxString wxGetOsDescription()
 {
-    wxString release = wxCFStringRef( [ [UIDevice currentDevice] systemName] ).AsString() ;
+    wxString release = wxCFStringRef( wxCFRetain([ [UIDevice currentDevice] systemName] )).AsString() ;
 
     return release;
 }

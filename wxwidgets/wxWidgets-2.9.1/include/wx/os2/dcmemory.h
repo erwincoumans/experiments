@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/09/99
-// RCS-ID:      $Id: dcmemory.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ public:
     virtual void DoGetSize(int* pWidth, int* pHeight) const;
     virtual void DoSelect(const wxBitmap& bitmap);
 
-    virtual wxBitmap DoGetAsBitmap(const wxRect* subrect) const 
+    virtual wxBitmap DoGetAsBitmap(const wxRect* subrect) const
     { return subrect == NULL ? GetSelectedBitmap() : GetSelectedBitmap().GetSubBitmap(*subrect);}
 
 protected:

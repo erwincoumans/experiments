@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/colour.h
+// Name:        wx/osx/core/colour.h
 // Purpose:     wxColour class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: colour.h 59001 2009-02-18 18:02:53Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -58,6 +58,10 @@ public:
     wxColour(const RGBColor& col);
     wxColour& operator=(const RGBColor& col);
 #endif
+#if wxOSX_USE_COCOA
+    wxColour(WX_NSColor color);
+    WX_NSColor OSXGetNSColor();
+#endif
     wxColour& operator=(CGColorRef col);
     wxColour& operator=(const wxColour& col);
 
@@ -68,6 +72,7 @@ protected :
     void InitRGBColor( const RGBColor& col );
 #endif
     void InitCGColorRef( CGColorRef col );
+    void InitFromComponents(const CGFloat* components, size_t numComponents );
 private:
     wxCFRef<CGColorRef>     m_cgColour;
 

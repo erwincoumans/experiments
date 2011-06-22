@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by: David Elliott
 // Created:     2005-02-04
-// RCS-ID:      $Id: timer.mm 48106 2007-08-15 16:10:19Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

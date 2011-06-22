@@ -1,4 +1,4 @@
-/* $Id: tif_predict.c 48824 2007-09-20 00:01:33Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler

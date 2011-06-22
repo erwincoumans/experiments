@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     11/11/2003
-// RCS-ID:      $Id: hid.cpp 59554 2009-03-15 09:58:18Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,8 +24,7 @@
     #pragma hdrstop
 #endif
 
-//DARWIN _ONLY_
-#ifdef __DARWIN__
+#if wxOSX_USE_COCOA_OR_CARBON
 
 #include "wx/osx/core/hid.h"
 
@@ -78,7 +77,7 @@ bool wxHIDDevice::Create (int nClass, int nType, int nDev)
     CFMutableDictionaryRef pDictionary = IOServiceMatching(kIOHIDDeviceKey);
     if(pDictionary == NULL)
     {
-        wxLogSysError( _T("IOServiceMatching(kIOHIDDeviceKey) failed") );
+        wxLogSysError( wxT("IOServiceMatching(kIOHIDDeviceKey) failed") );
         return false;
     }
 
@@ -103,7 +102,7 @@ bool wxHIDDevice::Create (int nClass, int nType, int nDev)
     if( IOServiceGetMatchingServices(m_pPort,
                         pDictionary, &pIterator) != kIOReturnSuccess )
     {
-        wxLogSysError(_T("No Matching HID Services"));
+        wxLogSysError(wxT("No Matching HID Services"));
         return false;
     }
 
@@ -129,7 +128,7 @@ bool wxHIDDevice::Create (int nClass, int nType, int nDev)
                 kNilOptions
              ) != KERN_SUCCESS )
         {
-            wxLogDebug(_T("IORegistryEntryCreateCFProperties failed"));
+            wxLogDebug(wxT("IORegistryEntryCreateCFProperties failed"));
         }
 
         //
@@ -193,7 +192,9 @@ bool wxHIDDevice::Create (int nClass, int nType, int nDev)
 
         //open the HID interface...
         if ( (*m_ppDevice)->open(m_ppDevice, 0) != S_OK )
-            wxLogDebug(_T("HID device: open failed"));
+        {
+            wxLogDebug(wxT("HID device: open failed"));
+        }
 
         //
         //Now the hard part - in order to scan things we need "cookies"
@@ -240,7 +241,7 @@ size_t wxHIDDevice::GetCount (int nClass, int nType)
     CFMutableDictionaryRef pDictionary = IOServiceMatching(kIOHIDDeviceKey);
     if(pDictionary == NULL)
     {
-        wxLogSysError( _T("IOServiceMatching(kIOHIDDeviceKey) failed") );
+        wxLogSysError( wxT("IOServiceMatching(kIOHIDDeviceKey) failed") );
         return false;
     }
 
@@ -265,7 +266,7 @@ size_t wxHIDDevice::GetCount (int nClass, int nType)
     if( IOServiceGetMatchingServices(pPort,
                                      pDictionary, &pIterator) != kIOReturnSuccess )
     {
-        wxLogSysError(_T("No Matching HID Services"));
+        wxLogSysError(wxT("No Matching HID Services"));
         return false;
     }
 
@@ -316,7 +317,9 @@ void wxHIDDevice::AddCookieInQueue(CFTypeRef Data, int i)
     //3rd Param flags (none yet)
     AddCookie(Data, i);
     if ( (*m_ppQueue)->addElement(m_ppQueue, m_pCookies[i], 0) != S_OK )
-        wxLogDebug(_T("HID device: adding element failed"));
+    {
+        wxLogDebug(wxT("HID device: adding element failed"));
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -333,14 +336,14 @@ void wxHIDDevice::InitCookies(size_t dwSize, bool bQueue)
         m_ppQueue = (*m_ppDevice)->allocQueue(m_ppDevice);
         if ( !m_ppQueue )
         {
-            wxLogDebug(_T("HID device: allocQueue failed"));
+            wxLogDebug(wxT("HID device: allocQueue failed"));
             return;
         }
 
         //Param 2, flags, none yet
         if ( (*m_ppQueue)->create(m_ppQueue, 0, 512) != S_OK )
         {
-            wxLogDebug(_T("HID device: create failed"));
+            wxLogDebug(wxT("HID device: create failed"));
         }
     }
 
@@ -474,8 +477,8 @@ void wxHIDKeyboard::BuildCookies(CFArrayRef Array)
 void wxHIDKeyboard::DoBuildCookies(CFArrayRef Array)
 {
     //Now go through each possible cookie
-    int i,
-        nUsage;
+    int i;
+    long nUsage;
 //    bool bEOTriggered = false;
     for (i = 0; i < CFArrayGetCount(Array); ++i)
     {
@@ -651,7 +654,7 @@ class wxHIDModule : public wxModule
         {
             for(size_t i = 0; i < sm_keyboards.GetCount(); ++i)
                 delete (wxHIDKeyboard*) sm_keyboards[i];
-	        sm_keyboards.Clear(); 
+            sm_keyboards.Clear();
         }
 };
 

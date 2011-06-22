@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: printdlg.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -42,9 +42,58 @@
 
 #include <stdlib.h>
 
+// smart pointer like class using OpenPrinter and ClosePrinter
+class WinPrinter
+{
+public:
+    // default ctor
+    WinPrinter()
+    {
+        m_hPrinter = (HANDLE)NULL;
+    }
+
+    WinPrinter( const wxString& printerName )
+    {
+        Open( printerName );
+    }
+
+    ~WinPrinter()
+    {
+        Close();
+    }
+
+    BOOL Open( const wxString& printerName, LPPRINTER_DEFAULTS pDefault=(LPPRINTER_DEFAULTS)NULL )
+    {
+        Close();
+        return OpenPrinter( (LPTSTR)printerName.wx_str(), &m_hPrinter, pDefault );
+    }
+
+    BOOL Close()
+    {
+        BOOL result = TRUE;
+        if( m_hPrinter )
+        {
+            result = ClosePrinter( m_hPrinter );
+            m_hPrinter = (HANDLE)NULL;
+        }
+        return result;
+    }
+
+    operator HANDLE() { return m_hPrinter; }
+    operator bool() { return m_hPrinter != (HANDLE)NULL; }
+
+private:
+    HANDLE m_hPrinter;
+
+    wxDECLARE_NO_COPY_CLASS(WinPrinter);
+};
+
+
 //----------------------------------------------------------------------------
 // wxWindowsPrintNativeData
 //----------------------------------------------------------------------------
+
+#if wxDEBUG_LEVEL
 
 static wxString wxGetPrintDlgError()
 {
@@ -78,6 +127,9 @@ static wxString wxGetPrintDlgError()
     }
     return msg;
 }
+
+#endif // wxDEBUG_LEVEL
+
 
 static HGLOBAL
 wxCreateDevNames(const wxString& driverName,
@@ -149,7 +201,7 @@ bool wxWindowsPrintNativeData::TransferTo( wxPrintData &data )
 
     //// Orientation
     if (devMode->dmFields & DM_ORIENTATION)
-        data.SetOrientation( devMode->dmOrientation );
+        data.SetOrientation( (wxPrintOrientation)devMode->dmOrientation );
 
     //// Collation
     if (devMode->dmFields & DM_COLLATE)
@@ -334,6 +386,55 @@ bool wxWindowsPrintNativeData::TransferTo( wxPrintData &data )
 bool wxWindowsPrintNativeData::TransferFrom( const wxPrintData &data )
 {
     HGLOBAL hDevMode = static_cast<HGLOBAL>(m_devMode);
+    WinPrinter printer;
+    LPTSTR szPrinterName = (LPTSTR)data.GetPrinterName().wx_str();
+
+    // From MSDN: How To Modify Printer Settings with the DocumentProperties() Function
+    // The purpose of this is to fill the DEVMODE with privdata from printer driver.
+    // If we have a printer name and OpenPrinter sucessfully returns
+    // this replaces the PrintDlg function which creates the DEVMODE filled only with data from default printer.
+    if ( !m_devMode && !data.GetPrinterName().IsEmpty() )
+    {
+        // Open printer
+        if ( printer.Open( data.GetPrinterName() ) == TRUE )
+        {
+            DWORD dwNeeded, dwRet;
+
+            // Step 1:
+            // Allocate a buffer of the correct size.
+            dwNeeded = DocumentProperties( NULL,
+                printer,         // Handle to our printer.
+                szPrinterName,   // Name of the printer.
+                NULL,            // Asking for size, so
+                NULL,            // these are not used.
+                0 );             // Zero returns buffer size.
+
+            LPDEVMODE tempDevMode = static_cast<LPDEVMODE>( GlobalAlloc( GMEM_FIXED | GMEM_ZEROINIT, dwNeeded ) );
+
+            // Step 2:
+            // Get the default DevMode for the printer
+            dwRet = DocumentProperties( NULL,
+                printer,
+                szPrinterName,
+                tempDevMode,     // The address of the buffer to fill.
+                NULL,            // Not using the input buffer.
+                DM_OUT_BUFFER ); // Have the output buffer filled.
+
+            if ( dwRet != IDOK )
+            {
+                // If failure, cleanup
+                GlobalFree( tempDevMode );
+                printer.Close();
+            }
+            else
+            {
+                hDevMode = tempDevMode;
+                m_devMode = hDevMode;
+                tempDevMode = NULL;
+            }
+        }
+    }
+
     if ( !m_devMode )
     {
         // Use PRINTDLG as a way of creating a DEVMODE object
@@ -364,7 +465,9 @@ bool wxWindowsPrintNativeData::TransferFrom( const wxPrintData &data )
             pd.hDevMode = NULL;
             pd.hDevNames = NULL;
 
+#if wxDEBUG_LEVEL
             wxLogDebug(wxT("Printing error: ") + wxGetPrintDlgError());
+#endif // wxDEBUG_LEVEL
         }
         else
         {
@@ -450,6 +553,15 @@ bool wxWindowsPrintNativeData::TransferFrom( const wxPrintData &data )
                 devMode->dmPaperLength = (short)(paperSize.y * 10);
                 devMode->dmFields |= DM_PAPERWIDTH;
                 devMode->dmFields |= DM_PAPERLENGTH;
+
+                // A printer driver may or may not also want DM_PAPERSIZE to
+                // be specified. Also, if the printer driver doesn't implement the DMPAPER_USER
+                // size, then this won't work, and even if you found the correct id by
+                // enumerating the driver's paper sizes, it probably won't change the actual size,
+                // it'll just select that custom paper type with its own current setting.
+                // For a discussion on this, see http://www.codeguru.com/forum/showthread.php?threadid=458617
+                // Although m_customWindowsPaperId is intended to work around this, it's
+                // unclear how it can help you set the custom paper size programmatically.
             }
             //else: neither paper type nor size specified, don't fill DEVMODE
             //      at all so that the system defaults are used
@@ -492,6 +604,8 @@ bool wxWindowsPrintNativeData::TransferFrom( const wxPrintData &data )
                 break;
             default:
                 quality = (short)data.GetQuality();
+                devMode->dmYResolution = quality;
+                devMode->dmFields |= DM_YRESOLUTION;
                 break;
         }
         devMode->dmPrintQuality = quality;
@@ -532,6 +646,21 @@ bool wxWindowsPrintNativeData::TransferFrom( const wxPrintData &data )
         {
             devMode->dmMediaType = data.GetMedia();
             devMode->dmFields |= DM_MEDIATYPE;
+        }
+
+        if( printer )
+        {
+            // Step 3:
+            // Merge the new settings with the old.
+            // This gives the driver an opportunity to update any private
+            // portions of the DevMode structure.
+            DocumentProperties( NULL,
+                printer,
+                szPrinterName,
+                (LPDEVMODE)hDevMode, // Reuse our buffer for output.
+                (LPDEVMODE)hDevMode, // Pass the driver our changes
+                DM_IN_BUFFER |       // Commands to Merge our changes and
+                DM_OUT_BUFFER );     // write the result.
         }
     }
 

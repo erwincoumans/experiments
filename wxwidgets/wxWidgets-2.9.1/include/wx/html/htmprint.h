@@ -3,7 +3,7 @@
 // Purpose:     html printing classes
 // Author:      Vaclav Slavik
 // Created:     25/09/99
-// RCS-ID:      $Id: htmprint.h 59862 2009-03-26 13:37:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,9 @@ public:
     // Following 3 methods *must* be called before any call to Render:
 
     // Assign DC to this render
-    void SetDC(wxDC *dc, double pixel_scale = 1.0);
+    void SetDC(wxDC *dc, double pixel_scale = 1.0)
+        { SetDC(dc, pixel_scale, pixel_scale); }
+    void SetDC(wxDC *dc, double pixel_scale, double font_scale);
 
     // Sets size of output rectangle, in pixels. Note that you *can't* change
     // width of the rectangle between calls to Render! (You can freely change height.)
@@ -174,15 +176,17 @@ public:
 private:
     // this function is called by the base class OnPreparePrinting()
     // implementation and by default checks whether the document fits into
-    // pageArea horizontally and warns the user if it does not, giving him
-    // the possibility to cancel printing in this case
+    // pageArea horizontally and warns the user if it does not and, if we're
+    // going to print and not just to preview the document, giving him the
+    // possibility to cancel printing
     //
     // you may override it to either suppress this check if truncation of the
     // HTML being printed is acceptable or, on the contrary, add more checks to
     // it, e.g. for the fit in the vertical direction if the document should
     // always appear on a single page
     //
-    // return true if printing should go ahead or false to cancel it
+    // return true if printing should go ahead or false to cancel it (the
+    // return value is ignored when previewing)
     virtual bool CheckFit(const wxSize& pageArea, const wxSize& docArea) const;
 
     void RenderPage(wxDC *dc, int page);
@@ -275,6 +279,11 @@ public:
             // get the parent window
     void SetParentWindow(wxWindow* window) { m_ParentWindow = window; }
             // set the parent window
+
+    const wxString& GetName() const { return m_Name; }
+            // get the printout name
+    void SetName(const wxString& name) { m_Name = name; }
+            // set the printout name
 
 protected:
     virtual wxHtmlPrintout *CreatePrintout();

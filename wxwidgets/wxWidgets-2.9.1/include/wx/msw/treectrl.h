@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin to be less MSW-specific on 10/10/98
 // Created:     01/02/97
-// RCS-ID:      $Id: treectrl.h 59600 2009-03-18 10:01:36Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -127,6 +127,11 @@ public:
     virtual wxTreeItemId GetRootItem() const;
     virtual wxTreeItemId GetSelection() const;
     virtual size_t GetSelections(wxArrayTreeItemIds& selections) const;
+    virtual wxTreeItemId GetFocusedItem() const;
+
+    virtual void ClearFocusedItem();
+    virtual void SetFocusedItem(const wxTreeItemId& item);
+
 
     virtual wxTreeItemId GetItemParent(const wxTreeItemId& item) const;
     virtual wxTreeItemId GetFirstChild(const wxTreeItemId& item,
@@ -161,12 +166,13 @@ public:
     virtual void Unselect();
     virtual void UnselectAll();
     virtual void SelectItem(const wxTreeItemId& item, bool select = true);
+    virtual void SelectChildren(const wxTreeItemId& parent);
 
     virtual void EnsureVisible(const wxTreeItemId& item);
     virtual void ScrollTo(const wxTreeItemId& item);
 
     virtual wxTextCtrl *EditLabel(const wxTreeItemId& item,
-                          wxClassInfo* textCtrlClass = CLASSINFO(wxTextCtrl));
+                          wxClassInfo* textCtrlClass = wxCLASSINFO(wxTextCtrl));
     virtual wxTextCtrl *GetEditControl() const;
     virtual void EndEditLabel(const wxTreeItemId& WXUNUSED(item),
                               bool discardChanges = false)
@@ -275,6 +281,7 @@ private:
     void DoToggleItemSelection(const wxTreeItemId& item);
 
     void DoUnselectAll();
+    void DoSelectChildren(const wxTreeItemId& parent);
 
     void DeleteTextCtrl();
 
@@ -282,9 +289,14 @@ private:
     // and the tree has wxTR_HIDE_ROOT style)
     bool IsHiddenRoot(const wxTreeItemId& item) const;
 
-    // clears/sets the currently focused item
-    void ClearFocusedItem();
-    void SetFocusedItem(const wxTreeItemId& item);
+
+    // check if the given flags (taken from TV_HITTESTINFO structure)
+    // indicate a position "on item": this is less trivial than just checking
+    // for TVHT_ONITEM because we consider that points to the left and right of
+    // item text are also "on item" when wxTR_FULL_ROW_HIGHLIGHT is used as the
+    // item visually spans the entire breadth of the window then
+    bool MSWIsOnItem(unsigned flags) const;
+
 
     // the hash storing the items attributes (indexed by item ids)
     wxMapTreeAttr m_attrs;
@@ -316,6 +328,9 @@ private:
 
     // whether we need to trigger a state image click event
     bool m_triggerStateImageClick;
+
+    // whether we need to deselect other items on mouse up
+    bool m_mouseUpDeselect;
 
     friend class wxTreeItemIndirectData;
     friend class wxTreeSortHelper;

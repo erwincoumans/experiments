@@ -6,7 +6,7 @@
  * whereby a setup.h is created under the lib directory.
  *
  * Copyright:   (c) Vadim Zeitlin
- * RCS-ID:      $Id: setup_redirect.h 33948 2005-05-04 18:57:50Z JS $
+ * RCS-ID:      $Id$
  * Licence:     wxWindows Licence
  */
 

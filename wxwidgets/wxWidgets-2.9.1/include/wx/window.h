@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Ron Lee
 // Created:     01/02/97
-// RCS-ID:      $Id: window.h 59164 2009-02-26 16:16:31Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -118,6 +118,7 @@ enum wxWindowVariant
 // valid values for Show/HideWithEffect()
 enum wxShowEffect
 {
+    wxSHOW_EFFECT_NONE,
     wxSHOW_EFFECT_ROLL_TO_LEFT,
     wxSHOW_EFFECT_ROLL_TO_RIGHT,
     wxSHOW_EFFECT_ROLL_TO_TOP,
@@ -148,7 +149,9 @@ WX_DECLARE_LIST_3(wxWindow, wxWindowBase, wxWindowList, wxWindowListNode, class 
 // ----------------------------------------------------------------------------
 
 extern WXDLLIMPEXP_DATA_CORE(wxWindowList) wxTopLevelWindows;
-extern WXDLLIMPEXP_DATA_CORE(wxList) wxPendingDelete;
+
+// declared here for compatibility only, main declaration is in wx/app.h
+extern WXDLLIMPEXP_DATA_BASE(wxList) wxPendingDelete;
 
 // ----------------------------------------------------------------------------
 // wxWindowBase is the base class for all GUI controls/widgets, this is the public
@@ -170,15 +173,6 @@ public:
         // default ctor, initializes everything which can be initialized before
         // Create()
     wxWindowBase() ;
-
-        // pseudo ctor (can't be virtual, called from ctor)
-    bool CreateBase(wxWindowBase *parent,
-                    wxWindowID winid,
-                    const wxPoint& pos = wxDefaultPosition,
-                    const wxSize& size = wxDefaultSize,
-                    long style = 0,
-                    const wxValidator& validator = wxDefaultValidator,
-                    const wxString& name = wxPanelNameStr);
 
     virtual ~wxWindowBase();
 
@@ -375,7 +369,7 @@ public:
         // acceptable size using which it will still look "nice" in
         // most situations)
     wxSize GetBestSize() const;
-    
+
     void GetBestSize(int *w, int *h) const
     {
         wxSize s = GetBestSize();
@@ -615,7 +609,7 @@ public:
     virtual void SetWindowStyleFlag( long style ) { m_windowStyle = style; }
     virtual long GetWindowStyleFlag() const { return m_windowStyle; }
 
-        // just some (somewhat shorter) synonims
+        // just some (somewhat shorter) synonyms
     void SetWindowStyle( long style ) { SetWindowStyleFlag(style); }
     long GetWindowStyle() const { return GetWindowStyleFlag(); }
 
@@ -809,6 +803,13 @@ public:
     bool ProcessWindowEvent(wxEvent& event)
         { return GetEventHandler()->ProcessEvent(event); }
 
+        // Call GetEventHandler()->ProcessEventLocally(): this should be used
+        // instead of calling ProcessEventLocally() directly on the window
+        // itself as this wouldn't take any pushed event handlers into account
+        // correctly
+    bool ProcessWindowEventLocally(wxEvent& event)
+        { return GetEventHandler()->ProcessEventLocally(event); }
+
         // Process an event by calling GetEventHandler()->ProcessEvent() and
         // handling any exceptions thrown by event handlers. It's mostly useful
         // when processing wx events when called from C code (e.g. in GTK+
@@ -820,6 +821,10 @@ public:
     virtual void SetNextHandler(wxEvtHandler *handler);
     virtual void SetPreviousHandler(wxEvtHandler *handler);
 
+
+    // Watcom doesn't allow reducing access with using access declaration, see
+    // #10749
+#ifndef __WATCOMC__
 protected:
 
     // NOTE: we change the access specifier of the following wxEvtHandler functions
@@ -832,6 +837,7 @@ protected:
     //       The same holds for all other wxEvtHandler functions.
 
     using wxEvtHandler::ProcessEvent;
+    using wxEvtHandler::ProcessEventLocally;
 #if wxUSE_THREADS
     using wxEvtHandler::ProcessThreadEvent;
 #endif
@@ -839,6 +845,7 @@ protected:
     using wxEvtHandler::ProcessPendingEvents;
     using wxEvtHandler::AddPendingEvent;
     using wxEvtHandler::QueueEvent;
+#endif // __WATCOMC__
 
 public:
 
@@ -887,16 +894,16 @@ public:
     // dialog units translations
     // -------------------------
 
-    wxPoint ConvertPixelsToDialog( const wxPoint& pt );
-    wxPoint ConvertDialogToPixels( const wxPoint& pt );
-    wxSize ConvertPixelsToDialog( const wxSize& sz )
+    wxPoint ConvertPixelsToDialog( const wxPoint& pt ) const;
+    wxPoint ConvertDialogToPixels( const wxPoint& pt ) const;
+    wxSize ConvertPixelsToDialog( const wxSize& sz ) const
     {
         wxPoint pt(ConvertPixelsToDialog(wxPoint(sz.x, sz.y)));
 
         return wxSize(pt.x, pt.y);
     }
 
-    wxSize ConvertDialogToPixels( const wxSize& sz )
+    wxSize ConvertDialogToPixels( const wxSize& sz ) const
     {
         wxPoint pt(ConvertDialogToPixels(wxPoint(sz.x, sz.y)));
 
@@ -1027,9 +1034,10 @@ public:
     wxColour GetForegroundColour() const;
 
         // Set/get the background style.
-        // Pass one of wxBG_STYLE_SYSTEM, wxBG_STYLE_COLOUR, wxBG_STYLE_CUSTOM
-    virtual bool SetBackgroundStyle(wxBackgroundStyle style) { m_backgroundStyle = style; return true; }
-    virtual wxBackgroundStyle GetBackgroundStyle() const { return m_backgroundStyle; }
+    virtual bool SetBackgroundStyle(wxBackgroundStyle style)
+        { m_backgroundStyle = style; return true; }
+    wxBackgroundStyle GetBackgroundStyle() const
+        { return m_backgroundStyle; }
 
         // returns true if the control has "transparent" areas such as a
         // wxStaticText and wxCheckBox and the background should be adapted
@@ -1064,12 +1072,14 @@ public:
 
         // get the width/height/... of the text using current or specified
         // font
-    virtual void GetTextExtent(const wxString& string,
-                               int *x, int *y,
-                               int *descent = NULL,
-                               int *externalLeading = NULL,
-                               const wxFont *theFont = (const wxFont *) NULL)
-                               const = 0;
+    void GetTextExtent(const wxString& string,
+                       int *x, int *y,
+                       int *descent = NULL,
+                       int *externalLeading = NULL,
+                       const wxFont *font = NULL) const
+    {
+        DoGetTextExtent(string, x, y, descent, externalLeading, font);
+    }
 
     wxSize GetTextExtent(const wxString& string) const
     {
@@ -1150,12 +1160,15 @@ public:
     // scrollbars
     // ----------
 
-        // does the window have the scrollbar for this orientation?
-    bool HasScrollbar(int orient) const
+        // can the window have the scrollbar in this orientation?
+    bool CanScroll(int orient) const
     {
         return (m_windowStyle &
                 (orient == wxHORIZONTAL ? wxHSCROLL : wxVSCROLL)) != 0;
     }
+
+        // does the window have the scrollbar in this orientation?
+    bool HasScrollbar(int orient) const;
 
         // configure the window scrollbars
     virtual void SetScrollbar( int orient,
@@ -1406,7 +1419,31 @@ public:
     // used only by Windows
     virtual bool CanApplyThemeBorder() const { return true; }
 
+    // returns the main window of composite control; this is the window
+    // that FindFocus returns if the focus is in one of composite control's
+    // windows
+    virtual wxWindow *GetMainWindowOfCompositeControl()
+        { return (wxWindow*)this; }
+
 protected:
+    // helper for the derived class Create() methods: the first overload, with
+    // validator parameter, should be used for child windows while the second
+    // one is used for top level ones
+    bool CreateBase(wxWindowBase *parent,
+                    wxWindowID winid,
+                    const wxPoint& pos = wxDefaultPosition,
+                    const wxSize& size = wxDefaultSize,
+                    long style = 0,
+                    const wxValidator& validator = wxDefaultValidator,
+                    const wxString& name = wxPanelNameStr);
+
+    bool CreateBase(wxWindowBase *parent,
+                    wxWindowID winid,
+                    const wxPoint& pos,
+                    const wxSize& size,
+                    long style,
+                    const wxString& name);
+
     // event handling specific to wxWindow
     virtual bool TryBefore(wxEvent& event);
     virtual bool TryAfter(wxEvent& event);
@@ -1434,12 +1471,6 @@ protected:
     // Send the wxWindowDestroyEvent if not done yet and sets m_isBeingDeleted
     // to true
     void SendDestroyEvent();
-
-    // returns the main window of composite control; this is the window
-    // that FindFocus returns if the focus is in one of composite control's
-    // windows
-    virtual wxWindow *GetMainWindowOfCompositeControl()
-        { return (wxWindow*)this; }
 
     // this method should be implemented to use operating system specific code
     // to really enable/disable the widget, it will only be called when we
@@ -1597,6 +1628,13 @@ protected:
     //     overloaded Something()s in terms of DoSomething() which will be the
     //     only one to be virtual.
 
+    // text extent
+    virtual void DoGetTextExtent(const wxString& string,
+                                 int *x, int *y,
+                                 int *descent = NULL,
+                                 int *externalLeading = NULL,
+                                 const wxFont *font = NULL) const = 0;
+
     // coordinates translation
     virtual void DoClientToScreen( int *x, int *y ) const = 0;
     virtual void DoScreenToClient( int *x, int *y ) const = 0;
@@ -1618,6 +1656,11 @@ protected:
     // same size as it would have after a call to Fit()
     virtual wxSize DoGetBestSize() const;
 
+    // this method can be overridden instead of DoGetBestSize() if it computes
+    // the best size of the client area of the window only, excluding borders
+    // (GetBorderSize() will be used to add them)
+    virtual wxSize DoGetBestClientSize() const { return wxDefaultSize; }
+
     // this is the virtual function to be overriden in any derived class which
     // wants to change how SetSize() or Move() works - it is called by all
     // versions of these functions in the base class
@@ -1631,6 +1674,15 @@ protected:
     virtual void DoSetSizeHints( int minW, int minH,
                                  int maxW, int maxH,
                                  int incW, int incH );
+
+    // return the total size of the window borders, i.e. the sum of the widths
+    // of the left and the right border in the x component of the returned size
+    // and the sum of the heights of the top and bottom borders in the y one
+    //
+    // NB: this is currently only implemented properly for wxMSW, wxGTK and
+    //     wxUniv and doesn't behave correctly in the presence of scrollbars in
+    //     the other ports
+    virtual wxSize DoGetBorderSize() const;
 
     // move the window to the specified location and resize it: this is called
     // from both DoSetSize() and DoSetClientSize() and would usually just
@@ -1688,6 +1740,13 @@ private:
     // implementation of the public GetPopupMenuSelectionFromUser() method
     int DoGetPopupMenuSelectionFromUser(wxMenu& menu, int x, int y);
 #endif // wxUSE_MENUS
+
+    // layout the window children when its size changes unless this was
+    // explicitly disabled with SetAutoLayout(false)
+    void InternalOnSize(wxSizeEvent& event);
+
+    // base for dialog unit conversion, i.e. average character size
+    wxSize GetDlgUnitBase() const;
 
     // the stack of windows which have captured the mouse
     static struct WXDLLIMPEXP_FWD_CORE wxWindowNext *ms_winCaptureNext;

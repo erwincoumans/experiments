@@ -3,7 +3,7 @@
 // Purpose:     wxSearchCtrlBase class
 // Author:      Vince Harron
 // Created:     2006-02-18
-// RCS-ID:      $Id: srchctrl.h 59263 2009-03-02 12:25:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vince Harron
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,7 @@
 
 #include "wx/textctrl.h"
 
-#if !defined(__WXUNIVERSAL__) && defined(__WXMAC__) 
+#if !defined(__WXUNIVERSAL__) && defined(__WXMAC__)
     // search control was introduced in Mac OS X 10.3 Panther
     #define wxUSE_NATIVE_SEARCH_CONTROL 1
 

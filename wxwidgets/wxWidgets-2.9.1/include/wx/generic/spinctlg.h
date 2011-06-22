@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     28.10.99
-// RCS-ID:      $Id: spinctlg.h 59722 2009-03-22 10:55:55Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ public:
                 long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                 double min = 0, double max = 100, double initial = 0,
                 double inc = 1,
-                const wxString& name = _T("wxSpinCtrl"));
+                const wxString& name = wxT("wxSpinCtrl"));
 
     virtual ~wxSpinCtrlGenericBase();
 
@@ -92,6 +92,10 @@ public:
     void OnTextEnter(wxCommandEvent& event);
     void OnTextChar(wxKeyEvent& event);
 
+    // this window itself is used only as a container for its sub windows so it
+    // shouldn't accept the focus at all
+    virtual bool AcceptsFocus() const { return false; }
+
     friend class wxSpinCtrlTextGeneric;
 
 protected:
@@ -105,8 +109,13 @@ protected:
     void DoSetRange(double min_val, double max_val);
     void DoSetIncrement(double inc);
 
-    // Ensure that the textctrl shows correct value
-    void SyncSpinToText();
+    // update our value to reflect the text control contents (if it has been
+    // modified by user, do nothing otherwise)
+    //
+    // can also change the text control if its value is invalid
+    //
+    // return true if our value has changed
+    bool SyncSpinToText();
 
     // Send the correct event type
     virtual void DoSendEvent() = 0;
@@ -161,7 +170,7 @@ public:
                 long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                 double min = 0, double max = 100, double initial = 0,
                 double inc = 1,
-                const wxString& name = _T("wxSpinCtrl"))
+                const wxString& name = wxT("wxSpinCtrl"))
     {
         m_min = min;
         m_max = max;
@@ -245,7 +254,7 @@ public:
                const wxSize& size = wxDefaultSize,
                long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                int min = 0, int max = 100, int initial = 0,
-               const wxString& name = _T("wxSpinCtrl"))
+               const wxString& name = wxT("wxSpinCtrl"))
     {
         Create(parent, id, value, pos, size, style, min, max, initial, name);
     }
@@ -257,30 +266,28 @@ public:
                 const wxSize& size = wxDefaultSize,
                 long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                 int min = 0, int max = 100, int initial = 0,
-                const wxString& name = _T("wxSpinCtrl"))
+                const wxString& name = wxT("wxSpinCtrl"))
     {
         return wxSpinCtrlGenericBase::Create(parent, id, value, pos, size,
                                              style, min, max, initial, 1, name);
     }
 
     // accessors
-    int GetValue(wxSPINCTRL_GETVALUE_FIX) const
-        { return wxRound( DoGetValue() ); }
-    int GetMin() const       { return wxRound( m_min ); }
-    int GetMax() const       { return wxRound( m_max ); }
-    int GetIncrement() const { return wxRound( m_increment ); }
+    int GetValue(wxSPINCTRL_GETVALUE_FIX) const { return int(DoGetValue()); }
+    int GetMin() const { return int(m_min); }
+    int GetMax() const { return int(m_max); }
+    int GetIncrement() const { return int(m_increment); }
 
     // operations
     void SetValue(const wxString& value)
         { wxSpinCtrlGenericBase::SetValue(value); }
     void SetValue( int value )              { DoSetValue(value); }
     void SetRange( int minVal, int maxVal ) { DoSetRange(minVal, maxVal); }
-    void SetIncrement( double inc )         { DoSetIncrement(inc); }
+    void SetIncrement(int inc) { DoSetIncrement(inc); }
 
 protected:
     virtual void DoSendEvent();
 
-private:
     DECLARE_DYNAMIC_CLASS(wxSpinCtrl)
 };
 
@@ -302,7 +309,7 @@ public:
                      long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                      double min = 0, double max = 100, double initial = 0,
                      double inc = 1,
-                     const wxString& name = _T("wxSpinCtrlDouble"))
+                     const wxString& name = wxT("wxSpinCtrlDouble"))
     {
         m_digits = 0;
         Create(parent, id, value, pos, size, style,
@@ -317,7 +324,7 @@ public:
                 long style = wxSP_ARROW_KEYS | wxALIGN_RIGHT,
                 double min = 0, double max = 100, double initial = 0,
                 double inc = 1,
-                const wxString& name = _T("wxSpinCtrlDouble"))
+                const wxString& name = wxT("wxSpinCtrlDouble"))
     {
         return wxSpinCtrlGenericBase::Create(parent, id, value, pos, size,
                                              style, min, max, initial,
@@ -344,7 +351,6 @@ protected:
 
     unsigned m_digits;
 
-private:
     DECLARE_DYNAMIC_CLASS(wxSpinCtrlDouble)
 };
 

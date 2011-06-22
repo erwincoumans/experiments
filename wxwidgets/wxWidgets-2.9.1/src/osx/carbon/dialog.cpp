@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: dialog.cpp 61420 2009-07-13 05:12:22Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,38 +23,19 @@
 #include "wx/osx/private.h"
 #include "wx/evtloop.h"
 
-extern wxList wxModalDialogs;
-
-void wxDialog::DoShowModal()
+void wxDialog::EndWindowModal()
 {
-    wxCHECK_RET( !IsModal(), wxT("DoShowModal() called twice") );
+    // Nothing to do for now.
+}
 
-    wxModalDialogs.Append(this);
+void wxDialog::DoShowWindowModal()
+{
+    // If someone wants to add support for this to wxOSX Carbon, here would 
+    // be the place to start: http://trac.wxwidgets.org/ticket/9459
+    // Unfortunately, supporting sheets in Carbon isn't as straightforward
+    // as with Cocoa, so it will probably take some tweaking.
 
-    SetFocus() ;
-
-    WindowRef windowRef = (WindowRef) GetWXWindow();
-    WindowGroupRef windowGroup;
-    WindowGroupRef formerParentGroup;
-    bool resetGroupParent = false;
-
-    if ( GetParent() == NULL )
-    {
-        windowGroup = GetWindowGroup(windowRef) ;
-        formerParentGroup = GetWindowGroupParent( windowGroup );
-        SetWindowGroupParent( windowGroup, GetWindowGroupOfClass( kMovableModalWindowClass ) );
-        resetGroupParent = true;
-    }
-    BeginAppModalStateForWindow(windowRef) ;
-
-    wxEventLoopGuarantor ensureHasLoop;
-    wxEventLoopBase * const loop = wxEventLoop::GetActive();
-    while ( IsModal() )
-        loop->Dispatch();
-
-    EndAppModalStateForWindow(windowRef) ;
-    if ( resetGroupParent )
-    {
-        SetWindowGroupParent( windowGroup , formerParentGroup );
-    }
+    m_modality = wxDIALOG_MODALITY_APP_MODAL;
+    ShowModal();
+    SendWindowModalDialogEvent ( wxEVT_WINDOW_MODAL_DIALOG_CLOSED  );
 }

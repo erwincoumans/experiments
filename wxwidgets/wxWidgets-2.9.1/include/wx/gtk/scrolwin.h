@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Modified by: Vadim Zeitlin (2005-10-10): wxScrolledWindow is now common
 // Created:     01/02/97
-// RCS-ID:      $Id: scrolwin.h 58773 2009-02-08 20:51:44Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

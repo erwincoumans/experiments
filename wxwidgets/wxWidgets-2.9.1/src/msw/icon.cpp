@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: 20.11.99 (VZ): don't derive from wxBitmap any more
 // Created:     04/01/98
-// RCS-ID:      $Id: icon.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ wxIcon::wxIcon(const wxIconLocation& loc)
     wxString fullname = loc.GetFileName();
     if ( loc.GetIndex() )
     {
-        fullname << _T(';') << loc.GetIndex();
+        fullname << wxT(';') << loc.GetIndex();
     }
     //else: 0 is default
 

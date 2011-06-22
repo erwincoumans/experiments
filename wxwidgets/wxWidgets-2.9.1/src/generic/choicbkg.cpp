@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Wlodzimierz ABX Skiba from generic/listbkg.cpp
 // Created:     15.09.04
-// RCS-ID:      $Id: choicbkg.cpp 59425 2009-03-08 06:35:58Z KO $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin, Wlodzimierz Skiba
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -112,53 +112,6 @@ wxChoicebook::Create(wxWindow *parent,
 }
 
 // ----------------------------------------------------------------------------
-// wxChoicebook geometry management
-// ----------------------------------------------------------------------------
-
-wxSize wxChoicebook::GetControllerSize() const
-{
-    const wxSize sizeClient = GetClientSize(),
-                 sizeChoice = m_controlSizer->CalcMin();
-
-    wxSize size;
-    if ( IsVertical() )
-    {
-        size.x = sizeClient.x;
-        size.y = sizeChoice.y;
-    }
-    else // left/right aligned
-    {
-        size.x = sizeChoice.x;
-        size.y = sizeClient.y;
-    }
-
-    return size;
-}
-
-wxSize wxChoicebook::CalcSizeFromPage(const wxSize& sizePage) const
-{
-    // we need to add the size of the choice control and the border between
-    const wxSize sizeChoice = GetControllerSize();
-
-    wxSize size = sizePage;
-    if ( IsVertical() )
-    {
-        if ( sizeChoice.x > sizePage.x )
-            size.x = sizeChoice.x;
-        size.y += sizeChoice.y + GetInternalBorder();
-    }
-    else // left/right aligned
-    {
-        size.x += sizeChoice.x + GetInternalBorder();
-        if ( sizeChoice.y > sizePage.y )
-            size.y = sizeChoice.y;
-    }
-
-    return size;
-}
-
-
-// ----------------------------------------------------------------------------
 // accessing the pages
 // ----------------------------------------------------------------------------
 
@@ -176,14 +129,16 @@ wxString wxChoicebook::GetPageText(size_t n) const
 
 int wxChoicebook::GetPageImage(size_t WXUNUSED(n)) const
 {
-    wxFAIL_MSG( _T("wxChoicebook::GetPageImage() not implemented") );
-
     return wxNOT_FOUND;
 }
 
 bool wxChoicebook::SetPageImage(size_t WXUNUSED(n), int WXUNUSED(imageId))
 {
-    wxFAIL_MSG( _T("wxChoicebook::SetPageImage() not implemented") );
+    // fail silently, the code may be written to use one of several book
+    // classes and call SetPageImage() unconditionally, it's better to just
+    // ignore it (which is the best we can do short of rewriting this class to
+    // use wxBitmapComboBox anyhow) than complain loudly about a rather
+    // harmless problem
 
     return false;
 }

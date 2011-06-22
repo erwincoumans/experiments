@@ -4,7 +4,7 @@
  * Author:      Julian Smart
  * Modified by:
  * Created:     01/02/97
- * RCS-ID:      $Id: chkconf.h 59720 2009-03-22 09:49:28Z SC $
+ * RCS-ID:      $Id$
  * Copyright:   (c) Julian Smart
  * Licence:     wxWindows licence
  */
@@ -27,8 +27,8 @@
     #define wxOSX_USE_NATIVE_TOOLBAR 1
 #endif
 
-/* 
- * text rendering system 
+/*
+ * text rendering system
  */
 
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
@@ -47,6 +47,13 @@
     #define wxOSX_USE_ATSU_TEXT 1
 
 #endif
+
+/*
+ * Audio System
+ */
+
+#define wxOSX_USE_QUICKTIME 1
+#define wxOSX_USE_AUDIOTOOLBOX 0
 
 #endif
     /* _WX_OSX_CARBON_CHKCONF_H_ */

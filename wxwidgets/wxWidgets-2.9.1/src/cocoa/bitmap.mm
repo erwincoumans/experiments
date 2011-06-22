@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/07/19
-// RCS-ID:      $Id: bitmap.mm 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -520,7 +520,7 @@ void *wxBitmap::GetRawData(wxPixelDataBase& data, int bpp)
 
     if([bitmapRep bitsPerPixel]!=bpp)
     {
-        wxFAIL_MSG( _T("incorrect bitmap type in wxBitmap::GetRawData()") );
+        wxFAIL_MSG( wxT("incorrect bitmap type in wxBitmap::GetRawData()") );
         return NULL;
     }
     data.m_width = [bitmapRep pixelsWide];

@@ -2,7 +2,7 @@
 // Name:        src/gtk/mdi.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: mdi.cpp 59523 2009-03-14 01:24:45Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -123,7 +123,7 @@ void wxMDIParentFrame::OnInternalIdle()
             wxMenuBar *menu_bar = active_child_frame->m_menuBar;
             if (menu_bar)
             {
-                menu_bar->SetInvokingWindow(active_child_frame);
+                menu_bar->Attach(active_child_frame);
             }
         }
         m_justInserted = false;
@@ -149,7 +149,13 @@ void wxMDIParentFrame::OnInternalIdle()
                 {
                     if (menu_bar->Show(true))
                     {
-                        menu_bar->SetInvokingWindow( child_frame );
+                        // Attach() asserts if we call it for an already
+                        // attached menu bar so don't do it if we're already
+                        // associated with this frame (it would be nice to get
+                        // rid of this check and ensure that this doesn't
+                        // happen...)
+                        if ( menu_bar->GetFrame() != child_frame )
+                            menu_bar->Attach( child_frame );
                     }
                     visible_child_menu = true;
                 }
@@ -157,7 +163,7 @@ void wxMDIParentFrame::OnInternalIdle()
                 {
                     if (menu_bar->Show(false))
                     {
-                        menu_bar->UnsetInvokingWindow( child_frame );
+                        menu_bar->Detach();
                     }
                 }
             }
@@ -173,12 +179,12 @@ void wxMDIParentFrame::OnInternalIdle()
         if (visible_child_menu)
         {
             m_frameMenuBar->Show( false );
-            m_frameMenuBar->UnsetInvokingWindow( this );
+            m_frameMenuBar->Detach();
         }
         else
         {
             m_frameMenuBar->Show( true );
-            m_frameMenuBar->SetInvokingWindow( this );
+            m_frameMenuBar->Attach( this );
         }
     }
 }
@@ -385,7 +391,7 @@ wxMDIClientWindow::~wxMDIClientWindow()
     // a call to gtk_mdi_page_change_callback with an invalid parent
     // (because gtk_mdi_page_change_callback expects a wxMDIClientWindow but
     //  at that point of the dtor chain we are a simple wxWindow!)
-    g_signal_handlers_disconnect_by_func(m_widget, 
+    g_signal_handlers_disconnect_by_func(m_widget,
                                          (gpointer)gtk_mdi_page_change_callback,
                                          GetParent());
 }

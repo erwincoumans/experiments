@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/choice.h
+// Name:        wx/osx/choice.h
 // Purpose:     wxChoice class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: choice.h 58319 2009-01-23 08:40:26Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ public:
     virtual wxString GetString(unsigned int n) const ;
     virtual void SetString(unsigned int pos, const wxString& s);
     // osx specific event handling common for all osx-ports
-    
+
     virtual bool        OSXHandleClicked( double timestampsec );
 
 protected:

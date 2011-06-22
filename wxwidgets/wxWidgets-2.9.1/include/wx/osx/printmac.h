@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: printmac.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,7 @@
 /*
  * Represents the printer: manages printing a wxPrintout object
  */
- 
+
 class WXDLLIMPEXP_CORE wxMacPrinter: public wxPrinterBase
 {
   DECLARE_DYNAMIC_CLASS(wxMacPrinter)
@@ -28,7 +28,7 @@ class WXDLLIMPEXP_CORE wxMacPrinter: public wxPrinterBase
 
     virtual bool Print(wxWindow *parent,
                        wxPrintout *printout,
-                       bool prompt = TRUE);
+                       bool prompt = true);
     virtual wxDC* PrintDialog(wxWindow *parent);
   virtual bool Setup(wxWindow *parent);
 
@@ -38,7 +38,7 @@ class WXDLLIMPEXP_CORE wxMacPrinter: public wxPrinterBase
  * wxPrintPreview
  * Programmer creates an object of this class to preview a wxPrintout.
  */
- 
+
 class WXDLLIMPEXP_CORE wxMacPrintPreview: public wxPrintPreviewBase
 {
   DECLARE_CLASS(wxMacPrintPreview)

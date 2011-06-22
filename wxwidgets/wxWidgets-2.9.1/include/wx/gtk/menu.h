@@ -2,7 +2,7 @@
 // Name:        wx/gtk/menu.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: menu.h 54123 2008-06-11 17:07:07Z PC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,7 +21,6 @@ public:
     wxMenuBar();
     wxMenuBar(long style);
     wxMenuBar(size_t n, wxMenu *menus[], const wxString titles[], long style = 0);
-    virtual ~wxMenuBar();
 
     // implement base class (pure) virtuals
     virtual bool Append( wxMenu *menu, const wxString &title );
@@ -44,18 +43,15 @@ public:
     // window
     virtual bool GTKNeedsParent() const { return false; }
 
-    void Attach(wxFrame *frame);
+    virtual void Attach(wxFrame *frame);
+    virtual void Detach();
 
     // implementation only from now on
-    void SetInvokingWindow( wxWindow *win );
-    void UnsetInvokingWindow( wxWindow *win );
+    GtkWidget       *m_menubar; // Public for hildon support
 
 private:
     // common part of Append and Insert
     bool GtkAppend(wxMenu *menu, const wxString& title, int pos=-1);
-
-    GtkWidget       *m_menubar;
-    wxWindow        *m_invokingWindow;
 
     void Init(size_t n, wxMenu *menus[], const wxString titles[], long style);
 

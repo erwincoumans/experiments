@@ -4,7 +4,7 @@
 // Author:      Original from Wolfram Gloger/Guilhem Lavaux/Vadim Zeitlin
 // Modified by: Aj Lavin, Stefan Csomor
 // Created:     04/22/98
-// RCS-ID:      $Id: thread.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Wolfram Gloger (1996, 1997); Guilhem Lavaux (1998),
 //                  Vadim Zeitlin (1999), Stefan Csomor (2000)
 // Licence:     wxWindows licence
@@ -49,7 +49,7 @@ enum wxThreadState
 // ----------------------------------------------------------------------------
 
 // the task ID of the main thread
-static wxThreadIdType gs_idMainThread = kInvalidID;
+wxThreadIdType wxThread::ms_idMainThread = kInvalidID;
 
 // this is the Per-Task Storage for the pointer to the appropriate wxThread
 TaskStorageIndex gs_tlsForWXThread = 0;
@@ -796,11 +796,6 @@ wxThread *wxThread::This()
     return thr;
 }
 
-bool wxThread::IsMain()
-{
-    return GetCurrentId() == gs_idMainThread || gs_idMainThread == kInvalidID ;
-}
-
 #ifdef Yield
 #undef Yield
 #endif
@@ -898,7 +893,7 @@ wxThreadError wxThread::Run()
 wxThreadError wxThread::Pause()
 {
     wxCHECK_MSG( This() != this, wxTHREAD_MISC_ERROR,
-                 _T("a thread can't pause itself") );
+                 wxT("a thread can't pause itself") );
 
     wxCriticalSectionLocker lock(m_critsect);
 
@@ -1196,8 +1191,8 @@ IMPLEMENT_DYNAMIC_CLASS(wxThreadModule, wxModule)
 
 bool wxThreadModule::OnInit()
 {
-    bool hasThreadManager = 
-#ifdef __LP64__ 
+    bool hasThreadManager =
+#ifdef __LP64__
         true ; // TODO VERIFY IN NEXT BUILD
 #else
         MPLibraryIsLoaded();
@@ -1214,7 +1209,7 @@ bool wxThreadModule::OnInit()
     verify_noerr( MPAllocateTaskStorageIndex( &gs_tlsForWXThread ) ) ;
     verify_noerr( MPSetTaskStorageValue( gs_tlsForWXThread, 0 ) ) ;
 
-    gs_idMainThread = wxThread::GetCurrentId();
+    wxThread::ms_idMainThread = wxThread::GetCurrentId();
     gs_critsectWaitingForGui = new wxCriticalSection();
 
     gs_critsectGui = new wxCriticalSection();
@@ -1234,12 +1229,10 @@ void wxThreadModule::OnExit()
         }
 
         gs_critsectGui->Leave();
-        delete gs_critsectGui;
-        gs_critsectGui = NULL;
+        wxDELETE(gs_critsectGui);
     }
 
-    delete gs_critsectWaitingForGui;
-    gs_critsectWaitingForGui = NULL;
+    wxDELETE(gs_critsectWaitingForGui);
 }
 
 // ----------------------------------------------------------------------------

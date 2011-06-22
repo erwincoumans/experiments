@@ -3,7 +3,7 @@
 // Purpose:     wxTimer for wxBase (unix)
 // Author:      Lukasz Michalski
 // Created:     15/01/2005
-// RCS-ID:      $Id: timer.h 58520 2009-01-30 15:21:47Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Lukasz Michalski
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ public:
     // timer is running
     void MarkStopped()
     {
-        wxASSERT_MSG( m_isRunning, _T("stopping non-running timer?") );
+        wxASSERT_MSG( m_isRunning, wxT("stopping non-running timer?") );
 
         m_isRunning = false;
     }

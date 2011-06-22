@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-09-30
-// RCS-ID:      $Id: richtexthtml.h 49108 2007-10-09 11:20:36Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,9 @@
  */
 
 #include "wx/richtext/richtextbuffer.h"
+
+// Use CSS styles where applicable, otherwise use non-CSS workarounds
+#define wxRICHTEXT_HANDLER_USE_CSS 0x1000
 
 /*!
  * wxRichTextHTMLHandler

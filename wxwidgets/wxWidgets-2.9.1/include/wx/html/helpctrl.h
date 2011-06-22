@@ -4,7 +4,7 @@
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden and Vaclav Slavik
-// RCS-ID:      $Id: helpctrl.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Harm van der Heijden and Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -66,6 +66,7 @@ public:
     wxHtmlHelpFrame* GetFrame() { return m_helpFrame; }
     wxHtmlHelpDialog* GetDialog() { return m_helpDialog; }
 
+#if wxUSE_CONFIG
     void UseConfig(wxConfigBase *config, const wxString& rootpath = wxEmptyString);
 
     // Assigns config object to the Ctrl. This config is then
@@ -73,6 +74,7 @@ public:
     // Ctrl and it's wxHtmlWindow
     virtual void ReadCustomization(wxConfigBase *cfg, const wxString& path = wxEmptyString);
     virtual void WriteCustomization(wxConfigBase *cfg, const wxString& path = wxEmptyString);
+#endif // wxUSE_CONFIG
 
     //// Backward compatibility with wxHelpController API
 
@@ -118,8 +120,10 @@ protected:
 
     wxHtmlHelpData      m_helpData;
     wxHtmlHelpWindow*   m_helpWindow;
+#if wxUSE_CONFIG
     wxConfigBase *      m_Config;
     wxString            m_ConfigRoot;
+#endif // wxUSE_CONFIG
     wxString            m_titleFormat;
     int                 m_FrameStyle;
     wxHtmlHelpFrame*    m_helpFrame;

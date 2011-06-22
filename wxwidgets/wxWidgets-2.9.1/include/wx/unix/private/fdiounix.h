@@ -3,7 +3,7 @@
 // Purpose:     wxFDIOManagerUnix class used by console Unix applications
 // Author:      Vadim Zeitlin
 // Created:     2009-08-17
-// RCS-ID:      $Id: fdiounix.h 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2009 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// Id:          $Id: combobox.h 59263 2009-03-02 12:25:01Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -88,6 +88,8 @@ public:
     {
         return wxItemContainer::GetStringSelection();
     }
+    virtual void Popup();
+    virtual void Dismiss();
 
     virtual void Clear()
     {
@@ -116,8 +118,8 @@ public:
     void OnUpdateDelete(wxUpdateUIEvent& event);
     void OnUpdateSelectAll(wxUpdateUIEvent& event);
 
-    virtual void DisableEvents();
-    virtual void EnableEvents();
+    virtual void GTKDisableEvents();
+    virtual void GTKEnableEvents();
     GtkWidget* GetConnectWidget();
 
     static wxVisualAttributes
@@ -135,8 +137,8 @@ protected:
     // custom list stores.
     virtual void GTKCreateComboBoxWidget();
 
-    // return the GtkEntry part of the combobox
-    GtkEntry *GetEntry() const { return m_entry; }
+    virtual GtkEntry *GetEntry() const
+        { return m_entry; }
 
     GtkEntry*   m_entry;
 
@@ -144,13 +146,7 @@ private:
     // From wxTextEntry:
     virtual wxWindow *GetEditableWindow() { return this; }
     virtual GtkEditable *GetEditable() const;
-    virtual void EnableTextChangedEvents(bool enable)
-    {
-        if ( enable )
-            EnableEvents();
-        else
-            DisableEvents();
-    }
+    virtual void EnableTextChangedEvents(bool enable);
 
     void Init();
 

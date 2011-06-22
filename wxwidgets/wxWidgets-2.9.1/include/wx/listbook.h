@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.08.03
-// RCS-ID:      $Id: listbook.h 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,6 @@ public:
     virtual wxString GetPageText(size_t n) const;
     virtual int GetPageImage(size_t n) const;
     virtual bool SetPageImage(size_t n, int imageId);
-    virtual wxSize CalcSizeFromPage(const wxSize& sizePage) const;
     virtual bool InsertPage(size_t n,
                             wxWindow *page,
                             const wxString& text,
@@ -88,9 +87,6 @@ public:
 
 protected:
     virtual wxWindow *DoRemovePage(size_t page);
-
-    // get the size which the list control should have
-    virtual wxSize GetControllerSize() const;
 
     void UpdateSelectedPage(size_t newsel);
 

@@ -5,7 +5,7 @@
  * Author:      Joel Farley, Ove Kaaven
  * Modified by: Vadim Zeitlin, Robert Roebling, Ron Lee
  * Created:     1998/06/12
- * RCS-ID:      $Id: wxcrtbase.h 59614 2009-03-18 21:11:13Z FM $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 1998-2006 wxWidgets dev team
  * Licence:     wxWindows licence
  */
@@ -26,7 +26,7 @@
 
     NB: don't include any wxWidgets headers here because almost all of them
         include this one!
-        
+
     NB2: User code should include wx/crt.h instead of including this
          header directly.
 
@@ -53,11 +53,23 @@
 #endif
 
 /*
+    Using -std=c++{98,0x} option with mingw32 disables most of standard
+    library extensions, so we can't rely on the presence of common non-ANSI
+    functions, define a special symbol to test for this. Notice that this
+    doesn't need to be done for g++ under Linux where _GNU_SOURCE (which is
+    defined by default) still makes all common extensions available even in
+    ANSI mode.
+ */
+#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
+    #define __WX_STRICT_ANSI_GCC__
+#endif
+
+/*
    a few compilers don't have the (non standard but common) isascii function,
    define it ourselves for them
  */
 #ifndef isascii
-    #if defined(__MWERKS__)
+    #if defined(__MWERKS__) || defined(__WX_STRICT_ANSI_GCC__)
         #define wxNEED_ISASCII
     #elif defined(_WIN32_WCE)
         #if _WIN32_WCE <= 211
@@ -72,7 +84,7 @@
 
 #ifdef _WIN32_WCE
     #if _WIN32_WCE <= 211
-        #define isspace(c) ((c) == _T(' ') || (c) == _T('\t'))
+        #define isspace(c) ((c) == wxT(' ') || (c) == wxT('\t'))
     #endif
 #endif /* _WIN32_WCE */
 
@@ -180,10 +192,15 @@ WXDLLIMPEXP_BASE void *calloc( size_t num, size_t size );
    Mac and OpenVMS do not have wcsdup: */
 #if defined(__VISUALC__) && __VISUALC__ >= 1400
     #define wxCRT_StrdupA _strdup
-#elif !(defined(__MWERKS__) && defined(__WXMAC__)) && !defined(__WXWINCE__)
+#elif !((defined(__MWERKS__) && defined(__WXMAC__)) || \
+        defined(__WXWINCE__) || \
+        defined(__WX_STRICT_ANSI_GCC__))
     #define wxCRT_StrdupA strdup
 #endif
-#if defined(__WINDOWS__)
+
+// most Windows compilers provide _wcsdup()
+#if defined(__WINDOWS__) && \
+        !(defined(__CYGWIN__) || defined(__WX_STRICT_ANSI_GCC__))
     #define wxCRT_StrdupW _wcsdup
 #elif defined(HAVE_WCSDUP)
     #define wxCRT_StrdupW wcsdup
@@ -226,12 +243,24 @@ WXDLLIMPEXP_BASE void *calloc( size_t num, size_t size );
     #endif /* HAVE_WCSTOULL */
 #endif
 
-/* Not all compilers have strnlen(); e.g. MSVC 6.x and 7.x don't have it */
-#if wxCHECK_VISUALC_VERSION(8) || defined(HAVE_STRNLEN)
+/*
+    Only VC8 and later provide strnlen() and wcsnlen() functions under Windows
+    and it's also only available starting from Windows CE 6.0 only in CE build.
+ */
+#if wxCHECK_VISUALC_VERSION(8) && (!defined(_WIN32_WCE) || (_WIN32_WCE >= 0x600))
+    #ifndef HAVE_STRNLEN
+        #define HAVE_STRNLEN
+    #endif
+    #ifndef HAVE_WCSNLEN
+        #define HAVE_WCSNLEN
+    #endif
+#endif
+
+#ifdef HAVE_STRNLEN
     #define wxCRT_StrnlenA  strnlen
 #endif
 
-#if wxCHECK_VISUALC_VERSION(8) || defined(HAVE_WCSNLEN)
+#ifdef HAVE_WCSNLEN
     #define wxCRT_StrnlenW  wcsnlen
 #endif
 
@@ -252,7 +281,7 @@ WXDLLIMPEXP_BASE void *calloc( size_t num, size_t size );
         (defined(__MWERKS__) && defined(__INTEL__))
     #define wxCRT_StricmpA _stricmp
     #define wxCRT_StrnicmpA _strnicmp
-#elif defined(__UNIX__) || defined(__GNUWIN32__)
+#elif defined(__UNIX__) || (defined(__GNUWIN32__) && !defined(__WX_STRICT_ANSI_GCC__))
     #define wxCRT_StricmpA strcasecmp
     #define wxCRT_StrnicmpA strncasecmp
 /* #else -- use wxWidgets implementation */
@@ -446,7 +475,7 @@ WXDLLIMPEXP_BASE wchar_t *wxCRT_StrtokW(wchar_t *psz, const wchar_t *delim, wcha
 #else /* Unicode filenames */
     /* special case: these functions are missing under Win9x with Unicows so we
        have to implement them ourselves */
-    #if wxUSE_UNICODE_MSLU
+    #if wxUSE_UNICODE_MSLU || defined(__WX_STRICT_ANSI_GCC__)
             WXDLLIMPEXP_BASE FILE* wxMSLU__wfopen(const wchar_t *name, const wchar_t *mode);
             WXDLLIMPEXP_BASE FILE* wxMSLU__wfreopen(const wchar_t *name, const wchar_t *mode, FILE *stream);
             WXDLLIMPEXP_BASE int wxMSLU__wrename(const wchar_t *oldname, const wchar_t *newname);
@@ -561,7 +590,7 @@ WXDLLIMPEXP_BASE wchar_t * wxCRT_GetenvW(const wchar_t *name);
         #define wxCRT_AtolW         watol
     /* else: use ANSI versions */
     #endif
-#elif defined(wxHAVE_TCHAR_SUPPORT)
+#elif defined(wxHAVE_TCHAR_SUPPORT) && !defined(__WX_STRICT_ANSI_GCC__)
     #define  wxCRT_AtoiW           _wtoi
     #define  wxCRT_AtolW           _wtol
     /* _wtof doesn't exist */
@@ -614,10 +643,32 @@ WXDLLIMPEXP_BASE wchar_t * wxCRT_GetenvW(const wchar_t *name);
    ------------------------------------------------------------------------- */
 
 #define wxCRT_StrftimeA  strftime
-#ifndef __WXPALMOS__
-/* FIXME-UTF8: when is this available? */
-#define wxCRT_StrftimeW  wcsftime
-#endif /* ! __WXPALMOS__ */
+#ifdef __SGI__
+    /*
+        IRIX provides not one but two versions of wcsftime(): XPG4 one which
+        uses "const char*" for the third parameter and so can't be used and the
+        correct, XPG5, one. Unfortunately we can't just define _XOPEN_SOURCE
+        high enough to get XPG5 version as this undefines other symbols which
+        make other functions we use unavailable (see <standards.h> for gory
+        details). So just declare the XPG5 version ourselves, we're extremely
+        unlikely to ever be compiled on a system without it. But if we ever do,
+        a configure test would need to be added for it (and _MIPS_SYMBOL_PRESENT
+        should be used to check for its presence during run-time, i.e. it would
+        probably be simpler to just always use our own wxCRT_StrftimeW() below
+        if it does ever become a problem).
+     */
+#ifdef __cplusplus
+    extern "C"
+#endif
+    size_t
+    _xpg5_wcsftime(wchar_t *, size_t, const wchar_t *, const struct tm * );
+    #define wxCRT_StrftimeW _xpg5_wcsftime
+#else
+    #ifndef __WXPALMOS__
+        // assume it's always available, this does seem to be the case for now
+        #define wxCRT_StrftimeW  wcsftime
+    #endif /* ! __WXPALMOS__ */
+#endif
 
 #ifndef wxCRT_StrftimeW
 WXDLLIMPEXP_BASE size_t wxCRT_StrftimeW(wchar_t *s, size_t max,

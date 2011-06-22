@@ -8,18 +8,18 @@
 	
 	includedirs 
 	{
-		"../wxWidgets-2.9.0/include/setup",
-		"../wxWidgets-2.9.0/include",
+		"../wxWidgets-2.9.1/include/setup",
+		"../wxWidgets-2.9.1/include",
 		"../../rendering/GlutGlewWindows",
 		"../../rendering/BulletMath"
 	}
 	libdirs {"../../rendering/GlutGlewWindows"}
 
 	configuration {"vs2008", "release"}
-	libdirs {"../wxWidgets-2.9.0/lib/vs2008release"}
+	libdirs {"../wxWidgets-2.9.1/lib/vs2008release"}
 
 	configuration {"vs2008", "debug"}
-	libdirs {"../wxWidgets-2.9.0/lib/vs2008debug"}
+	libdirs {"../wxWidgets-2.9.1/lib/vs2008debug"}
 
 	configuration {}
 	

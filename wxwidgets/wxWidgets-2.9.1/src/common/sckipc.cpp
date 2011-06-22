@@ -8,7 +8,7 @@
 //              Vadim Zeitlin (added support for Unix sockets) Apr 2002
 //                            (use buffering, many fixes/cleanup) Oct 2008
 // Created:     1993
-// RCS-ID:      $Id: sckipc.cpp 60569 2009-05-09 13:24:23Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart 1993
 //              (c) Guilhem Lavaux 1997, 1998
 //              (c) 2000 Guillermo Rodriguez <guille@iies.es>
@@ -92,7 +92,7 @@ GetAddressFromName(const wxString& serverName,
 #if defined(__UNIX__) && !defined(__WINDOWS__) && !defined(__WINE__)
     // under Unix, if the server name looks like a path, create a AF_UNIX
     // socket instead of AF_INET one
-    if ( serverName.Find(_T('/')) != wxNOT_FOUND )
+    if ( serverName.Find(wxT('/')) != wxNOT_FOUND )
     {
         wxUNIXaddress *addr = new wxUNIXaddress;
         addr->Filename(serverName);
@@ -528,7 +528,7 @@ wxTCPServer::~wxTCPServer()
     {
         if ( remove(m_filename.fn_str()) != 0 )
         {
-            wxLogDebug(_T("Stale AF_UNIX file '%s' left."), m_filename.c_str());
+            wxLogDebug(wxT("Stale AF_UNIX file '%s' left."), m_filename.c_str());
         }
     }
 #endif // __UNIX_LIKE__
@@ -694,6 +694,11 @@ void wxTCPEventHandler::HandleDisconnect(wxTCPConnection *connection)
     // connection was closed (either gracefully or not): destroy everything
     connection->m_sock->Notify(false);
     connection->m_sock->Close();
+
+    // don't leave references to this soon-to-be-dangling connection in the
+    // socket as it won't be destroyed immediately as its destruction will be
+    // delayed in case there are more events pending for it
+    connection->m_sock->SetClientData(NULL);
 
     connection->SetConnected(false);
     connection->OnDisconnect();

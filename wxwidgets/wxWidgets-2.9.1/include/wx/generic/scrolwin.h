@@ -3,7 +3,7 @@
 // Purpose:     generic wxScrollHelper
 // Author:      Vadim Zeitlin
 // Created:     2008-12-24 (replacing old file with the same name)
-// RCS-ID:      $Id: scrolwin.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,7 @@
 // Name:        src/html/htmlpars.cpp
 // Purpose:     wxHtmlParser class (generic parser)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlpars.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@
 // DLL options compatibility check:
 WX_CHECK_BUILD_OPTIONS("wxHTML")
 
-const wxChar *wxTRACE_HTML_DEBUG = _T("htmldebug");
+const wxChar *wxTRACE_HTML_DEBUG = wxT("htmldebug");
 
 //-----------------------------------------------------------------------------
 // wxHtmlParser helpers
@@ -250,8 +250,7 @@ void wxHtmlParser::DestroyDOMTree()
     }
     m_Tags = m_CurTag = NULL;
 
-    delete m_TextPieces;
-    m_TextPieces = NULL;
+    wxDELETE(m_TextPieces);
 }
 
 void wxHtmlParser::DoParsing()
@@ -433,7 +432,7 @@ void wxHtmlTagHandler::ParseInnerSource(const wxString& source)
 IMPLEMENT_DYNAMIC_CLASS(wxHtmlEntitiesParser,wxObject)
 
 wxHtmlEntitiesParser::wxHtmlEntitiesParser()
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     : m_conv(NULL), m_encoding(wxFONTENCODING_SYSTEM)
 #endif
 {
@@ -441,14 +440,14 @@ wxHtmlEntitiesParser::wxHtmlEntitiesParser()
 
 wxHtmlEntitiesParser::~wxHtmlEntitiesParser()
 {
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     delete m_conv;
 #endif
 }
 
+#if !wxUSE_UNICODE
 void wxHtmlEntitiesParser::SetEncoding(wxFontEncoding encoding)
 {
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
     if (encoding == m_encoding)
         return;
 
@@ -459,10 +458,8 @@ void wxHtmlEntitiesParser::SetEncoding(wxFontEncoding encoding)
         m_conv = NULL;
     else
         m_conv = new wxCSConv(wxFontMapper::GetEncodingName(m_encoding));
-#else
-    (void) encoding;
-#endif
 }
+#endif // !wxUSE_UNICODE
 
 wxString wxHtmlEntitiesParser::Parse(const wxString& input) const
 {
@@ -523,7 +520,6 @@ wxString wxHtmlEntitiesParser::Parse(const wxString& input) const
 #if !wxUSE_UNICODE
 wxChar wxHtmlEntitiesParser::GetCharForCode(unsigned code) const
 {
-#if wxUSE_WCHAR_T
     char buf[2];
     wchar_t wbuf[2];
     wbuf[0] = (wchar_t)code;
@@ -532,9 +528,6 @@ wxChar wxHtmlEntitiesParser::GetCharForCode(unsigned code) const
     if (conv->WC2MB(buf, wbuf, 2) == (size_t)-1)
         return '?';
     return buf[0];
-#else
-    return (code < 256) ? (wxChar)code : '?';
-#endif
 }
 #endif
 
@@ -655,6 +648,7 @@ wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity) const
             ENTITY("amp", 38),
             ENTITY("and", 8743),
             ENTITY("ang", 8736),
+            ENTITY("apos", 39),
             ENTITY("aring", 229),
             ENTITY("asymp", 8776),
             ENTITY("atilde", 227),
@@ -915,18 +909,18 @@ private:
 
 bool wxMetaTagHandler::HandleTag(const wxHtmlTag& tag)
 {
-    if (tag.GetName() == _T("BODY"))
+    if (tag.GetName() == wxT("BODY"))
     {
         m_Parser->StopParsing();
         return false;
     }
 
-    if (tag.HasParam(_T("HTTP-EQUIV")) &&
-        tag.GetParam(_T("HTTP-EQUIV")).IsSameAs(_T("Content-Type"), false) &&
-        tag.HasParam(_T("CONTENT")))
+    if (tag.HasParam(wxT("HTTP-EQUIV")) &&
+        tag.GetParam(wxT("HTTP-EQUIV")).IsSameAs(wxT("Content-Type"), false) &&
+        tag.HasParam(wxT("CONTENT")))
     {
-        wxString content = tag.GetParam(_T("CONTENT")).Lower();
-        if (content.Left(19) == _T("text/html; charset="))
+        wxString content = tag.GetParam(wxT("CONTENT")).Lower();
+        if (content.Left(19) == wxT("text/html; charset="))
         {
             *m_retval = content.Mid(19);
             m_Parser->StopParsing();
@@ -955,7 +949,7 @@ bool
 wxHtmlParser::SkipCommentTag(wxString::const_iterator& start,
                              wxString::const_iterator end)
 {
-    wxASSERT_MSG( *start == '<', _T("should be called on the tag start") );
+    wxASSERT_MSG( *start == '<', wxT("should be called on the tag start") );
 
     wxString::const_iterator p = start;
 

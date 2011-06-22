@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: font.h 59565 2009-03-15 16:42:05Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ public:
     {
         Create(size, family, style, weight, underlined, face, encoding);
     }
-    
+
     bool Create(int size,
                 wxFontFamily family,
                 wxFontStyle style,
@@ -110,10 +110,6 @@ public:
 
     virtual ~wxFont();
 
-    // wxFontBase overridden functions
-    virtual wxString GetNativeFontInfoDesc() const;
-    virtual wxString GetNativeFontInfoUserDesc() const;
-
     // implement base class pure virtuals
     virtual int GetPointSize() const;
     virtual wxSize GetPixelSize() const;
@@ -135,7 +131,7 @@ public:
     virtual void SetUnderlined(bool underlined);
     virtual void SetEncoding(wxFontEncoding encoding);
 
-    WXDECLARE_COMPAT_SETTERS
+    wxDECLARE_COMMON_FONT_METHODS();
 
     virtual bool IsFixedWidth() const;
 

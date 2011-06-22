@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/wx_cwcocoa.h
+// Name:        wx/wx_cwcocoa.h
 // Purpose:     Metrowerks Prefix Header File (wxCocoa Release)
 // Author:      Tommy Tian (tommy.tian@webex.com)
 // Modified by: David Elliott
 // Created:     10/22/2004
-// RCS-ID:      $Id: wx_cwcocoa.h 30235 2004-11-02 06:22:11Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) Tommy Tian
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

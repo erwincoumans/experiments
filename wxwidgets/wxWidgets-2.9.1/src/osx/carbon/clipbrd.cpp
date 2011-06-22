@@ -5,7 +5,7 @@
 //              Generalized clipboard implementation by Matthew Flatt
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: clipbrd.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@
 // the trace mask we use with wxLogTrace() - call
 // wxLog::AddTraceMask(TRACE_CLIPBOARD) to enable the trace messages from here
 // (there will be a *lot* of them!)
-#define TRACE_CLIPBOARD _T("clipboard")
+#define TRACE_CLIPBOARD wxT("clipboard")
 
 IMPLEMENT_DYNAMIC_CLASS(wxClipboard, wxObject)
 
@@ -61,11 +61,7 @@ wxClipboard::~wxClipboard()
 
 void wxClipboard::Clear()
 {
-    if (m_data != NULL)
-    {
-        delete m_data;
-        m_data = NULL;
-    }
+    wxDELETE(m_data);
 
     OSStatus err = PasteboardClear( m_pasteboard );
     if (err != noErr)
@@ -139,11 +135,7 @@ void wxClipboard::Close()
     // Get rid of cached object.
     // If this is not done, copying data from
     // another application will only work once
-    if (m_data)
-    {
-        delete m_data;
-        m_data = NULL;
-    }
+    wxDELETE(m_data);
 }
 
 bool wxClipboard::IsSupported( const wxDataFormat &dataFormat )

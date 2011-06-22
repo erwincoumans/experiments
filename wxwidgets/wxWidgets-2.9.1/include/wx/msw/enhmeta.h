@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     13.01.00
-// RCS-ID:      $Id: enhmeta.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,6 +84,13 @@ public:
     // the ctor parameters specify the filename (empty for memory metafiles),
     // the metafile picture size and the optional description/comment
     wxEnhMetaFileDC(const wxString& filename = wxEmptyString,
+                    int width = 0, int height = 0,
+                    const wxString& description = wxEmptyString);
+
+    // as above, but takes reference DC as first argument to take resolution,
+    // size, font metrics etc. from
+    wxEnhMetaFileDC(const wxDC& referenceDC,
+                    const wxString& filename = wxEmptyString,
                     int width = 0, int height = 0,
                     const wxString& description = wxEmptyString);
 

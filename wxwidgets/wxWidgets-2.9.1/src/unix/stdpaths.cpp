@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2004-10-19
-// RCS-ID:      $Id: stdpaths.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -29,6 +29,7 @@
 #include "wx/stdpaths.h"
 
 #ifndef WX_PRECOMP
+    #include "wx/app.h"
     #include "wx/wxcrt.h"
     #include "wx/utils.h"
 #endif //WX_PRECOMP
@@ -74,17 +75,17 @@ wxString wxStandardPaths::GetInstallPrefix() const
 
 wxString wxStandardPaths::GetConfigDir() const
 {
-   return _T("/sys$manager");
+   return wxT("/sys$manager");
 }
 
 wxString wxStandardPaths::GetDataDir() const
 {
-   return AppendAppInfo(GetInstallPrefix() + _T("/sys$share"));
+   return AppendAppInfo(GetInstallPrefix() + wxT("/sys$share"));
 }
 
 wxString wxStandardPaths::GetLocalDataDir() const
 {
-   return AppendAppInfo(_T("/sys$manager"));
+   return AppendAppInfo(wxT("/sys$manager"));
 }
 
 wxString wxStandardPaths::GetUserDataDir() const
@@ -186,27 +187,41 @@ wxString wxStandardPaths::GetInstallPrefix() const
 
 wxString wxStandardPaths::GetConfigDir() const
 {
-   return _T("/etc");
+   return wxT("/etc");
 }
 
 wxString wxStandardPaths::GetDataDir() const
 {
-   return AppendAppInfo(GetInstallPrefix() + _T("/share"));
+    // allow to override the location of the data directory by setting
+    // WX_APPNAME_DATA_DIR environment variable: this is very useful in
+    // practice for running well-written (and so using wxStandardPaths to find
+    // their files) wx applications without installing them
+    static const wxString
+      envOverride(
+        getenv(
+            ("WX_" + wxTheApp->GetAppName().Upper() + "_DATA_DIR").c_str()
+        )
+      );
+
+    if ( !envOverride.empty() )
+        return envOverride;
+
+   return AppendAppInfo(GetInstallPrefix() + wxT("/share"));
 }
 
 wxString wxStandardPaths::GetLocalDataDir() const
 {
-   return AppendAppInfo(_T("/etc"));
+   return AppendAppInfo(wxT("/etc"));
 }
 
 wxString wxStandardPaths::GetUserDataDir() const
 {
-   return AppendAppInfo(wxFileName::GetHomeDir() + _T("/."));
+   return AppendAppInfo(wxFileName::GetHomeDir() + wxT("/."));
 }
 
 wxString wxStandardPaths::GetPluginsDir() const
 {
-    return AppendAppInfo(GetInstallPrefix() + _T("/lib"));
+    return AppendAppInfo(GetInstallPrefix() + wxT("/lib"));
 }
 
 wxString
@@ -216,7 +231,7 @@ wxStandardPaths::GetLocalizedResourcesDir(const wxString& lang,
     if ( category != ResourceCat_Messages )
         return wxStandardPathsBase::GetLocalizedResourcesDir(lang, category);
 
-    return GetInstallPrefix() + _T("/share/locale/") + lang + _T("/LC_MESSAGES");
+    return GetInstallPrefix() + wxT("/share/locale/") + lang + wxT("/LC_MESSAGES");
 }
 
 wxString wxStandardPaths::GetDocumentsDir() const

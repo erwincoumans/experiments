@@ -5,9 +5,9 @@
 // Author:      John Norris, minor changes by Axel Schlueter
 // Modified by:
 // Created:     08.02.01
-// RCS-ID:      $Id: tglbtn.h 56651 2008-11-02 22:16:14Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Johnny C. Norris II
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_GTK_TOGGLEBUTTON_H_
@@ -65,7 +65,7 @@ public:
     // Set the label
     virtual void SetLabel(const wxString& label) { wxControl::SetLabel(label); }
     virtual void SetLabel(const wxBitmap& label);
-    bool Enable(bool enable = TRUE);
+    bool Enable(bool enable = true);
 
     static wxVisualAttributes
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
@@ -84,6 +84,8 @@ protected:
     virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
 
 private:
+    typedef wxToggleButtonBase base_type;
+
     DECLARE_DYNAMIC_CLASS(wxBitmapToggleButton)
 };
 
@@ -123,7 +125,7 @@ public:
 
     // Set the label
     void SetLabel(const wxString& label);
-    bool Enable(bool enable = TRUE);
+    bool Enable(bool enable = true);
 
     static wxVisualAttributes
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
@@ -137,6 +139,8 @@ protected:
     virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
 
 private:
+    typedef wxToggleButtonBase base_type;
+
     DECLARE_DYNAMIC_CLASS(wxToggleButton)
 };
 

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin to be less MSW-specific on 10.10.98
 // Created:     1997
-// RCS-ID:      $Id: treectrl.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -80,11 +80,7 @@ public:
     wxTreeItemInternalData() {}
     ~wxTreeItemInternalData()
     {
-        if(m_pAttr)
-        {
-            delete m_pAttr;
-            m_pAttr = NULL;
-        }
+        wxDELETE(m_pAttr);
     }
 
     wxTreeItemAttr*                 m_pAttr;

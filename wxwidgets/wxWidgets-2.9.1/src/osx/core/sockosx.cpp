@@ -3,7 +3,7 @@
 // Purpose:     wxSocketImpl implementation for OS X
 // Authors:     Brian Victor, Vadim Zeitlin
 // Created:     February 2002
-// RCS-ID:      $Id: sockosx.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 Brian Victor
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -287,6 +287,6 @@ static struct OSXManagerSetter
 } gs_OSXManagerSetter;
 
 // see the relative linker macro in socket.cpp
-wxFORCE_LINK_THIS_MODULE( osxsocket );
+wxFORCE_LINK_THIS_MODULE(osxsocket)
 
 #endif // wxUSE_SOCKETS

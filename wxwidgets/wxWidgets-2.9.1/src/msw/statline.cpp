@@ -3,7 +3,7 @@
 // Purpose:     MSW version of wxStaticLine class
 // Author:      Vadim Zeitlin
 // Created:     28.06.99
-// Version:     $Id: statline.cpp 41054 2006-09-07 19:01:45Z ABX $
+// Version:     $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ bool wxStaticLine::Create(wxWindow *parent,
     if ( !CreateControl(parent, id, pos, size, style, wxDefaultValidator, name) )
         return false;
 
-    return MSWCreateControl(_T("STATIC"), wxEmptyString, pos, size);
+    return MSWCreateControl(wxT("STATIC"), wxEmptyString, pos, size);
 }
 
 WXDWORD wxStaticLine::MSWGetStyle(long style, WXDWORD *exstyle) const

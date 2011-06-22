@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/06/99
-// RCS-ID:      $Id: font.h 59564 2009-03-15 16:28:33Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -50,7 +50,7 @@ public:
     {
         Create(size, family, style, weight, underlined, face, encoding);
     }
-    
+
     wxFont(const wxSize& pixelSize,
            wxFontFamily family,
            wxFontStyle style,
@@ -62,7 +62,7 @@ public:
         Create(10, family, style, weight, underlined, face, encoding);
         SetPixelSize(pixelSize);
     }
-    
+
     bool Create(int size,
                 wxFontFamily family,
                 wxFontStyle style,
@@ -109,7 +109,7 @@ public:
     virtual void SetUnderlined(bool bUnderlined);
     virtual void SetEncoding(wxFontEncoding vEncoding);
 
-    WXDECLARE_COMPAT_SETTERS
+    wxDECLARE_COMMON_FONT_METHODS();
 
     //
     // For internal use only!

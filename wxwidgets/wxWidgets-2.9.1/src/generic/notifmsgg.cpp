@@ -3,7 +3,7 @@
 // Purpose:     generic implementation of wxGenericNotificationMessage
 // Author:      Vadim Zeitlin
 // Created:     2007-11-24
-// RCS-ID:      $Id: notifmsgg.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,11 @@
     #define wxUSE_LIBHILDON 0
 #endif
 
-#if wxUSE_NOTIFICATION_MESSAGE && !wxUSE_LIBHILDON
+#ifndef wxUSE_LIBHILDON2
+    #define wxUSE_LIBHILDON2 0
+#endif
+
+#if wxUSE_NOTIFICATION_MESSAGE && (!wxUSE_LIBHILDON || !wxUSE_LIBHILDON2)
 
 #ifndef WX_PRECOMP
     #include "wx/dialog.h"
@@ -238,4 +242,4 @@ bool wxGenericNotificationMessage::Close()
     return true;
 }
 
-#endif // wxUSE_NOTIFICATION_MESSAGE && !wxUSE_LIBHILDON
+#endif // wxUSE_NOTIFICATION_MESSAGE && (!wxUSE_LIBHILDON || !wxUSE_LIBHILDON2)

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: textctrl.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ public:
 
     // Implementation from now on
     // --------------------------
- 
+
 #if wxUSE_DRAG_AND_DROP && wxUSE_RICHEDIT
     virtual void SetDropTarget(wxDropTarget *dropTarget);
 #endif // wxUSE_DRAG_AND_DROP && wxUSE_RICHEDIT
@@ -125,10 +125,11 @@ public:
     int GetRichVersion() const { return m_verRichEdit; }
     bool IsRich() const { return m_verRichEdit != 0; }
 
-    // rich edit controls are not compatible with normal ones and wem ust set
-    // the colours for them otherwise
+    // rich edit controls are not compatible with normal ones and we must set
+    // the colours and font for them otherwise
     virtual bool SetBackgroundColour(const wxColour& colour);
     virtual bool SetForegroundColour(const wxColour& colour);
+    virtual bool SetFont(const wxFont& font);
 #else
     bool IsRich() const { return false; }
 #endif // wxUSE_RICHEDIT
@@ -179,7 +180,6 @@ public:
 
     virtual bool MSWShouldPreProcessMessage(WXMSG* pMsg);
     virtual WXDWORD MSWGetStyle(long style, WXDWORD *exstyle) const;
-    virtual wxVisualAttributes GetDefaultAttributes() const;
 
 protected:
     // common part of all ctors

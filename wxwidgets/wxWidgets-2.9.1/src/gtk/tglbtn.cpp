@@ -5,9 +5,9 @@
 // Author:      John Norris, minor changes by Axel Schlueter
 // Modified by:
 // Created:     08.02.01
-// RCS-ID:      $Id: tglbtn.cpp 58877 2009-02-13 10:25:38Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Johnny C. Norris II
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h".
@@ -285,17 +285,13 @@ void wxToggleButton::SetLabel(const wxString& label)
 
 bool wxToggleButton::Enable(bool enable /*=true*/)
 {
-    bool isEnabled = IsEnabled();
-
-    if (!wxControl::Enable(enable))
+    if (!base_type::Enable(enable))
         return false;
 
     gtk_widget_set_sensitive(GTK_BIN(m_widget)->child, enable);
 
-    if (!isEnabled && enable)
-    {
+    if (enable)
         GTKFixSensitivity();
-    }
 
     return true;
 }

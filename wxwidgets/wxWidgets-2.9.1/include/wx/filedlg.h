@@ -5,7 +5,7 @@
 // Modified by:
 // Created:     8/17/99
 // Copyright:   (c) Robert Roebling
-// RCS-ID:      $Id: filedlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -107,9 +107,9 @@ public:
     bool HasFdFlag(int flag) const { return HasFlag(flag); }
 
     virtual void SetMessage(const wxString& message) { m_message = message; }
-    virtual void SetPath(const wxString& path) { m_path = path; }
-    virtual void SetDirectory(const wxString& dir) { m_dir = dir; }
-    virtual void SetFilename(const wxString& name) { m_fileName = name; }
+    virtual void SetPath(const wxString& path);
+    virtual void SetDirectory(const wxString& dir);
+    virtual void SetFilename(const wxString& name);
     virtual void SetWildcard(const wxString& wildCard) { m_wildCard = wildCard; }
     virtual void SetFilterIndex(int filterIndex) { m_filterIndex = filterIndex; }
 

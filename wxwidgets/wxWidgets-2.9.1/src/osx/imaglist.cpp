@@ -2,7 +2,7 @@
 // Name:        src/osx/imaglist.cpp
 // Purpose:
 // Author:      Robert Roebling
-// RCS_ID:      $Id: imaglist.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS_ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -58,8 +58,8 @@ int wxImageList::Add( const wxIcon &bitmap )
 {
     wxASSERT_MSG( (bitmap.GetWidth() == m_width && bitmap.GetHeight() == m_height)
                   || (m_width == 0 && m_height == 0),
-                  _T("invalid bitmap size in wxImageList: this might work ")
-                  _T("on this platform but definitely won't under Windows.") );
+                  wxT("invalid bitmap size in wxImageList: this might work ")
+                  wxT("on this platform but definitely won't under Windows.") );
 
     m_images.Append( new wxIcon( bitmap ) );
 
@@ -76,8 +76,8 @@ int wxImageList::Add( const wxBitmap &bitmap )
 {
     wxASSERT_MSG( (bitmap.GetWidth() >= m_width && bitmap.GetHeight() == m_height)
                   || (m_width == 0 && m_height == 0),
-                  _T("invalid bitmap size in wxImageList: this might work ")
-                  _T("on this platform but definitely won't under Windows.") );
+                  wxT("invalid bitmap size in wxImageList: this might work ")
+                  wxT("on this platform but definitely won't under Windows.") );
 
     // Mimic behavior of Windows ImageList_Add that automatically breaks up the added
     // bitmap into sub-images of the correct size

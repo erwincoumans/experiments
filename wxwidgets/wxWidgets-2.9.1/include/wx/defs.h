@@ -4,7 +4,7 @@
  *  Author:      Julian Smart and others
  *  Modified by: Ryan Norton (Converted to C)
  *  Created:     01/02/97
- *  RCS-ID:      $Id: defs.h 60405 2009-04-26 15:47:58Z CE $
+ *  RCS-ID:      $Id$
  *  Copyright:   (c) Julian Smart
  *  Licence:     wxWindows licence
  */
@@ -140,6 +140,9 @@
         #endif
         #ifndef _CRT_NON_CONFORMING_SWPRINTFS
             #define _CRT_NON_CONFORMING_SWPRINTFS 1
+        #endif
+        #ifndef _SCL_SECURE_NO_WARNINGS
+            #define _SCL_SECURE_NO_WARNINGS 1
         #endif
     #endif /* VC++ 8 */
 #endif /*  __VISUALC__ */
@@ -303,8 +306,7 @@ typedef short int WXTYPE;
     #if defined(__VISUALC__) && (__VISUALC__ >= 1100)
         /*  VC++ 6.0 and 5.0 have std::wstring (what about earlier versions?) */
         #define HAVE_STD_WSTRING
-    #elif ( defined(__MINGW32__) || defined(__CYGWIN32__) ) \
-          && wxCHECK_GCC_VERSION(3, 3)
+    #elif defined(__MINGW32__) && wxCHECK_GCC_VERSION(3, 3)
         /*  GCC 3.1 has std::wstring; 3.0 never was in MinGW, 2.95 hasn't it */
         #define HAVE_STD_WSTRING
     #endif
@@ -320,6 +322,12 @@ typedef short int WXTYPE;
         /*  GCC 3.1 has std::string::compare; */
         /*  3.0 never was in MinGW, 2.95 hasn't it */
         #define HAVE_STD_STRING_COMPARE
+    #endif
+#endif
+
+#ifndef HAVE_TR1_TYPE_TRAITS
+    #if defined(__VISUALC__) && (_MSC_FULL_VER >= 150030729)
+        #define HAVE_TR1_TYPE_TRAITS
     #endif
 #endif
 
@@ -374,10 +382,11 @@ typedef short int WXTYPE;
 
 
 #ifndef HAVE_WOSTREAM
-    // Mingw <= 3.4 and any version (so far) when targetting PalmOS don't have
-    // std::wostream
+    // Mingw <= 3.4 and all versions of Cygwin as well as any gcc version (so
+    // far) targeting PalmOS don't have std::wostream
     #if defined(__PALMOS__) || \
-        (defined(__MINGW32__) && !wxCHECK_GCC_VERSION(4, 0))
+        (defined(__MINGW32__) && !wxCHECK_GCC_VERSION(4, 0)) || \
+        defined(__CYGWIN__)
         #define wxNO_WOSTREAM
     #endif
 
@@ -518,6 +527,11 @@ typedef short int WXTYPE;
    explains why do we have it.
  */
 #define wxDEPRECATED_INLINE(func, body) wxDEPRECATED(func) { body }
+
+/*
+    A macro to define a simple deprecated accessor.
+ */
+#define wxDEPRECATED_ACCESSOR(func, what) wxDEPRECATED_INLINE(func, return what;)
 
 /*
    Special variant of the macro above which should be used for the functions
@@ -812,21 +826,30 @@ typedef wxUint16 wxWord;
     #define SIZEOF_VOID_P 4
     #define SIZEOF_SIZE_T 4
 #elif defined(__WINDOWS__)
-    /*  Win64 uses LLP64 model and so ints and longs have the same size as in */
-    /*  Win32 */
     #if defined(__WIN32__)
         typedef int wxInt32;
         typedef unsigned int wxUint32;
 
-        /* Assume that if SIZEOF_INT is defined that all the other ones except
-           SIZEOF_SIZE_T, are too.  See next #if below.  */
+        /*
+            Win64 uses LLP64 model and so ints and longs have the same size as
+            in Win32.
+         */
         #ifndef SIZEOF_INT
             #define SIZEOF_INT 4
-            #define SIZEOF_LONG 4
-            #define SIZEOF_WCHAR_T 2
+        #endif
 
+        #ifndef SIZEOF_LONG
+            #define SIZEOF_LONG 4
+        #endif
+
+        #ifndef SIZEOF_WCHAR_T
+            /* Windows uses UTF-16 */
+            #define SIZEOF_WCHAR_T 2
+        #endif
+
+        #ifndef SIZEOF_SIZE_T
             /*
-               under Win64 sizeof(size_t) == 8 and so it is neither unsigned
+               Under Win64 sizeof(size_t) == 8 and so it is neither unsigned
                int nor unsigned long!
              */
             #ifdef __WIN64__
@@ -839,25 +862,14 @@ typedef wxUint16 wxWord;
                 #define wxSIZE_T_IS_UINT
             #endif
             #undef wxSIZE_T_IS_ULONG
+        #endif
 
+        #ifndef SIZEOF_VOID_P
             #ifdef __WIN64__
                 #define SIZEOF_VOID_P 8
             #else /*  Win32 */
                 #define SIZEOF_VOID_P 4
             #endif /*  Win64/32 */
-        #endif /*  !defined(SIZEOF_INT) */
-
-        /*
-          If Python.h was included first, it defines all of the SIZEOF's above
-          except for SIZEOF_SIZE_T, so we need to do it here to avoid
-          triggering the #error in the ssize_t typedefs below...
-        */
-        #ifndef SIZEOF_SIZE_T
-            #ifdef __WIN64__
-                #define SIZEOF_SIZE_T 8
-            #else /* Win32 */
-                #define SIZEOF_SIZE_T 4
-            #endif
         #endif
     #else
         #error "Unsupported Windows version"
@@ -900,7 +912,7 @@ typedef wxUint16 wxWord;
         #if defined(__MACH__) && !defined(SIZEOF_WCHAR_T)
             #define SIZEOF_WCHAR_T 4
         #endif
-        #if wxUSE_WCHAR_T && !defined(SIZEOF_WCHAR_T)
+        #if !defined(SIZEOF_WCHAR_T)
             /*  also assume that sizeof(wchar_t) == 2 (under Unix the most */
             /*  common case is 4 but there configure would have defined */
             /*  SIZEOF_WCHAR_T for us) */
@@ -909,23 +921,31 @@ typedef wxUint16 wxWord;
                                     Wchar_tMustBeExactly2Bytes);
 
             #define SIZEOF_WCHAR_T 2
-        #endif /*  wxUSE_WCHAR_T */
+        #endif /*  !defined(SIZEOF_WCHAR_T) */
     #endif
 #endif /*  Win/!Win */
+
+#ifndef SIZEOF_WCHAR_T
+    #error "SIZEOF_WCHAR_T must be defined, but isn't"
+#endif
 
 /* also define C99-like sized MIN/MAX constants */
 #define wxINT8_MIN CHAR_MIN
 #define wxINT8_MAX CHAR_MAX
+#define wxUINT8_MAX UCHAR_MAX
 
 #define wxINT16_MIN SHRT_MIN
 #define wxINT16_MAX SHRT_MAX
+#define wxUINT16_MAX USHRT_MAX
 
 #if SIZEOF_INT == 4
     #define wxINT32_MIN INT_MIN
     #define wxINT32_MAX INT_MAX
+    #define wxUINT32_MAX UINT_MAX
 #elif SIZEOF_LONG == 4
     #define wxINT32_MIN LONG_MIN
     #define wxINT32_MAX LONG_MAX
+    #define wxUINT32_MAX ULONG_MAX
 #else
     #error "Unknown 32 bit type"
 #endif
@@ -933,11 +953,13 @@ typedef wxUint16 wxWord;
 typedef wxUint32 wxDword;
 
 #ifdef LLONG_MAX
-    #define wxINT64_MAX LLONG_MAX
     #define wxINT64_MIN LLONG_MIN
+    #define wxINT64_MAX LLONG_MAX
+    #define wxUINT64_MAX ULLONG_MAX
 #else
-    #define wxINT64_MAX wxLL(9223372036854775807)
     #define wxINT64_MIN (wxLL(-9223372036854775807)-1)
+    #define wxINT64_MAX wxLL(9223372036854775807)
+    #define wxUINT64_MAX wxULL(0xFFFFFFFFFFFFFFFF)
 #endif
 
 /*  64 bit */
@@ -964,28 +986,28 @@ typedef wxUint32 wxDword;
 #if (defined(__VISUALC__) && defined(__WIN32__))
     #define wxLongLong_t __int64
     #define wxLongLongSuffix i64
-    #define wxLongLongFmtSpec _T("I64")
+    #define wxLongLongFmtSpec "I64"
 #elif defined(__BORLANDC__) && defined(__WIN32__) && (__BORLANDC__ >= 0x520)
     #define wxLongLong_t __int64
     #define wxLongLongSuffix i64
-    #define wxLongLongFmtSpec _T("L")
+    #define wxLongLongFmtSpec "L"
 #elif (defined(__WATCOMC__) && (defined(__WIN32__) || defined(__DOS__) || defined(__OS2__)))
       #define wxLongLong_t __int64
       #define wxLongLongSuffix i64
-      #define wxLongLongFmtSpec _T("L")
+      #define wxLongLongFmtSpec "L"
 #elif defined(__DIGITALMARS__)
       #define wxLongLong_t __int64
       #define wxLongLongSuffix LL
-      #define wxLongLongFmtSpec _T("ll")
+      #define wxLongLongFmtSpec "ll"
 #elif defined(__MINGW32__)
     #define wxLongLong_t long long
     #define wxLongLongSuffix ll
-    #define wxLongLongFmtSpec _T("I64")
+    #define wxLongLongFmtSpec "I64"
 #elif defined(__MWERKS__)
     #if __option(longlong)
         #define wxLongLong_t long long
         #define wxLongLongSuffix ll
-        #define wxLongLongFmtSpec _T("ll")
+        #define wxLongLongFmtSpec "ll"
     #else
         #error "The 64 bit integer support in CodeWarrior has been disabled."
         #error "See the documentation on the 'longlong' pragma."
@@ -997,7 +1019,7 @@ typedef wxUint32 wxDword;
         #define wxLongLong_t long long
     #endif /* __WXPALMOS6__ */
     #define wxLongLongSuffix ll
-    #define wxLongLongFmtSpec _T("ll")
+    #define wxLongLongFmtSpec "ll"
 #elif defined(__VISAGECPP__) && __IBMCPP__ >= 400
     #define wxLongLong_t long long
 #elif (defined(SIZEOF_LONG_LONG) && SIZEOF_LONG_LONG >= 8)  || \
@@ -1007,11 +1029,11 @@ typedef wxUint32 wxDword;
         (defined(__DJGPP__) && __DJGPP__ >= 2)
     #define wxLongLong_t long long
     #define wxLongLongSuffix ll
-    #define wxLongLongFmtSpec _T("ll")
+    #define wxLongLongFmtSpec "ll"
 #elif defined(SIZEOF_LONG) && (SIZEOF_LONG == 8)
     #define wxLongLong_t long
     #define wxLongLongSuffix l
-    #define wxLongLongFmtSpec _T("l")
+    #define wxLongLongFmtSpec "l"
     #define wxLongLongIsLong
 #endif
 
@@ -1062,6 +1084,8 @@ typedef wxUint32 wxDword;
         #define HAVE_SSIZE_T
     #endif
 #elif defined(__PALMOS__)
+    #define HAVE_SSIZE_T
+#elif wxCHECK_WATCOM_VERSION(1,4)
     #define HAVE_SSIZE_T
 #endif
 #endif /* !HAVE_SSIZE_T */
@@ -1232,14 +1256,14 @@ typedef double wxDouble;
 
 /* Define wxChar16 and wxChar32                                              */
 
-#if wxUSE_WCHAR_T && (!defined(SIZEOF_WCHAR_T) || (SIZEOF_WCHAR_T == 2))
+#if SIZEOF_WCHAR_T == 2
     #define wxWCHAR_T_IS_WXCHAR16
     typedef wchar_t wxChar16;
 #else
     typedef wxUint16 wxChar16;
 #endif
 
-#if wxUSE_WCHAR_T && defined(SIZEOF_WCHAR_T) && (SIZEOF_WCHAR_T == 4)
+#if SIZEOF_WCHAR_T == 4
     #define wxWCHAR_T_IS_WXCHAR32
     typedef wchar_t wxChar32;
 #else
@@ -1450,6 +1474,11 @@ enum wxDirection
 
 enum wxAlignment
 {
+    // 0 is a valid wxAlignment value (both wxALIGN_LEFT and wxALIGN_TOP use
+    // it) so define a symbolic name for an invalid alignment value which can
+    // be assumed to be different from anything else
+    wxALIGN_INVALID           = -1,
+
     wxALIGN_NOT               = 0x0000,
     wxALIGN_CENTER_HORIZONTAL = 0x0100,
     wxALIGN_CENTRE_HORIZONTAL = wxALIGN_CENTER_HORIZONTAL,
@@ -1470,8 +1499,11 @@ enum wxAlignment
 /* misc. flags for wxSizer items */
 enum wxSizerFlagBits
 {
-    /* for compatibility only, default now, don't use explicitly any more */
-#if WXWIN_COMPATIBILITY_2_8
+    // wxADJUST_MINSIZE doesn't do anything any more but we still define it for
+    // compatibility. Notice that it may be also predefined (as 0, hopefully)
+    // in the user code in order to use it even in !WXWIN_COMPATIBILITY_2_8
+    // builds so don't redefine it in such case.
+#if WXWIN_COMPATIBILITY_2_8 && !defined(wxADJUST_MINSIZE)
     wxADJUST_MINSIZE               = 0,
 #endif
     wxFIXED_MINSIZE                = 0x8000,
@@ -1529,12 +1561,40 @@ enum wxBorder
  * Some styles are used across more than one group,
  * so the values mustn't clash with others in the group.
  * Otherwise, numbers can be reused across groups.
- *
- * From version 1.66:
- * Window (cross-group) styles now take up the first half
- * of the flag, and control-specific styles the
- * second half.
- *
+ */
+
+/*
+    Summary of the bits used by various styles.
+
+    High word, containing styles which can be used with many windows:
+
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  \_ wxFULL_REPAINT_ON_RESIZE
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  \____ wxPOPUP_WINDOW
+      |  |  |  |  |  |  |  |  |  |  |  |  |  \_______ wxWANTS_CHARS
+      |  |  |  |  |  |  |  |  |  |  |  |  \__________ wxTAB_TRAVERSAL
+      |  |  |  |  |  |  |  |  |  |  |  \_____________ wxTRANSPARENT_WINDOW
+      |  |  |  |  |  |  |  |  |  |  \________________ wxBORDER_NONE
+      |  |  |  |  |  |  |  |  |  \___________________ wxCLIP_CHILDREN
+      |  |  |  |  |  |  |  |  \______________________ wxALWAYS_SHOW_SB
+      |  |  |  |  |  |  |  \_________________________ wxBORDER_STATIC
+      |  |  |  |  |  |  \____________________________ wxBORDER_SIMPLE
+      |  |  |  |  |  \_______________________________ wxBORDER_RAISED
+      |  |  |  |  \__________________________________ wxBORDER_SUNKEN
+      |  |  |  \_____________________________________ wxBORDER_{DOUBLE,THEME}
+      |  |  \________________________________________ wxCAPTION/wxCLIP_SIBLINGS
+      |  \___________________________________________ wxHSCROLL
+      \______________________________________________ wxVSCROLL
+
+
+    Low word style bits is class-specific meaning that the same bit can have
+    different meanings for different controls (e.g. 0x10 is wxCB_READONLY
+    meaning that the control can't be modified for wxComboBox but wxLB_SORT
+    meaning that the control should be kept sorted for wxListBox, while
+    wxLB_SORT has a different value -- and this is just fine).
  */
 
 /*
@@ -1693,9 +1753,10 @@ enum wxBorder
 #define wxLB_MULTIPLE       0x0040
 #define wxLB_EXTENDED       0x0080
 /*  wxLB_OWNERDRAW is Windows-only */
+#define wxLB_NEEDED_SB      0x0000
 #define wxLB_OWNERDRAW      0x0100
-#define wxLB_NEEDED_SB      0x0200
-#define wxLB_ALWAYS_SB      0x0400
+#define wxLB_ALWAYS_SB      0x0200
+#define wxLB_NO_SB          0x0400
 #define wxLB_HSCROLL        wxHSCROLL
 /*  always show an entire number of rows */
 #define wxLB_INT_HEIGHT     0x0800
@@ -1768,11 +1829,6 @@ enum wxBorder
 #define wxTC_OWNERDRAW        0x0400
 
 /*
- * wxStatusBar95 flags
- */
-#define wxST_SIZEGRIP         0x0010
-
-/*
  * wxStaticBitmap flags
  */
 #define wxBI_EXPAND           wxEXPAND
@@ -1813,7 +1869,6 @@ enum wxBorder
 #define wxICON_INFORMATION      0x00000800
 #define wxICON_STOP             wxICON_HAND
 #define wxICON_ASTERISK         wxICON_INFORMATION
-#define wxICON_MASK             (0x00000100|0x00000200|0x00000400|0x00000800)
 
 #define  wxFORWARD              0x00001000
 #define  wxBACKWARD             0x00002000
@@ -1821,17 +1876,40 @@ enum wxBorder
 #define  wxHELP                 0x00008000
 #define  wxMORE                 0x00010000
 #define  wxSETUP                0x00020000
+#define wxICON_NONE             0x00040000
+
+#define wxICON_MASK \
+    (wxICON_EXCLAMATION|wxICON_HAND|wxICON_QUESTION|wxICON_INFORMATION|wxICON_NONE)
 
 /*
  * Background styles. See wxWindow::SetBackgroundStyle
  */
-
 enum wxBackgroundStyle
 {
-  wxBG_STYLE_SYSTEM,
-  wxBG_STYLE_COLOUR,
-  wxBG_STYLE_CUSTOM,
-  wxBG_STYLE_TRANSPARENT
+    // background is erased in the EVT_ERASE_BACKGROUND handler or using the
+    // system default background if no such handler is defined (this is the
+    // default style)
+    wxBG_STYLE_ERASE,
+
+    // background is erased by the system, no EVT_ERASE_BACKGROUND event is
+    // generated at all
+    wxBG_STYLE_SYSTEM,
+
+    // background is erased in EVT_PAINT handler and not erased at all before
+    // it, this should be used if the paint handler paints over the entire
+    // window to avoid flicker
+    wxBG_STYLE_PAINT,
+
+
+    // this is a Mac-only style, don't use in portable code
+    wxBG_STYLE_TRANSPARENT,
+
+    // this style is deprecated and doesn't do anything, don't use
+    wxBG_STYLE_COLOUR,
+
+    // this style is deprecated and is synonymous with wxBG_STYLE_PAINT, use
+    // the new name
+    wxBG_STYLE_CUSTOM = wxBG_STYLE_PAINT
 };
 
 /*
@@ -2219,12 +2297,12 @@ enum wxKeyCode
     WXK_DELETE  =    127,
 
     /* values from 128 to 255 are reserved for ASCII extended characters
-       (note that there isn't a real widely used standard for the meaning
+       (note that there isn't a single fixed standard for the meaning
        of these values; avoid them in portable apps!) */
 
-    /* These are, by design, not compatible with unicode characters.
+    /* These are not compatible with unicode characters.
        If you want to get a unicode character from a key event, use
-       wxKeyEvent::GetUnicodeKey instead.                           */
+       wxKeyEvent::GetUnicodeKey                                    */
     WXK_START   = 300,
     WXK_LBUTTON,
     WXK_RBUTTON,
@@ -2498,14 +2576,17 @@ typedef enum
     wxPAPER_PENV_7_ROTATED,     /* PRC Envelope #7 Rotated 230 x 160 mm */
     wxPAPER_PENV_8_ROTATED,     /* PRC Envelope #8 Rotated 309 x 120 mm */
     wxPAPER_PENV_9_ROTATED,     /* PRC Envelope #9 Rotated 324 x 229 mm */
-    wxPAPER_PENV_10_ROTATED    /* PRC Envelope #10 Rotated 458 x 324 m */
+    wxPAPER_PENV_10_ROTATED,    /* PRC Envelope #10 Rotated 458 x 324 m */
+    wxPAPER_A0,                 /* A0 Sheet 841 x 1189 mm */
+    wxPAPER_A1                  /* A1 Sheet 594 x 841 mm */
 } wxPaperSize;
 
 /* Printing orientation */
-#ifndef wxPORTRAIT
-#define wxPORTRAIT      1
-#define wxLANDSCAPE     2
-#endif
+enum wxPrintOrientation
+{
+   wxPORTRAIT = 1,
+   wxLANDSCAPE
+};
 
 /* Duplex printing modes
  */
@@ -2803,9 +2884,15 @@ typedef WX_NSOpenGLContext WXGLContext;
 DECLARE_WXCOCOA_OBJC_CLASS(UIWindow);
 DECLARE_WXCOCOA_OBJC_CLASS(UIView);
 DECLARE_WXCOCOA_OBJC_CLASS(UIFont);
+DECLARE_WXCOCOA_OBJC_CLASS(UIImage);
+DECLARE_WXCOCOA_OBJC_CLASS(UIEvent);
+DECLARE_WXCOCOA_OBJC_CLASS(NSSet);
+DECLARE_WXCOCOA_OBJC_CLASS(EAGLContext);
 
 typedef WX_UIWindow WXWindow;
 typedef WX_UIView WXWidget;
+typedef WX_EAGLContext WXGLContext;
+typedef WX_NSString* WXGLPixelFormat;
 
 #endif
 
@@ -2849,29 +2936,35 @@ typedef void *          WXRECTANGLEPTR;
 /* ABX: check __WIN32__ instead of __WXMSW__ for the same MSWBase in any Win32 port */
 #if defined(__WIN32__)
 
-/*  the keywords needed for WinMain() declaration */
-#ifndef WXFAR
-#    define WXFAR
+/*  Stand-ins for Windows types to avoid #including all of windows.h */
+
+#ifndef NO_STRICT
+    #define WX_MSW_DECLARE_HANDLE(type) typedef struct type##__ * WX##type
+#else
+    #define WX_MSW_DECLARE_HANDLE(type) typedef void * WX##type
 #endif
 
-/*  Stand-ins for Windows types to avoid #including all of windows.h */
-typedef void *          WXHWND;
-typedef void *          WXHANDLE;
-typedef void *          WXHICON;
-typedef void *          WXHFONT;
-typedef void *          WXHMENU;
-typedef void *          WXHPEN;
-typedef void *          WXHBRUSH;
-typedef void *          WXHPALETTE;
-typedef void *          WXHCURSOR;
-typedef void *          WXHRGN;
-typedef void *          WXRECTPTR;
-typedef void *          WXHACCEL;
-typedef void WXFAR  *   WXHINSTANCE;
-typedef void *          WXHBITMAP;
-typedef void *          WXHIMAGELIST;
-typedef void *          WXHGLOBAL;
-typedef void *          WXHDC;
+typedef void* WXHANDLE;
+WX_MSW_DECLARE_HANDLE(HWND);
+WX_MSW_DECLARE_HANDLE(HICON);
+WX_MSW_DECLARE_HANDLE(HFONT);
+WX_MSW_DECLARE_HANDLE(HMENU);
+WX_MSW_DECLARE_HANDLE(HPEN);
+WX_MSW_DECLARE_HANDLE(HBRUSH);
+WX_MSW_DECLARE_HANDLE(HPALETTE);
+WX_MSW_DECLARE_HANDLE(HCURSOR);
+WX_MSW_DECLARE_HANDLE(HRGN);
+WX_MSW_DECLARE_HANDLE(RECTPTR);
+WX_MSW_DECLARE_HANDLE(HACCEL);
+WX_MSW_DECLARE_HANDLE(HINSTANCE);
+WX_MSW_DECLARE_HANDLE(HBITMAP);
+WX_MSW_DECLARE_HANDLE(HIMAGELIST);
+WX_MSW_DECLARE_HANDLE(HGLOBAL);
+WX_MSW_DECLARE_HANDLE(HDC);
+typedef WXHINSTANCE WXHMODULE;
+
+#undef WX_MSW_DECLARE_HANDLE
+
 typedef unsigned int    WXUINT;
 typedef unsigned long   WXDWORD;
 typedef unsigned short  WXWORD;
@@ -2926,6 +3019,8 @@ typedef unsigned long   WXHPALETTE;
 typedef unsigned long   WXHCURSOR;
 typedef unsigned long   WXHRGN;
 typedef unsigned long   WXHACCEL;
+typedef unsigned long   WXHINSTANCE;
+typedef unsigned long   WXHMODULE;
 typedef unsigned long   WXHBITMAP;
 typedef unsigned long   WXHDC;
 typedef unsigned int    WXUINT;
@@ -3132,9 +3227,11 @@ typedef const void* WXWidget;
 /*  This is required because of clashing macros in windows.h, which may be */
 /*  included before or after wxWidgets classes, and therefore must be */
 /*  disabled here before any significant wxWidgets headers are included. */
+#ifdef __cplusplus
 #ifdef __WXMSW__
 #include "wx/msw/winundef.h"
 #endif /* __WXMSW__ */
+#endif /* __cplusplus */
 
 
 /*  include the feature test macros */

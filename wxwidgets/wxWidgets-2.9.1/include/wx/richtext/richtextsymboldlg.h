@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/5/2006 3:11:58 PM
-// RCS-ID:      $Id: richtextsymboldlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -111,6 +111,9 @@ public:
 #if defined(__UNICODE__)
     /// wxEVT_COMMAND_COMBOBOX_SELECTED event handler for ID_SYMBOLPICKERDIALOG_SUBSET
     void OnSubsetSelected( wxCommandEvent& event );
+
+    /// wxEVT_UPDATE_UI event handler for ID_SYMBOLPICKERDIALOG_SUBSET
+    void OnSymbolpickerdialogSubsetUpdate( wxUpdateUIEvent& event );
 
 #endif
 #if defined(__UNICODE__)

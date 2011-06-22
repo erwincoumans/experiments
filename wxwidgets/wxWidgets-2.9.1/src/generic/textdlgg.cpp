@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: textdlgg.cpp 57940 2009-01-09 12:43:20Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,7 @@ wxTextEntryDialog::wxTextEntryDialog(wxWindow *parent,
                                      const wxString& value,
                                      long style,
                                      const wxPoint& pos)
-                 : wxDialog(GetParentForModalDialog(parent),
+                 : wxDialog(GetParentForModalDialog(parent, style),
                             wxID_ANY, caption, pos, wxDefaultSize,
                             wxDEFAULT_DIALOG_STYLE),
                    m_value(value)
@@ -107,7 +107,7 @@ wxTextEntryDialog::wxTextEntryDialog(wxWindow *parent,
 #endif // wxUSE_VALIDATORS
 
     // 3) buttons if any
-    wxSizer *buttonSizer = CreateSeparatedButtonSizer(style & ButtonSizerFlags);
+    wxSizer *buttonSizer = CreateSeparatedButtonSizer(style & (wxOK | wxCANCEL));
     if ( buttonSizer )
     {
         topsizer->Add(buttonSizer, wxSizerFlags(flagsBorder2).Expand());

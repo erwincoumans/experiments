@@ -4,7 +4,7 @@
 // Author:      Julian Smart, Guillermo Rodriguez, Vadim Zeitlin
 // Modified by: VZ: extracted all non-wxTimer stuff in stopwatch.cpp (20.06.03)
 // Created:     04/01/98
-// RCS-ID:      $Id: timerimpl.cpp 54728 2008-07-20 22:05:30Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 //              (c) 1999 Guillermo Rodriguez <guille@iies.es>
 // Licence:     wxWindows licence
@@ -58,7 +58,7 @@ bool wxTimerImpl::Start(int milliseconds, bool oneShot)
     // let the caller know about it
 #if wxUSE_THREADS
     wxASSERT_MSG( wxThread::IsMain(),
-                  _T("timer can only be started from the main thread") );
+                  wxT("timer can only be started from the main thread") );
 #endif // wxUSE_THREADS
 
     if ( IsRunning() )

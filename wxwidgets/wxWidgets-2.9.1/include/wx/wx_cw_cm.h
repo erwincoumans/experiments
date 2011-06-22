@@ -4,7 +4,7 @@
  Author:      Stefan Csomor
  Modified by:
  Created:
- RCS-ID:      $Id: wx_cw_cm.h 42655 2006-10-29 20:17:29Z VZ $
+ RCS-ID:      $Id$
  Copyright:   (c) Stefan Csomor
  Licence:     wxWindows licence
 */

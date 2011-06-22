@@ -4,7 +4,7 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     24/09/2006
-// Id:          $Id: animatecmn.cpp 56651 2008-11-02 22:16:14Z FM $
+// Id:          $Id$
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,6 +16,10 @@
 
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
+
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
 
 #if wxUSE_ANIMATIONCTRL
 

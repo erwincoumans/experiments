@@ -4,20 +4,20 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: accel.cpp 54962 2008-08-03 17:34:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wxprec.h"
 
+#if wxUSE_ACCEL
+
 #include "wx/accel.h"
 
 #ifndef WX_PRECOMP
     #include "wx/string.h"
 #endif
-
-#ifndef __WXUNIVERSAL__
 
 IMPLEMENT_DYNAMIC_CLASS(wxAcceleratorTable, wxObject)
 
@@ -95,7 +95,7 @@ int wxAcceleratorTable::GetCommand( wxKeyEvent &event )
         if ((event.m_keyCode == entry->GetKeyCode()) &&
            (((entry->GetFlags() & wxACCEL_CTRL) != 0) == event.ControlDown()) &&
            (((entry->GetFlags() & wxACCEL_SHIFT) != 0) == event.ShiftDown()) &&
-           (((entry->GetFlags() & wxACCEL_ALT) != 0) == event.AltDown()) && 
+           (((entry->GetFlags() & wxACCEL_ALT) != 0) == event.AltDown()) &&
            (((entry->GetFlags() & wxACCEL_CMD) != 0) == event.CmdDown()))
         {
             return entry->GetCommand();
@@ -106,4 +106,4 @@ int wxAcceleratorTable::GetCommand( wxKeyEvent &event )
     return -1;
 }
 
-#endif
+#endif // wxUSE_ACCEL

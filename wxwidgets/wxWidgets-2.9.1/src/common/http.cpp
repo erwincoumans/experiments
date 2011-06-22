@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Simo Virokannas (authentication, Dec 2005)
 // Created:     August 1997
-// RCS-ID:      $Id: http.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -66,6 +66,11 @@ void wxHTTP::ClearHeaders()
     m_headers.clear();
 }
 
+void wxHTTP::ClearCookies()
+{
+    m_cookies.clear();
+}
+
 wxString wxHTTP::GetContentType() const
 {
     return GetHeader(wxT("Content-Type"));
@@ -100,6 +105,30 @@ wxHTTP::wxHeaderConstIterator wxHTTP::FindHeader(const wxString& header) const
     return it;
 }
 
+wxHTTP::wxCookieIterator wxHTTP::FindCookie(const wxString& cookie)
+{
+    wxCookieIterator it = m_cookies.begin();
+    for ( wxCookieIterator en = m_cookies.end(); it != en; ++it )
+    {
+        if ( cookie.CmpNoCase(it->first) == 0 )
+            break;
+    }
+
+    return it;
+}
+
+wxHTTP::wxCookieConstIterator wxHTTP::FindCookie(const wxString& cookie) const
+{
+    wxCookieConstIterator it = m_cookies.begin();
+    for ( wxCookieConstIterator en = m_cookies.end(); it != en; ++it )
+    {
+        if ( cookie.CmpNoCase(it->first) == 0 )
+            break;
+    }
+
+    return it;
+}
+
 void wxHTTP::SetHeader(const wxString& header, const wxString& h_data)
 {
     if (m_read) {
@@ -121,8 +150,17 @@ wxString wxHTTP::GetHeader(const wxString& header) const
     return it == m_headers.end() ? wxGetEmptyString() : it->second;
 }
 
+wxString wxHTTP::GetCookie(const wxString& cookie) const
+{
+    wxCookieConstIterator it = FindCookie(cookie);
+
+    return it == m_cookies.end() ? wxGetEmptyString() : it->second;
+}
+
 wxString wxHTTP::GenerateAuthString(const wxString& user, const wxString& pass) const
 {
+    // TODO: Use wxBase64Encode() now that we have it instead of reproducing it
+
     static const char *base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     wxString buf;
@@ -178,6 +216,7 @@ bool wxHTTP::ParseHeaders()
     wxStringTokenizer tokenzr;
 
     ClearHeaders();
+    ClearCookies();
     m_read = true;
 
     for ( ;; )
@@ -190,7 +229,19 @@ bool wxHTTP::ParseHeaders()
             break;
 
         wxString left_str = line.BeforeFirst(':');
-        m_headers[left_str] = line.AfterFirst(':').Strip(wxString::both);
+        if(!left_str.CmpNoCase("Set-Cookie"))
+        {
+            wxString cookieName = line.AfterFirst(':').Strip(wxString::both).BeforeFirst('=');
+            wxString cookieValue = line.AfterFirst(':').Strip(wxString::both).AfterFirst('=').BeforeFirst(';');
+            m_cookies[cookieName] = cookieValue;
+
+            // For compatibility
+            m_headers[left_str] = line.AfterFirst(':').Strip(wxString::both);
+        }
+        else
+        {
+            m_headers[left_str] = line.AfterFirst(':').Strip(wxString::both);
+        }
     }
     return true;
 }
@@ -200,16 +251,14 @@ bool wxHTTP::Connect(const wxString& host, unsigned short port)
     wxIPV4address *addr;
 
     if (m_addr) {
-        delete m_addr;
-        m_addr = NULL;
+        wxDELETE(m_addr);
         Close();
     }
 
     m_addr = addr = new wxIPV4address();
 
     if (!addr->Hostname(host)) {
-        delete m_addr;
-        m_addr = NULL;
+        wxDELETE(m_addr);
         m_lastError = wxPROTO_NETERR;
         return false;
     }
@@ -219,7 +268,10 @@ bool wxHTTP::Connect(const wxString& host, unsigned short port)
     else if (!addr->Service(wxT("http")))
         addr->Service(80);
 
-    SetHeader(wxT("Host"), host);
+    wxString hostHdr = host;
+    if ( port && port != 80 )
+        hostHdr << wxT(":") << port;
+    SetHeader(wxT("Host"), hostHdr);
 
     m_lastError = wxPROTO_NOERR;
     return true;
@@ -235,8 +287,14 @@ bool wxHTTP::Connect(const wxSockAddress& addr, bool WXUNUSED(wait))
     m_addr = addr.Clone();
 
     wxIPV4address *ipv4addr = wxDynamicCast(&addr, wxIPV4address);
-    if (ipv4addr)
-        SetHeader(wxT("Host"), ipv4addr->OrigHostname());
+    if ( ipv4addr )
+    {
+        wxString hostHdr = ipv4addr->OrigHostname();
+        unsigned short port = ipv4addr->Service();
+        if ( port && port != 80 )
+            hostHdr << wxT(":") << port;
+        SetHeader(wxT("Host"), hostHdr);
+    }
 
     m_lastError = wxPROTO_NOERR;
     return true;
@@ -288,7 +346,17 @@ bool wxHTTP::BuildRequest(const wxString& path, wxHTTP_Req req)
     Write("\r\n", 2);
 
     if ( req == wxHTTP_POST ) {
-        Write(m_post_buf.mbc_str(), m_post_buf.Len());
+        // Post data can be arbitrary binary data when the "binary" content
+        // transfer encoding is used so don't assume it's ASCII only or
+        // NUL-terminated.
+        {
+            const wxScopedCharBuffer buf(m_post_buf.To8BitData());
+            Write(buf, buf.length());
+        } // delete the buffer before modifying the string it points to, it
+          // wouldn't really be a problem here even if we didn't do this
+          // because we won't use this buffer again but this will avoid any
+          // nasty surprises in the future if this code changes
+
         m_post_buf = wxEmptyString;
     }
 
@@ -372,7 +440,7 @@ protected:
 
 size_t wxHTTPStream::OnSysRead(void *buffer, size_t bufsize)
 {
-    if (m_httpsize > 0 && m_read_bytes >= m_httpsize)
+    if (m_read_bytes >= m_httpsize)
     {
         m_lasterror = wxSTREAM_EOF;
         return 0;

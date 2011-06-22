@@ -3,7 +3,7 @@
 // Purpose:     Common defines for wxListCtrl and wxListCtrl-based classes.
 // Author:      Kevin Ollivier
 // Created:     09/15/06
-// RCS-ID:      $Id: listctrlcmn.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Kevin Ollivier
 // Licence:     wxWindows licence
 ////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +18,10 @@
 
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
+
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
 
 #if wxUSE_LISTCTRL
 

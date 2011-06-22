@@ -3,7 +3,7 @@
 // Purpose:     Pthreads implementation of wxTlsValue<>
 // Author:      Vadim Zeitlin
 // Created:     2008-08-08
-// RCS-ID:      $Id: tls.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,10 +21,10 @@ class wxTlsKey
 {
 public:
     // ctor allocates a new key and possibly registering a destructor function
-    // for it (notice that using destructor function is Pthreads-specific and
-    // not supported in Win32 implementation)
-    wxTlsKey(void (*destructor)(void *) = NULL)
+    // for it
+    wxTlsKey(wxTlsDestructorFunction destructor)
     {
+        m_destructor = destructor;
         if ( pthread_key_create(&m_key, destructor) != 0 )
             m_key = 0;
     }
@@ -41,6 +41,10 @@ public:
     // change the key value, return true if ok
     bool Set(void *value)
     {
+        void *old = Get();
+        if ( old )
+            m_destructor(old);
+
         return pthread_setspecific(m_key, value) == 0;
     }
 
@@ -52,6 +56,7 @@ public:
     }
 
 private:
+    wxTlsDestructorFunction m_destructor;
     pthread_key_t m_key;
 
     wxDECLARE_NO_COPY_CLASS(wxTlsKey);

@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/07/23
-// RCS-ID:      $Id: fontenum.mm 27405 2004-05-23 15:10:40Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

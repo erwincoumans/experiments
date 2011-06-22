@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     05.02.00
-// RCS-ID:      $Id: statusbr.h 59568 2009-03-15 19:45:34Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,22 @@ extern WXDLLIMPEXP_DATA_CORE(const char) wxStatusBarNameStr[];
 // wxStatusBar constants
 // ----------------------------------------------------------------------------
 
-// style flags for fields
+// wxStatusBar styles
+#define wxSTB_SIZEGRIP         0x0010
+#define wxSTB_SHOW_TIPS        0x0020
+
+#define wxSTB_ELLIPSIZE_START   0x0040
+#define wxSTB_ELLIPSIZE_MIDDLE  0x0080
+#define wxSTB_ELLIPSIZE_END     0x0100
+
+#define wxSTB_DEFAULT_STYLE    (wxSTB_SIZEGRIP|wxSTB_ELLIPSIZE_END|wxSTB_SHOW_TIPS|wxFULL_REPAINT_ON_RESIZE)
+
+
+// old compat style name:
+#define wxST_SIZEGRIP    wxSTB_SIZEGRIP
+
+
+// style flags for wxStatusBar fields
 #define wxSB_NORMAL    0x0000
 #define wxSB_FLAT      0x0001
 #define wxSB_RAISED    0x0002
@@ -37,36 +52,55 @@ extern WXDLLIMPEXP_DATA_CORE(const char) wxStatusBarNameStr[];
 
 class WXDLLIMPEXP_CORE wxStatusBarPane
 {
-    // only wxStatusBarBase can access our internal members and modify them:
-    friend class WXDLLIMPEXP_FWD_CORE wxStatusBarBase;
-
 public:
     wxStatusBarPane(int style = wxSB_NORMAL, size_t width = 0)
-        : m_nStyle(style), m_nWidth(width) { m_arrStack.Add(wxEmptyString); }
-        
-    int GetWidth() const
-        { return m_nWidth; }
-    int GetStyle() const
-        { return m_nStyle; }
-        
-    const wxArrayString& GetStack() const
-        { return m_arrStack; }
+        : m_nStyle(style), m_nWidth(width)
+        { m_bEllipsized = false; }
 
-    // use wxStatusBar setter functions to modify a wxStatusBarPane
+    int GetWidth() const { return m_nWidth; }
+    int GetStyle() const { return m_nStyle; }
+    wxString GetText() const { return m_text; }
 
-protected:
+
+    // implementation-only from now on
+    // -------------------------------
+
+    bool IsEllipsized() const
+        { return m_bEllipsized; }
+    void SetIsEllipsized(bool isEllipsized) { m_bEllipsized = isEllipsized; }
+
+    void SetWidth(int width) { m_nWidth = width; }
+    void SetStyle(int style) { m_nStyle = style; }
+
+    // set text, return true if it changed or false if it was already set to
+    // this value
+    bool SetText(const wxString& text);
+
+    // save the existing text on top of our stack and make the new text
+    // current; return true if the text really changed
+    bool PushText(const wxString& text);
+
+    // restore the message saved by the last call to Push() (unless it was
+    // changed by an intervening call to SetText()) and return true if we
+    // really restored anything
+    bool PopText();
+
+private:
     int m_nStyle;
-    int m_nWidth;     // the width maybe negative, indicating a variable-width field
+    int m_nWidth;     // may be negative, indicating a variable-width field
+    wxString m_text;
 
-    // this is the array of the stacked strings of this pane; note that this
-    // stack does include also the string currently displayed in this pane
-    // as the version stored in the native status bar control is possibly
-    // ellipsized; note that arrStack.Last() is the top of the stack
-    // (i.e. the string shown in the status bar)
+    // the array used to keep the previous values of this pane after a
+    // PushStatusText() call, its top element is the value to restore after the
+    // next PopStatusText() call while the currently shown value is always in
+    // m_text
     wxArrayString m_arrStack;
+
+    // is the currently shown value shown with ellipsis in the status bar?
+    bool m_bEllipsized;
 };
 
-WX_DECLARE_OBJARRAY(wxStatusBarPane, wxStatusBarPaneArray);
+WX_DECLARE_EXPORTED_OBJARRAY(wxStatusBarPane, wxStatusBarPaneArray);
 
 // ----------------------------------------------------------------------------
 // wxStatusBar: a window near the bottom of the frame used for status info
@@ -90,13 +124,12 @@ public:
     // field text
     // ----------
 
-    virtual void SetStatusText(const wxString& text, int number = 0)
-        { m_panes[number].GetStack().Last() = text; }
-    virtual wxString GetStatusText(int number = 0) const
-        { return m_panes[number].GetStack().Last(); }
-    const wxArrayString& GetStatusStack(int n) const
-        { return m_panes[n].GetStack(); }
+    // just change or get the currently shown text
+    void SetStatusText(const wxString& text, int number = 0);
+    wxString GetStatusText(int number = 0) const;
 
+    // change the currently shown text to the new one and save the current
+    // value to be restored by the next call to PopStatusText()
     void PushStatusText(const wxString& text, int number = 0);
     void PopStatusText(int number = 0);
 
@@ -110,7 +143,7 @@ public:
     // negative width according to the abs value of the width (field with width
     // -2 grows twice as much as one with width -1 &c)
     virtual void SetStatusWidths(int n, const int widths[]);
-    
+
     int GetStatusWidth(int n) const
         { return m_panes[n].GetWidth(); }
 
@@ -122,7 +155,7 @@ public:
     // appears flat or wxSB_POPOUT to make the field appear raised.
     // Setting field styles only works on wxMSW
     virtual void SetStatusStyles(int n, const int styles[]);
-    
+
     int GetStatusStyle(int n) const
         { return m_panes[n].GetStyle(); }
 
@@ -139,14 +172,17 @@ public:
     virtual int GetBorderX() const = 0;
     virtual int GetBorderY() const = 0;
 
+    wxSize GetBorders() const
+        { return wxSize(GetBorderX(), GetBorderY()); }
+
     // miscellaneous
     // -------------
-    
+
     const wxStatusBarPane& GetField(int n) const
         { return m_panes[n]; }
-    
+
     // wxWindow overrides:
-    
+
     // don't want status bars to accept the focus at all
     virtual bool AcceptsFocus() const { return false; }
 
@@ -154,10 +190,33 @@ public:
     virtual bool CanBeOutsideClientArea() const { return true; }
 
 protected:
+    // called after the status bar pane text changed and should update its
+    // display
+    virtual void DoUpdateStatusText(int number) = 0;
+
+
+    // wxWindow overrides:
+
+#if wxUSE_TOOLTIPS
+   virtual void DoSetToolTip( wxToolTip *tip )
+        {
+            wxASSERT_MSG(!HasFlag(wxSTB_SHOW_TIPS),
+                         "Do not set tooltip(s) manually when using wxSTB_SHOW_TIPS!");
+            wxWindow::DoSetToolTip(tip);
+        }
+#endif // wxUSE_TOOLTIPS
     virtual wxBorder GetDefaultBorder() const { return wxBORDER_NONE; }
+
+
+    // internal helpers & data:
 
     // calculate the real field widths for the given total available size
     wxArrayInt CalculateAbsWidths(wxCoord widthTotal) const;
+
+    // should be called to remember if the pane text is currently being show
+    // ellipsized or not
+    void SetEllipsizedFlag(int n, bool isEllipsized);
+
 
     // the array with the pane infos:
     wxStatusBarPaneArray m_panes;

@@ -4,7 +4,7 @@
 // Author:      Michael Bedward (based on code by Julian Smart, Robin Dunn)
 // Modified by: Santiago Palacios
 // Created:     1/08/1999
-// RCS-ID:      $Id: grideditors.h 60385 2009-04-26 11:12:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Michael Bedward
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ protected:
 
     // string representation of our value
     wxString GetString() const
-        { return wxString::Format(_T("%ld"), m_value); }
+        { return wxString::Format(wxT("%ld"), m_value); }
 
 private:
     int m_min,
@@ -227,7 +227,7 @@ public:
 
     // set the string values returned by GetValue() for the true and false
     // states, respectively
-    static void UseStringValues(const wxString& valueTrue = _T("1"),
+    static void UseStringValues(const wxString& valueTrue = wxT("1"),
                                 const wxString& valueFalse = wxEmptyString);
 
     // return true if the given string is equal to the string representation of

@@ -4,7 +4,7 @@
 // Author:      Benjamin I. Williams
 // Modified by:
 // Created:     2005-05-17
-// RCS-ID:      $Id: floatpane.h 53774 2008-05-27 09:17:56Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (C) Copyright 2005, Kirix Corporation, All Rights Reserved.
 // Licence:     wxWindows Library Licence, Version 3.1
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,18 +37,18 @@ public:
                    const wxAuiPaneInfo& pane,
                    wxWindowID id = wxID_ANY,
                    long style = wxRESIZE_BORDER | wxSYSTEM_MENU | wxCAPTION |
-                                wxFRAME_NO_TASKBAR | wxFRAME_FLOAT_ON_PARENT | 
+                                wxFRAME_NO_TASKBAR | wxFRAME_FLOAT_ON_PARENT |
                                 wxCLIP_CHILDREN
                    );
     virtual ~wxAuiFloatingFrame();
     void SetPaneWindow(const wxAuiPaneInfo& pane);
     wxAuiManager* GetOwnerManager() const;
-    
+
 protected:
     virtual void OnMoveStart();
     virtual void OnMoving(const wxRect& window_rect, wxDirection dir);
     virtual void OnMoveFinished();
-    
+
 private:
     void OnSize(wxSizeEvent& event);
     void OnClose(wxCloseEvent& event);
@@ -56,7 +56,7 @@ private:
     void OnIdle(wxIdleEvent& event);
     void OnActivate(wxActivateEvent& event);
     static bool isMouseDown();
-    
+
 private:
     wxWindow* m_pane_window;    // pane window being managed
     bool m_solid_drag;          // true if system uses solid window drag

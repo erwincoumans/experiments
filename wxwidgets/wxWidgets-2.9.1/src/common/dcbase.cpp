@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     05/25/99
-// RCS-ID:      $Id: dcbase.cpp 58382 2009-01-25 12:01:35Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,6 +30,7 @@
 #include "wx/dcscreen.h"
 #include "wx/dcprint.h"
 #include "wx/prntbase.h"
+#include "wx/scopeguard.h"
 
 #ifndef WX_PRECOMP
     #include "wx/math.h"
@@ -569,7 +570,7 @@ void wxDCImpl::GetMultiLineTextExtent(const wxString& text,
     wxString curLine;
     for ( wxString::const_iterator pc = text.begin(); ; ++pc )
     {
-        if ( pc == text.end() || *pc == _T('\n') )
+        if ( pc == text.end() || *pc == wxT('\n') )
         {
             if ( curLine.empty() )
             {
@@ -585,7 +586,7 @@ void wxDCImpl::GetMultiLineTextExtent(const wxString& text,
                 if ( !heightLineDefault )
                 {
                     // but we don't know it yet - choose something reasonable
-                    DoGetTextExtent(_T("W"), NULL, &heightLineDefault,
+                    DoGetTextExtent(wxT("W"), NULL, &heightLineDefault,
                                   NULL, NULL, font);
                 }
 
@@ -656,7 +657,7 @@ wxDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
                         wxCoord ysrcMask)
 {
     wxCHECK_MSG( srcWidth && srcHeight && dstWidth && dstHeight, false,
-                 _T("invalid blit size") );
+                 wxT("invalid blit size") );
 
     // emulate the stretching by modifying the DC scale
     double xscale = (double)srcWidth/dstWidth,
@@ -1054,8 +1055,9 @@ void wxDCImpl::DoGradientFillConcentric(const wxRect& rect,
                                       const wxColour& destColour,
                                       const wxPoint& circleCenter)
 {
-    //save the old pen color
-    wxColour oldPenColour = m_pen.GetColour();
+    // save the old pen and ensure it is restored on exit
+    const wxPen penOrig = m_pen;
+    wxON_BLOCK_EXIT_SET(m_pen, penOrig);
 
     wxUint8 nR1 = destColour.Red();
     wxUint8 nG1 = destColour.Green();
@@ -1100,12 +1102,10 @@ void wxDCImpl::DoGradientFillConcentric(const wxRect& rect,
             nB = (wxUint8)(nB1 + ((nB2 - nB1) * nGradient / 100));
 
             //set the pixel
-            m_pen.SetColour(wxColour(nR,nG,nB));
+            m_pen = wxColour(nR,nG,nB);
             DoDrawPoint(x + rect.GetLeft(), y + rect.GetTop());
         }
     }
-    //return old pen color
-    m_pen.SetColour(oldPenColour);
 }
 
 void wxDCImpl::InheritAttributes(wxWindow *win)
@@ -1115,7 +1115,8 @@ void wxDCImpl::InheritAttributes(wxWindow *win)
     SetFont(win->GetFont());
     SetTextForeground(win->GetForegroundColour());
     SetTextBackground(win->GetBackgroundColour());
-    SetBackground(wxBrush(win->GetBackgroundColour()));
+    SetBackground(win->GetBackgroundColour());
+    SetLayoutDirection(win->GetLayoutDirection());
 }
 
 //-----------------------------------------------------------------------------
@@ -1123,6 +1124,15 @@ void wxDCImpl::InheritAttributes(wxWindow *win)
 //-----------------------------------------------------------------------------
 
 IMPLEMENT_ABSTRACT_CLASS(wxDC, wxObject)
+
+void wxDC::CopyAttributes(const wxDC& dc)
+{
+    SetFont(dc.GetFont());
+    SetTextForeground(dc.GetTextForeground());
+    SetTextBackground(dc.GetTextBackground());
+    SetBackground(dc.GetBackground());
+    SetLayoutDirection(dc.GetLayoutDirection());
+}
 
 void wxDC::DrawLabel(const wxString& text,
                          const wxBitmap& bitmap,

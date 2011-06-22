@@ -3,7 +3,7 @@
  * Purpose:     wxCocoa-specific config settings checks
  * Author:      Vadim Zeitlin
  * Created:     2008-09-11
- * RCS-ID:      $Id: chkconf.h 55546 2008-09-11 11:20:33Z VZ $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
  * Licence:     wxWindows licence
  */

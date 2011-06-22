@@ -6,7 +6,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: private.h 56153 2008-10-07 22:22:19Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -169,12 +169,12 @@ typedef MRESULT (APIENTRY * WndProcCast) (HWND, ULONG, MPARAM, MPARAM);
  * for this combination of CTl3D/FAFA settings
  */
 
-#define STATIC_CLASS     _T("STATIC")
+#define STATIC_CLASS     wxT("STATIC")
 #define STATIC_FLAGS     (SS_TEXT|DT_LEFT|SS_LEFT|WS_VISIBLE)
-#define CHECK_CLASS      _T("BUTTON")
+#define CHECK_CLASS      wxT("BUTTON")
 #define CHECK_FLAGS      (BS_AUTOCHECKBOX|WS_TABSTOP)
 #define CHECK_IS_FAFA    FALSE
-#define RADIO_CLASS      _T("BUTTON" )
+#define RADIO_CLASS      wxT("BUTTON" )
 #define RADIO_FLAGS      (BS_AUTORADIOBUTTON|WS_VISIBLE)
 #define RADIO_SIZE       20
 #define RADIO_IS_FAFA    FALSE

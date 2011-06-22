@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     31.01.99
-// RCS-ID:      $Id: tooltip.h 48093 2007-08-15 12:57:36Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ private:
 
     wxString  m_text;           // tooltip text
     wxWindow *m_window;         // window we're associated with
-    
+
     DECLARE_ABSTRACT_CLASS(wxToolTip)
 };
 

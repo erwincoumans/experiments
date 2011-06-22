@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: spinctrl.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@ public:
                ,int             nMin = 0
                ,int             nMax = 100
                ,int             nInitial = 0
-               ,const wxString& rsName = _T("wxSpinCtrl")
+               ,const wxString& rsName = wxT("wxSpinCtrl")
               )
     {
         Create(pParent, vId, rsValue, rPos, rSize, lStyle, nMin, nMax, nInitial, rsName);
@@ -52,7 +52,7 @@ public:
                ,int             nMin = 0
                ,int             nMax = 100
                ,int             nInitial = 0
-               ,const wxString& rsName = _T("wxSpinCtrl")
+               ,const wxString& rsName = wxT("wxSpinCtrl")
               );
 
     //

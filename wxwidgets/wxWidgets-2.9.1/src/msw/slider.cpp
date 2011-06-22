@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: slider.cpp 52551 2008-03-15 16:53:06Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart 1998
 //                  Vadim Zeitlin 2004
 // Licence:     wxWindows licence
@@ -183,7 +183,7 @@ wxSlider::Create(wxWindow *parent,
     };
 
     wxASSERT_MSG( !(style & wxSL_VERTICAL) || !(style & wxSL_HORIZONTAL),
-                    _T("incompatible slider direction and orientation") );
+                    wxT("incompatible slider direction and orientation") );
 
 
     // initialize everything
@@ -575,7 +575,7 @@ void wxSlider::SetValue(int value)
 {
     ::SendMessage(GetHwnd(), TBM_SETPOS, (WPARAM)TRUE, (LPARAM)ValueInvertOrNot(value));
 
-    if ( m_labels )
+    if ( HasFlag(wxSL_VALUE_LABEL) )
     {
         ::SetWindowText((*m_labels)[SliderLabel_Value], Format(value).wx_str());
     }
@@ -589,7 +589,7 @@ void wxSlider::SetRange(int minValue, int maxValue)
     ::SendMessage(GetHwnd(), TBM_SETRANGEMIN, TRUE, m_rangeMin);
     ::SendMessage(GetHwnd(), TBM_SETRANGEMAX, TRUE, m_rangeMax);
 
-    if ( m_labels )
+    if ( HasFlag(wxSL_MIN_MAX_LABELS) )
     {
         ::SetWindowText((*m_labels)[SliderLabel_Min],
                         Format(ValueInvertOrNot(m_rangeMin)).wx_str());

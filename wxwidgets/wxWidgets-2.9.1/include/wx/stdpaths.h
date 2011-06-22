@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2004-10-17
-// RCS-ID:      $Id: stdpaths.h 58259 2009-01-21 14:01:30Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -16,6 +16,8 @@
 
 #include "wx/string.h"
 #include "wx/filefn.h"
+
+class WXDLLIMPEXP_FWD_BASE wxStandardPaths;
 
 // ----------------------------------------------------------------------------
 // wxStandardPaths returns the standard locations in the file system
@@ -50,7 +52,7 @@ public:
 
 
     // return the global standard paths object
-    static wxStandardPathsBase& Get();
+    static wxStandardPaths& Get();
 
     // return the path (directory+filename) of the running executable or
     // wxEmptyString if it couldn't be determined.

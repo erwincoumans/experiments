@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: bitmap.cpp 61410 2009-07-12 08:27:46Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -496,8 +496,13 @@ IconRef wxBitmapRefData::GetIconRef()
                      }
                 }
                 HUnlock( data );
+
                 OSStatus err = SetIconFamilyData( iconFamily, dataType , data );
-                wxASSERT_MSG( err == noErr , wxT("Error when adding bitmap") );
+                if ( err != noErr )
+                {
+                    wxFAIL_MSG("Error when adding bitmap");
+                }
+
                 DisposeHandle( data );
             }
             else
@@ -634,6 +639,9 @@ CGImageRef wxBitmapRefData::CreateCGImage() const
     {
         if ( m_depth != 1 && m_bitmapMask == NULL )
         {
+#if 0
+            // in order for this code to work properly, wxMask would have to invert black and white
+            // in the native bitmap
             if ( m_bitmapMask )
             {
                 CGImageRef tempImage = CGBitmapContextCreateImage( m_hBitmap );
@@ -643,6 +651,7 @@ CGImageRef wxBitmapRefData::CreateCGImage() const
                 CGImageRelease(tempImage);
             }
             else
+#endif
                 image = CGBitmapContextCreateImage( m_hBitmap );
         }
         else
@@ -773,11 +782,7 @@ void wxBitmapRefData::Free()
         m_hBitmap = NULL ;
     }
 
-    if (m_bitmapMask)
-    {
-        delete m_bitmapMask;
-        m_bitmapMask = NULL;
-    }
+    wxDELETE(m_bitmapMask);
 }
 
 wxBitmapRefData::~wxBitmapRefData()
@@ -1014,16 +1019,25 @@ IconRef wxBitmap::CreateIconRef() const
 }
 #endif
 
-#if wxOSX_USE_COCOA_OR_IPHONE
+#if wxOSX_USE_COCOA
 
 WX_NSImage wxBitmap::GetNSImage() const
 {
     wxCFRef< CGImageRef > cgimage(CreateCGImage());
-    return wxOSXCreateNSImageFromCGImage( cgimage );
+    return wxOSXGetNSImageFromCGImage( cgimage );
 }
 
 #endif
 
+#if wxOSX_USE_IPHONE
+
+WX_UIImage wxBitmap::GetUIImage() const
+{
+    wxCFRef< CGImageRef > cgimage(CreateCGImage());
+    return wxOSXGetUIImageFromCGImage( cgimage );
+}
+
+#endif
 wxBitmap wxBitmap::GetSubBitmap(const wxRect &rect) const
 {
     wxCHECK_MSG( Ok() &&
@@ -1157,7 +1171,7 @@ wxBitmap::wxBitmap(const wxImage& image, int depth)
     int height = image.GetHeight();
 
     wxBitmapRefData* bitmapRefData;
-    
+
     m_refData = bitmapRefData = new wxBitmapRefData( width , height , depth ) ;
 
     if ( bitmapRefData->IsOk())
@@ -1640,7 +1654,7 @@ WXHBITMAP wxMask::GetHBITMAP() const
 // Standard Handlers
 // ----------------------------------------------------------------------------
 
-#if !defined( __LP64__ ) && !defined(__WXOSX_IPHONE__) 
+#if !defined( __LP64__ ) && !defined(__WXOSX_IPHONE__)
 
 class WXDLLEXPORT wxPICTResourceHandler: public wxBitmapHandler
 {
@@ -1654,8 +1668,11 @@ public:
         SetType(wxBITMAP_TYPE_PICT_RESOURCE);
     };
 
-    virtual bool LoadFile(wxBitmap *bitmap, const wxString& name, long flags,
-          int desiredWidth, int desiredHeight);
+    virtual bool LoadFile(wxBitmap *bitmap,
+                          const wxString& name,
+                          wxBitmapType type,
+                          int desiredWidth,
+                          int desiredHeight);
 };
 
 IMPLEMENT_DYNAMIC_CLASS(wxPICTResourceHandler, wxBitmapHandler)
@@ -1663,7 +1680,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxPICTResourceHandler, wxBitmapHandler)
 
 bool wxPICTResourceHandler::LoadFile(wxBitmap *bitmap,
                                      const wxString& name,
-                                     long WXUNUSED(flags),
+                                     wxBitmapType WXUNUSED(type),
                                      int WXUNUSED(desiredWidth),
                                      int WXUNUSED(desiredHeight))
 {

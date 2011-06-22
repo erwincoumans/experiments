@@ -3,7 +3,7 @@
 // Purpose:     XML resource handler for wxStaticBox
 // Author:      Brian Gavin
 // Created:     2000/09/00
-// RCS-ID:      $Id: xh_stbox.h 41590 2006-10-03 14:53:40Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Brian Gavin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

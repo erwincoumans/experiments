@@ -35,8 +35,6 @@
 
 #ifdef __WXMAC__
 #include "wx/osx/private.h"
-// for themeing support
-#include <Carbon/Carbon.h>
 #endif
 
 #include "wx/arrimpl.cpp"
@@ -147,33 +145,33 @@ private:
 // -- bitmaps --
 
 #if defined( __WXMAC__ )
- static unsigned char close_bits[]={
+ static const unsigned char close_bits[]={
      0xFF, 0xFF, 0xFF, 0xFF, 0x0F, 0xFE, 0x03, 0xF8, 0x01, 0xF0, 0x19, 0xF3,
      0xB8, 0xE3, 0xF0, 0xE1, 0xE0, 0xE0, 0xF0, 0xE1, 0xB8, 0xE3, 0x19, 0xF3,
      0x01, 0xF0, 0x03, 0xF8, 0x0F, 0xFE, 0xFF, 0xFF };
 #elif defined( __WXGTK__)
- static unsigned char close_bits[]={
+ static const unsigned char close_bits[]={
      0xff, 0xff, 0xff, 0xff, 0x07, 0xf0, 0xfb, 0xef, 0xdb, 0xed, 0x8b, 0xe8,
      0x1b, 0xec, 0x3b, 0xee, 0x1b, 0xec, 0x8b, 0xe8, 0xdb, 0xed, 0xfb, 0xef,
      0x07, 0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 #else
- static unsigned char close_bits[]={
+ static const unsigned char close_bits[]={
      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe7, 0xf3, 0xcf, 0xf9,
      0x9f, 0xfc, 0x3f, 0xfe, 0x3f, 0xfe, 0x9f, 0xfc, 0xcf, 0xf9, 0xe7, 0xf3,
      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 #endif
 
-static unsigned char left_bits[] = {
+static const unsigned char left_bits[] = {
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x7f, 0xfe, 0x3f, 0xfe,
    0x1f, 0xfe, 0x0f, 0xfe, 0x1f, 0xfe, 0x3f, 0xfe, 0x7f, 0xfe, 0xff, 0xfe,
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-static unsigned char right_bits[] = {
+static const unsigned char right_bits[] = {
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xdf, 0xff, 0x9f, 0xff, 0x1f, 0xff,
    0x1f, 0xfe, 0x1f, 0xfc, 0x1f, 0xfe, 0x1f, 0xff, 0x9f, 0xff, 0xdf, 0xff,
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-static unsigned char list_bits[] = {
+static const unsigned char list_bits[] = {
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
    0x0f, 0xf8, 0xff, 0xff, 0x0f, 0xf8, 0x1f, 0xfc, 0x3f, 0xfe, 0x7f, 0xff,
    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -730,7 +728,7 @@ void wxAuiDefaultTabArt::DrawButton(wxDC& dc,
 
 int wxAuiDefaultTabArt::ShowDropDown(wxWindow* wnd,
                                      const wxAuiNotebookPageArray& pages,
-                                     int active_idx)
+                                     int /*active_idx*/)
 {
     wxMenu menuPopup;
 
@@ -745,12 +743,10 @@ int wxAuiDefaultTabArt::ShowDropDown(wxWindow* wnd,
         if (caption.IsEmpty())
             caption = wxT(" ");
 
-        menuPopup.AppendCheckItem(1000+i, caption);
-    }
-
-    if (active_idx != -1)
-    {
-        menuPopup.Check(1000+active_idx, true);
+        wxMenuItem* item = new wxMenuItem(NULL, 1000+i, caption);
+        if (page.bitmap.IsOk())
+            item->SetBitmap(page.bitmap);
+        menuPopup.Append(item);
     }
 
     // find out where to put the popup menu of window items
@@ -2055,7 +2051,7 @@ bool wxAuiTabContainer::TabHitTest(int x, int y, wxWindow** hit) const
         return false;
 
     wxAuiTabContainerButton* btn = NULL;
-    if (ButtonHitTest(x, y, &btn))
+    if (ButtonHitTest(x, y, &btn) && !(btn->cur_state & wxAUI_BUTTON_STATE_DISABLED))
     {
         if (m_buttons.Index(*btn) != wxNOT_FOUND)
             return false;
@@ -2093,8 +2089,7 @@ bool wxAuiTabContainer::ButtonHitTest(int x, int y,
     {
         wxAuiTabContainerButton& button = m_buttons.Item(i);
         if (button.rect.Contains(x,y) &&
-            !(button.cur_state & (wxAUI_BUTTON_STATE_HIDDEN |
-                                   wxAUI_BUTTON_STATE_DISABLED)))
+            !(button.cur_state & wxAUI_BUTTON_STATE_HIDDEN ))
         {
             if (hit)
                 *hit = &button;
@@ -2302,7 +2297,8 @@ void wxAuiTabCtrl::OnLeftUp(wxMouseEvent& evt)
     {
         // make sure we're still clicking the button
         wxAuiTabContainerButton* button = NULL;
-        if (!ButtonHitTest(evt.m_x, evt.m_y, &button))
+        if (!ButtonHitTest(evt.m_x, evt.m_y, &button) ||
+            button->cur_state & wxAUI_BUTTON_STATE_DISABLED)
             return;
 
         if (button != m_pressed_button)
@@ -2397,7 +2393,7 @@ void wxAuiTabCtrl::OnMotion(wxMouseEvent& evt)
 
     // check if the mouse is hovering above a button
     wxAuiTabContainerButton* button;
-    if (ButtonHitTest(pos.x, pos.y, &button))
+    if (ButtonHitTest(pos.x, pos.y, &button) && !(button->cur_state & wxAUI_BUTTON_STATE_DISABLED))
     {
         if (m_hover_button && button != m_hover_button)
         {
@@ -2693,6 +2689,9 @@ public:
     void DoSizing()
     {
         if (!m_tabs)
+            return;
+
+        if (m_tabs->IsFrozen() || m_tabs->GetParent()->IsFrozen())
             return;
 
         m_tab_rect = wxRect(m_rect.x, m_rect.y, m_rect.width, m_tab_ctrl_height);
@@ -3263,12 +3262,11 @@ bool wxAuiNotebook::RemovePage(size_t page_idx)
 
     RemoveEmptyTabFrames();
 
-    // set new active pane
+    m_curpage = wxNOT_FOUND;
+
+    // set new active pane unless we're being destroyed anyhow
     if (new_active && !m_isBeingDeleted)
-    {
-        m_curpage = -1;
         SetSelectionToWindow(new_active);
-    }
 
     return true;
 }
@@ -3438,7 +3436,7 @@ size_t wxAuiNotebook::SetSelection(size_t new_page)
 void wxAuiNotebook::SetSelectionToWindow(wxWindow *win)
 {
     const int idx = m_tabs.GetIdxFromWindow(win);
-    wxCHECK_RET( idx != wxNOT_FOUND, _T("invalid notebook page") );
+    wxCHECK_RET( idx != wxNOT_FOUND, wxT("invalid notebook page") );
 
 
     // since a tab was clicked, let the parent know that we received
@@ -3446,7 +3444,7 @@ void wxAuiNotebook::SetSelectionToWindow(wxWindow *win)
     // to the child tab in the SetSelection call below
     // (the child focus event will also let wxAuiManager, if any,
     // know that the notebook control has been activated)
-    
+
     wxWindow* parent = GetParent();
     if (parent)
     {
@@ -3844,7 +3842,7 @@ void wxAuiNotebook::OnTabEndDrag(wxAuiNotebookEvent& evt)
 
 
     wxAuiTabCtrl* src_tabs = (wxAuiTabCtrl*)evt.GetEventObject();
-    wxCHECK_RET( src_tabs, _T("no source object?") );
+    wxCHECK_RET( src_tabs, wxT("no source object?") );
 
     src_tabs->SetCursor(wxCursor(wxCURSOR_ARROW));
 
@@ -3907,7 +3905,7 @@ void wxAuiNotebook::OnTabEndDrag(wxAuiNotebookEvent& evt)
 
                 // get main index of the page
                 int main_idx = m_tabs.GetIdxFromWindow(src_page);
-                wxCHECK_RET( main_idx != wxNOT_FOUND, _T("no source page?") );
+                wxCHECK_RET( main_idx != wxNOT_FOUND, wxT("no source page?") );
 
 
                 // make a copy of the page info
@@ -4160,6 +4158,8 @@ void wxAuiNotebook::RemoveEmptyTabFrames()
 
 void wxAuiNotebook::OnChildFocusNotebook(wxChildFocusEvent& evt)
 {
+    evt.Skip();
+
     // if we're dragging a tab, don't change the current selection.
     // This code prevents a bug that used to happen when the hint window
     // was hidden.  In the bug, the focus would return to the notebook
@@ -4305,7 +4305,7 @@ void wxAuiNotebook::OnTabButton(wxAuiNotebookEvent& evt)
 #endif
             {
                 int main_idx = m_tabs.GetIdxFromWindow(close_wnd);
-                wxCHECK_RET( main_idx != wxNOT_FOUND, _T("no page to delete?") );
+                wxCHECK_RET( main_idx != wxNOT_FOUND, wxT("no page to delete?") );
 
                 DeletePage(main_idx);
             }
@@ -4482,6 +4482,13 @@ bool wxAuiNotebook::ShowWindowMenu()
     }
     else
         return false;
+}
+
+void wxAuiNotebook::Thaw()
+{
+    DoSizing();
+
+    wxControl::Thaw();
 }
 
 #endif // wxUSE_AUI

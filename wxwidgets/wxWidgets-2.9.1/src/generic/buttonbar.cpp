@@ -4,7 +4,7 @@
 // Author:      Julian Smart, after Robert Roebling, Vadim Zeitlin, SciTech
 // Modified by:
 // Created:     2006-04-13
-// Id:          $Id: buttonbar.cpp 49660 2007-11-05 22:31:24Z VZ $
+// Id:          $Id$
 // Copyright:   (c) Julian Smart, Robert Roebling, Vadim Zeitlin,
 //              SciTech Software, Inc.
 // Licence:     wxWindows licence
@@ -207,7 +207,7 @@ void wxButtonToolBar::GetRectLimits(const wxRect& rect,
                               wxCoord *start,
                               wxCoord *end) const
 {
-    wxCHECK_RET( start && end, _T("NULL pointer in GetRectLimits") );
+    wxCHECK_RET( start && end, wxT("NULL pointer in GetRectLimits") );
 
     if ( IsVertical() )
     {
@@ -226,7 +226,7 @@ void wxButtonToolBar::SetToolShortHelp(int id, const wxString& help)
 {
     wxToolBarToolBase *tool = FindById(id);
 
-    wxCHECK_RET( tool, _T("SetToolShortHelp: no such tool") );
+    wxCHECK_RET( tool, wxT("SetToolShortHelp: no such tool") );
 
     // TODO: set tooltip/short help
     tool->SetShortHelp(help);
@@ -289,7 +289,7 @@ wxRect wxButtonToolBar::GetToolRect(wxToolBarToolBase *toolBase) const
 
     wxRect rect;
 
-    wxCHECK_MSG( tool, rect, _T("GetToolRect: NULL tool") );
+    wxCHECK_MSG( tool, rect, wxT("GetToolRect: NULL tool") );
 
     // ensure that we always have the valid tool position
     if ( m_needsLayout )

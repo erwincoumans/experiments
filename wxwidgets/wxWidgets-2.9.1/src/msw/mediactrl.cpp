@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrl.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -582,7 +582,7 @@ struct IMediaPlayer2 : public IMediaPlayer
 {
     STDMETHOD(get_DVD)(struct IMediaPlayerDvd __RPC_FAR *__RPC_FAR *ppdispatch) PURE;
     STDMETHOD(GetMediaParameter)(long EntryNum, BSTR bstrParameterName, BSTR __RPC_FAR *pbstrParameterValue) PURE;
-    STDMETHOD(GetMediaParameterName(long EntryNum, long Index, BSTR __RPC_FAR *pbstrParameterName) PURE;
+    STDMETHOD(GetMediaParameterName)(long EntryNum, long Index, BSTR __RPC_FAR *pbstrParameterName) PURE;
     STDMETHOD(get_EntryCount)(long __RPC_FAR *pNumberEntries) PURE;
     STDMETHOD(GetCurrentEntry)(long __RPC_FAR *pEntryNumber) PURE;
     STDMETHOD(SetCurrentEntry)(long EntryNumber) PURE;
@@ -725,7 +725,7 @@ struct INSPlay : public INSOPlay
     STDMETHOD(put_BaseURL)(BSTR pbstrBaseURL) PURE;
     STDMETHOD(get_DefaultFrame)(BSTR __RPC_FAR *pbstrDefaultFrame) PURE;
     STDMETHOD(put_DefaultFrame)(BSTR pbstrDefaultFrame) PURE;
-    STDMETHOD(AboutBox))(void) PURE;
+    STDMETHOD(AboutBox)(void) PURE;
     STDMETHOD(Cancel)(void) PURE;
     STDMETHOD(GetCodecInstalled)(long CodecNum, VARIANT_BOOL __RPC_FAR *pCodecInstalled) PURE;
     STDMETHOD(GetCodecDescription)(long CodecNum, BSTR __RPC_FAR *pbstrCodecDescription) PURE;
@@ -2193,11 +2193,7 @@ wxAMMediaBackend::~wxAMMediaBackend()
 //---------------------------------------------------------------------------
 void wxAMMediaBackend::Clear()
 {
-    if (m_pTimer)
-    {
-        delete m_pTimer;
-        m_pTimer = NULL;
-    }
+    wxDELETE(m_pTimer);
 }
 
 //---------------------------------------------------------------------------
@@ -2214,7 +2210,7 @@ bool wxAMMediaBackend::CreateControl(wxControl* ctrl, wxWindow* parent,
     // First get the AMGetErrorText procedure in
     // debug mode for more meaningful messages
 #if wxDEBUG_LEVEL
-    if ( m_dllQuartz.Load(_T("quartz.dll"), wxDL_VERBATIM) )
+    if ( m_dllQuartz.Load(wxT("quartz.dll"), wxDL_VERBATIM) )
     {
         m_lpAMGetErrorText = (LPAMGETERRORTEXT)
                                 m_dllQuartz.GetSymbolAorW(wxT("AMGetErrorText"));
@@ -2786,7 +2782,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxMCIMediaBackend, wxMediaBackend)
     { \
         TCHAR sz[5000]; \
         mciGetErrorString(nRet, sz, 5000); \
-        wxFAIL_MSG(wxString::Format(_T("MCI Error:%s"), sz)); \
+        wxFAIL_MSG(wxString::Format(wxT("MCI Error:%s"), sz)); \
     } \
 }
 #else
@@ -3923,11 +3919,7 @@ void wxQTMediaBackend::Cleanup()
 {
     m_bPlaying = false;
 
-    if (m_timer)
-    {
-        delete m_timer;
-        m_timer = NULL;
-    }
+    wxDELETE(m_timer);
 
     m_lib.StopMovie(m_movie);
 

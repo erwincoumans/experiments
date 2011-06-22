@@ -2,7 +2,7 @@
 // Name:        src/gtk/radiobox.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: radiobox.cpp 60467 2009-05-02 10:06:54Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -428,8 +428,6 @@ void wxRadioBox::SetString(unsigned int item, const wxString& label)
 
 bool wxRadioBox::Enable( bool enable )
 {
-    bool isEnabled = IsEnabled();
-
     if ( !wxControl::Enable( enable ) )
         return false;
 
@@ -444,10 +442,8 @@ bool wxRadioBox::Enable( bool enable )
         node = node->GetNext();
     }
 
-    if (!isEnabled && enable)
-    {
+    if (enable)
         GTKFixSensitivity();
-    }
 
     return true;
 }

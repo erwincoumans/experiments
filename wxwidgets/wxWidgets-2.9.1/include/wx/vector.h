@@ -17,7 +17,14 @@
 #if wxUSE_STL
 
 #include <vector>
+#include <algorithm>
+
 #define wxVector std::vector
+template<typename T>
+inline void wxVectorSort(wxVector<T>& v)
+{
+    std::sort(v.begin(), v.end());
+}
 
 #else // !wxUSE_STL
 
@@ -169,19 +176,19 @@ public:
 
     wxVector() : m_size(0), m_capacity(0), m_values(NULL) {}
 
-    wxVector(size_type size)
+    wxVector(size_type p_size)
         : m_size(0), m_capacity(0), m_values(NULL)
     {
-        reserve(size);
-        for ( size_t n = 0; n < size; n++ )
+        reserve(p_size);
+        for ( size_t n = 0; n < p_size; n++ )
             push_back(value_type());
     }
 
-    wxVector(size_type size, const value_type& v)
+    wxVector(size_type p_size, const value_type& v)
         : m_size(0), m_capacity(0), m_values(NULL)
     {
-        reserve(size);
-        for ( size_t n = 0; n < size; n++ )
+        reserve(p_size);
+        for ( size_t n = 0; n < p_size; n++ )
             push_back(v);
     }
 
@@ -193,6 +200,13 @@ public:
     ~wxVector()
     {
         clear();
+    }
+
+    void swap(wxVector& v)
+    {
+        wxSwap(m_size, v.m_size);
+        wxSwap(m_capacity, v.m_capacity);
+        wxSwap(m_values, v.m_values);
     }
 
     void clear()
@@ -429,6 +443,44 @@ inline typename wxVector<T>::size_type wxVector<T>::erase(size_type n)
     return n;
 }
 #endif // WXWIN_COMPATIBILITY_2_8
+
+
+
+namespace wxPrivate
+{
+
+// This is a helper for the wxVectorSort function, and should not be used
+// directly in user's code.
+template<typename T>
+struct wxVectorSort
+{
+    static int wxCMPFUNC_CONV
+    Compare(const void* pitem1, const void* pitem2, const void* )
+    {
+        const T& item1 = *reinterpret_cast<const T*>(pitem1);
+        const T& item2 = *reinterpret_cast<const T*>(pitem2);
+
+        if (item1 < item2)
+            return -1;
+        else if (item2 < item1)
+            return 1;
+        else
+            return 0;
+    }
+};
+
+}  // namespace wxPrivate
+
+
+
+template<typename T>
+void wxVectorSort(wxVector<T>& v)
+{
+    wxQsort(v.begin(), v.size(), sizeof(T),
+            wxPrivate::wxVectorSort<T>::Compare, NULL);
+}
+
+
 
 #endif // wxUSE_STL/!wxUSE_STL
 

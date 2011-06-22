@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: utilscmn.cpp 59239 2009-03-01 14:31:41Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -110,7 +110,7 @@
 // ============================================================================
 
 // Array used in DecToHex conversion routine.
-static wxChar hexArray[] = wxT("0123456789ABCDEF");
+static const wxChar hexArray[] = wxT("0123456789ABCDEF");
 
 // Convert 2-digit hex number to decimal
 int wxHexToDec(const wxString& buf)
@@ -160,16 +160,6 @@ wxString wxDecToHex(int dec)
 // ----------------------------------------------------------------------------
 // misc functions
 // ----------------------------------------------------------------------------
-
-// Don't synthesize KeyUp events holding down a key and producing KeyDown
-// events with autorepeat. On by default and always on in wxMSW. wxGTK version
-// in utilsgtk.cpp.
-#ifndef __WXGTK__
-bool wxSetDetectableAutoRepeat( bool WXUNUSED(flag) )
-{
-    return true;    // detectable auto-repeat is the only mode MSW supports
-}
-#endif // !wxGTK
 
 // Return the current date/time
 wxString wxNow()
@@ -365,8 +355,7 @@ void wxPlatform::AddPlatform(int platform)
 
 void wxPlatform::ClearPlatforms()
 {
-    delete sm_customPlatforms;
-    sm_customPlatforms = NULL;
+    wxDELETE(sm_customPlatforms);
 }
 
 /// Function for testing current platform
@@ -545,7 +534,7 @@ wxString wxGetCurrentDir()
         {
             if ( errno != ERANGE )
             {
-                wxLogSysError(_T("Failed to get current directory"));
+                wxLogSysError(wxT("Failed to get current directory"));
 
                 return wxEmptyString;
             }
@@ -573,7 +562,7 @@ wxString wxGetCurrentDir()
 #if wxUSE_STREAMS
 static bool ReadAll(wxInputStream *is, wxArrayString& output)
 {
-    wxCHECK_MSG( is, false, _T("NULL stream in wxExecute()?") );
+    wxCHECK_MSG( is, false, wxT("NULL stream in wxExecute()?") );
 
     // the stream could be already at EOF or in wxSTREAM_BROKEN_PIPE state
     is->Reset();
@@ -933,6 +922,16 @@ void wxQsort(void *const pbase, size_t total_elems,
 
 #if wxUSE_GUI
 
+// this function is only really implemented for X11-based ports, including GTK1
+// (GTK2 sets detectable auto-repeat automatically anyhow)
+#if !(defined(__WXX11__) || defined(__WXMOTIF__) || \
+        (defined(__WXGTK__) && !defined(__WXGTK20__)))
+bool wxSetDetectableAutoRepeat( bool WXUNUSED(flag) )
+{
+    return true;
+}
+#endif // !X11-based port
+
 // ----------------------------------------------------------------------------
 // Launch default browser
 // ----------------------------------------------------------------------------
@@ -943,7 +942,7 @@ void wxQsort(void *const pbase, size_t total_elems,
 bool wxDoLaunchDefaultBrowser(const wxString& url, const wxString& scheme, int flags);
 
 #elif defined(__WXX11__) || defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXCOCOA__) || \
-      (defined(__WXMAC__) && !defined(__WXOSX_IPHONE__))
+      (defined(__WXOSX__) )
 
 // implemented in a port-specific utils source file:
 bool wxDoLaunchDefaultBrowser(const wxString& url, int flags);
@@ -959,7 +958,7 @@ bool wxDoLaunchDefaultBrowser(const wxString& url, int flags)
     wxString cmd;
 
 #if wxUSE_MIMETYPE
-    wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(_T("html"));
+    wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(wxT("html"));
     if ( ft )
     {
         wxString mt;
@@ -974,7 +973,7 @@ bool wxDoLaunchDefaultBrowser(const wxString& url, int flags)
     {
         // fallback to checking for the BROWSER environment variable
         if ( !wxGetEnv(wxT("BROWSER"), &cmd) || cmd.empty() )
-            cmd << _T(' ') << url;
+            cmd << wxT(' ') << url;
     }
 
     ok = ( !cmd.empty() && wxExecute(cmd) );
@@ -1116,7 +1115,7 @@ wxChar *wxStripMenuCodes(const wxChar *in, wxChar *out)
 
 wxString wxStripMenuCodes(const wxString& in, int flags)
 {
-    wxASSERT_MSG( flags, _T("this is useless to call without any flags") );
+    wxASSERT_MSG( flags, wxT("this is useless to call without any flags") );
 
     wxString out;
 
@@ -1126,14 +1125,14 @@ wxString wxStripMenuCodes(const wxString& in, int flags)
     for ( size_t n = 0; n < len; n++ )
     {
         wxChar ch = in[n];
-        if ( (flags & wxStrip_Mnemonics) && ch == _T('&') )
+        if ( (flags & wxStrip_Mnemonics) && ch == wxT('&') )
         {
             // skip it, it is used to introduce the accel char (or to quote
             // itself in which case it should still be skipped): note that it
             // can't be the last character of the string
             if ( ++n == len )
             {
-                wxLogDebug(_T("Invalid menu string '%s'"), in.c_str());
+                wxLogDebug(wxT("Invalid menu string '%s'"), in.c_str());
             }
             else
             {
@@ -1141,7 +1140,7 @@ wxString wxStripMenuCodes(const wxString& in, int flags)
                 ch = in[n];
             }
         }
-        else if ( (flags & wxStrip_Accel) && ch == _T('\t') )
+        else if ( (flags & wxStrip_Accel) && ch == wxT('\t') )
         {
             // everything after TAB is accel string, exit the loop
             break;
@@ -1283,14 +1282,14 @@ wxWindow* wxGenericFindWindowAtPoint(const wxPoint& pt)
 int wxMessageBox(const wxString& message, const wxString& caption, long style,
                  wxWindow *parent, int WXUNUSED(x), int WXUNUSED(y) )
 {
-    long decorated_style = style;
-
-    if ( ( style & ( wxICON_EXCLAMATION | wxICON_HAND | wxICON_INFORMATION | wxICON_QUESTION ) ) == 0 )
+    // add the appropriate icon unless this was explicitly disabled by use of
+    // wxICON_NONE
+    if ( !(style & wxICON_NONE) && !(style & wxICON_MASK) )
     {
-        decorated_style |= ( style & wxYES ) ? wxICON_QUESTION : wxICON_INFORMATION ;
+        style |= style & wxYES ? wxICON_QUESTION : wxICON_INFORMATION;
     }
 
-    wxMessageDialog dialog(parent, message, caption, decorated_style);
+    wxMessageDialog dialog(parent, message, caption, style);
 
     int ans = dialog.ShowModal();
     switch ( ans )
@@ -1305,7 +1304,7 @@ int wxMessageBox(const wxString& message, const wxString& caption, long style,
             return wxCANCEL;
     }
 
-    wxFAIL_MSG( _T("unexpected return code from wxMessageDialog") );
+    wxFAIL_MSG( wxT("unexpected return code from wxMessageDialog") );
 
     return wxCANCEL;
 }
@@ -1314,38 +1313,38 @@ void wxInfoMessageBox(wxWindow* parent)
 {
     // don't translate these strings, they're for diagnostics purposes only
     wxString msg;
-    msg.Printf(_T("wxWidgets Library (%s port)\n")
-               _T("Version %d.%d.%d%s%s, compiled at %s %s\n")
-               _T("Runtime version of toolkit used is %d.%d.%s\n")
-               _T("Copyright (c) 1995-2009 wxWidgets team"),
-               wxPlatformInfo::Get().GetPortIdName().c_str(),
+    msg.Printf(wxS("wxWidgets Library (%s port)\n")
+               wxS("Version %d.%d.%d (Unicode: %s, debug level: %d),\n")
+               wxS("compiled at %s %s\n\n")
+               wxS("Runtime version of toolkit used is %d.%d.\n"),
+               wxPlatformInfo::Get().GetPortIdName(),
                wxMAJOR_VERSION,
                wxMINOR_VERSION,
                wxRELEASE_NUMBER,
-#if wxUSE_UNICODE
-               L" (Unicode)",
+#if wxUSE_UNICODE_UTF8
+               "UTF-8",
+#elif wxUSE_UNICODE
+               "wchar_t",
 #else
-               wxEmptyString,
+               "none",
 #endif
-#ifdef __WXDEBUG__
-               _T(" Debug build"),
-#else
-               wxEmptyString,
-#endif
+               wxDEBUG_LEVEL,
                __TDATE__,
                __TTIME__,
                wxPlatformInfo::Get().GetToolkitMajorVersion(),
-               wxPlatformInfo::Get().GetToolkitMinorVersion(),
+               wxPlatformInfo::Get().GetToolkitMinorVersion()
+              );
+
 #ifdef __WXGTK__
-               wxString::Format("\nThe compile-time GTK+ version is %d.%d.%d.",
-                                GTK_MAJOR_VERSION,
-                                GTK_MINOR_VERSION,
-                                GTK_MICRO_VERSION).c_str()
-#else
-               wxEmptyString
-#endif
-               );
-    wxMessageBox(msg, _T("wxWidgets information"),
+    msg += wxString::Format("Compile-time GTK+ version is %d.%d.%d.\n",
+                            GTK_MAJOR_VERSION,
+                            GTK_MINOR_VERSION,
+                            GTK_MICRO_VERSION);
+#endif // __WXGTK__
+
+    msg += wxS("\nCopyright (c) 1995-2010 wxWidgets team");
+
+    wxMessageBox(msg, wxT("wxWidgets information"),
                  wxICON_INFORMATION | wxOK,
                  parent);
 }

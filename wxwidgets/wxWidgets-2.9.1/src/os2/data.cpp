@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/20/99
-// RCS-ID:      $Id: data.cpp 27408 2004-05-23 20:53:33Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

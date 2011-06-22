@@ -4,7 +4,7 @@
 // Author:      Robin Dunn
 // Modified by:
 // Created:     27-Mar-2003
-// RCS-ID:      $Id: rgncmn.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robin Dunn
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -60,7 +60,7 @@ bool wxRegionBase::IsEqual(const wxRegion& region) const
 wxBitmap wxRegionBase::ConvertToBitmap() const
 {
     wxRect box = GetBox();
-    wxBitmap bmp(box.GetRight(), box.GetBottom());
+    wxBitmap bmp(box.GetWidth(), box.GetHeight());
     wxMemoryDC dc;
     dc.SelectObject(bmp);
     dc.SetBackground(*wxBLACK_BRUSH);
@@ -131,7 +131,7 @@ bool wxRegionBase::Union(const wxBitmap& bmp)
     if (bmp.GetMask())
     {
         wxImage image = bmp.ConvertToImage();
-        wxASSERT_MSG( image.HasMask(), _T("wxBitmap::ConvertToImage doesn't preserve mask?") );
+        wxASSERT_MSG( image.HasMask(), wxT("wxBitmap::ConvertToImage doesn't preserve mask?") );
         return DoRegionUnion(*this, image,
                              image.GetMaskRed(),
                              image.GetMaskGreen(),

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Ron Lee
 // Created:     01/02/97
-// RCS-ID:      $Id: object.h 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997 Julian Smart
 //              (c) 2001 Ron Lee <ron@debian.org>
 // Licence:     wxWindows licence
@@ -26,7 +26,7 @@ class WXDLLIMPEXP_FWD_BASE wxString;
 #define wxUSE_EXTENDED_RTTI 0
 #endif
 
-#define DECLARE_CLASS_INFO_ITERATORS()                                       \
+#define wxDECLARE_CLASS_INFO_ITERATORS()                                     \
     class WXDLLIMPEXP_BASE const_iterator                                    \
     {                                                                        \
         typedef wxHashTable_Node Node;                                       \
@@ -55,7 +55,7 @@ class WXDLLIMPEXP_FWD_BASE wxString;
     };                                                                       \
                                                                              \
     static const_iterator begin_classinfo();                                 \
-    static const_iterator end_classinfo();
+    static const_iterator end_classinfo()
 
 #if wxUSE_EXTENDED_RTTI
 #include "wx/xti.h"
@@ -69,7 +69,6 @@ class WXDLLIMPEXP_FWD_BASE wxClassInfo;
 class WXDLLIMPEXP_FWD_BASE wxHashTable;
 class WXDLLIMPEXP_FWD_BASE wxObject;
 class WXDLLIMPEXP_FWD_BASE wxPluginLibrary;
-class WXDLLIMPEXP_FWD_BASE wxObjectRefData;
 class WXDLLIMPEXP_FWD_BASE wxHashTable_Node;
 
 // ----------------------------------------------------------------------------
@@ -131,7 +130,8 @@ public:
                  ( m_baseInfo2 && m_baseInfo2->IsKindOf(info) ) );
     }
 
-    DECLARE_CLASS_INFO_ITERATORS()
+    wxDECLARE_CLASS_INFO_ITERATORS();
+    
 private:
     const wxChar            *m_className;
     int                      m_objectSize;
@@ -164,24 +164,25 @@ WXDLLIMPEXP_BASE wxObject *wxCreateDynamicObject(const wxString& name);
 // Dynamic class macros
 // ----------------------------------------------------------------------------
 
-#define DECLARE_ABSTRACT_CLASS(name)                                          \
+#define wxDECLARE_ABSTRACT_CLASS(name)                                        \
     public:                                                                   \
         static wxClassInfo ms_classInfo;                                      \
-        virtual wxClassInfo *GetClassInfo() const;
+        virtual wxClassInfo *GetClassInfo() const
 
-#define DECLARE_DYNAMIC_CLASS_NO_ASSIGN(name)                                 \
-    DECLARE_NO_ASSIGN_CLASS(name)                                             \
-    DECLARE_DYNAMIC_CLASS(name)
+#define wxDECLARE_DYNAMIC_CLASS_NO_ASSIGN(name)                               \
+    wxDECLARE_NO_ASSIGN_CLASS(name);                                          \
+    wxDECLARE_DYNAMIC_CLASS(name)
 
-#define DECLARE_DYNAMIC_CLASS_NO_COPY(name)                                   \
-    DECLARE_NO_COPY_CLASS(name)                                               \
-    DECLARE_DYNAMIC_CLASS(name)
+#define wxDECLARE_DYNAMIC_CLASS_NO_COPY(name)                                 \
+    wxDECLARE_NO_COPY_CLASS(name);                                            \
+    wxDECLARE_DYNAMIC_CLASS(name)
 
-#define DECLARE_DYNAMIC_CLASS(name)                                           \
-    DECLARE_ABSTRACT_CLASS(name)                                              \
-    static wxObject* wxCreateObject();
+#define wxDECLARE_DYNAMIC_CLASS(name)                                         \
+    wxDECLARE_ABSTRACT_CLASS(name);                                           \
+    static wxObject* wxCreateObject()
 
-#define DECLARE_CLASS(name) DECLARE_DYNAMIC_CLASS(name)
+#define wxDECLARE_CLASS(name)                                                 \
+    wxDECLARE_DYNAMIC_CLASS(name)
 
 
 // common part of the macros below
@@ -206,13 +207,13 @@ WXDLLIMPEXP_BASE wxObject *wxCreateDynamicObject(const wxString& name);
 // -----------------------------------
 
     // Single inheritance with one base class
-#define IMPLEMENT_DYNAMIC_CLASS(name, basename)                               \
+#define wxIMPLEMENT_DYNAMIC_CLASS(name, basename)                             \
     wxIMPLEMENT_CLASS_COMMON1(name, basename, name::wxCreateObject)           \
     wxObject* name::wxCreateObject()                                          \
         { return new name; }
 
     // Multiple inheritance with two base classes
-#define IMPLEMENT_DYNAMIC_CLASS2(name, basename1, basename2)                  \
+#define wxIMPLEMENT_DYNAMIC_CLASS2(name, basename1, basename2)                \
     wxIMPLEMENT_CLASS_COMMON2(name, basename1, basename2,                     \
                               name::wxCreateObject)                           \
     wxObject* name::wxCreateObject()                                          \
@@ -223,17 +224,18 @@ WXDLLIMPEXP_BASE wxObject *wxCreateDynamicObject(const wxString& name);
 // -----------------------------------
 
     // Single inheritance with one base class
-
-#define IMPLEMENT_ABSTRACT_CLASS(name, basename)                              \
+#define wxIMPLEMENT_ABSTRACT_CLASS(name, basename)                            \
     wxIMPLEMENT_CLASS_COMMON1(name, basename, NULL)
 
     // Multiple inheritance with two base classes
-
-#define IMPLEMENT_ABSTRACT_CLASS2(name, basename1, basename2)                 \
+#define wxIMPLEMENT_ABSTRACT_CLASS2(name, basename1, basename2)               \
     wxIMPLEMENT_CLASS_COMMON2(name, basename1, basename2, NULL)
 
-#define IMPLEMENT_CLASS IMPLEMENT_ABSTRACT_CLASS
-#define IMPLEMENT_CLASS2 IMPLEMENT_ABSTRACT_CLASS2
+#define wxIMPLEMENT_CLASS(name, basename)                                     \
+    wxIMPLEMENT_ABSTRACT_CLASS(name, basename)
+    
+#define wxIMPLEMENT_CLASS2(name, basename1, basename2)                        \
+    IMPLEMENT_ABSTRACT_CLASS2(name, basename1, basename2)
 
 #endif // !wxUSE_EXTENDED_RTTI
 
@@ -258,7 +260,7 @@ public:                                         \
     name##PluginSentinel();                     \
     ~name##PluginSentinel();                    \
 };                                              \
-name##PluginSentinel  m_pluginsentinel;
+name##PluginSentinel  m_pluginsentinel
 
 #define _IMPLEMENT_DL_SENTINEL(name)                                \
  const wxString name::name##PluginSentinel::sm_className(#name);    \
@@ -277,35 +279,35 @@ name##PluginSentinel  m_pluginsentinel;
 
 #endif  // wxUSE_NESTED_CLASSES
 
-#define DECLARE_PLUGGABLE_CLASS(name) \
- DECLARE_DYNAMIC_CLASS(name) _DECLARE_DL_SENTINEL(name, WXDLLIMPEXP_CORE)
-#define DECLARE_ABSTRACT_PLUGGABLE_CLASS(name)  \
- DECLARE_ABSTRACT_CLASS(name) _DECLARE_DL_SENTINEL(name, WXDLLIMPEXP_CORE)
+#define wxDECLARE_PLUGGABLE_CLASS(name) \
+ wxDECLARE_DYNAMIC_CLASS(name); _DECLARE_DL_SENTINEL(name, WXDLLIMPEXP_CORE)
+#define wxDECLARE_ABSTRACT_PLUGGABLE_CLASS(name)  \
+ wxDECLARE_ABSTRACT_CLASS(name); _DECLARE_DL_SENTINEL(name, WXDLLIMPEXP_CORE)
 
-#define DECLARE_USER_EXPORTED_PLUGGABLE_CLASS(name, usergoo) \
- DECLARE_DYNAMIC_CLASS(name) _DECLARE_DL_SENTINEL(name, usergoo)
-#define DECLARE_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(name, usergoo)  \
- DECLARE_ABSTRACT_CLASS(name) _DECLARE_DL_SENTINEL(name, usergoo)
+#define wxDECLARE_USER_EXPORTED_PLUGGABLE_CLASS(name, usergoo) \
+ wxDECLARE_DYNAMIC_CLASS(name); _DECLARE_DL_SENTINEL(name, usergoo)
+#define wxDECLARE_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(name, usergoo)  \
+ wxDECLARE_ABSTRACT_CLASS(name); _DECLARE_DL_SENTINEL(name, usergoo)
 
-#define IMPLEMENT_PLUGGABLE_CLASS(name, basename) \
- IMPLEMENT_DYNAMIC_CLASS(name, basename) _IMPLEMENT_DL_SENTINEL(name)
-#define IMPLEMENT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
- IMPLEMENT_DYNAMIC_CLASS2(name, basename1, basename2) _IMPLEMENT_DL_SENTINEL(name)
-#define IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(name, basename) \
- IMPLEMENT_ABSTRACT_CLASS(name, basename) _IMPLEMENT_DL_SENTINEL(name)
-#define IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
- IMPLEMENT_ABSTRACT_CLASS2(name, basename1, basename2) _IMPLEMENT_DL_SENTINEL(name)
+#define wxIMPLEMENT_PLUGGABLE_CLASS(name, basename) \
+ wxIMPLEMENT_DYNAMIC_CLASS(name, basename) _IMPLEMENT_DL_SENTINEL(name)
+#define wxIMPLEMENT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
+ wxIMPLEMENT_DYNAMIC_CLASS2(name, basename1, basename2) _IMPLEMENT_DL_SENTINEL(name)
+#define wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(name, basename) \
+ wxIMPLEMENT_ABSTRACT_CLASS(name, basename) _IMPLEMENT_DL_SENTINEL(name)
+#define wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
+ wxIMPLEMENT_ABSTRACT_CLASS2(name, basename1, basename2) _IMPLEMENT_DL_SENTINEL(name)
 
-#define IMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS(name, basename) \
- IMPLEMENT_PLUGGABLE_CLASS(name, basename)
-#define IMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS2(name, basename1, basename2)  \
- IMPLEMENT_PLUGGABLE_CLASS2(name, basename1, basename2)
-#define IMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(name, basename) \
- IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(name, basename)
-#define IMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
- IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)
+#define wxIMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS(name, basename) \
+ wxIMPLEMENT_PLUGGABLE_CLASS(name, basename)
+#define wxIMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS2(name, basename1, basename2)  \
+ wxIMPLEMENT_PLUGGABLE_CLASS2(name, basename1, basename2)
+#define wxIMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(name, basename) \
+ wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(name, basename)
+#define wxIMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)  \
+ wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(name, basename1, basename2)
 
-#define CLASSINFO(name) (&name::ms_classInfo)
+#define wxCLASSINFO(name) (&name::ms_classInfo)
 
 #define wxIS_KIND_OF(obj, className) obj->IsKindOf(&className::ms_classInfo)
 
@@ -399,15 +401,13 @@ inline T *wxCheckCast(const void *ptr, T * = NULL)
 #endif // wxUSE_MEMORY_TRACING
 
 // ----------------------------------------------------------------------------
-// wxObjectRefData: ref counted data meant to be stored in wxObject
+// wxRefCounter: ref counted data "manager"
 // ----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_BASE wxObjectRefData
+class WXDLLIMPEXP_BASE wxRefCounter
 {
-    friend class WXDLLIMPEXP_FWD_BASE wxObject;
-
 public:
-    wxObjectRefData() : m_count(1) { }
+    wxRefCounter() { m_count = 1; }
 
     int GetRefCount() const { return m_count; }
 
@@ -417,12 +417,19 @@ public:
 protected:
     // this object should never be destroyed directly but only as a
     // result of a DecRef() call:
-    virtual ~wxObjectRefData() { }
+    virtual ~wxRefCounter() { }
 
 private:
     // our refcount:
     int m_count;
 };
+
+// ----------------------------------------------------------------------------
+// wxObjectRefData: ref counted data meant to be stored in wxObject
+// ----------------------------------------------------------------------------
+
+typedef wxRefCounter wxObjectRefData;
+
 
 // ----------------------------------------------------------------------------
 // wxObjectDataPtr: helper class to avoid memleaks because of missing calls
@@ -508,7 +515,7 @@ private:
 
 class WXDLLIMPEXP_BASE wxObject
 {
-    DECLARE_ABSTRACT_CLASS(wxObject)
+    wxDECLARE_ABSTRACT_CLASS(wxObject);
 
 public:
     wxObject() { m_refData = NULL; }
@@ -518,7 +525,7 @@ public:
     {
          m_refData = other.m_refData;
          if (m_refData)
-             m_refData->m_count++;
+             m_refData->IncRef();
     }
 
     wxObject& operator=(const wxObject& other)
@@ -660,5 +667,43 @@ private :
         #include "wx/msw/msvcrt.h"
     #endif
 #endif // wxUSE_DEBUG_NEW_ALWAYS
+
+// ----------------------------------------------------------------------------
+// Compatibility macro aliases
+// ----------------------------------------------------------------------------
+
+// deprecated variants _not_ requiring a semicolon after them and without wx prefix.
+// (note that also some wx-prefixed macro do _not_ require a semicolon because
+//  it's not always possible to force the compire to require it)
+
+#define DECLARE_CLASS_INFO_ITERATORS()                              wxDECLARE_CLASS_INFO_ITERATORS();
+#define DECLARE_ABSTRACT_CLASS(n)                                   wxDECLARE_ABSTRACT_CLASS(n);
+#define DECLARE_DYNAMIC_CLASS_NO_ASSIGN(n)                          wxDECLARE_DYNAMIC_CLASS_NO_ASSIGN(n);
+#define DECLARE_DYNAMIC_CLASS_NO_COPY(n)                            wxDECLARE_DYNAMIC_CLASS_NO_COPY(n);
+#define DECLARE_DYNAMIC_CLASS(n)                                    wxDECLARE_DYNAMIC_CLASS(n);
+#define DECLARE_CLASS(n)                                            wxDECLARE_CLASS(n);
+
+#define IMPLEMENT_DYNAMIC_CLASS(n,b)                                wxIMPLEMENT_DYNAMIC_CLASS(n,b)
+#define IMPLEMENT_DYNAMIC_CLASS2(n,b1,b2)                           wxIMPLEMENT_DYNAMIC_CLASS2(n,b1,b2)
+#define IMPLEMENT_ABSTRACT_CLASS(n,b)                               wxIMPLEMENT_ABSTRACT_CLASS(n,b)
+#define IMPLEMENT_ABSTRACT_CLASS2(n,b1,b2)                          wxIMPLEMENT_ABSTRACT_CLASS2(n,b1,b2)
+#define IMPLEMENT_CLASS(n,b)                                        wxIMPLEMENT_CLASS(n,b)
+#define IMPLEMENT_CLASS2(n,b1,b2)                                   wxIMPLEMENT_CLASS2(n,b1,b2)
+
+#define DECLARE_PLUGGABLE_CLASS(n)                                  wxDECLARE_PLUGGABLE_CLASS(n);
+#define DECLARE_ABSTRACT_PLUGGABLE_CLASS(n)                         wxDECLARE_ABSTRACT_PLUGGABLE_CLASS(n);
+#define DECLARE_USER_EXPORTED_PLUGGABLE_CLASS(n,u)                  wxDECLARE_USER_EXPORTED_PLUGGABLE_CLASS(n,u);
+#define DECLARE_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(n,u)         wxDECLARE_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(n,u);
+
+#define IMPLEMENT_PLUGGABLE_CLASS(n,b)                              wxIMPLEMENT_PLUGGABLE_CLASS(n,b)
+#define IMPLEMENT_PLUGGABLE_CLASS2(n,b,b2)                          wxIMPLEMENT_PLUGGABLE_CLASS2(n,b,b2)
+#define IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(n,b)                     wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS(n,b)
+#define IMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(n,b,b2)                 wxIMPLEMENT_ABSTRACT_PLUGGABLE_CLASS2(n,b,b2)
+#define IMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS(n,b)                wxIMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS(n,b)
+#define IMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS2(n,b,b2)            wxIMPLEMENT_USER_EXPORTED_PLUGGABLE_CLASS2(n,b,b2)
+#define IMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(n,b)       wxIMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS(n,b)
+#define IMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS2(n,b,b2)   wxIMPLEMENT_USER_EXPORTED_ABSTRACT_PLUGGABLE_CLASS2(n,b,b2)
+
+#define CLASSINFO(n)                                wxCLASSINFO(n)
 
 #endif // _WX_OBJECTH__

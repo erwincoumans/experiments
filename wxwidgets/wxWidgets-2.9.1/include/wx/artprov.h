@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     18/03/2002
-// RCS-ID:      $Id: artprov.h 59930 2009-03-29 21:23:59Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,10 +28,10 @@ class wxArtProviderModule;
 typedef wxString wxArtClient;
 typedef wxString wxArtID;
 
-#define wxART_MAKE_CLIENT_ID_FROM_STR(id)  (id + _T("_C"))
-#define wxART_MAKE_CLIENT_ID(id)           _T(#id) _T("_C")
+#define wxART_MAKE_CLIENT_ID_FROM_STR(id)  (id + wxT("_C"))
+#define wxART_MAKE_CLIENT_ID(id)           wxT(#id) wxT("_C")
 #define wxART_MAKE_ART_ID_FROM_STR(id)     (id)
-#define wxART_MAKE_ART_ID(id)              _T(#id)
+#define wxART_MAKE_ART_ID(id)              wxT(#id)
 
 // ----------------------------------------------------------------------------
 // Art clients
@@ -101,6 +101,7 @@ typedef wxString wxArtID;
 #define wxART_UNDO                 wxART_MAKE_ART_ID(wxART_UNDO)
 #define wxART_REDO                 wxART_MAKE_ART_ID(wxART_REDO)
 
+#define wxART_CLOSE                wxART_MAKE_ART_ID(wxART_CLOSE)
 #define wxART_QUIT                 wxART_MAKE_ART_ID(wxART_QUIT)
 
 #define wxART_FIND                 wxART_MAKE_ART_ID(wxART_FIND)
@@ -155,10 +156,18 @@ public:
                           const wxArtClient& client = wxART_OTHER,
                           const wxSize& size = wxDefaultSize);
 
+    // Helper used by GetMessageBoxIcon(): return the art id corresponding to
+    // the standard wxICON_INFORMATION/WARNING/ERROR/QUESTION flags (only one
+    // can be set)
+    static wxArtID GetMessageBoxIconId(int flags);
+
     // Helper used by several generic classes: return the icon corresponding to
     // the standard wxICON_INFORMATION/WARNING/ERROR/QUESTION flags (only one
     // can be set)
-    static wxIcon GetMessageBoxIcon(int flags);
+    static wxIcon GetMessageBoxIcon(int flags)
+    {
+        return GetIcon(GetMessageBoxIconId(flags), wxART_MESSAGE_BOX);
+    }
 
     // Query the providers for iconbundle with given ID and return it. Return
     // wxNullIconBundle if no provider provides it.

@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/17/99
-// RCS-ID:      $Id: control.h 58246 2009-01-20 18:33:33Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

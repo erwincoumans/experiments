@@ -5,7 +5,7 @@
 // Modified by:
 //  Chris Elliott (biol75@york.ac.uk) 5 Dec 00: write support for Win32
 // Created:     23.09.98
-// RCS-ID:      $Id: mimetype.h 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -53,12 +53,12 @@ class WXDLLIMPEXP_BASE wxMimeType : public wxString
 public:
     // all string ctors here
 
-    wxString GetType() const { return BeforeFirst(_T('/')); }
-    wxString GetSubType() const { return AfterFirst(_T('/')); }
+    wxString GetType() const { return BeforeFirst(wxT('/')); }
+    wxString GetSubType() const { return AfterFirst(wxT('/')); }
 
     void SetSubType(const wxString& subtype)
     {
-        *this = GetType() + _T('/') + subtype;
+        *this = GetType() + wxT('/') + subtype;
     }
 
     bool Matches(const wxMimeType& wildcard)
@@ -137,7 +137,7 @@ public:
     // NB: This is a helper to get implicit conversion of variadic ctor's
     //     fixed arguments into something that can be passed to VarArgInit().
     //     Do not use, it's used by the ctor only.
-    struct WXDLLIMPEXP_BASE CtorString
+    struct CtorString
     {
         CtorString(const char *str) : m_str(str) {}
         CtorString(const wchar_t *str) : m_str(str) {}
@@ -410,7 +410,7 @@ public:
 
     static void Set( wxMimeTypesManagerFactory *factory );
     static wxMimeTypesManagerFactory *Get();
-    
+
 private:
     static wxMimeTypesManagerFactory *m_factory;
 };

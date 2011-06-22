@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/mac/carbon/window.h
+// Name:        wx/osx/window.h
 // Purpose:     wxWindowMac class
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: window.h 59938 2009-03-30 07:30:26Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,7 @@
 
 class WXDLLIMPEXP_FWD_CORE wxButton;
 class WXDLLIMPEXP_FWD_CORE wxScrollBar;
+class WXDLLIMPEXP_FWD_CORE wxPanel;
 class WXDLLIMPEXP_FWD_CORE wxNonOwnedWindow;
 
 #if wxOSX_USE_CARBON
@@ -62,6 +63,16 @@ public:
     virtual void Lower();
 
     virtual bool Show( bool show = true );
+    virtual bool ShowWithEffect(wxShowEffect effect,
+                                unsigned timeout = 0)
+    {
+        return OSXShowWithEffect(true, effect, timeout);
+    }
+    virtual bool HideWithEffect(wxShowEffect effect,
+                                unsigned timeout = 0)
+    {
+        return OSXShowWithEffect(false, effect, timeout);
+    }
 
     virtual bool IsShownOnScreen() const;
 
@@ -80,22 +91,10 @@ public:
     virtual bool SetBackgroundColour( const wxColour &colour );
     virtual bool SetForegroundColour( const wxColour &colour );
 
+    virtual bool SetBackgroundStyle(wxBackgroundStyle style);
+
     virtual int GetCharHeight() const;
     virtual int GetCharWidth() const;
-    virtual void GetTextExtent( const wxString& string,
-                               int *x, int *y,
-                               int *descent = NULL,
-                               int *externalLeading = NULL,
-                               const wxFont *theFont = NULL )
-                               const;
-protected:
-    virtual void DoEnable( bool enable );
-#if wxUSE_MENUS
-    virtual bool DoPopupMenu( wxMenu *menu, int x, int y );
-#endif
-
-    virtual void DoFreeze();
-    virtual void DoThaw();
 
 public:
     virtual void SetScrollbar( int orient, int pos, int thumbVisible,
@@ -145,8 +144,6 @@ public:
     // event handlers
     // --------------
 
-    void OnNcPaint( wxNcPaintEvent& event );
-    void OnEraseBackground(wxEraseEvent& event );
     void OnMouseEvent( wxMouseEvent &event );
 
     void MacOnScroll( wxScrollEvent&event );
@@ -172,7 +169,7 @@ public:
     // this should not be overriden in classes above wxWindowMac
     // because it is called from its destructor via DeleteChildren
     virtual void        RemoveChild( wxWindowBase *child );
-    
+
     virtual bool        MacDoRedraw( long time ) ;
     virtual void        MacPaintChildrenBorders();
     virtual void        MacPaintBorders( int left , int top ) ;
@@ -233,7 +230,7 @@ public:
     { return ((wxWindow*)m_hScrollBar == sb || (wxWindow*)m_vScrollBar == sb) ; }
     virtual bool IsClientAreaChild(const wxWindow *child) const
     {
-        return !MacIsWindowScrollbar(child) &&
+        return !MacIsWindowScrollbar(child) && !((wxWindow*)m_growBox==child) &&
                wxWindowBase::IsClientAreaChild(child);
     }
 
@@ -251,14 +248,25 @@ public:
 
     // the 'true' OS level control for this wxWindow
     wxOSXWidgetImpl*       GetPeer() const { return m_peer ; }
- 
+
+#if wxOSX_USE_COCOA_OR_IPHONE
+    // the NSView or NSWindow of this window: can be used for both child and
+    // non-owned windows
+    //
+    // this is useful for a few Cocoa function which can work with either views
+    // or windows indiscriminately, e.g. for setting NSViewAnimationTargetKey
+    virtual void *OSXGetViewOrWindow() const { return GetHandle(); }
+#endif // Cocoa
+
     void *              MacGetCGContextRef() { return m_cgContextRef ; }
     void                MacSetCGContextRef(void * cg) { m_cgContextRef = cg ; }
 
     // osx specific event handling common for all osx-ports
-    
+
     virtual bool        OSXHandleClicked( double timestampsec );
     virtual bool        OSXHandleKeyEvent( wxKeyEvent& event );
+    
+    bool                IsNativeWindowWrapper() const { return m_isNativeWindowWrapper; }
 protected:
     // For controls like radio buttons which are genuinely composite
     wxList              m_subControls;
@@ -291,7 +299,10 @@ protected:
     wxScrollBar*        m_vScrollBar ;
     bool                m_hScrollBarAlwaysShown;
     bool                m_vScrollBarAlwaysShown;
+    wxWindow*           m_growBox ;
     wxString            m_label ;
+    
+    bool                m_isNativeWindowWrapper;
 
     // set to true if we do a sharp clip at the content area of this window
     // must be dynamic as eg a panel normally is not clipping precisely, but if
@@ -306,6 +317,20 @@ protected:
     void                MacUpdateControlFont() ;
 
     // implement the base class pure virtuals
+    virtual void DoGetTextExtent(const wxString& string,
+                                 int *x, int *y,
+                                 int *descent = NULL,
+                                 int *externalLeading = NULL,
+                                 const wxFont *theFont = NULL ) const;
+
+    virtual void DoEnable( bool enable );
+#if wxUSE_MENUS
+    virtual bool DoPopupMenu( wxMenu *menu, int x, int y );
+#endif
+
+    virtual void DoFreeze();
+    virtual void DoThaw();
+
     virtual wxSize DoGetBestSize() const;
     virtual wxSize DoGetSizeFromClientSize( const wxSize & size ) const;
     virtual void DoClientToScreen( int *x, int *y ) const;
@@ -332,6 +357,11 @@ protected:
     virtual void DoSetToolTip( wxToolTip *tip );
 #endif
 
+    // common part of Show/HideWithEffect()
+    virtual bool OSXShowWithEffect(bool show,
+                                   wxShowEffect effect,
+                                   unsigned timeout);
+
 private:
     // common part of all ctors
     void Init();
@@ -339,7 +369,6 @@ private:
     // show/hide scrollbars as needed, common part of SetScrollbar() and
     // AlwaysShowScrollbars()
     void DoUpdateScrollbarVisibility();
-
 
     wxDECLARE_NO_COPY_CLASS(wxWindowMac);
     DECLARE_EVENT_TABLE()

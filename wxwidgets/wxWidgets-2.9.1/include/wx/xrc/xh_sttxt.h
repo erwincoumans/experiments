@@ -3,7 +3,7 @@
 // Purpose:     XML resource handler for wxStaticText
 // Author:      Bob Mitchell
 // Created:     2000/03/21
-// RCS-ID:      $Id: xh_sttxt.h 41590 2006-10-03 14:53:40Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Bob Mitchell
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

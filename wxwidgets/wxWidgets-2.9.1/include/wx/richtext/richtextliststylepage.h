@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/18/2006 11:36:37 AM
-// RCS-ID:      $Id: richtextliststylepage.h 59816 2009-03-24 19:09:52Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +28,7 @@
 
 ////@begin control identifiers
 #define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_STYLE wxRESIZE_BORDER|wxTAB_TRAVERSAL
-#define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_TITLE _T("")
+#define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_TITLE wxT("")
 #define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_IDNAME ID_RICHTEXTLISTSTYLEPAGE
 #define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_SIZE wxSize(400, 300)
 #define SYMBOL_WXRICHTEXTLISTSTYLEPAGE_POSITION wxDefaultPosition

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin (wxMenuItem is now in separate file)
 // Created:     01/02/97
-// RCS-ID:      $Id: menu.h 58461 2009-01-27 16:45:24Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -67,10 +67,7 @@ public:
 
     bool MSWCommand(WXUINT param, WXWORD id);
 
-    // semi-private accessors
-        // get the window which contains this menu
-    wxWindow *GetWindow() const;
-        // get the menu handle
+    // get the native menu handle
     WXHMENU GetHMenu() const { return m_hMenu; }
 
 #if wxUSE_ACCEL
@@ -90,6 +87,25 @@ public:
     // (shouldn't be called if we don't have any accelerators)
     wxAcceleratorTable *CreateAccelTable() const;
 #endif // wxUSE_ACCEL
+
+#if wxUSE_OWNER_DRAWN
+
+    int GetMaxAccelWidth()
+    {
+        if (m_maxAccelWidth == -1)
+            CalculateMaxAccelWidth();
+        return m_maxAccelWidth;
+    }
+
+    void ResetMaxAccelWidth()
+    {
+        m_maxAccelWidth = -1;
+    }
+
+private:
+    void CalculateMaxAccelWidth();
+
+#endif // wxUSE_OWNER_DRAWN
 
 protected:
     virtual wxMenuItem* DoAppend(wxMenuItem *item);
@@ -119,6 +135,17 @@ private:
     // the accelerators for our menu items
     wxAcceleratorArray m_accels;
 #endif // wxUSE_ACCEL
+
+#if wxUSE_OWNER_DRAWN
+    // true if the menu has any ownerdrawn items
+    bool m_ownerDrawn;
+
+    // the max width of menu items bitmaps
+    int m_maxBitmapWidth;
+
+    // the max width of menu items accels
+    int m_maxAccelWidth;
+#endif // wxUSE_OWNER_DRAWN
 
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxMenu)
 };

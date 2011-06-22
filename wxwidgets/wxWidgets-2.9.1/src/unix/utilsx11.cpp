@@ -4,7 +4,7 @@
 // Author:      Mattia Barbon, Vaclav Slavik, Robert Roebling
 // Modified by:
 // Created:     25.03.02
-// RCS-ID:      $Id: utilsx11.cpp 57941 2009-01-09 13:24:26Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -478,8 +478,8 @@ wxX11FullScreenMethod wxGetFullScreenMethodX11(WXDisplay* display,
     wxMAKE_ATOM(_NET_WM_STATE_FULLSCREEN, disp);
     if (wxQueryWMspecSupport(disp, root, _NET_WM_STATE_FULLSCREEN))
     {
-        wxLogTrace(_T("fullscreen"),
-                   _T("detected _NET_WM_STATE_FULLSCREEN support"));
+        wxLogTrace(wxT("fullscreen"),
+                   wxT("detected _NET_WM_STATE_FULLSCREEN support"));
         return wxX11_FS_WMSPEC;
     }
 
@@ -487,12 +487,12 @@ wxX11FullScreenMethod wxGetFullScreenMethodX11(WXDisplay* display,
     // kwin doesn't understand any other method:
     if (wxKwinRunning(disp, root))
     {
-        wxLogTrace(_T("fullscreen"), _T("detected kwin"));
+        wxLogTrace(wxT("fullscreen"), wxT("detected kwin"));
         return wxX11_FS_KDE;
     }
 
     // finally, fall back to ICCCM heuristic method:
-    wxLogTrace(_T("fullscreen"), _T("unknown WM, using _WIN_LAYER"));
+    wxLogTrace(wxT("fullscreen"), wxT("unknown WM, using _WIN_LAYER"));
     return wxX11_FS_GENERIC;
 }
 
@@ -823,7 +823,7 @@ bool wxGetKeyState(wxKeyCode key)
     if ( IsModifierKey(iKey) )  // If iKey is a modifier key, use a different method
     {
         XModifierKeymap *map = XGetModifierMapping(pDisplay);
-        wxCHECK_MSG( map, false, _T("failed to get X11 modifiers map") );
+        wxCHECK_MSG( map, false, wxT("failed to get X11 modifiers map") );
 
         for (int i = 0; i < 8; ++i)
         {
@@ -910,7 +910,7 @@ bool wxDoLaunchDefaultBrowser(const wxString& url, int flags)
         if (res >= 0 && errors.GetCount() == 0)
         {
             wxString cmd = output[0];
-            cmd << _T(' ') << url;
+            cmd << wxT(' ') << url;
             if (wxExecute(cmd))
                 return true;
         }

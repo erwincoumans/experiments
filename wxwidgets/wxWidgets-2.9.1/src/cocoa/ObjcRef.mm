@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by: 
 // Created:     2004/03/28
-// RCS-ID:      $Id: ObjcRef.mm 27405 2004-05-23 15:10:40Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott <dfe@cox.net>
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/cocoa/ObjcRef.h"

@@ -3,7 +3,7 @@
 // Purpose:     wxTextEntry implementation for wxMSW
 // Author:      Vadim Zeitlin
 // Created:     2007-09-26
-// RCS-ID:      $Id: textentry.cpp 59265 2009-03-02 13:31:29Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -77,6 +77,12 @@ public:
     wxIEnumString(const wxArrayString& strings) : m_strings(strings)
     {
         m_index = 0;
+    }
+
+    void ChangeStrings(const wxArrayString& strings)
+    {
+        m_strings = strings;
+        Reset();
     }
 
     DECLARE_IUNKNOWN_METHODS;
@@ -156,7 +162,7 @@ private:
     virtual ~wxIEnumString() { }
 
 
-    const wxArrayString m_strings;
+    wxArrayString m_strings;
     unsigned m_index;
 
     wxDECLARE_NO_COPY_CLASS(wxIEnumString);
@@ -305,7 +311,7 @@ bool wxTextEntry::AutoCompleteFileNames()
     static wxDynamicLibrary s_dllShlwapi;
     if ( s_pfnSHAutoComplete == (SHAutoComplete_t)-1 )
     {
-        if ( !s_dllShlwapi.Load(_T("shlwapi.dll"), wxDL_VERBATIM | wxDL_QUIET) )
+        if ( !s_dllShlwapi.Load(wxT("shlwapi.dll"), wxDL_VERBATIM | wxDL_QUIET) )
         {
             s_pfnSHAutoComplete = NULL;
         }
@@ -321,7 +327,7 @@ bool wxTextEntry::AutoCompleteFileNames()
     HRESULT hr = (*s_pfnSHAutoComplete)(GetEditHwnd(), SHACF_FILESYS_ONLY);
     if ( FAILED(hr) )
     {
-        wxLogApiError(_T("SHAutoComplete()"), hr);
+        wxLogApiError(wxT("SHAutoComplete()"), hr);
 
         return false;
     }
@@ -334,6 +340,14 @@ bool wxTextEntry::AutoCompleteFileNames()
 bool wxTextEntry::AutoComplete(const wxArrayString& choices)
 {
 #ifdef HAS_AUTOCOMPLETE
+    // if we had an old enumerator we must reuse it as IAutoComplete doesn't
+    // free it if we call Init() again (see #10968) -- and it's also simpler
+    if ( m_enumStrings )
+    {
+        m_enumStrings->ChangeStrings(choices);
+        return true;
+    }
+
     // create an object exposing IAutoComplete interface (don't go for
     // IAutoComplete2 immediately as, presumably, it might be not available on
     // older systems as otherwise why do we have both -- although in practice I
@@ -349,18 +363,18 @@ bool wxTextEntry::AutoComplete(const wxArrayString& choices)
                  );
     if ( FAILED(hr) )
     {
-        wxLogApiError(_T("CoCreateInstance(CLSID_AutoComplete)"), hr);
+        wxLogApiError(wxT("CoCreateInstance(CLSID_AutoComplete)"), hr);
         return false;
     }
 
     // associate it with our strings
-    wxIEnumString *pEnumString = new wxIEnumString(choices);
-    pEnumString->AddRef();
-    hr = pAutoComplete->Init(GetEditHwnd(), pEnumString, NULL, NULL);
-    pEnumString->Release();
+    m_enumStrings = new wxIEnumString(choices);
+    m_enumStrings->AddRef();
+    hr = pAutoComplete->Init(GetEditHwnd(), m_enumStrings, NULL, NULL);
+    m_enumStrings->Release();
     if ( FAILED(hr) )
     {
-        wxLogApiError(_T("IAutoComplete::Init"), hr);
+        wxLogApiError(wxT("IAutoComplete::Init"), hr);
         return false;
     }
 
@@ -436,8 +450,12 @@ bool wxTextEntry::SetHint(const wxString& hint)
     if ( wxUxThemeEngine::GetIfActive() )
     {
         // notice that this message always works with Unicode strings
+        //
+        // we always use TRUE for wParam to show the hint even when the window
+        // has focus, otherwise there would be no way to show the hint for the
+        // initially focused window
         if ( ::SendMessage(GetEditHwnd(), EM_SETCUEBANNER,
-                             0, (LPARAM)(const wchar_t *)hint.wc_str()) )
+                             TRUE, (LPARAM)(const wchar_t *)hint.wc_str()) )
             return true;
     }
 
@@ -451,7 +469,7 @@ wxString wxTextEntry::GetHint() const
         wchar_t buf[256];
         if ( ::SendMessage(GetEditHwnd(), EM_GETCUEBANNER,
                             (WPARAM)buf, WXSIZEOF(buf)) )
-            return buf;
+            return wxString(buf);
     }
 
     return wxTextEntryBase::GetHint();
@@ -459,5 +477,45 @@ wxString wxTextEntry::GetHint() const
 
 
 #endif // wxUSE_UXTHEME
+
+// ----------------------------------------------------------------------------
+// margins support
+// ----------------------------------------------------------------------------
+
+bool wxTextEntry::DoSetMargins(const wxPoint& margins)
+{
+#if !defined(__WXWINCE__)
+    bool res = true;
+
+    if ( margins.x != -1 )
+    {
+        // left margin
+        ::SendMessage(GetEditHwnd(), EM_SETMARGINS,
+                      EC_LEFTMARGIN, MAKELONG(margins.x, 0));
+    }
+
+    if ( margins.y != -1 )
+    {
+        res = false;
+    }
+
+    return res;
+#else
+    return false;
+#endif
+}
+
+wxPoint wxTextEntry::DoGetMargins() const
+{
+#if !defined(__WXWINCE__)
+    LRESULT lResult = ::SendMessage(GetEditHwnd(), EM_GETMARGINS,
+                                    0, 0);
+    int left = LOWORD(lResult);
+    int top = -1;
+    return wxPoint(left, top);
+#else
+    return wxPoint(-1, -1);
+#endif
+}
 
 #endif // wxUSE_TEXTCTRL || wxUSE_COMBOBOX

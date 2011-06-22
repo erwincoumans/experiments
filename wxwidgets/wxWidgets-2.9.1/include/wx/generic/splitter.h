@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: splitter.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,7 @@ public:
     void SetSplitMode(int mode)
     {
         wxASSERT_MSG( mode == wxSPLIT_VERTICAL || mode == wxSPLIT_HORIZONTAL,
-                      _T("invalid split mode") );
+                      wxT("invalid split mode") );
 
         m_splitMode = (wxSplitMode)mode;
     }
@@ -193,6 +193,9 @@ public:
     // Handles mouse events
     void OnMouseEvent(wxMouseEvent& ev);
 
+    // Aborts dragging mode
+    void OnMouseCaptureLost(wxMouseCaptureLostEvent& event);
+
     // Adjusts the panes
     void OnSize(wxSizeEvent& event);
 
@@ -275,16 +278,16 @@ protected:
     wxWindow*   m_windowOne;
     wxWindow*   m_windowTwo;
     int         m_dragMode;
-    int         m_oldX;
-    int         m_oldY;
+    int         m_oldX;         // current tracker position if not live mode
+    int         m_oldY;         // current tracker position if not live mode
     int         m_sashPosition; // Number of pixels from left or top
     double      m_sashGravity;
     int         m_sashSize;
     wxSize      m_lastSize;
     int         m_requestedSashPosition;
     int         m_sashPositionCurrent; // while dragging
-    int         m_firstX;
-    int         m_firstY;
+    wxPoint     m_ptStart;      // mouse position when dragging started
+    int         m_sashStart;    // sash position when dragging started
     int         m_minimumPaneSize;
     wxCursor    m_sashCursorWE;
     wxCursor    m_sashCursorNS;

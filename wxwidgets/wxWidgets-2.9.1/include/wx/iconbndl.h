@@ -4,7 +4,7 @@
 // Author:      Mattia barbon
 // Modified by:
 // Created:     23.03.02
-// RCS-ID:      $Id: iconbndl.h 59929 2009-03-29 21:19:40Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Mattia Barbon
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -13,8 +13,7 @@
 #define _WX_ICONBNDL_H_
 
 #include "wx/gdiobj.h"
-// for wxSize
-#include "wx/gdicmn.h"
+#include "wx/gdicmn.h"      // for wxSize
 #include "wx/icon.h"
 
 #include "wx/dynarray.h"
@@ -33,10 +32,12 @@ public:
     wxIconBundle();
 
     // initializes the bundle with the icon(s) found in the file
+#if wxUSE_STREAMS && wxUSE_IMAGE
+#if wxUSE_FFILE || wxUSE_FILE
     wxIconBundle(const wxString& file, wxBitmapType type = wxBITMAP_TYPE_ANY);
-#if wxUSE_STREAMS
+#endif // wxUSE_FFILE || wxUSE_FILE
     wxIconBundle(wxInputStream& stream, wxBitmapType type = wxBITMAP_TYPE_ANY);
-#endif
+#endif // wxUSE_STREAMS && wxUSE_IMAGE
 
     // initializes the bundle with a single icon
     wxIconBundle(const wxIcon& icon);
@@ -46,10 +47,12 @@ public:
     // adds all the icons contained in the file to the collection,
     // if the collection already contains icons with the same
     // width and height, they are replaced
+#if wxUSE_STREAMS && wxUSE_IMAGE
+#if wxUSE_FFILE || wxUSE_FILE
     void AddIcon(const wxString& file, wxBitmapType type = wxBITMAP_TYPE_ANY);
-#if wxUSE_STREAMS
+#endif // wxUSE_FFILE || wxUSE_FILE
     void AddIcon(wxInputStream& stream, wxBitmapType type = wxBITMAP_TYPE_ANY);
-#endif
+#endif // wxUSE_STREAMS && wxUSE_IMAGE
 
     // adds the icon to the collection, if the collection already
     // contains an icon with the same width and height, it is
@@ -84,6 +87,7 @@ public:
     bool IsEmpty() const { return GetIconCount() == 0; }
 
 #if WXWIN_COMPATIBILITY_2_8
+#if wxUSE_STREAMS && wxUSE_IMAGE && (wxUSE_FFILE || wxUSE_FILE)
     wxDEPRECATED( void AddIcon(const wxString& file, long type)
         {
             AddIcon(file, (wxBitmapType)type);
@@ -95,6 +99,7 @@ public:
             AddIcon(file, (wxBitmapType)type);
         }
     )
+#endif // wxUSE_STREAMS && wxUSE_IMAGE && (wxUSE_FFILE || wxUSE_FILE)
 #endif // WXWIN_COMPATIBILITY_2_8
 
 protected:

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: listctrl.h 58963 2009-02-17 11:24:19Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -103,7 +103,7 @@ class WXDLLIMPEXP_CORE wxListCtrl: public wxControl
   bool SetItemColumnImage(long item, long column, int image);
 
   // Gets the item text
-  wxString GetItemText(long item) const ;
+  wxString GetItemText(long item, int col = 0) const ;
 
   // Sets the item text
   void SetItemText(long item, const wxString& str) ;
@@ -217,7 +217,7 @@ class WXDLLIMPEXP_CORE wxListCtrl: public wxControl
   void ClearAll();
 
   // Edit the label
-  wxTextCtrl* EditLabel(long item, wxClassInfo* textControlClass = CLASSINFO(wxTextCtrl));
+  wxTextCtrl* EditLabel(long item, wxClassInfo* textControlClass = wxCLASSINFO(wxTextCtrl));
 
   // End label editing, optionally cancelling the edit
   bool EndEditLabel(bool cancel);
@@ -281,7 +281,7 @@ class WXDLLIMPEXP_CORE wxListCtrl: public wxControl
   // or zero if the two items are equivalent.
 
   // data is arbitrary data to be passed to the sort function.
-  bool SortItems(wxListCtrlCompare fn, long data);
+  bool SortItems(wxListCtrlCompare fn, wxIntPtr data);
 
   wxMacDataBrowserListCtrlControl* GetListPeer() const;
 
@@ -317,7 +317,7 @@ class WXDLLIMPEXP_CORE wxListCtrl: public wxControl
   void Command(wxCommandEvent& event) { ProcessCommand(event); };
 
   wxListCtrlCompare GetCompareFunc() { return m_compareFunc; };
-  long GetCompareFuncData() { return m_compareFuncData; };
+  wxIntPtr GetCompareFuncData() { return m_compareFuncData; };
 
 
   // public overrides needed for pimpl approach
@@ -325,6 +325,10 @@ class WXDLLIMPEXP_CORE wxListCtrl: public wxControl
   virtual bool SetForegroundColour(const wxColour& colour);
   virtual bool SetBackgroundColour(const wxColour& colour);
   virtual wxColour GetBackgroundColour() const;
+
+  virtual void Freeze ();
+  virtual void Thaw ();
+  virtual void Update ();
 
   // functions for editing/timer
   void OnRenameTimer();
@@ -391,7 +395,7 @@ protected:
   void*  m_macListCtrlEventHandler;
   void*  m_cgContext;
   wxListCtrlCompare m_compareFunc;
-  long m_compareFuncData;
+  wxIntPtr m_compareFuncData;
 
   wxTextCtrl*       m_textCtrl;        // The control used for editing a label
   wxImageList *     m_imageListNormal; // The image list for normal icons

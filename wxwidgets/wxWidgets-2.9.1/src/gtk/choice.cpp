@@ -2,7 +2,7 @@
 // Name:        src/gtk/choice.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: choice.cpp 58227 2009-01-19 13:55:27Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -129,7 +129,7 @@ int wxChoice::DoInsertItems(const wxArrayStringsAdapter & items,
     wxCHECK_MSG( m_widget != NULL, -1, wxT("invalid control") );
 
     wxASSERT_MSG( !IsSorted() || (pos == GetCount()),
-                 _T("In a sorted choice data could only be appended"));
+                 wxT("In a sorted choice data could only be appended"));
 
     const int count = items.GetCount();
 
@@ -187,7 +187,7 @@ void wxChoice::DoClear()
 void wxChoice::DoDeleteOneItem(unsigned int n)
 {
     wxCHECK_RET( m_widget != NULL, wxT("invalid control") );
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxChoice::Delete") );
+    wxCHECK_RET( IsValid(n), wxT("invalid index in wxChoice::Delete") );
 
     GtkComboBox* combobox = GTK_COMBO_BOX( m_widget );
     GtkTreeModel* model = gtk_combo_box_get_model( combobox );

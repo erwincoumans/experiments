@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2004-08-22
-// RCS-ID:      $Id: artgtk.cpp 60822 2009-05-30 17:02:46Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik, 2004
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -113,6 +113,7 @@ wxString wxArtIDToStock(const wxArtID& id)
     ART(wxART_UNDO,                                GTK_STOCK_UNDO)
     ART(wxART_REDO,                                GTK_STOCK_REDO)
 
+    ART(wxART_CLOSE,                               GTK_STOCK_CLOSE)
     ART(wxART_QUIT,                                GTK_STOCK_QUIT)
 
     ART(wxART_FIND,                                GTK_STOCK_FIND)

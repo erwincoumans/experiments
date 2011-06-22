@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     05/25/99
-// RCS-ID:      $Id: dc.h 59127 2009-02-25 12:08:12Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -702,6 +702,9 @@ private:
 class WXDLLIMPEXP_CORE wxDC : public wxObject
 {
 public:
+    // copy attributes (font, colours and writing direction) from another DC
+    void CopyAttributes(const wxDC& dc);
+
     virtual ~wxDC() { delete m_pimpl; }
 
     wxDCImpl *GetImpl()
@@ -1196,7 +1199,50 @@ public:
 #endif  // WXWIN_COMPATIBILITY_2_8
 
 #ifdef __WXMSW__
+    // GetHDC() is the simplest way to retrieve an HDC From a wxDC but only
+    // works if this wxDC is GDI-based and fails for GDI+ contexts (and
+    // anything else without HDC, e.g. wxPostScriptDC)
     WXHDC GetHDC() const;
+
+    // don't use these methods manually, use GetTempHDC() instead
+    virtual WXHDC AcquireHDC() { return GetHDC(); }
+    virtual void ReleaseHDC(WXHDC WXUNUSED(hdc)) { }
+
+    // helper class holding the result of GetTempHDC() with std::auto_ptr<>-like
+    // semantics, i.e. it is moved when copied
+    class TempHDC
+    {
+    public:
+        TempHDC(wxDC& dc)
+            : m_dc(dc),
+              m_hdc(dc.AcquireHDC())
+        {
+        }
+
+        TempHDC(const TempHDC& thdc)
+            : m_dc(thdc.m_dc),
+              m_hdc(thdc.m_hdc)
+        {
+            const_cast<TempHDC&>(thdc).m_hdc = 0;
+        }
+
+        ~TempHDC()
+        {
+            if ( m_hdc )
+                m_dc.ReleaseHDC(m_hdc);
+        }
+
+        WXHDC GetHDC() const { return m_hdc; }
+
+    private:
+        wxDC& m_dc;
+        WXHDC m_hdc;
+
+        wxDECLARE_NO_ASSIGN_CLASS(TempHDC);
+    };
+
+    // GetTempHDC() also works for wxGCDC (but still not for wxPostScriptDC &c)
+    TempHDC GetTempHDC() { return TempHDC(*this); }
 #endif // __WXMSW__
 
 protected:
@@ -1331,8 +1377,21 @@ private:
 class WXDLLIMPEXP_CORE wxDCFontChanger
 {
 public:
-    wxDCFontChanger(wxDC& dc, const wxFont& font) : m_dc(dc), m_fontOld(dc.GetFont())
+    wxDCFontChanger(wxDC& dc)
+        : m_dc(dc), m_fontOld()
     {
+    }
+
+    wxDCFontChanger(wxDC& dc, const wxFont& font)
+        : m_dc(dc), m_fontOld(dc.GetFont())
+    {
+        m_dc.SetFont(font);
+    }
+
+    void Set(const wxFont& font)
+    {
+        if ( !m_fontOld.Ok() )
+            m_fontOld = m_dc.GetFont();
         m_dc.SetFont(font);
     }
 

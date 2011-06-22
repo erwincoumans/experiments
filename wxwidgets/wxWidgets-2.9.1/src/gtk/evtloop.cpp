@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.07.01
-// RCS-ID:      $Id: evtloop.cpp 59587 2009-03-17 20:56:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -25,6 +25,7 @@
 #endif
 
 #include "wx/evtloop.h"
+#include "wx/evtloopsrc.h"
 
 #ifndef WX_PRECOMP
     #include "wx/app.h"
@@ -32,6 +33,7 @@
 #endif // WX_PRECOMP
 
 #include <gtk/gtk.h>
+#include <glib.h>
 
 // ============================================================================
 // wxEventLoop implementation
@@ -82,6 +84,84 @@ void wxGUIEventLoop::WakeUp()
 }
 
 // ----------------------------------------------------------------------------
+// wxEventLoop adding & removing sources
+// ----------------------------------------------------------------------------
+
+#if wxUSE_EVENTLOOP_SOURCE
+
+extern "C"
+{
+static gboolean wx_on_channel_event(GIOChannel *channel,
+                                    GIOCondition condition,
+                                    gpointer data)
+{
+    wxLogTrace(wxTRACE_EVT_SOURCE,
+               "wx_on_channel_event, fd=%d, condition=%08x",
+               g_io_channel_unix_get_fd(channel), condition);
+
+    wxEventLoopSourceHandler * const
+        handler = static_cast<wxEventLoopSourceHandler *>(data);
+
+    if (condition & G_IO_IN || condition & G_IO_PRI)
+        handler->OnReadWaiting();
+    if (condition & G_IO_OUT)
+        handler->OnWriteWaiting();
+    else if (condition & G_IO_ERR || condition & G_IO_NVAL)
+        handler->OnExceptionWaiting();
+
+    // we never want to remove source here, so always return true
+    return TRUE;
+}
+}
+
+wxEventLoopSource *
+wxGUIEventLoop::AddSourceForFD(int fd,
+                               wxEventLoopSourceHandler *handler,
+                               int flags)
+{
+    wxCHECK_MSG( fd != -1, NULL, "can't monitor invalid fd" );
+
+    int condition = 0;
+    if (flags & wxEVENT_SOURCE_INPUT)
+        condition |= G_IO_IN | G_IO_PRI;
+    if (flags & wxEVENT_SOURCE_OUTPUT)
+        condition |= G_IO_OUT;
+    if (flags & wxEVENT_SOURCE_EXCEPTION)
+        condition |= G_IO_ERR | G_IO_HUP | G_IO_NVAL;
+
+    GIOChannel* channel = g_io_channel_unix_new(fd);
+    const unsigned sourceId  = g_io_add_watch
+                               (
+                                channel,
+                                (GIOCondition)condition,
+                                &wx_on_channel_event,
+                                handler
+                               );
+    // it was ref'd by g_io_add_watch() so we can unref it here
+    g_io_channel_unref(channel);
+
+    if ( !sourceId )
+        return NULL;
+
+    wxLogTrace(wxTRACE_EVT_SOURCE,
+               "Adding event loop source for fd=%d with GTK id=%u",
+               fd, sourceId);
+
+
+    return new wxGTKEventLoopSource(sourceId, handler, flags);
+}
+
+wxGTKEventLoopSource::~wxGTKEventLoopSource()
+{
+    wxLogTrace(wxTRACE_EVT_SOURCE,
+               "Removing event loop source with GTK id=%u", m_sourceId);
+
+    g_source_remove(m_sourceId);
+}
+
+#endif // wxUSE_EVENTLOOP_SOURCE
+
+// ----------------------------------------------------------------------------
 // wxEventLoop message processing dispatching
 // ----------------------------------------------------------------------------
 
@@ -98,7 +178,7 @@ bool wxGUIEventLoop::Pending() const
 
 bool wxGUIEventLoop::Dispatch()
 {
-    wxCHECK_MSG( IsRunning(), false, _T("can't call Dispatch() if not running") );
+    wxCHECK_MSG( IsRunning(), false, wxT("can't call Dispatch() if not running") );
 
     // gtk_main_iteration() returns TRUE only if gtk_main_quit() was called
     return !gtk_main_iteration();
@@ -133,16 +213,17 @@ int wxGUIEventLoop::DispatchTimeout(unsigned long timeout)
 // YieldFor
 //-----------------------------------------------------------------------------
 
-static void wxgtk_main_do_event(GdkEvent *event, wxGUIEventLoop* evtloop)
+extern "C" {
+static void wxgtk_main_do_event(GdkEvent* event, void* data)
 {
     // categorize the GDK event according to wxEventCategory.
     // See http://library.gnome.org/devel/gdk/unstable/gdk-Events.html#GdkEventType
     // for more info.
-    
+
     // NOTE: GDK_* constants which were not present in the GDK2.0 can be tested for
     //       only at compile-time; when running the program (compiled with a recent GDK)
-    //       on a system with an older GDK lib we can be sure there won't be problems 
-    //       because event->type will never assume those values corresponding to 
+    //       on a system with an older GDK lib we can be sure there won't be problems
+    //       because event->type will never assume those values corresponding to
     //       new event types (since new event types are always added in GDK with non
     //       conflicting values for ABI compatibility).
 
@@ -210,12 +291,15 @@ static void wxgtk_main_do_event(GdkEvent *event, wxGUIEventLoop* evtloop)
         break;
     }
 
+    wxGUIEventLoop* evtloop = static_cast<wxGUIEventLoop*>(data);
+
     // is this event allowed now?
     if (evtloop->IsEventAllowedInsideYield(cat))
         gtk_main_do_event(event);         // process it now
     else if (event->type != GDK_NOTHING)
         evtloop->StoreGdkEventForLaterProcessing(gdk_event_copy(event));
             // process it later (but make a copy; the caller will free the event pointer)
+}
 }
 
 bool wxGUIEventLoop::YieldFor(long eventsToProcess)
@@ -245,7 +329,7 @@ bool wxGUIEventLoop::YieldFor(long eventsToProcess)
     //       and then call gtk_main_do_event()!
     //       In particular in this way we also process input from sources like
     //       GIOChannels (this is needed for e.g. wxGUIAppTraits::WaitForChild).
-    gdk_event_handler_set ((GdkEventFunc)wxgtk_main_do_event, this, NULL);
+    gdk_event_handler_set(wxgtk_main_do_event, this, NULL);
     while (Pending())   // avoid false positives from our idle source
         gtk_main_iteration();
     gdk_event_handler_set ((GdkEventFunc)gtk_main_do_event, NULL, NULL);

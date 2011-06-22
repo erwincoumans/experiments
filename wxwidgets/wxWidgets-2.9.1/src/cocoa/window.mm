@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/26
-// RCS-ID:      $Id: window.mm 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -1713,7 +1713,7 @@ int wxWindow::GetCharWidth() const
     return 5;
 }
 
-void wxWindow::GetTextExtent(const wxString& string, int *outX, int *outY,
+void wxWindow::DoGetTextExtent(const wxString& string, int *outX, int *outY,
         int *outDescent, int *outExternalLeading, const wxFont *inFont) const
 {
     // FIXME: This obviously ignores the window's font (if any) along with any size

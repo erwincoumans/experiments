@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/afterstd.h
+// Name:        wx/afterstd.h
 // Purpose:     #include after STL headers
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     07/07/03
-// RCS-ID:      $Id: afterstd.h 47644 2007-07-22 09:20:42Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,21 +17,10 @@
     #include "wx/msw/winundef.h"
 #endif
 
-#if defined(__VISUALC__)
-#pragma warning(default:4530)
-#endif
-
 // undo what we did in wx/beforestd.h
 #if defined(__VISUALC__) && __VISUALC__ <= 1201
     // MSVC 5 does not have this
     #if _MSC_VER > 1100
-        // don't restore this one for VC6, it gives it in each try/catch which is a
-        // bit annoying to say the least
-        #if _MSC_VER >= 0x1300
-            // unreachable code
-            #pragma warning(default:4702)
-        #endif // VC++ >= 7
-
         #pragma warning(pop)
     #else
         // 'expression' : signed/unsigned mismatch

@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.06.2003 (extracted from common/appcmn.cpp)
-// RCS-ID:      $Id: appbase.cpp 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -43,6 +43,7 @@
 #include "wx/filename.h"
 #include "wx/msgout.h"
 #include "wx/scopedptr.h"
+#include "wx/sysopt.h"
 #include "wx/tokenzr.h"
 #include "wx/thread.h"
 
@@ -115,6 +116,8 @@ wxAppInitializerFunction wxAppConsoleBase::ms_appInitFn = NULL;
 
 wxSocketManager *wxAppTraitsBase::ms_manager = NULL;
 
+WXDLLIMPEXP_DATA_BASE(wxList) wxPendingDelete;
+
 // ----------------------------------------------------------------------------
 // wxEventLoopPtr
 // ----------------------------------------------------------------------------
@@ -144,14 +147,17 @@ wxAppConsoleBase::wxAppConsoleBase()
     // In unicode mode the SetTraceMasks call can cause an apptraits to be
     // created, but since we are still in the constructor the wrong kind will
     // be created for GUI apps.  Destroy it so it can be created again later.
-    delete m_traits;
-    m_traits = NULL;
+    wxDELETE(m_traits);
 #endif
 #endif
 }
 
 wxAppConsoleBase::~wxAppConsoleBase()
 {
+    // we're being destroyed and using this object from now on may not work or
+    // even crash so don't leave dangling pointers to it
+    ms_appInstance = NULL;
+
     delete m_traits;
 }
 
@@ -159,21 +165,45 @@ wxAppConsoleBase::~wxAppConsoleBase()
 // initialization/cleanup
 // ----------------------------------------------------------------------------
 
-bool wxAppConsoleBase::Initialize(int& WXUNUSED(argc), wxChar **argv)
+bool wxAppConsoleBase::Initialize(int& WXUNUSED(argc), wxChar **WXUNUSED(argv))
 {
 #if wxUSE_INTL
     GetTraits()->SetLocale();
 #endif // wxUSE_INTL
 
+    return true;
+}
+
+wxString wxAppConsoleBase::GetAppName() const
+{
+    wxString name = m_appName;
 #ifndef __WXPALMOS__
-    if ( m_appName.empty() && argv && argv[0] )
+    if ( name.empty() )
     {
-        // the application name is, by default, the name of its executable file
-        wxFileName::SplitPath(argv[0], NULL, &m_appName, NULL);
+        if ( argv )
+        {
+            // the application name is, by default, the name of its executable file
+            wxFileName::SplitPath(argv[0], NULL, &name, NULL);
+        }
     }
 #endif // !__WXPALMOS__
+    return name;
+}
 
-    return true;
+wxString wxAppConsoleBase::GetAppDisplayName() const
+{
+    // use the explicitly provided display name, if any
+    if ( !m_appDisplayName.empty() )
+        return m_appDisplayName;
+
+    // if the application name was explicitly set, use it as is as capitalizing
+    // it won't always produce good results
+    if ( !m_appName.empty() )
+        return m_appName;
+
+    // if neither is set, use the capitalized version of the program file as
+    // it's the most reasonable default
+    return GetAppName().Capitalize();
 }
 
 wxEventLoopBase *wxAppConsoleBase::CreateMainLoop()
@@ -183,11 +213,7 @@ wxEventLoopBase *wxAppConsoleBase::CreateMainLoop()
 
 void wxAppConsoleBase::CleanUp()
 {
-    if ( m_mainLoop )
-    {
-        delete m_mainLoop;
-        m_mainLoop = NULL;
-    }
+    wxDELETE(m_mainLoop);
 }
 
 // ----------------------------------------------------------------------------
@@ -264,7 +290,7 @@ wxAppTraits *wxAppConsoleBase::GetTraits()
     {
         m_traits = CreateTraits();
 
-        wxASSERT_MSG( m_traits, _T("wxApp::CreateTraits() failed?") );
+        wxASSERT_MSG( m_traits, wxT("wxApp::CreateTraits() failed?") );
     }
 
     return m_traits;
@@ -325,15 +351,33 @@ bool wxAppConsoleBase::Yield(bool onlyIfNeeded)
 
 void wxAppConsoleBase::WakeUpIdle()
 {
-    if ( m_mainLoop )
-        m_mainLoop->WakeUp();
+    wxEventLoopBase * const loop = wxEventLoopBase::GetActive();
+
+    if ( loop )
+        loop->WakeUp();
 }
 
 bool wxAppConsoleBase::ProcessIdle()
 {
-    wxEventLoopBase * const loop = wxEventLoopBase::GetActive();
+    // synthesize an idle event and check if more of them are needed
+    wxIdleEvent event;
+    event.SetEventObject(this);
+    ProcessEvent(event);
 
-    return loop && loop->ProcessIdle();
+#if wxUSE_LOG
+    // flush the logged messages if any (do this after processing the events
+    // which could have logged new messages)
+    wxLog::FlushActive();
+#endif
+
+    return event.MoreRequested();
+}
+
+bool wxAppConsoleBase::UsesEventLoop() const
+{
+    // in console applications we don't know whether we're going to have an
+    // event loop so assume we won't -- unless we already have one running
+    return wxEventLoopBase::GetActive() != NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -428,43 +472,46 @@ void wxAppConsoleBase::ResumeProcessingOfPendingEvents()
 
 void wxAppConsoleBase::ProcessPendingEvents()
 {
-    if (!m_bDoPendingEventProcessing)
-        return;
-
-    wxENTER_CRIT_SECT(m_handlersWithPendingEventsLocker);
-
-    wxCHECK_RET( m_handlersWithPendingDelayedEvents.IsEmpty(),
-                 "this helper list should be empty" );
-
-    // iterate until the list becomes empty: the handlers remove themselves
-    // from it when they don't have any more pending events
-    while (!m_handlersWithPendingEvents.IsEmpty())
+    if ( m_bDoPendingEventProcessing )
     {
-        // In ProcessPendingEvents(), new handlers might be added
-        // and we can safely leave the critical section here.
-        wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
-
-        // NOTE: we always call ProcessPendingEvents() on the first event handler
-        //       with pending events because handlers auto-remove themselves
-        //       from this list (see RemovePendingEventHandler) if they have no
-        //       more pending events.
-        m_handlersWithPendingEvents[0]->ProcessPendingEvents();
-
         wxENTER_CRIT_SECT(m_handlersWithPendingEventsLocker);
+
+        wxCHECK_RET( m_handlersWithPendingDelayedEvents.IsEmpty(),
+                     "this helper list should be empty" );
+
+        // iterate until the list becomes empty: the handlers remove themselves
+        // from it when they don't have any more pending events
+        while (!m_handlersWithPendingEvents.IsEmpty())
+        {
+            // In ProcessPendingEvents(), new handlers might be added
+            // and we can safely leave the critical section here.
+            wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
+
+            // NOTE: we always call ProcessPendingEvents() on the first event handler
+            //       with pending events because handlers auto-remove themselves
+            //       from this list (see RemovePendingEventHandler) if they have no
+            //       more pending events.
+            m_handlersWithPendingEvents[0]->ProcessPendingEvents();
+
+            wxENTER_CRIT_SECT(m_handlersWithPendingEventsLocker);
+        }
+
+        // now the wxHandlersWithPendingEvents is surely empty; however some event
+        // handlers may have moved themselves into wxHandlersWithPendingDelayedEvents
+        // because of a selective wxYield call in progress.
+        // Now we need to move them back to wxHandlersWithPendingEvents so the next
+        // call to this function has the chance of processing them:
+        if (!m_handlersWithPendingDelayedEvents.IsEmpty())
+        {
+            WX_APPEND_ARRAY(m_handlersWithPendingEvents, m_handlersWithPendingDelayedEvents);
+            m_handlersWithPendingDelayedEvents.Clear();
+        }
+
+        wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
     }
 
-    // now the wxHandlersWithPendingEvents is surely empty; however some event
-    // handlers may have moved themselves into wxHandlersWithPendingDelayedEvents
-    // because of a selective wxYield call in progress.
-    // Now we need to move them back to wxHandlersWithPendingEvents so the next
-    // call to this function has the chance of processing them:
-    if (!m_handlersWithPendingDelayedEvents.IsEmpty())
-    {
-        WX_APPEND_ARRAY(m_handlersWithPendingEvents, m_handlersWithPendingDelayedEvents);
-        m_handlersWithPendingDelayedEvents.Clear();
-    }
-
-    wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
+    // Garbage collect all objects previously scheduled for destruction.
+    DeletePendingObjects();
 }
 
 void wxAppConsoleBase::DeletePendingEvents()
@@ -480,6 +527,50 @@ void wxAppConsoleBase::DeletePendingEvents()
     m_handlersWithPendingEvents.Clear();
 
     wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
+}
+
+// ----------------------------------------------------------------------------
+// delayed objects destruction
+// ----------------------------------------------------------------------------
+
+bool wxAppConsoleBase::IsScheduledForDestruction(wxObject *object) const
+{
+    return wxPendingDelete.Member(object);
+}
+
+void wxAppConsoleBase::ScheduleForDestruction(wxObject *object)
+{
+    if ( !UsesEventLoop() )
+    {
+        // we won't be able to delete it later so do it right now
+        delete object;
+        return;
+    }
+    //else: we either already have or will soon start an event loop
+
+    if ( !wxPendingDelete.Member(object) )
+        wxPendingDelete.Append(object);
+}
+
+void wxAppConsoleBase::DeletePendingObjects()
+{
+    wxList::compatibility_iterator node = wxPendingDelete.GetFirst();
+    while (node)
+    {
+        wxObject *obj = node->GetData();
+
+        // remove it from the list first so that if we get back here somehow
+        // during the object deletion (e.g. wxYield called from its dtor) we
+        // wouldn't try to delete it the second time
+        if ( wxPendingDelete.Member(obj) )
+            wxPendingDelete.Erase(node);
+
+        delete obj;
+
+        // Deleting one object may have deleted other pending
+        // objects, so start from beginning of list again.
+        node = wxPendingDelete.GetFirst();
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -503,7 +594,7 @@ void wxAppConsoleBase::CallEventHandler(wxEvtHandler *handler,
 {
     // If the functor holds a method then, for backward compatibility, call
     // HandleEvent():
-    wxEventFunction eventFunction = functor.GetMethod();
+    wxEventFunction eventFunction = functor.GetEvtMethod();
 
     if ( eventFunction )
         HandleEvent(handler, eventFunction, event);
@@ -645,7 +736,7 @@ bool wxAppConsoleBase::CheckBuildOptions(const char *optionsSignature,
         wxString progName = wxString::FromAscii(componentName);
         wxString msg;
 
-        msg.Printf(_T("Mismatch between the program and library build versions detected.\nThe library used %s,\nand %s used %s."),
+        msg.Printf(wxT("Mismatch between the program and library build versions detected.\nThe library used %s,\nand %s used %s."),
                    lib.c_str(), progName.c_str(), prog.c_str());
 
         wxLogFatalError(msg.c_str());
@@ -733,16 +824,6 @@ bool wxConsoleAppTraitsBase::HasStderr()
     return true;
 }
 
-void wxConsoleAppTraitsBase::ScheduleForDestroy(wxObject *object)
-{
-    delete object;
-}
-
-void wxConsoleAppTraitsBase::RemoveFromPendingDelete(wxObject * WXUNUSED(object))
-{
-    // nothing to do
-}
-
 // ----------------------------------------------------------------------------
 // wxAppTraits
 // ----------------------------------------------------------------------------
@@ -787,22 +868,19 @@ void WXDLLIMPEXP_BASE wxMutexGuiLeave()
 bool wxAppTraitsBase::ShowAssertDialog(const wxString& msgOriginal)
 {
 #if wxDEBUG_LEVEL
-    wxString msg = msgOriginal;
+    wxString msg;
 
 #if wxUSE_STACKWALKER
-#if !defined(__WXMSW__)
-    // on Unix stack frame generation may take some time, depending on the
-    // size of the executable mainly... warn the user that we are working
-    wxFprintf(stderr, wxT("[Debug] Generating a stack trace... please wait"));
-    fflush(stderr);
-#endif
-
     const wxString stackTrace = GetAssertStackTrace();
     if ( !stackTrace.empty() )
-        msg << _T("\n\nCall stack:\n") << stackTrace;
+    {
+        msg << wxT("\n\nCall stack:\n") << stackTrace;
+
+        wxMessageOutputDebug().Output(msg);
+    }
 #endif // wxUSE_STACKWALKER
 
-    return DoShowAssertDialog(msg);
+    return DoShowAssertDialog(msgOriginal + msg);
 #else // !wxDEBUG_LEVEL
     wxUnusedVar(msgOriginal);
 
@@ -814,6 +892,15 @@ bool wxAppTraitsBase::ShowAssertDialog(const wxString& msgOriginal)
 wxString wxAppTraitsBase::GetAssertStackTrace()
 {
 #if wxDEBUG_LEVEL
+
+#if !defined(__WXMSW__)
+    // on Unix stack frame generation may take some time, depending on the
+    // size of the executable mainly... warn the user that we are working
+    wxFprintf(stderr, "Collecting stack trace information, please wait...");
+    fflush(stderr);
+#endif // !__WXMSW__
+
+
     wxString stackTrace;
 
     class StackDump : public wxStackWalker
@@ -828,29 +915,29 @@ wxString wxAppTraitsBase::GetAssertStackTrace()
         {
             m_stackTrace << wxString::Format
                             (
-                              _T("[%02d] "),
+                              wxT("[%02d] "),
                               wx_truncate_cast(int, frame.GetLevel())
                             );
 
             wxString name = frame.GetName();
             if ( !name.empty() )
             {
-                m_stackTrace << wxString::Format(_T("%-40s"), name.c_str());
+                m_stackTrace << wxString::Format(wxT("%-40s"), name.c_str());
             }
             else
             {
-                m_stackTrace << wxString::Format(_T("%p"), frame.GetAddress());
+                m_stackTrace << wxString::Format(wxT("%p"), frame.GetAddress());
             }
 
             if ( frame.HasSourceLocation() )
             {
-                m_stackTrace << _T('\t')
+                m_stackTrace << wxT('\t')
                              << frame.GetFileName()
-                             << _T(':')
+                             << wxT(':')
                              << frame.GetLine();
             }
 
-            m_stackTrace << _T('\n');
+            m_stackTrace << wxT('\n');
         }
 
     private:
@@ -936,6 +1023,10 @@ wxDefaultAssertHandler(const wxString& file,
                        const wxString& cond,
                        const wxString& msg)
 {
+    // If this option is set, we should abort immediately when assert happens.
+    if ( wxSystemOptions::GetOptionInt("exit-on-assert") )
+        abort();
+
     // FIXME MT-unsafe
     static int s_bInAssert = 0;
 
@@ -964,6 +1055,11 @@ wxDefaultAssertHandler(const wxString& file,
 }
 
 wxAssertHandler_t wxTheAssertHandler = wxDefaultAssertHandler;
+
+void wxSetDefaultAssertHandler()
+{
+    wxTheAssertHandler = wxDefaultAssertHandler;
+}
 
 void wxOnAssert(const wxString& file,
                 int line,
@@ -1082,7 +1178,7 @@ bool DoShowAssertDialog(const wxString& msg)
               wxT("You can also choose [Cancel] to suppress ")
               wxT("further warnings.");
 
-    switch ( ::MessageBox(NULL, msgDlg.wx_str(), _T("wxWidgets Debug Alert"),
+    switch ( ::MessageBox(NULL, msgDlg.wx_str(), wxT("wxWidgets Debug Alert"),
                           MB_YESNOCANCEL | MB_ICONSTOP ) )
     {
         case IDYES:
@@ -1096,14 +1192,10 @@ bool DoShowAssertDialog(const wxString& msg)
         //case IDNO: nothing to do
     }
 #else // !__WXMSW__
-    wxFprintf(stderr, wxT("%s\n"), msg.c_str());
-    fflush(stderr);
-
-    // TODO: ask the user to enter "Y" or "N" on the console?
-    wxTrap();
+    wxUnusedVar(msg);
 #endif // __WXMSW__/!__WXMSW__
 
-    // continue with the asserts
+    // continue with the asserts by default
     return false;
 }
 
@@ -1129,16 +1221,16 @@ void ShowAssertDialog(const wxString& file,
 
     // add the function name, if any
     if ( !func.empty() )
-        msg << _T(" in ") << func << _T("()");
+        msg << wxT(" in ") << func << wxT("()");
 
     // and the message itself
     if ( !msgUser.empty() )
     {
-        msg << _T(": ") << msgUser;
+        msg << wxT(": ") << msgUser;
     }
     else // no message given
     {
-        msg << _T('.');
+        msg << wxT('.');
     }
 
 #if wxUSE_THREADS
@@ -1146,27 +1238,15 @@ void ShowAssertDialog(const wxString& file,
     // since dialogs cannot be displayed
     if ( !wxThread::IsMain() )
     {
-        msg += wxT(" [in child thread]");
-
-#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
-        msg << wxT("\r\n");
-        OutputDebugString(msg.wx_str());
-#else
-        // send to stderr
-        wxFprintf(stderr, wxT("%s\n"), msg.c_str());
-        fflush(stderr);
-#endif
-        // He-e-e-e-elp!! we're asserting in a child thread
-        wxTrap();
+        msg += wxString::Format(" [in thread %lx]", wxThread::GetCurrentId());
     }
-    else
 #endif // wxUSE_THREADS
+
+    // log the assert in any case
+    wxMessageOutputDebug().Output(msg);
 
     if ( !s_bNoAsserts )
     {
-        // send it to the normal log destination
-        wxLogDebug(_T("%s"), msg.c_str());
-
         if ( traits )
         {
             // delegate showing assert dialog (if possible) to that class

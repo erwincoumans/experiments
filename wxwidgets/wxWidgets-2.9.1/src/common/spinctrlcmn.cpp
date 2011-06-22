@@ -3,7 +3,7 @@
 // Purpose:     define wxSpinCtrl event types
 // Author:      Peter Most
 // Created:     01.11.08
-// RCS-ID:      $Id: spinctrlcmn.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008-2009 wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -5,7 +5,7 @@
 // Modified by:
 // Created:     8/17/99
 // Copyright:   (c) Robert Roebling
-// RCS-ID:      $Id: filedlgg.h 57114 2008-12-04 23:14:00Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -61,6 +61,10 @@ public:
 
     virtual ~wxGenericFileDialog();
 
+    virtual void SetDirectory(const wxString& dir)
+        { m_filectrl->SetDirectory(dir); }
+    virtual void SetFilename(const wxString& name)
+        { m_filectrl->SetFilename(name); }
     virtual void SetMessage(const wxString& message) { SetTitle(message); }
     virtual void SetPath(const wxString& path)
         { m_filectrl->SetPath(path); }

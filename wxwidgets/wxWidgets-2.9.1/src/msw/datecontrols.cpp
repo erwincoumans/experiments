@@ -3,7 +3,7 @@
 // Purpose:     implementation of date controls helper functions
 // Author:      Vadim Zeitlin
 // Created:     2008-04-04
-// RCS-ID:      $Id: datecontrols.cpp 57405 2008-12-17 22:19:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ bool wxMSWDateControls::CheckInitialization()
 
         // see comment in wxApp::GetComCtl32Version() explaining the
         // use of wxLoadedDLL
-        wxLoadedDLL dllComCtl32(_T("comctl32.dll"));
+        wxLoadedDLL dllComCtl32(wxT("comctl32.dll"));
         if ( dllComCtl32.IsLoaded() )
         {
             wxLogNull noLog;

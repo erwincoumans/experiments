@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Ryan Norton (UTF8 UNICODE)
 // Created:     2004-09-19
-// RCS-ID:      $Id: sstream.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@
 // ----------------------------------------------------------------------------
 
 // TODO:  Do we want to include the null char in the stream?  If so then
-// just add +1 to m_len in the ctor 
+// just add +1 to m_len in the ctor
 wxStringInputStream::wxStringInputStream(const wxString& s)
 #if wxUSE_UNICODE
     // FIXME-UTF8: use wxCharBufferWithLength if we have it
@@ -47,7 +47,7 @@ wxStringInputStream::wxStringInputStream(const wxString& s)
 #endif
 {
 #if wxUSE_UNICODE
-    wxASSERT_MSG(m_buf.data() != NULL, _T("Could not convert string to UTF8!"));
+    wxASSERT_MSG(m_buf.data() != NULL, wxT("Could not convert string to UTF8!"));
 #endif
     m_pos = 0;
 }
@@ -56,9 +56,9 @@ wxStringInputStream::wxStringInputStream(const wxString& s)
 // getlength
 // ----------------------------------------------------------------------------
 
-wxFileOffset wxStringInputStream::GetLength() const 
-{ 
-    return m_len; 
+wxFileOffset wxStringInputStream::GetLength() const
+{
+    return m_len;
 }
 
 // ----------------------------------------------------------------------------
@@ -82,7 +82,7 @@ wxFileOffset wxStringInputStream::OnSysSeek(wxFileOffset ofs, wxSeekMode mode)
             break;
 
         default:
-            wxFAIL_MSG( _T("invalid seek mode") );
+            wxFAIL_MSG( wxT("invalid seek mode") );
             return wxInvalidOffset;
     }
 

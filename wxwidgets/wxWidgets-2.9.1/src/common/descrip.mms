@@ -2,7 +2,7 @@
 #                                                                            *
 # Make file for VMS                                                          *
 # Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                             *
-# Date : 23 March 2009                                                       *
+# Date : 10 May 2010                                                         *
 #                                                                            *
 #*****************************************************************************
 .first
@@ -10,24 +10,26 @@
 
 .ifdef __WXMOTIF__
 CXX_DEFINE = /define=(__WXMOTIF__=1)/name=(as_is,short)\
-	   /assume=(nostdnew,noglobal_array_new)
-CC_DEFINE = /define=(__WXMOTIF__=1)/name=(as_is,short)
+	   /assume=(nostdnew,noglobal_array_new)/incl=[-.regex]
+CC_DEFINE = /define=(__WXMOTIF__=1)/name=(as_is,short)/incl=[-.regex]
 .else
 .ifdef __WXGTK__
 CXX_DEFINE = /define=(__WXGTK__=1)/float=ieee/name=(as_is,short)/ieee=denorm\
-	   /assume=(nostdnew,noglobal_array_new)
-CC_DEFINE = /define=(__WXGTK__=1)/float=ieee/name=(as_is,short)/ieee=denorm
+	   /assume=(nostdnew,noglobal_array_new)/incl=[-.regex]
+CC_DEFINE = /define=(__WXGTK__=1)/float=ieee/name=(as_is,short)/ieee=denorm\
+	/incl=[-.regex]
 .else
 .ifdef __WXGTK2__
 CXX_DEFINE = /define=(__WXGTK__=1,VMS_GTK2=1)/float=ieee/name=(as_is,short)/ieee=denorm\
-	   /assume=(nostdnew,noglobal_array_new)
-CC_DEFINE = /define=(__WXGTK__=1,VMS_GTK2=1)/float=ieee/name=(as_is,short)/ieee=denorm
+	   /assume=(nostdnew,noglobal_array_new)/incl=[-.regex]
+CC_DEFINE = /define=(__WXGTK__=1,VMS_GTK2=1)/float=ieee/name=(as_is,short)\
+	/ieee=denorm/incl=[-.regex]
 .else
 .ifdef __WXX11__
 CXX_DEFINE = /define=(__WXX11__=1,__WXUNIVERSAL__==1)/float=ieee\
-	/name=(as_is,short)/assume=(nostdnew,noglobal_array_new)
+	/name=(as_is,short)/assume=(nostdnew,noglobal_array_new)/incl=[-.regex]
 CC_DEFINE = /define=(__WXX11__=1,__WXUNIVERSAL__==1)/float=ieee\
-	/name=(as_is,short)
+	/name=(as_is,short)/incl=[-.regex]
 .else
 CXX_DEFINE =
 CC_DEFINE =
@@ -212,14 +214,17 @@ OBJECTS2=tbarbase.obj,srchcmn.obj,\
 		listctrlcmn.obj,socketiohandler.obj,fdiodispatcher.obj,\
 		selectdispatcher.obj,overlaycmn.obj,windowid.obj,sstream.obj,\
 		wrapsizer.obj,headerctrlcmn.obj,headercolcmn.obj,\
-		rearrangectrl.obj,spinctrlcmn.obj,datetimefmt.obj,xlocale.obj
+		rearrangectrl.obj,spinctrlcmn.obj,datetimefmt.obj,xlocale.obj,\
+		regex.obj,any.obj,archive.obj,fs_arc.obj,arcall.obj,\
+		arcfind.obj,tarstrm.obj,datavcmn.obj,debugrpt.obj,\
+		translation.obj,languageinfo.obj,filehistorycmn.obj
 
 OBJECTS_MOTIF=radiocmn.obj,combocmn.obj
 
 OBJECTS_X11=accesscmn.obj,dndcmn.obj,dpycmn.obj,dseldlg.obj,\
 	dynload.obj,effects.obj,fddlgcmn.obj,fs_mem.obj,\
 	gbsizer.obj,geometry.obj,matrix.obj,radiocmn.obj,\
-	regex.obj,taskbarcmn.obj,xti.obj,xtistrm.obj,xtixml.obj,\
+	taskbarcmn.obj,xti.obj,xtistrm.obj,xtixml.obj,\
 	combocmn.obj
 
 
@@ -229,6 +234,7 @@ SOURCES = \
 		accelcmn.cpp,\
 		anidecod.cpp,\
 		animatecmn.cpp,\
+		any.cpp,\
 		appbase.cpp,\
 		appcmn.cpp,\
 		arrstr.cpp,\
@@ -409,7 +415,8 @@ SOURCES = \
 		xti.cpp,\
 		xtistrm.cpp,\
 		xtixml.cpp,\
-		wrapsizer.cpp
+		wrapsizer.cpp,archive.cpp,fs_arc.cpp,arcall.cpp,arcfind.cpp,\
+		tarstrm.cpp,datavcmn.cpp,debugrpt.cpp
 
 all : $(SOURCES)
 	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)
@@ -459,6 +466,7 @@ $(OBJECTS_MOTIF) : [--.include.wx]setup.h
 accelcmn.obj : accelcmn.cpp
 anidecod.obj : anidecod.cpp
 animatecmn.obj : animatecmn.cpp
+any.obj : any.cpp
 appbase.obj : appbase.cpp
 appcmn.obj : appcmn.cpp
 arrstr.obj : arrstr.cpp
@@ -525,6 +533,8 @@ hash.obj : hash.cpp
 hashmap.obj : hashmap.cpp
 helpbase.obj : helpbase.cpp
 http.obj : http.cpp
+	cxx$(CXXFLAGS)$(CXX_DEFINE)/warn=disable=(UNSCOMZER)/obj=http.obj \
+	http.cpp
 hyperlnkcmn.obj : hyperlnkcmn.cpp
 iconbndl.obj : iconbndl.cpp
 init.obj : init.cpp
@@ -649,3 +659,13 @@ rearrangectrl.obj : rearrangectrl.cpp
 spinctrlcmn.obj : spinctrlcmn.cpp
 datetimefmt.obj : datetimefmt.cpp
 xlocale.obj : xlocale.cpp
+archive.obj : archive.cpp
+fs_arc.obj : fs_arc.cpp
+arcall.obj : arcall.cpp
+arcfind.obj : arcfind.cpp
+tarstrm.obj : tarstrm.cpp
+datavcmn.obj : datavcmn.cpp
+debugrpt.obj : debugrpt.cpp
+translation.obj : translation.cpp
+languageinfo.obj : languageinfo.cpp
+filehistorycmn.obj : filehistorycmn.cpp

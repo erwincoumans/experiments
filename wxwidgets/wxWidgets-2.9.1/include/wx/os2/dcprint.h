@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/12/99
-// RCS-ID:      $Id: dcprint.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: frame.cpp 58401 2009-01-25 15:12:21Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -78,11 +78,11 @@ wxPoint wxFrame::GetClientAreaOrigin() const
         int w, h;
         toolbar->GetSize(&w, &h);
 
-        if ( toolbar->GetWindowStyleFlag() & wxTB_VERTICAL )
+        if ( toolbar->HasFlag(wxTB_LEFT) )
         {
             pt.x += w;
         }
-        else
+        else if ( HasFlag(wxTB_TOP) )
         {
 #if !wxOSX_USE_NATIVE_TOOLBAR
             pt.y += h;
@@ -231,9 +231,6 @@ void wxFrame::HandleResized( double timestampsec )
 #if wxUSE_MENUS
 void wxFrame::DetachMenuBar()
 {
-    if ( m_frameMenuBar )
-        m_frameMenuBar->UnsetInvokingWindow();
-
     wxFrameBase::DetachMenuBar();
 }
 
@@ -257,7 +254,6 @@ void wxFrame::AttachMenuBar( wxMenuBar *menuBar )
 
     if (m_frameMenuBar)
     {
-        m_frameMenuBar->SetInvokingWindow( this );
         if (makeCurrent)
             m_frameMenuBar->MacInstallMenuBar();
     }
@@ -337,16 +333,19 @@ void wxFrame::SetToolBar(wxToolBar *toolbar)
     if ( m_frameToolBar == toolbar )
         return ;
 
+#ifndef __WXOSX_IPHONE__
 #if wxOSX_USE_NATIVE_TOOLBAR
     if ( m_frameToolBar )
         m_frameToolBar->MacInstallNativeToolbar( false ) ;
 #endif
-
+#endif
     m_frameToolBar = toolbar ;
 
+#ifndef __WXOSX_IPHONE__
 #if wxOSX_USE_NATIVE_TOOLBAR
     if ( toolbar )
         toolbar->MacInstallNativeToolbar( true ) ;
+#endif
 #endif
 }
 
@@ -373,6 +372,12 @@ void wxFrame::PositionToolBar()
         GetStatusBar()->GetClientSize(&statusX, &statusY);
         ch -= statusY;
     }
+#endif
+
+#ifdef __WXOSX_IPHONE__
+    // TODO integrate this in a better way, on iphone the status bar is not a child of the content view
+    // but the toolbar is
+    ch -= 20;
 #endif
 
     if (GetToolBar())

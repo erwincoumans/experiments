@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     23.09.98
-// RCS-ID:      $Id: mimetype.h 54448 2008-07-01 09:28:08Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +79,7 @@ protected:
 
     wxString GetCommand(const wxString &verb, size_t nIndex) const;
 
-    // Read XDG *.desktop file 
+    // Read XDG *.desktop file
     void LoadXDGApp(const wxString& filename);
     // Scan XDG directory
     void LoadXDGAppsFilesFromDir(const wxString& dirname);
@@ -93,7 +93,7 @@ protected:
                       wxMimeTypeCommands *entry,
                       const wxArrayString& strExtensions,
                       const wxString& strDesc,
-                      bool replaceExisting = TRUE);
+                      bool replaceExisting = true);
     virtual bool DoAssociation(const wxString& strType,
                        const wxString& strIcon,
                        wxMimeTypeCommands *entry,
@@ -120,12 +120,12 @@ public:
     // accessors
     bool GetExtensions(wxArrayString& extensions);
     bool GetMimeType(wxString *mimeType) const
-        { *mimeType = m_manager->m_aTypes[m_index[0]]; return TRUE; }
+        { *mimeType = m_manager->m_aTypes[m_index[0]]; return true; }
     bool GetMimeTypes(wxArrayString& mimeTypes) const;
     bool GetIcon(wxIconLocation *iconLoc) const;
 
     bool GetDescription(wxString *desc) const
-        { *desc = m_manager->m_aDescriptions[m_index[0]]; return TRUE; }
+        { *desc = m_manager->m_aDescriptions[m_index[0]]; return true; }
 
     bool GetOpenCommand(wxString *openCmd,
                         const wxFileType::MessageParameters& params) const
@@ -155,7 +155,7 @@ public:
 
     // set an arbitrary command, ask confirmation if it already exists and
     // overwriteprompt is TRUE
-    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = TRUE);
+    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = true);
     bool SetDefaultIcon(const wxString& strIcon = wxEmptyString, int index = 0);
 
 private:

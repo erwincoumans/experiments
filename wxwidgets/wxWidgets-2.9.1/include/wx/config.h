@@ -5,18 +5,16 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Julian Smart
-// RCS-ID:      $Id: config.h 59405 2009-03-07 14:03:45Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_CONFIG_H_BASE_
 #define _WX_CONFIG_H_BASE_
 
-#include "wx/defs.h"
+#include "wx/confbase.h"
 
 #if wxUSE_CONFIG
-
-#include "wx/confbase.h"
 
 // ----------------------------------------------------------------------------
 // define the native wxConfigBase implementation

@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2008-08-24
-// RCS-ID:      $Id: propgridpagestate.h 58884 2009-02-13 16:15:12Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_PROPGRID_PROPGRIDPAGESTATE_H_
@@ -23,25 +23,59 @@
     A return value from wxPropertyGrid::HitTest(),
     contains all you need to know about an arbitrary location on the grid.
 */
-struct WXDLLIMPEXP_PROPGRID wxPropertyGridHitTestResult
+class WXDLLIMPEXP_PROPGRID wxPropertyGridHitTestResult
 {
     friend class wxPropertyGridPageState;
 public:
+    wxPropertyGridHitTestResult()
+    {
+        m_property = NULL;
+        m_column = -1;
+        m_splitter = -1;
+        m_splitterHitOffset = 0;
+    }
 
-    wxPGProperty* GetProperty() const { return property; }
+    ~wxPropertyGridHitTestResult()
+    {
+    }
 
-    /** Column. -1 for margin. */
-    int             column;
+    /**
+        Returns column hit. -1 for margin.
+    */
+    int GetColumn() const { return m_column; }
 
-    /** Index of splitter hit, -1 for none. */
-    int             splitter;
+    /**
+        Returns property hit. NULL if empty space below
+        properties was hit instead.
+    */
+    wxPGProperty* GetProperty() const
+    {
+        return m_property;
+    }
 
-    /** If splitter hit, offset to that */
-    int             splitterHitOffset;
+    /**
+        Returns index of splitter hit, -1 for none.
+    */
+    int GetSplitter() const { return m_splitter; }
+
+    /**
+        If splitter hit, then this member function
+        returns offset to the exact splitter position.
+    */
+    int GetSplitterHitOffset() const { return m_splitterHitOffset; }
 
 private:
     /** Property. NULL if empty space below properties was hit */
-    wxPGProperty*   property;
+    wxPGProperty*   m_property;
+
+    /** Column. -1 for margin. */
+    int             m_column;
+
+    /** Index of splitter hit, -1 for none. */
+    int             m_splitter;
+
+    /** If splitter hit, offset to that */
+    int             m_splitterHitOffset;
 };
 
 // -----------------------------------------------------------------------
@@ -314,28 +348,16 @@ protected:
 
 /** Base class to derive new viterators.
 */
-class WXDLLIMPEXP_PROPGRID wxPGVIteratorBase
+class WXDLLIMPEXP_PROPGRID wxPGVIteratorBase : public wxObjectRefData
 {
     friend class wxPGVIterator;
 public:
-    wxPGVIteratorBase() { m_refCount = 1; }
+    wxPGVIteratorBase() { }
     virtual void Next() = 0;
-    void IncRef()
-    {
-        m_refCount++;
-    }
-    void DecRef()
-    {
-        m_refCount--;
-        if ( m_refCount <= 0 )
-            delete this;
-    }
 protected:
     virtual ~wxPGVIteratorBase() { }
 
     wxPropertyGridIterator  m_it;
-private:
-    int     m_refCount;
 };
 
 /** @class wxPGVIterator
@@ -357,7 +379,6 @@ public:
         m_pIt = it.m_pIt;
         m_pIt->IncRef();
     }
-#ifndef SWIG
     const wxPGVIterator& operator=( const wxPGVIterator& it )
     {
         if (this != &it)
@@ -368,7 +389,6 @@ public:
         }
         return *this;
     }
-#endif
     void Next() { m_pIt->Next(); }
     bool AtEnd() const { return m_pIt->m_it.AtEnd(); }
     wxPGProperty* GetProperty() const { return m_pIt->m_it.GetProperty(); }
@@ -377,9 +397,6 @@ protected:
 };
 
 // -----------------------------------------------------------------------
-
-#ifndef SWIG
-// We won't need this class from wxPython
 
 /** @class wxPropertyGridPageState
 
@@ -441,8 +458,7 @@ public:
     */
     virtual void DoSetSplitterPosition( int pos,
                                         int splitterColumn = 0,
-                                        bool allPages = false,
-                                        bool fromAutoCenter = false );
+                                        int flags = 0 );
 
     bool EnableCategories( bool enable );
 
@@ -487,11 +503,6 @@ public:
         return (unsigned int) m_colWidths.size();
     }
 
-    wxPGProperty* GetSelection() const
-    {
-        return m_selected;
-    }
-
     int GetColumnMinWidth( int column ) const;
 
     int GetColumnWidth( unsigned int column ) const
@@ -511,6 +522,39 @@ public:
     {
         return ((wxPropertyGridPageState*)this)->GetLastItem(flags);
     }
+
+    /**
+        Returns currently selected property.
+    */
+    wxPGProperty* GetSelection() const
+    {
+        if ( m_selection.size() == 0 )
+            return NULL;
+        return m_selection[0];
+    }
+
+    void DoSetSelection( wxPGProperty* prop )
+    {
+        m_selection.clear();
+        if ( prop )
+            m_selection.push_back(prop);
+    }
+
+    bool DoClearSelection()
+    {
+        return DoSelectProperty(NULL);
+    }
+
+    void DoRemoveFromSelection( wxPGProperty* prop );
+
+    void DoSetColumnProportion( unsigned int column, int proportion );
+
+    int DoGetColumnProportion( unsigned int column ) const
+    {
+        return m_columnProportions[column];
+    }
+
+    void ResetColumnSizes( int setSplitterFlags );
 
     wxPropertyCategory* GetPropertyCategory( const wxPGProperty* p ) const;
 
@@ -602,8 +646,6 @@ public:
 
     bool PrepareAfterItemsAdded();
 
-    void SetSelection( wxPGProperty* p ) { m_selected = p; }
-
     /** Called after virtual height needs to be recalculated.
     */
     void VirtualHeightChanged()
@@ -617,13 +659,10 @@ public:
     /** Returns property by its name. */
     wxPGProperty* BaseGetPropertyByName( const wxString& name ) const;
 
-    void DoClearSelection()
-    {
-        m_selected = NULL;
-    }
-
     /** Called in, for example, wxPropertyGrid::Clear. */
     void DoClear();
+
+    bool DoIsPropertySelected( wxPGProperty* prop ) const;
 
     bool DoCollapse( wxPGProperty* p );
 
@@ -632,6 +671,11 @@ public:
     void CalculateFontAndBitmapStuff( int vspacing );
 
 protected:
+
+    // Utility to check if two properties are visibly next to each other
+    bool ArePropertiesAdjacent( wxPGProperty* prop1,
+                                wxPGProperty* prop2,
+                                int iterFlags = wxPG_ITERATE_VISIBLE ) const;
 
     int DoGetSplitterPosition( int splitterIndex = 0 ) const;
 
@@ -666,13 +710,19 @@ protected:
     /** List of column widths (first column does not include margin). */
     wxArrayInt                  m_colWidths;
 
+    /** List of indices of columns the user can edit by clicking it. */
+    wxArrayInt                  m_editableColumns;
+
+    /** Column proportions */
+    wxArrayInt                  m_columnProportions;
+
     double                      m_fSplitterX;
 
     /** Most recently added category. */
     wxPropertyCategory*         m_currentCategory;
 
-    /** Pointer to selected property. */
-    wxPGProperty*               m_selected;
+    /** Array of selected property. */
+    wxArrayPGProperty           m_selection;
 
     /** Virtual width. */
     int                         m_width;
@@ -694,12 +744,16 @@ protected:
 
     unsigned char               m_vhCalcPending;
 
+    /** True if splitter has been pre-set by the application. */
+    bool                        m_isSplitterPreSet;
+
+    /** Used to (temporarily) disable splitter centering. */
+    bool                        m_dontCenterSplitter;
+
 private:
     /** Only inits arrays, doesn't migrate things or such. */
     void InitNonCatMode();
 };
-
-#endif // #ifndef SWIG
 
 // -----------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-/* $Id: bmp2tiff.c 47655 2007-07-22 15:36:51Z VZ $
+/* $Id$
  *
  * Project:  libtiff tools
  * Purpose:  Convert Windows BMP files in TIFF.

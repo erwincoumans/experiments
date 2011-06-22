@@ -3,7 +3,7 @@
 // Purpose:     declares wxIf<> metaprogramming construct
 // Author:      Vaclav Slavik
 // Created:     2008-01-22
-// RCS-ID:      $Id: if.h 51471 2008-01-31 11:26:52Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ struct wxIfImpl<false>
 
 } // namespace wxPrivate
 
-// wxIf<> template defines nested type "value" which is the same as 
+// wxIf<> template defines nested type "value" which is the same as
 // TTrue if the condition Cond (boolean compile-time constant) was met and
 // TFalse if it wasn't.
 //

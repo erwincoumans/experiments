@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: statbox.cpp 52851 2008-03-27 13:03:02Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -259,7 +259,7 @@ SubtractRectFromRgn(HRGN hrgn, int left, int top, int right, int bottom)
     AutoHRGN hrgnRect(::CreateRectRgn(left, top, right, bottom));
     if ( !hrgnRect )
     {
-        wxLogLastError(_T("CreateRectRgn()"));
+        wxLogLastError(wxT("CreateRectRgn()"));
         return;
     }
 
@@ -363,16 +363,15 @@ void wxStaticBox::PaintBackground(wxDC& dc, const RECT& rc)
     //     we did it
     //  3. this is backwards compatible behaviour and some people rely on it,
     //     see http://groups.google.com/groups?selm=4252E932.3080801%40able.es
-    wxWindow *parent = GetParent();
     wxMSWDCImpl *impl = (wxMSWDCImpl*) dc.GetImpl();
-    HBRUSH hbr = (HBRUSH)parent->MSWGetBgBrush(impl->GetHDC(), GetHWND());
+    HBRUSH hbr = MSWGetBgBrush(impl->GetHDC());
 
     // if there is no special brush for painting this control, just use the
     // solid background colour
     wxBrush brush;
     if ( !hbr )
     {
-        brush = wxBrush(parent->GetBackgroundColour());
+        brush = wxBrush(GetParent()->GetBackgroundColour());
         hbr = GetHbrushOf(brush);
     }
 

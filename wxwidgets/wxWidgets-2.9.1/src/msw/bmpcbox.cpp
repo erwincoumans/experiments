@@ -3,7 +3,7 @@
 // Purpose:     wxBitmapComboBox
 // Author:      Jaakko Salli
 // Created:     2008-04-06
-// RCS-ID:      $Id: bmpcbox.cpp 58225 2009-01-19 13:30:34Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -183,6 +183,20 @@ wxBitmapComboBox::~wxBitmapComboBox()
     Clear();
 }
 
+wxSize wxBitmapComboBox::DoGetBestSize() const
+{
+    wxSize best = wxComboBox::DoGetBestSize();
+    wxSize bitmapSize = GetBitmapSize();
+
+    wxCoord useHeightBitmap = EDIT_HEIGHT_FROM_CHAR_HEIGHT(bitmapSize.y);
+    if ( best.y < useHeightBitmap )
+    {
+        best.y = useHeightBitmap;
+        CacheBestSize(best);
+    }
+    return best;
+}
+
 // ----------------------------------------------------------------------------
 // Item manipulation
 // ----------------------------------------------------------------------------
@@ -253,6 +267,8 @@ int wxBitmapComboBox::DoInsertItems(const wxArrayStringsAdapter & items,
     const unsigned int numItems = items.GetCount();
     const unsigned int countNew = GetCount() + numItems;
 
+    wxASSERT( numItems == 1 || !HasFlag(wxCB_SORT) );  // Sanity check
+
     m_bitmaps.Alloc(countNew);
 
     for ( unsigned int i = 0; i < numItems; i++ )
@@ -267,6 +283,14 @@ int wxBitmapComboBox::DoInsertItems(const wxArrayStringsAdapter & items,
     {
         for ( int i = numItems-1; i >= 0; i-- )
             BCBDoDeleteOneItem(pos + i);
+    }
+    else if ( ((unsigned int)index) != pos )
+    {
+        // Move pre-inserted empty bitmap into correct position
+        // (usually happens when combo box has wxCB_SORT style)
+        wxBitmap* bmp = static_cast<wxBitmap*>(m_bitmaps[pos]);
+        m_bitmaps.RemoveAt(pos);
+        m_bitmaps.Insert(bmp, index);
     }
 
     return index;
@@ -284,7 +308,7 @@ bool wxBitmapComboBox::OnAddBitmap(const wxBitmap& bitmap)
 
         return true;
     }
-    
+
     return false;
 }
 
@@ -341,7 +365,7 @@ bool wxBitmapComboBox::MSWOnDraw(WXDRAWITEMSTRUCT *item)
     if ( pos == -1 )
         return FALSE;
 
-    int flags = 0;                
+    int flags = 0;
     if ( lpDrawItem->itemState & ODS_COMBOBOXEDIT )
         flags |= wxODCB_PAINTING_CONTROL;
     if ( lpDrawItem->itemState & ODS_SELECTED )

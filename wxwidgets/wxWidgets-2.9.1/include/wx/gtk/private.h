@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     12.03.02
-// RCS-ID:      $Id: private.h 58299 2009-01-22 14:09:32Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -85,25 +85,6 @@ extern const gchar *wx_pango_version_check(int major, int minor, int micro);
     #define wxGTK_CONV_BACK_FONT(s, font) wxConvertFromGTK((s), (font))
     #define wxGTK_CONV_BACK_SYS(s) wxConvertFromGTK((s))
 #endif
-
-// Some deprecated GTK+ prototypes we still use often
-// FIXME: Don't use them if possible.
-extern "C" {
-
-// Deprecated since GTK+-1.3.7:
-// Trivial wrapper around gtk_window_move, with some side effects we seem to rely on
-void gtk_widget_set_uposition (GtkWidget *widget,
-                               gint      x,
-                               gint      y);
-
-// We rely on the allow_shrink parameter in one place
-void gtk_window_set_policy (GtkWindow *window,
-                            gint       allow_shrink,
-                            gint       allow_grow,
-                            gint       auto_shrink);
-
-} // extern "C"
-
 
 // ----------------------------------------------------------------------------
 // various private helper functions

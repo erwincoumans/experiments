@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Created:     26/04/97
 // Modified by: Vadim Zeitlin to use wxSockAddressImpl on 2008-12-28
-// RCS-ID:      $Id: sckaddr.cpp 59945 2009-03-30 18:28:42Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -31,6 +31,7 @@
     #include "wx/object.h"
     #include "wx/log.h"
     #include "wx/intl.h"
+    #include "wx/thread.h"
 
     #include <stdio.h>
     #include <stdlib.h>
@@ -734,7 +735,7 @@ int wxSockAddress::GetAddressDataLen() const
 
 void wxSockAddress::Init()
 {
-    if ( !wxSocketBase::IsInitialized() )
+    if ( wxIsMainThread() && !wxSocketBase::IsInitialized() )
     {
         // we must do it before using any socket functions
         (void)wxSocketBase::Initialize();

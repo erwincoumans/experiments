@@ -2,7 +2,7 @@
 // Name:        src/generic/imaglist.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: imaglist.cpp 59036 2009-02-19 20:26:00Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -65,8 +65,8 @@ int wxGenericImageList::Add( const wxBitmap &bitmap )
 {
     wxASSERT_MSG( (bitmap.GetWidth() >= m_width && bitmap.GetHeight() == m_height)
                   || (m_width == 0 && m_height == 0),
-                  _T("invalid bitmap size in wxImageList: this might work ")
-                  _T("on this platform but definitely won't under Windows.") );
+                  wxT("invalid bitmap size in wxImageList: this might work ")
+                  wxT("on this platform but definitely won't under Windows.") );
 
     const int index = int(m_images.GetCount());
 

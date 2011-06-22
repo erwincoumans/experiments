@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: combo.cpp 58229 2009-01-19 14:40:13Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -117,9 +117,7 @@
 #define NATIVE_TEXT_INDENT_XP       4
 #define NATIVE_TEXT_INDENT_CLASSIC  2
 
-#define TEXTCTRLXADJUST_XP          1
 #define TEXTCTRLYADJUST_XP          3
-#define TEXTCTRLXADJUST_CLASSIC     1
 #define TEXTCTRLYADJUST_CLASSIC     3
 
 #define COMBOBOX_ANIMATION_RESOLUTION   10
@@ -223,60 +221,21 @@ wxComboCtrl::~wxComboCtrl()
 {
 }
 
-void wxComboCtrl::OnThemeChange()
-{
-    // there doesn't seem to be any way to get the text colour using themes
-    // API: TMT_TEXTCOLOR doesn't work neither for EDIT nor COMBOBOX
-    SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-#if wxUSE_UXTHEME
-    wxUxThemeEngine * const theme = wxUxThemeEngine::GetIfActive();
-    if ( theme )
-    {
-        // NB: use EDIT, not COMBOBOX (the latter works in XP but not Vista)
-        wxUxThemeHandle hTheme(this, L"EDIT");
-        COLORREF col;
-        HRESULT hr = theme->GetThemeColor
-                            (
-                                hTheme,
-                                EP_EDITTEXT,
-                                ETS_NORMAL,
-                                TMT_FILLCOLOR,
-                                &col
-                            );
-        if ( SUCCEEDED(hr) )
-        {
-            SetBackgroundColour(wxRGBToColour(col));
-
-            // skip the call below
-            return;
-        }
-
-        wxLogApiError(_T("GetThemeColor(EDIT, ETS_NORMAL, TMT_FILLCOLOR)"), hr);
-    }
-#endif
-
-    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-}
-
 void wxComboCtrl::OnResize()
 {
     //
     // Recalculates button and textctrl areas
 
-    int textCtrlXAdjust;
     int textCtrlYAdjust;
 
 #if wxUSE_UXTHEME
     if ( wxUxThemeEngine::GetIfActive() )
     {
-        textCtrlXAdjust = TEXTCTRLXADJUST_XP;
         textCtrlYAdjust = TEXTCTRLYADJUST_XP;
     }
     else
 #endif
     {
-        textCtrlXAdjust = TEXTCTRLXADJUST_CLASSIC;
         textCtrlYAdjust = TEXTCTRLYADJUST_CLASSIC;
     }
 
@@ -286,7 +245,7 @@ void wxComboCtrl::OnResize()
     CalculateAreas(btnWidth);
 
     // Position textctrl using standard routine
-    PositionTextCtrl(textCtrlXAdjust,textCtrlYAdjust);
+    PositionTextCtrl(0, textCtrlYAdjust);
 }
 
 // Draws non-XP GUI dotted line around the focus area
@@ -402,6 +361,7 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
     //if ( hTheme )
     //    theme = wxUxThemeEngine::GetIfActive();
 
+    wxColour fgCol;
     wxColour bgCol;
     bool doDrawDottedEdge = false;
     bool doDrawSelRect = true;
@@ -427,28 +387,31 @@ wxComboCtrl::PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const
             if ( (m_iFlags & wxCC_FULL_BUTTON) && !(flags & wxCONTROL_ISSUBMENU) )
             {
                 // Vista style read-only combo
+                fgCol = GetForegroundColour();
+                bgCol = GetBackgroundColour();
                 doDrawSelRect = false;
                 doDrawDottedEdge = true;
             }
             else
             {
-                dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT) );
+                fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
                 bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
             }
         }
         else
         {
-            dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT) );
+            fgCol = GetForegroundColour();
             bgCol = GetBackgroundColour();
             doDrawSelRect = false;
         }
     }
     else
     {
-        dc.SetTextForeground( wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT) );
+        fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
         bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
     }
 
+    dc.SetTextForeground(fgCol);
     dc.SetBrush(bgCol);
     if ( doDrawSelRect )
     {
@@ -767,6 +730,7 @@ void wxComboCtrl::DoTimerEvent()
 {
     bool stopTimer = false;
 
+    wxWindow* win = GetPopupWindow();
     wxWindow* popup = GetPopupControl()->GetControl();
 
     // Popup was hidden before it was fully shown?
@@ -778,7 +742,6 @@ void wxComboCtrl::DoTimerEvent()
     {
         wxLongLong t = ::wxGetLocalTimeMillis();
         const wxRect& rect = m_animRect;
-        wxWindow* win = GetPopupWindow();
 
         int pos = (int) (t-m_animStart).GetLo();
         if ( pos < COMBOBOX_ANIMATION_DURATION )
@@ -796,8 +759,10 @@ void wxComboCtrl::DoTimerEvent()
             }
             else
             {
-                popup->Move( 0, -y );
+                // Note that apparently Move() should be called after
+                // SetSize() to reduce (or even eliminate) animation garbage
                 win->SetSize( rect.x, rect.y, rect.width, h );
+                popup->Move( 0, -y );
             }
         }
         else
@@ -808,9 +773,13 @@ void wxComboCtrl::DoTimerEvent()
 
     if ( stopTimer )
     {
-        popup->Move( 0, 0 );
         m_animTimer.Stop();
         DoShowPopup( m_animRect, m_animFlags );
+        popup->Move( 0, 0 );
+
+        // Do a one final refresh to clean up the rare cases of animation
+        // garbage
+        win->Refresh();
     }
 }
 #endif
@@ -868,18 +837,12 @@ bool wxComboCtrl::IsKeyPopupToggle(const wxKeyEvent& event) const
 
         case WXK_DOWN:
         case WXK_UP:
-            // On XP or with writable combo in Classic, arrows don't open the
-            // popup but Alt-arrow does
-            if ( event.AltDown() ||
-                    ( !isPopupShown &&
-                      HasFlag(wxCB_READONLY)
-#if wxUSE_UXTHEME
-                      && !wxUxThemeEngine::GetIfActive()
-#endif
-                    ) )
-            {
+        case WXK_NUMPAD_DOWN:
+        case WXK_NUMPAD_UP:
+            // Arrow keys (and mouse wheel) toggle the popup in the native
+            // combo boxes
+            if ( event.AltDown() )
                 return true;
-            }
             break;
     }
 

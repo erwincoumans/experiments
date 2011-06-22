@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin, Ryan Norton
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: string.cpp 61499 2009-07-22 18:12:38Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 //              (c) 2004 Ryan Norton <wxprojects@comcast.net>
 // Licence:     wxWindows licence
@@ -24,6 +24,7 @@
 #ifndef WX_PRECOMP
     #include "wx/string.h"
     #include "wx/wxcrtvararg.h"
+    #include "wx/intl.h"
     #include "wx/log.h"
 #endif
 
@@ -44,6 +45,10 @@
     #include "wx/msw/wrapwin.h"
 #endif // __WXMSW__
 
+#if wxUSE_STD_IOSTREAM
+    #include <sstream>
+#endif
+
 // string handling functions used by wxString:
 #if wxUSE_UNICODE_UTF8
     #define wxStringMemcpy   memcpy
@@ -57,16 +62,20 @@
     #define wxStringStrlen   wxStrlen
 #endif
 
-// ----------------------------------------------------------------------------
-// global variables
-// ----------------------------------------------------------------------------
-
+// define a function declared in wx/buffer.h here as we don't have buffer.cpp
+// and don't want to add it just because of this simple function
 namespace wxPrivate
 {
 
-static UntypedBufferData s_untypedNullData(NULL, 0);
+// wxXXXBuffer classes can be (implicitly) used during global statics
+// initialization so wrap the status UntypedBufferData variable in a function
+// to make it safe to access it even before all global statics are initialized
+UntypedBufferData *GetUntypedNullData()
+{
+    static UntypedBufferData s_untypedNullData(NULL, 0);
 
-UntypedBufferData * const untypedNullDataPtr = &s_untypedNullData;
+    return &s_untypedNullData;
+}
 
 } // namespace wxPrivate
 
@@ -433,7 +442,7 @@ wxString::SubstrBufFromMB wxString::ConvertStr(const char *psz, size_t nLength,
     // and then to UTF-8:
     SubstrBufFromMB buf(ConvertStr(wcBuf, wcLen, wxMBConvStrictUTF8()));
     // widechar -> UTF-8 conversion isn't supposed to ever fail:
-    wxASSERT_MSG( buf.data, _T("conversion to UTF-8 failed") );
+    wxASSERT_MSG( buf.data, wxT("conversion to UTF-8 failed") );
 
     return buf;
 }
@@ -641,7 +650,7 @@ wxString operator+(const wxString& str, const char *psz)
 
     wxString s;
     if ( !s.Alloc(strlen(psz) + str.length()) ) {
-        wxFAIL_MSG( _T("out of memory in wxString::operator+") );
+        wxFAIL_MSG( wxT("out of memory in wxString::operator+") );
     }
     s += str;
     s += psz;
@@ -657,7 +666,7 @@ wxString operator+(const wxString& str, const wchar_t *pwz)
 
     wxString s;
     if ( !s.Alloc(wxWcslen(pwz) + str.length()) ) {
-        wxFAIL_MSG( _T("out of memory in wxString::operator+") );
+        wxFAIL_MSG( wxT("out of memory in wxString::operator+") );
     }
     s += str;
     s += pwz;
@@ -673,7 +682,7 @@ wxString operator+(const char *psz, const wxString& str)
 
     wxString s;
     if ( !s.Alloc(strlen(psz) + str.length()) ) {
-        wxFAIL_MSG( _T("out of memory in wxString::operator+") );
+        wxFAIL_MSG( wxT("out of memory in wxString::operator+") );
     }
     s = psz;
     s += str;
@@ -689,7 +698,7 @@ wxString operator+(const wchar_t *pwz, const wxString& str)
 
     wxString s;
     if ( !s.Alloc(wxWcslen(pwz) + str.length()) ) {
-        wxFAIL_MSG( _T("out of memory in wxString::operator+") );
+        wxFAIL_MSG( wxT("out of memory in wxString::operator+") );
     }
     s = pwz;
     s += str;
@@ -907,7 +916,7 @@ size_t wxString::find_first_not_of(const wxChar* sz, size_t nStart) const
 
 size_t wxString::find_first_of(const wxChar* sz, size_t nStart, size_t n) const
 {
-    wxASSERT_MSG( nStart <= length(),  _T("invalid index") );
+    wxASSERT_MSG( nStart <= length(),  wxT("invalid index") );
 
     size_t idx = nStart;
     for ( const_iterator i = begin() + nStart; i != end(); ++idx, ++i )
@@ -921,7 +930,7 @@ size_t wxString::find_first_of(const wxChar* sz, size_t nStart, size_t n) const
 
 size_t wxString::find_first_not_of(const wxChar* sz, size_t nStart, size_t n) const
 {
-    wxASSERT_MSG( nStart <= length(),  _T("invalid index") );
+    wxASSERT_MSG( nStart <= length(),  wxT("invalid index") );
 
     size_t idx = nStart;
     for ( const_iterator i = begin() + nStart; i != end(); ++idx, ++i )
@@ -954,7 +963,7 @@ size_t wxString::find_last_of(const wxChar* sz, size_t nStart, size_t n) const
     }
     else
     {
-        wxASSERT_MSG( nStart <= len, _T("invalid index") );
+        wxASSERT_MSG( nStart <= len, wxT("invalid index") );
     }
 
     size_t idx = nStart;
@@ -978,7 +987,7 @@ size_t wxString::find_last_not_of(const wxChar* sz, size_t nStart, size_t n) con
     }
     else
     {
-        wxASSERT_MSG( nStart <= len, _T("invalid index") );
+        wxASSERT_MSG( nStart <= len, wxT("invalid index") );
     }
 
     size_t idx = nStart;
@@ -994,7 +1003,7 @@ size_t wxString::find_last_not_of(const wxChar* sz, size_t nStart, size_t n) con
 
 size_t wxString::find_first_not_of(wxUniChar ch, size_t nStart) const
 {
-    wxASSERT_MSG( nStart <= length(),  _T("invalid index") );
+    wxASSERT_MSG( nStart <= length(),  wxT("invalid index") );
 
     size_t idx = nStart;
     for ( const_iterator i = begin() + nStart; i != end(); ++idx, ++i )
@@ -1016,7 +1025,7 @@ size_t wxString::find_last_not_of(wxUniChar ch, size_t nStart) const
     }
     else
     {
-        wxASSERT_MSG( nStart <= len, _T("invalid index") );
+        wxASSERT_MSG( nStart <= len, wxT("invalid index") );
     }
 
     size_t idx = nStart;
@@ -1075,9 +1084,15 @@ size_t wxString::find_last_not_of(const wxOtherCharType* sz, size_t nStart,
 int wxString::CmpNoCase(const wxString& s) const
 {
 #if defined(__WXMSW__) && !wxUSE_UNICODE_UTF8
-    // prefer to use CompareString() if available as it's more efficient than
-    // doing it manual or even using wxStricmp() (see #10375)
-    switch ( ::CompareString(LOCALE_USER_DEFAULT, NORM_IGNORECASE,
+    // Prefer to use CompareString() if available as it's more efficient than
+    // doing it manually or even using wxStricmp() (see #10375)
+    //
+    // Also note that not using NORM_STRINGSORT may result in not having a
+    // strict weak ordering (e.g. s1 < s2 and s2 < s3 but s3 < s1) and so break
+    // algorithms such as std::sort that rely on it. It's also more consistent
+    // with the fall back version below.
+    switch ( ::CompareString(LOCALE_USER_DEFAULT,
+                             NORM_IGNORECASE | SORT_STRINGSORT,
                              m_impl.c_str(), m_impl.length(),
                              s.m_impl.c_str(), s.m_impl.length()) )
     {
@@ -1151,7 +1166,7 @@ wxString wxString::FromAscii(const char *ascii, size_t len)
         {
             unsigned char c = (unsigned char)*ascii++;
             wxASSERT_MSG( c < 0x80,
-                          _T("Non-ASCII value passed to FromAscii().") );
+                          wxT("Non-ASCII value passed to FromAscii().") );
 
             *dest++ = (wchar_t)c;
         }
@@ -1171,7 +1186,7 @@ wxString wxString::FromAscii(char ascii)
 
     unsigned char c = (unsigned char)ascii;
 
-    wxASSERT_MSG( c < 0x80, _T("Non-ASCII value passed to FromAscii().") );
+    wxASSERT_MSG( c < 0x80, wxT("Non-ASCII value passed to FromAscii().") );
 
     // NB: the cast to wchar_t causes interpretation of 'ascii' as Latin1 value
     return wxString(wxUniChar((wchar_t)c));
@@ -1226,7 +1241,7 @@ wxString wxString::Mid(size_t nFirst, size_t nCount) const
     wxString dest(*this, nFirst, nCount);
     if ( dest.length() != nCount )
     {
-        wxFAIL_MSG( _T("out of memory in wxString::Mid") );
+        wxFAIL_MSG( wxT("out of memory in wxString::Mid") );
     }
 
     return dest;
@@ -1276,7 +1291,7 @@ wxString wxString::Right(size_t nCount) const
 
   wxString dest(*this, length() - nCount, nCount);
   if ( dest.length() != nCount ) {
-    wxFAIL_MSG( _T("out of memory in wxString::Right") );
+    wxFAIL_MSG( wxT("out of memory in wxString::Right") );
   }
   return dest;
 }
@@ -1303,7 +1318,7 @@ wxString wxString::Left(size_t nCount) const
 
   wxString dest(*this, 0, nCount);
   if ( dest.length() != nCount ) {
-    wxFAIL_MSG( _T("out of memory in wxString::Left") );
+    wxFAIL_MSG( wxT("out of memory in wxString::Left") );
   }
   return dest;
 }
@@ -1348,7 +1363,7 @@ size_t wxString::Replace(const wxString& strOld,
 {
     // if we tried to replace an empty string we'd enter an infinite loop below
     wxCHECK_MSG( !strOld.empty(), 0,
-                 _T("wxString::Replace(): invalid parameter") );
+                 wxT("wxString::Replace(): invalid parameter") );
 
     wxSTRING_INVALIDATE_CACHE();
 
@@ -1470,7 +1485,7 @@ bool wxString::IsNumber() const
 
     const_iterator i = begin();
 
-    if ( *i == _T('-') || *i == _T('+') )
+    if ( *i == wxT('-') || *i == wxT('+') )
         ++i;
 
     for ( ; i != end(); ++i )
@@ -1627,23 +1642,23 @@ int wxString::Find(wxUniChar ch, bool bFromEnd) const
 #endif
 
 #define WX_STRING_TO_X_TYPE_START                                           \
-    wxCHECK_MSG( pVal, false, _T("NULL output pointer") );                  \
+    wxCHECK_MSG( pVal, false, wxT("NULL output pointer") );                  \
     DO_IF_NOT_WINCE( errno = 0; )                                           \
     const wxStringCharType *start = wx_str();                               \
     wxStringCharType *end;
 
+// notice that we return false without modifying the output parameter at all if
+// nothing could be parsed but we do modify it and return false then if we did
+// parse something successfully but not the entire string
 #define WX_STRING_TO_X_TYPE_END                                             \
-    /* return true only if scan was stopped by the terminating NUL and */   \
-    /* if the string was not empty to start with and no under/overflow */   \
-    /* occurred: */                                                         \
-    if ( *end || end == start DO_IF_NOT_WINCE(|| errno == ERANGE) )         \
+    if ( end == start DO_IF_NOT_WINCE(|| errno == ERANGE) )                 \
         return false;                                                       \
     *pVal = val;                                                            \
-    return true;
+    return !*end;
 
 bool wxString::ToLong(long *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
     long val = wxStrtol(start, &end, base);
@@ -1652,7 +1667,7 @@ bool wxString::ToLong(long *pVal, int base) const
 
 bool wxString::ToULong(unsigned long *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
     unsigned long val = wxStrtoul(start, &end, base);
@@ -1661,7 +1676,7 @@ bool wxString::ToULong(unsigned long *pVal, int base) const
 
 bool wxString::ToLongLong(wxLongLong_t *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
     wxLongLong_t val = wxStrtoll(start, &end, base);
@@ -1670,7 +1685,7 @@ bool wxString::ToLongLong(wxLongLong_t *pVal, int base) const
 
 bool wxString::ToULongLong(wxULongLong_t *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
     wxULongLong_t val = wxStrtoull(start, &end, base);
@@ -1688,7 +1703,7 @@ bool wxString::ToDouble(double *pVal) const
 
 bool wxString::ToCLong(long *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
 #if (wxUSE_UNICODE_UTF8 || !wxUSE_UNICODE) && defined(wxHAS_XLOCALE_SUPPORT)
@@ -1701,7 +1716,7 @@ bool wxString::ToCLong(long *pVal, int base) const
 
 bool wxString::ToCULong(unsigned long *pVal, int base) const
 {
-    wxASSERT_MSG( !base || (base > 1 && base <= 36), _T("invalid base") );
+    wxASSERT_MSG( !base || (base > 1 && base <= 36), wxT("invalid base") );
 
     WX_STRING_TO_X_TYPE_START
 #if (wxUSE_UNICODE_UTF8 || !wxUSE_UNICODE) && defined(wxHAS_XLOCALE_SUPPORT)
@@ -1723,7 +1738,87 @@ bool wxString::ToCDouble(double *pVal) const
     WX_STRING_TO_X_TYPE_END
 }
 
-#endif  // wxUSE_XLOCALE
+#else // wxUSE_XLOCALE
+
+// Provide implementation of these functions even when wxUSE_XLOCALE is
+// disabled, we still need them in wxWidgets internal code.
+
+// For integers we just assume the current locale uses the same number
+// representation as the C one as there is nothing else we can do.
+bool wxString::ToCLong(long *pVal, int base) const
+{
+    return ToLong(pVal, base);
+}
+
+bool wxString::ToCULong(unsigned long *pVal, int base) const
+{
+    return ToULong(pVal, base);
+}
+
+// For floating point numbers we have to handle the problem of the decimal
+// point which is different in different locales.
+bool wxString::ToCDouble(double *pVal) const
+{
+    // Create a copy of this string using the decimal point instead of whatever
+    // separator the current locale uses.
+#if wxUSE_INTL
+    wxString sep = wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT,
+                                     wxLOCALE_CAT_NUMBER);
+    if ( sep == "." )
+    {
+        // We can avoid an unnecessary string copy in this case.
+        return ToDouble(pVal);
+    }
+#else // !wxUSE_INTL
+    // We don't know what the current separator is so it might even be a point
+    // already, try to parse the string as a double:
+    if ( ToDouble(pVal) )
+    {
+        // It must have been the point, nothing else to do.
+        return true;
+    }
+
+    // Try to guess the separator, using the most common alternative value.
+    wxString sep(",");
+#endif // wxUSE_INTL/!wxUSE_INTL
+    wxString cstr(*this);
+    cstr.Replace(".", sep);
+
+    return cstr.ToDouble(pVal);
+}
+
+#endif  // wxUSE_XLOCALE/!wxUSE_XLOCALE
+
+// ----------------------------------------------------------------------------
+// number to string conversion
+// ----------------------------------------------------------------------------
+
+/* static */
+wxString wxString::FromCDouble(double val)
+{
+#if wxUSE_STD_IOSTREAM && wxUSE_STD_STRING
+    // We assume that we can use the ostream and not wstream for numbers.
+    wxSTD ostringstream os;
+    os << val;
+    return os.str();
+#else // wxUSE_STD_IOSTREAM
+    // Can't use iostream locale support, fall back to the manual method
+    // instead.
+    wxString s = FromDouble(val);
+#if wxUSE_INTL
+    wxString sep = wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT,
+                                     wxLOCALE_CAT_NUMBER);
+#else // !wxUSE_INTL
+    // As above, this is the most common alternative value. Notice that here it
+    // doesn't matter if we guess wrongly and the current separator is already
+    // ".": we'll just waste a call to Replace() in this case.
+    wxString sep(",");
+#endif // wxUSE_INTL/!wxUSE_INTL
+
+    s.Replace(sep, ".");
+    return s;
+#endif // wxUSE_STD_IOSTREAM/!wxUSE_STD_IOSTREAM
+}
 
 // ---------------------------------------------------------------------------
 // formatted output
@@ -1918,7 +2013,7 @@ static int DoStringPrintfV(wxString& str,
         // always do it manually
         // FIXME: This really seems to be the wrong and would be an off-by-one
         // bug except the code above allocates an extra character.
-        buf[size] = _T('\0');
+        buf[size] = wxT('\0');
 
         // vsnprintf() may return either -1 (traditional Unix behaviour) or the
         // total number of characters which would have been written if the
@@ -2024,31 +2119,31 @@ bool wxString::Matches(const wxString& mask) const
     wxString pattern;
     pattern.reserve(wxStrlen(pszMask));
 
-    pattern += _T('^');
+    pattern += wxT('^');
     while ( *pszMask )
     {
         switch ( *pszMask )
         {
-            case _T('?'):
-                pattern += _T('.');
+            case wxT('?'):
+                pattern += wxT('.');
                 break;
 
-            case _T('*'):
-                pattern += _T(".*");
+            case wxT('*'):
+                pattern += wxT(".*");
                 break;
 
-            case _T('^'):
-            case _T('.'):
-            case _T('$'):
-            case _T('('):
-            case _T(')'):
-            case _T('|'):
-            case _T('+'):
-            case _T('\\'):
+            case wxT('^'):
+            case wxT('.'):
+            case wxT('$'):
+            case wxT('('):
+            case wxT(')'):
+            case wxT('|'):
+            case wxT('+'):
+            case wxT('\\'):
                 // these characters are special in a RE, quote them
                 // (however note that we don't quote '[' and ']' to allow
                 // using them for Unix shell like matching)
-                pattern += _T('\\');
+                pattern += wxT('\\');
                 // fall through
 
             default:
@@ -2057,7 +2152,7 @@ bool wxString::Matches(const wxString& mask) const
 
         pszMask++;
     }
-    pattern += _T('$');
+    pattern += wxT('$');
 
     // and now use it
     return wxRegEx(pattern, wxRE_NOSUB | wxRE_EXTENDED).Matches(c_str());

@@ -3,7 +3,7 @@
  * Purpose:     Unix-specific config settings consistency checks
  * Author:      Vadim Zeitlin
  * Created:     2007-07-14
- * RCS-ID:      $Id: chkconf.h 47465 2007-07-14 19:06:18Z VZ $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwidgets.org>
  * Licence:     wxWindows licence
  */
@@ -20,3 +20,25 @@
 #       endif
 #   endif
 #endif /* wxUSE_CONSOLE_EVENTLOOP */
+
+#if wxUSE_FSWATCHER
+#   if !defined(wxHAS_INOTIFY) && !defined(wxHAS_KQUEUE)
+#       ifdef wxABORT_ON_CONFIG_ERROR
+#           error "wxFileSystemWatcher requires either inotify() or kqueue()"
+#       else
+#           undef wxUSE_FSWATCHER
+#           define wxUSE_FSWATCHER 0
+#       endif
+#   endif
+#endif /* wxUSE_FSWATCHER */
+
+#if wxUSE_GSTREAMER
+#   if !wxUSE_THREADS
+#       ifdef wxABORT_ON_CONFIG_ERROR
+#           error "GStreamer requires threads"
+#       else
+#           undef wxUSE_GSTREAMER
+#           define wxUSE_GSTREAMER 0
+#       endif
+#   endif
+#endif /* wxUSE_GSTREAMER */

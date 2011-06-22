@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: dcscreen.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,7 +24,7 @@ public:
     virtual wxBitmap DoGetAsBitmap(const wxRect *subrect) const;
 private:
     void* m_overlayWindow;
-        
+
 private:
     DECLARE_CLASS(wxScreenDCImpl)
     wxDECLARE_NO_COPY_CLASS(wxScreenDCImpl);

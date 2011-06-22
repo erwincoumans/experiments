@@ -3,7 +3,7 @@
 // Purpose:     wxGIFDecoder, GIF reader for wxImage and wxAnimation
 // Author:      Guillermo Rodriguez Garcia <guille@iies.es>
 // Version:     3.04
-// RCS-ID:      $Id: gifdecod.cpp 60038 2009-04-06 10:21:02Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -575,15 +575,12 @@ as an End of Information itself)
 // CanRead:
 //  Returns true if the file looks like a valid GIF, false otherwise.
 //
-bool wxGIFDecoder::CanRead(wxInputStream &stream) const
+bool wxGIFDecoder::DoCanRead(wxInputStream &stream) const
 {
     unsigned char buf[3];
 
     if ( !stream.Read(buf, WXSIZEOF(buf)) )
         return false;
-
-    if (stream.SeekI(-(wxFileOffset)WXSIZEOF(buf), wxFromCurrent) == wxInvalidOffset)
-        return false;       // this happens e.g. for non-seekable streams
 
     return memcmp(buf, "GIF", WXSIZEOF(buf)) == 0;
 }

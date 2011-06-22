@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dialog.cpp 58634 2009-02-03 12:01:46Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -150,7 +150,9 @@ void wxDialog::Init()
 #if wxUSE_TOOLBAR && defined(__POCKETPC__)
     m_dialogToolBar = NULL;
 #endif
+#if wxUSE_DIALOG_SIZEGRIP
     m_hGripper = 0;
+#endif // wxUSE_DIALOG_SIZEGRIP
 }
 
 bool wxDialog::Create(wxWindow *parent,
@@ -179,6 +181,7 @@ bool wxDialog::Create(wxWindow *parent,
     CreateToolBar();
 #endif
 
+#if wxUSE_DIALOG_SIZEGRIP
     if ( HasFlag(wxRESIZE_BORDER) )
     {
         CreateGripper();
@@ -186,6 +189,7 @@ bool wxDialog::Create(wxWindow *parent,
         Connect(wxEVT_CREATE,
                 wxWindowCreateEventHandler(wxDialog::OnWindowCreate));
     }
+#endif // wxUSE_DIALOG_SIZEGRIP
 
     return true;
 }
@@ -195,34 +199,14 @@ wxDialog::~wxDialog()
     // this will also reenable all the other windows for a modal dialog
     Show(false);
 
+#if wxUSE_DIALOG_SIZEGRIP
     DestroyGripper();
+#endif // wxUSE_DIALOG_SIZEGRIP
 }
 
 // ----------------------------------------------------------------------------
 // showing the dialogs
 // ----------------------------------------------------------------------------
-
-wxWindow *wxDialog::FindSuitableParent() const
-{
-    // first try to use the currently active window
-    HWND hwndFg = ::GetForegroundWindow();
-    wxWindow *parent = hwndFg ? wxFindWinFromHandle((WXHWND)hwndFg)
-                              : NULL;
-    if ( !parent )
-    {
-        // next try the main app window
-        parent = wxTheApp->GetTopWindow();
-    }
-
-    // finally, check if the parent we found is really suitable
-    if ( !parent || parent == (wxWindow *)this || !parent->IsShown() )
-    {
-        // don't use this one
-        parent = NULL;
-    }
-
-    return parent;
-}
 
 bool wxDialog::Show(bool show)
 {
@@ -276,7 +260,7 @@ void wxDialog::Raise()
 // show dialog modally
 int wxDialog::ShowModal()
 {
-    wxASSERT_MSG( !IsModal(), _T("ShowModal() can't be called twice") );
+    wxASSERT_MSG( !IsModal(), wxT("ShowModal() can't be called twice") );
 
     Show();
 
@@ -295,7 +279,7 @@ int wxDialog::ShowModal()
 
 void wxDialog::EndModal(int retCode)
 {
-    wxASSERT_MSG( IsModal(), _T("EndModal() called for non modal dialog") );
+    wxASSERT_MSG( IsModal(), wxT("EndModal() called for non modal dialog") );
 
     SetReturnCode(retCode);
 
@@ -305,6 +289,8 @@ void wxDialog::EndModal(int retCode)
 // ----------------------------------------------------------------------------
 // wxDialog gripper handling
 // ----------------------------------------------------------------------------
+
+#if wxUSE_DIALOG_SIZEGRIP
 
 void wxDialog::SetWindowStyleFlag(long style)
 {
@@ -350,7 +336,7 @@ void wxDialog::DestroyGripper()
         // have been called yet)
         wxASSERT_MSG( !IsShown() ||
                       ::GetWindow((HWND)m_hGripper, GW_HWNDNEXT) == 0,
-            _T("Bug in wxWidgets: gripper should be at the bottom of Z-order") );
+            wxT("Bug in wxWidgets: gripper should be at the bottom of Z-order") );
         ::DestroyWindow((HWND) m_hGripper);
         m_hGripper = 0;
     }
@@ -358,7 +344,7 @@ void wxDialog::DestroyGripper()
 
 void wxDialog::ShowGripper(bool show)
 {
-    wxASSERT_MSG( m_hGripper, _T("shouldn't be called if we have no gripper") );
+    wxASSERT_MSG( m_hGripper, wxT("shouldn't be called if we have no gripper") );
 
     if ( show )
         ResizeGripper();
@@ -368,7 +354,7 @@ void wxDialog::ShowGripper(bool show)
 
 void wxDialog::ResizeGripper()
 {
-    wxASSERT_MSG( m_hGripper, _T("shouldn't be called if we have no gripper") );
+    wxASSERT_MSG( m_hGripper, wxT("shouldn't be called if we have no gripper") );
 
     HWND hwndGripper = (HWND)m_hGripper;
 
@@ -393,6 +379,8 @@ void wxDialog::OnWindowCreate(wxWindowCreateEvent& event)
 
     event.Skip();
 }
+
+#endif // wxUSE_DIALOG_SIZEGRIP
 
 // ----------------------------------------------------------------------------
 // wxWin event handlers
@@ -475,6 +463,7 @@ WXLRESULT wxDialog::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPar
             break;
 
         case WM_SIZE:
+#if wxUSE_DIALOG_SIZEGRIP
             if ( m_hGripper )
             {
                 switch ( wParam )
@@ -487,6 +476,7 @@ WXLRESULT wxDialog::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPar
                         ShowGripper(true);
                 }
             }
+#endif // wxUSE_DIALOG_SIZEGRIP
 
             // the Windows dialogs unfortunately are not meant to be resizeable
             // at all and their standard class doesn't include CS_[VH]REDRAW

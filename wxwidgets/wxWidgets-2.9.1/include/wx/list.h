@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: VZ at 16/11/98: WX_DECLARE_LIST() and typesafe lists added
 // Created:     29/01/98
-// RCS-ID:      $Id: list.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -186,7 +186,7 @@ inline const void *wxListCastElementToVoidPtr(const wxString& str)
             bool operator==(const compatibility_iterator& i) const            \
             {                                                                 \
                 wxASSERT_MSG( m_list && i.m_list,                             \
-                              _T("comparing invalid iterators is illegal") ); \
+                              wxT("comparing invalid iterators is illegal") ); \
                 return (m_list == i.m_list) && (m_iter == i.m_iter);          \
             }                                                                 \
             bool operator!=(const compatibility_iterator& i) const            \
@@ -258,7 +258,7 @@ inline const void *wxListCastElementToVoidPtr(const wxString& str)
             iterator i = const_cast< liT* >(this)->end();                     \
             return compatibility_iterator( this, !empty() ? --i : i );        \
         }                                                                     \
-        compatibility_iterator Member( elT e ) const                          \
+        bool Member( elT e ) const                                            \
             { return Find( e ); }                                             \
         compatibility_iterator Nth( int n ) const                             \
             { return Item( n ); }                                             \
@@ -1010,11 +1010,22 @@ private:
         iterator insert(const iterator& it, const_reference v)              \
         {                                                                   \
             if ( it == end() )                                              \
+            {                                                               \
                 Append((const_base_reference)v);                            \
+                /*                                                          \
+                    note that this is the new end(), the old one was        \
+                    invalidated by the Append() call, and this is why we    \
+                    can't use the same code as in the normal case below     \
+                 */                                                         \
+                iterator itins(end());                                      \
+                return --itins;                                             \
+            }                                                               \
             else                                                            \
+            {                                                               \
                 Insert(it.m_node, (const_base_reference)v);                 \
-            iterator itprev(it);                                            \
-            return itprev--;                                                \
+                iterator itins(it);                                         \
+                return --itins;                                             \
+            }                                                               \
         }                                                                   \
         void insert(const iterator& it, size_type n, const_reference v)     \
         {                                                                   \
@@ -1179,12 +1190,8 @@ public:
 
     // compatibility methods
     void Sort(wxSortCompareFunction compfunc) { wxListBase::Sort(compfunc); }
-#endif
-
-#if wxUSE_STL
-#else
-    wxNode *Member(wxObject *object) const { return (wxNode *)Find(object); }
-#endif
+    bool Member(wxObject *object) const { return Find(object) != NULL; }
+#endif // !wxUSE_STL
 };
 
 #if !wxUSE_STL

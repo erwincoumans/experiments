@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Modified by: Ryan Norton (Native GTK2.0+ checklist)
-// Id:          $Id: checklst.cpp 58616 2009-02-01 23:43:59Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -88,7 +88,12 @@ void wxCheckListBox::DoCreateCheckList()
         gtk_tree_view_column_new_with_attributes( "", renderer,
                                                   "active", 0,
                                                   NULL );
+#if wxUSE_LIBHILDON2
+    gtk_tree_view_column_set_fixed_width(column, 40);
+#else
     gtk_tree_view_column_set_fixed_width(column, 22);
+#endif // wxUSE_LIBHILDON2/!wxUSE_LIBHILDON2
+
     gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
     gtk_tree_view_column_set_clickable(column, TRUE);
 

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     18.10.99
-// RCS-ID:      $Id: appcmn.cpp 59718 2009-03-22 09:05:58Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -49,8 +49,6 @@
 // DLL options compatibility check:
 #include "wx/build.h"
 WX_CHECK_BUILD_OPTIONS("wxCore")
-
-WXDLLIMPEXP_DATA_CORE(wxList) wxPendingDelete;
 
 // ============================================================================
 // wxAppBase implementation
@@ -130,8 +128,7 @@ void wxAppBase::CleanUp()
 
     wxDeleteStockLists();
 
-    delete wxTheColourDatabase;
-    wxTheColourDatabase = NULL;
+    wxDELETE(wxTheColourDatabase);
 
     wxAppConsole::CleanUp();
 }
@@ -244,7 +241,7 @@ bool wxAppBase::OnCmdLineParsed(wxCmdLineParser& parser)
     if ( parser.Found(OPTION_MODE, &modeDesc) )
     {
         unsigned w, h, bpp;
-        if ( wxSscanf(modeDesc.c_str(), _T("%ux%u-%u"), &w, &h, &bpp) != 3 )
+        if ( wxSscanf(modeDesc.c_str(), wxT("%ux%u-%u"), &w, &h, &bpp) != 3 )
         {
             wxLogError(_("Invalid display mode specification '%s'."), modeDesc.c_str());
             return false;
@@ -341,33 +338,11 @@ bool wxAppBase::SafeYieldFor(wxWindow *win, long eventsToProcess)
 // idle handling
 // ----------------------------------------------------------------------------
 
-void wxAppBase::DeletePendingObjects()
-{
-    wxList::compatibility_iterator node = wxPendingDelete.GetFirst();
-    while (node)
-    {
-        wxObject *obj = node->GetData();
-
-        // remove it from the list first so that if we get back here somehow
-        // during the object deletion (e.g. wxYield called from its dtor) we
-        // wouldn't try to delete it the second time
-        if ( wxPendingDelete.Member(obj) )
-            wxPendingDelete.Erase(node);
-
-        delete obj;
-
-        // Deleting one object may have deleted other pending
-        // objects, so start from beginning of list again.
-        node = wxPendingDelete.GetFirst();
-    }
-}
-
 // Returns true if more time is needed.
 bool wxAppBase::ProcessIdle()
 {
-    // call the base class version first, it will process the pending events
-    // (which should be done before the idle events generation) and send the
-    // idle event to wxTheApp itself
+    // call the base class version first to send the idle event to wxTheApp
+    // itself
     bool needMore = wxAppConsoleBase::ProcessIdle();
     wxIdleEvent event;
     wxWindowList::compatibility_iterator node = wxTopLevelWindows.GetFirst();
@@ -378,14 +353,6 @@ bool wxAppBase::ProcessIdle()
             needMore = true;
         node = node->GetNext();
     }
-
-    // 'Garbage' collection of windows deleted with Close().
-    DeletePendingObjects();
-
-#if wxUSE_LOG
-    // flush the logged messages if any
-    wxLog::FlushActive();
-#endif
 
     wxUpdateUIEvent::ResetUpdateTime();
 
@@ -431,7 +398,11 @@ bool wxAppBase::SendIdleEvents(wxWindow* win, wxIdleEvent& event)
 wxLog *wxGUIAppTraitsBase::CreateLogTarget()
 {
 #if wxUSE_LOGGUI
+#ifndef __WXOSX_IPHONE__
     return new wxLogGui;
+#else
+    return new wxLogStderr;
+#endif
 #else
     // we must have something!
     return new wxLogStderr;
@@ -479,6 +450,7 @@ wxRendererNative *wxGUIAppTraitsBase::CreateRenderer()
 
 bool wxGUIAppTraitsBase::ShowAssertDialog(const wxString& msg)
 {
+#if wxDEBUG_LEVEL
     // under MSW we prefer to use the base class version using ::MessageBox()
     // even if wxMessageBox() is available because it has less chances to
     // double fault our app than our wxMessageBox()
@@ -487,50 +459,46 @@ bool wxGUIAppTraitsBase::ShowAssertDialog(const wxString& msg)
     //
     // and finally we can't use wxMessageBox() if it wasn't compiled in, of
     // course
-#if defined(__WXMSW__) || defined(__WXDFB__) || !wxUSE_MSGDLG
-    return wxAppTraitsBase::ShowAssertDialog(msg);
-#else // wxUSE_MSGDLG
-#if wxDEBUG_LEVEL
-    wxString msgDlg = msg;
+#if !defined(__WXMSW__) && !defined(__WXDFB__) && wxUSE_MSGDLG
+
+    // we can't (safely) show the GUI dialog from another thread, only do it
+    // for the asserts in the main thread
+    if ( wxIsMainThread() )
+    {
+        wxString msgDlg = msg;
 
 #if wxUSE_STACKWALKER
-    // on Unix stack frame generation may take some time, depending on the
-    // size of the executable mainly... warn the user that we are working
-    wxFprintf(stderr, wxT("[Debug] Generating a stack trace... please wait"));
-    fflush(stderr);
-
-    const wxString stackTrace = GetAssertStackTrace();
-    if ( !stackTrace.empty() )
-        msgDlg << _T("\n\nCall stack:\n") << stackTrace;
+        const wxString stackTrace = GetAssertStackTrace();
+        if ( !stackTrace.empty() )
+            msgDlg << wxT("\n\nCall stack:\n") << stackTrace;
 #endif // wxUSE_STACKWALKER
 
-    // this message is intentionally not translated -- it is for
-    // developpers only
-    msgDlg += wxT("\nDo you want to stop the program?\n")
-              wxT("You can also choose [Cancel] to suppress ")
-              wxT("further warnings.");
+        // this message is intentionally not translated -- it is for
+        // developpers only
+        msgDlg += wxT("\nDo you want to stop the program?\n")
+                  wxT("You can also choose [Cancel] to suppress ")
+                  wxT("further warnings.");
 
-    switch ( wxMessageBox(msgDlg, wxT("wxWidgets Debug Alert"),
-                          wxYES_NO | wxCANCEL | wxICON_STOP ) )
-    {
-        case wxYES:
-            wxTrap();
-            break;
+        switch ( wxMessageBox(msgDlg, wxT("wxWidgets Debug Alert"),
+                              wxYES_NO | wxCANCEL | wxICON_STOP ) )
+        {
+            case wxYES:
+                wxTrap();
+                break;
 
-        case wxCANCEL:
-            // no more asserts
-            return true;
+            case wxCANCEL:
+                // no more asserts
+                return true;
 
-        //case wxNO: nothing to do
+            //case wxNO: nothing to do
+        }
+
+        return false;
     }
-#else // !wxDEBUG_LEVEL
-    // this function always exists (for ABI compatibility) but is never called
-    // if debug level is 0 and so can simply do nothing then
-    wxUnusedVar(msg);
-#endif // wxDEBUG_LEVEL/!wxDEBUG_LEVEL
+#endif // wxUSE_MSGDLG
+#endif // wxDEBUG_LEVEL
 
-    return false;
-#endif // !wxUSE_MSGDLG/wxUSE_MSGDLG
+    return wxAppTraitsBase::ShowAssertDialog(msg);
 }
 
 bool wxGUIAppTraitsBase::HasStderr()
@@ -542,16 +510,5 @@ bool wxGUIAppTraitsBase::HasStderr()
 #else
     return false;
 #endif
-}
-
-void wxGUIAppTraitsBase::ScheduleForDestroy(wxObject *object)
-{
-    if ( !wxPendingDelete.Member(object) )
-        wxPendingDelete.Append(object);
-}
-
-void wxGUIAppTraitsBase::RemoveFromPendingDelete(wxObject *object)
-{
-    wxPendingDelete.DeleteObject(object);
 }
 

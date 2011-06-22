@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: tooltip.cpp 45277 2007-04-06 20:31:02Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,9 @@ void wxToolTip::Create(
                                ,NULL
                               );
     if (!m_hWnd)
-        wxLogError(_T("Unable to create tooltip window"));
+    {
+        wxLogError(wxT("Unable to create tooltip window"));
+    }
 
     wxColour                        vColor( wxT("YELLOW") );
     lColor = (LONG)vColor.GetPixel();

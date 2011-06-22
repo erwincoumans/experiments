@@ -2,7 +2,7 @@
 // Name:        src/gtk/minifram.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: minifram.cpp 58227 2009-01-19 13:55:27Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -96,8 +96,8 @@ static gboolean gtk_window_own_expose_callback(GtkWidget* widget, GdkEventExpose
         wxBrush brush( LightContrastColour( wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT) ) );
         dc.SetBrush( brush );
         dc.SetPen( *wxTRANSPARENT_PEN );
-        dc.DrawRectangle( win->m_miniEdge-1, 
-                          win->m_miniEdge-1, 
+        dc.DrawRectangle( win->m_miniEdge-1,
+                          win->m_miniEdge-1,
                           win->m_width - (2*(win->m_miniEdge-1)),
                           15  );
 
@@ -107,7 +107,7 @@ static gboolean gtk_window_own_expose_callback(GtkWidget* widget, GdkEventExpose
         if (style & wxCLOSE_BOX)
             dc.DrawBitmap( win->m_closeButton, win->m_width-18, 3, true );
     }
-    
+
     return false;
 }
 }
@@ -281,6 +281,7 @@ gtk_window_motion_notify_callback( GtkWidget *widget, GdkEventMotion *gdk_event,
                gdk_window_set_cursor( widget->window, gdk_cursor_new( GDK_BOTTOM_RIGHT_CORNER ) );
             else
                gdk_window_set_cursor( widget->window, NULL );
+            win->GTKUpdateCursor(false);
         }
         return TRUE;
     }

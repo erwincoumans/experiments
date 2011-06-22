@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: odcombo.cpp 58202 2009-01-18 19:57:23Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -54,6 +54,7 @@
 BEGIN_EVENT_TABLE(wxVListBoxComboPopup, wxVListBox)
     EVT_MOTION(wxVListBoxComboPopup::OnMouseMove)
     EVT_KEY_DOWN(wxVListBoxComboPopup::OnKey)
+    EVT_CHAR(wxVListBoxComboPopup::OnChar)
     EVT_LEFT_UP(wxVListBoxComboPopup::OnLeftClick)
 END_EVENT_TABLE()
 
@@ -93,6 +94,18 @@ bool wxVListBoxComboPopup::Create(wxWindow* parent)
 wxVListBoxComboPopup::~wxVListBoxComboPopup()
 {
     Clear();
+}
+
+void wxVListBoxComboPopup::SetFocus()
+{
+    // Suppress SetFocus() warning by simply not calling it. This combo popup
+    // has already been designed with the assumption that SetFocus() may not
+    // do anything useful, so it really doesn't need to be called.
+#ifdef __WXMSW__
+    //
+#else
+    wxVListBox::SetFocus();
+#endif
 }
 
 bool wxVListBoxComboPopup::LazyCreate()
@@ -244,7 +257,7 @@ void wxVListBoxComboPopup::SendComboBoxEvent( int selection )
 }
 
 // returns true if key was consumed
-bool wxVListBoxComboPopup::HandleKey( int keycode, bool saturate, wxChar unicode )
+bool wxVListBoxComboPopup::HandleKey( int keycode, bool saturate, wxChar keychar )
 {
     const int itemCount = GetCount();
 
@@ -256,39 +269,42 @@ bool wxVListBoxComboPopup::HandleKey( int keycode, bool saturate, wxChar unicode
     int value = m_value;
     int comboStyle = m_combo->GetWindowStyle();
 
-    // this is the character equivalent of the code
-    wxChar keychar = 0;
-    if ( keycode < WXK_START )
+    if ( keychar > 0 )
     {
-        if ( unicode > 0 )
-        {
-            if ( wxIsprint(unicode) )
-                keychar = unicode;
-        }
-        else if ( wxIsprint(keycode) )
-        {
-            keychar = (wxChar) keycode;
-        }
+        // we have character equivalent of the keycode; filter out these that
+        // are not printable characters
+        if ( !wxIsprint(keychar) )
+            keychar = 0;
     }
 
-    if ( keycode == WXK_DOWN || keycode == WXK_RIGHT )
+    if ( keycode == WXK_DOWN || keycode == WXK_NUMPAD_DOWN || keycode == WXK_RIGHT )
     {
         value++;
         StopPartialCompletion();
     }
-    else if ( keycode == WXK_UP || keycode == WXK_LEFT )
+    else if ( keycode == WXK_UP || keycode == WXK_NUMPAD_UP || keycode == WXK_LEFT )
     {
         value--;
         StopPartialCompletion();
     }
-    else if ( keycode == WXK_PAGEDOWN )
+    else if ( keycode == WXK_PAGEDOWN || keycode == WXK_NUMPAD_PAGEDOWN )
     {
         value+=10;
         StopPartialCompletion();
     }
-    else if ( keycode == WXK_PAGEUP )
+    else if ( keycode == WXK_PAGEUP || keycode == WXK_NUMPAD_PAGEUP )
     {
         value-=10;
+        StopPartialCompletion();
+    }
+    else if ( keycode == WXK_HOME || keycode == WXK_NUMPAD_HOME )
+    {
+        value=0;
+        StopPartialCompletion();
+    }
+    else if ( keycode == WXK_END || keycode == WXK_NUMPAD_END )
+    {
+        value=itemCount-1;
         StopPartialCompletion();
     }
     else if ( keychar && (comboStyle & wxCB_READONLY) )
@@ -385,13 +401,21 @@ void wxVListBoxComboPopup::OnComboDoubleClick()
 void wxVListBoxComboPopup::OnComboKeyEvent( wxKeyEvent& event )
 {
     // Saturated key movement on
-    if ( !HandleKey(event.GetKeyCode(),true,
+    if ( !HandleKey(event.GetKeyCode(), true) )
+        event.Skip();
+}
+
+void wxVListBoxComboPopup::OnComboCharEvent( wxKeyEvent& event )
+{
+    // unlike in OnComboKeyEvent, wxEVT_CHAR contains meaningful
+    // printable character information, so pass it
 #if wxUSE_UNICODE
-        event.GetUnicodeKey()
+    const wxChar charcode = event.GetUnicodeKey();
 #else
-        0
+    const wxChar charcode = (wxChar)event.GetKeyCode();
 #endif
-        ) )
+
+    if ( !HandleKey(event.GetKeyCode(), true, charcode) )
         event.Skip();
 }
 
@@ -456,18 +480,31 @@ void wxVListBoxComboPopup::OnKey(wxKeyEvent& event)
     }
     else
     {
-        int comboStyle = m_combo->GetWindowStyle();
-        int keycode = event.GetKeyCode();
-        // Process partial completion key codes here, but not the arrow keys as the base class will do that for us
-        if ((comboStyle & wxCB_READONLY) &&
-            (keycode >= WXK_SPACE) && (keycode <=255) && (keycode != WXK_DELETE) && wxIsprint(keycode))
-        {
-            OnComboKeyEvent(event);
-            SetSelection(m_value); // ensure the highlight bar moves
-        }
-        else
-            event.Skip();
+        // completion is handled in OnChar() below
+        event.Skip();
     }
+}
+
+void wxVListBoxComboPopup::OnChar(wxKeyEvent& event)
+{
+    if ( m_combo->GetWindowStyle() & wxCB_READONLY )
+    {
+        // Process partial completion key codes here, but not the arrow keys as
+        // the base class will do that for us
+#if wxUSE_UNICODE
+        const wxChar charcode = event.GetUnicodeKey();
+#else
+        const wxChar charcode = (wxChar)event.GetKeyCode();
+#endif
+        if ( wxIsprint(charcode) )
+        {
+            OnComboCharEvent(event);
+            SetSelection(m_value); // ensure the highlight bar moves
+            return; // don't skip the event
+        }
+    }
+
+    event.Skip();
 }
 
 void wxVListBoxComboPopup::Insert( const wxString& item, int pos )
@@ -504,7 +541,7 @@ int wxVListBoxComboPopup::Append(const wxString& item)
 
         for ( i=0; i<strings.GetCount(); i++ )
         {
-            if ( item.Cmp(strings.Item(i)) < 0 )
+            if ( item.CmpNoCase(strings.Item(i)) < 0 )
             {
                 pos = (int)i;
                 break;
@@ -760,6 +797,11 @@ wxSize wxVListBoxComboPopup::GetAdjustedSize( int minWidth, int prefHeight, int 
             height = maxHeight;
 
         int totalHeight = GetTotalHeight(); // + 3;
+
+        // Take borders into account on Mac or scrollbars always appear
+#if defined(__WXMAC__)
+        totalHeight += 2;
+#endif
         if ( height >= totalHeight )
         {
             height = totalHeight;
@@ -952,7 +994,7 @@ void wxOwnerDrawnComboBox::DoClear()
 
 void wxOwnerDrawnComboBox::DoDeleteOneItem(unsigned int n)
 {
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxOwnerDrawnComboBox::Delete") );
+    wxCHECK_RET( IsValid(n), wxT("invalid index in wxOwnerDrawnComboBox::Delete") );
 
     if ( GetSelection() == (int) n )
         SetValue(wxEmptyString);
@@ -970,7 +1012,7 @@ unsigned int wxOwnerDrawnComboBox::GetCount() const
 
 wxString wxOwnerDrawnComboBox::GetString(unsigned int n) const
 {
-    wxCHECK_MSG( IsValid(n), wxEmptyString, _T("invalid index in wxOwnerDrawnComboBox::GetString") );
+    wxCHECK_MSG( IsValid(n), wxEmptyString, wxT("invalid index in wxOwnerDrawnComboBox::GetString") );
 
     if ( !m_popupInterface )
         return m_initChs.Item(n);
@@ -982,7 +1024,7 @@ void wxOwnerDrawnComboBox::SetString(unsigned int n, const wxString& s)
 {
     EnsurePopupControl();
 
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxOwnerDrawnComboBox::SetString") );
+    wxCHECK_RET( IsValid(n), wxT("invalid index in wxOwnerDrawnComboBox::SetString") );
 
     GetVListBoxComboPopup()->SetString(n,s);
 }
@@ -999,7 +1041,7 @@ void wxOwnerDrawnComboBox::Select(int n)
 {
     EnsurePopupControl();
 
-    wxCHECK_RET( (n == wxNOT_FOUND) || IsValid(n), _T("invalid index in wxOwnerDrawnComboBox::Select") );
+    wxCHECK_RET( (n == wxNOT_FOUND) || IsValid(n), wxT("invalid index in wxOwnerDrawnComboBox::Select") );
 
     GetVListBoxComboPopup()->SetSelection(n);
 
@@ -1039,7 +1081,7 @@ int wxOwnerDrawnComboBox::DoInsertItems(const wxArrayStringsAdapter& items,
 
         for ( unsigned int i = 0; i < count; ++i )
         {
-            int n = GetVListBoxComboPopup()->Append(items[i]);
+            n = GetVListBoxComboPopup()->Append(items[i]);
             AssignNewItemClientData(n, clientData, i, type);
         }
 
@@ -1084,8 +1126,21 @@ void wxOwnerDrawnComboBox::OnDrawItem( wxDC& dc,
 {
     if ( flags & wxODCB_PAINTING_CONTROL )
     {
-        dc.DrawText( GetValue(),
-                     rect.x + GetTextIndent(),
+        wxString text;
+
+        if ( !ShouldUseHintText() )
+        {
+            text = GetValue();
+        }
+        else
+        {
+            text = GetHint();
+            wxColour col = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+            dc.SetTextForeground(col);
+        }
+
+        dc.DrawText( text,
+                     rect.x + GetMargins().x,
                      (rect.height-dc.GetCharHeight())/2 + rect.y );
     }
     else

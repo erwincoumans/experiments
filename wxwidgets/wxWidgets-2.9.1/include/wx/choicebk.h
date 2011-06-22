@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Wlodzimierz ABX Skiba from wx/listbook.h
 // Created:     15.09.04
-// RCS-ID:      $Id: choicebk.h 59616 2009-03-18 21:58:15Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vadim Zeitlin, Wlodzimierz Skiba
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -70,7 +70,6 @@ public:
     virtual wxString GetPageText(size_t n) const;
     virtual int GetPageImage(size_t n) const;
     virtual bool SetPageImage(size_t n, int imageId);
-    virtual wxSize CalcSizeFromPage(const wxSize& sizePage) const;
     virtual bool InsertPage(size_t n,
                             wxWindow *page,
                             const wxString& text,
@@ -90,9 +89,6 @@ protected:
     virtual void DoSetWindowVariant(wxWindowVariant variant);
 
     virtual wxWindow *DoRemovePage(size_t page);
-
-    // get the size which the choice control should have
-    virtual wxSize GetControllerSize() const;
 
     void UpdateSelectedPage(size_t newsel)
     {

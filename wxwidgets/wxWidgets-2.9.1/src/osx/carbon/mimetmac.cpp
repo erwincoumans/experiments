@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     04/16/2005
-// RCS-ID:      $Id: mimetmac.cpp 55419 2008-09-02 16:53:23Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Ryan Norton (<wxprojects@comcast.net>)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1404,7 +1404,9 @@ wxFileType* wxMimeTypesManagerImpl::Associate(const wxFileTypeInfo& ftInfo)
                 wxString sError;
                 bInfoOpenSuccess = cfdInfo.ReadAsXML(cfdaInDict, &sError);
                 if (!bInfoOpenSuccess)
+                {
                     wxLogDebug(sError);
+                }
                 indictfile.Close();
             }
 
@@ -1752,7 +1754,9 @@ wxMimeTypesManagerImpl::Unassociate(wxFileType *pFileType)
                 wxString sError;
                 bInfoOpenSuccess = cfdInfo.ReadAsXML(cfdaInDict, &sError);
                 if (!bInfoOpenSuccess)
+                {
                     wxLogDebug(sError);
+                }
                 indictfile.Close();
             }
 
@@ -1853,7 +1857,9 @@ wxMimeTypesManagerImpl::Unassociate(wxFileType *pFileType)
                         wxLogDebug(sPrintOut);
 
                         for (size_t i = 0; i < asExtensions.GetCount(); ++i)
+                        {
                             wxLogDebug(asExtensions[i]);
+                        }
                     }
                 }
                 else

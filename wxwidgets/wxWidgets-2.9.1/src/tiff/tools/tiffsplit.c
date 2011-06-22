@@ -1,4 +1,4 @@
-/* $Id: tiffsplit.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1992-1997 Sam Leffler

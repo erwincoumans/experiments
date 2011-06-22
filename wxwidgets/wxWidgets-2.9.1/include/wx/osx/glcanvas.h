@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/glcanvas.h
+// Name:        wx/osx/glcanvas.h
 // Purpose:     wxGLCanvas, for using OpenGL with wxWidgets under Macintosh
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: glcanvas.h 59923 2009-03-29 20:45:45Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,16 +15,20 @@
 #ifdef __WXOSX_IPHONE__
 #import <OpenGLES/ES1/gl.h>
 #import <OpenGLES/ES1/glext.h>
+#define wxUSE_OPENGL_EMULATION 1
 #else
 #include <OpenGL/gl.h>
 #endif
+
+#include "wx/vector.h"
 
 // low level calls
 
 WXDLLIMPEXP_GL WXGLContext WXGLCreateContext( WXGLPixelFormat pixelFormat, WXGLContext shareContext );
 WXDLLIMPEXP_GL void WXGLDestroyContext( WXGLContext context );
+
 WXDLLIMPEXP_GL WXGLContext WXGLGetCurrentContext();
-WXDLLIMPEXP_GL void WXGLSwapBuffers( WXGLContext context );
+WXDLLIMPEXP_GL bool WXGLSetCurrentContext(WXGLContext context);
 
 WXDLLIMPEXP_GL WXGLPixelFormat WXGLChoosePixelFormat(const int *attribList);
 WXDLLIMPEXP_GL void WXGLDestroyPixelFormat( WXGLPixelFormat pixelFormat );
@@ -39,7 +43,7 @@ public:
 
     // Mac-specific
     WXGLContext GetWXGLContext() const { return m_glContext; }
-    
+
 private:
     WXGLContext m_glContext;
 
@@ -138,7 +142,7 @@ public:
     virtual void MacVisibilityChanged();
 
     void MacUpdateView();
-    
+
     GLint GetAglBufferName() const { return m_bufferName; }
 #endif
 

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     04.11.99
-// RCS-ID:      $Id: fontmap.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999-2003 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -329,7 +329,7 @@ bool wxFontMapper::GetAltForEncoding(wxFontEncoding encoding,
              encName = GetEncodingName(encoding);
     if ( !facename.empty() )
     {
-        configEntry = facename + _T("_");
+        configEntry = facename + wxT("_");
     }
     configEntry += encName;
 
@@ -494,7 +494,7 @@ bool wxFontMapper::GetAltForEncoding(wxFontEncoding encoding,
                                      bool interactive)
 {
     wxCHECK_MSG( encodingAlt, false,
-                    _T("wxFontEncoding::GetAltForEncoding(): NULL pointer") );
+                    wxT("wxFontEncoding::GetAltForEncoding(): NULL pointer") );
 
     wxNativeEncodingInfo info;
     if ( !GetAltForEncoding(encoding, &info, facename, interactive) )

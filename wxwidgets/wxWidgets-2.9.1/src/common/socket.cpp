@@ -6,8 +6,8 @@
 // Copyright:  (C) 1999-1997, Guilhem Lavaux
 //             (C) 1999-2000, Guillermo Rodriguez Garcia
 //             (C) 2008 Vadim Zeitlin
-// RCS_ID:     $Id: socket.cpp 61734 2009-08-22 17:40:08Z VZ $
-// License:    wxWindows licence
+// RCS_ID:     $Id$
+// Licence:    wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ==========================================================================
@@ -115,7 +115,7 @@ wxDEFINE_EVENT(wxEVT_SOCKET, wxSocketEvent);
 // discard buffer
 #define MAX_DISCARD_SIZE (10 * 1024)
 
-#define wxTRACE_Socket _T("wxSocket")
+#define wxTRACE_Socket wxT("wxSocket")
 
 // --------------------------------------------------------------------------
 // wxWin macros
@@ -213,7 +213,11 @@ public:
     {
         m_socket->m_reading = false;
 
-        m_socket->m_impl->ReenableEvents(wxSOCKET_INPUT_FLAG);
+        // connection could have been lost while reading, in this case calling
+        // ReenableEvents() would assert and is not necessary anyhow
+        wxSocketImpl * const impl = m_socket->m_impl;
+        if ( impl && impl->m_fd != INVALID_SOCKET )
+            impl->ReenableEvents(wxSOCKET_INPUT_FLAG);
     }
 
 private:
@@ -231,13 +235,15 @@ public:
         wxASSERT_MSG( !m_socket->m_writing, "write reentrancy?" );
 
         m_socket->m_writing = true;
-
-        m_socket->m_impl->ReenableEvents(wxSOCKET_OUTPUT_FLAG);
     }
 
     ~wxSocketWriteGuard()
     {
         m_socket->m_writing = false;
+
+        wxSocketImpl * const impl = m_socket->m_impl;
+        if ( impl && impl->m_fd != INVALID_SOCKET )
+            impl->ReenableEvents(wxSOCKET_OUTPUT_FLAG);
     }
 
 private:
@@ -744,36 +750,48 @@ int wxSocketImpl::Write(const void *buffer, int size)
 // Initialization and shutdown
 // --------------------------------------------------------------------------
 
-// FIXME-MT: all this is MT-unsafe, of course, we should protect all accesses
-//           to m_countInit with a crit section
-size_t wxSocketBase::m_countInit = 0;
+namespace
+{
+
+// counts the number of calls to Initialize() minus the number of calls to
+// Shutdown(): we don't really need it any more but it was documented that
+// Shutdown() must be called the same number of times as Initialize() and using
+// a counter helps us to check it
+int gs_socketInitCount = 0;
+
+} // anonymous namespace
 
 bool wxSocketBase::IsInitialized()
 {
-    return m_countInit > 0;
+    wxASSERT_MSG( wxIsMainThread(), "unsafe to call from other threads" );
+
+    return gs_socketInitCount != 0;
 }
 
 bool wxSocketBase::Initialize()
 {
-    if ( !m_countInit++ )
+    wxCHECK_MSG( wxIsMainThread(), false,
+                 "must be called from the main thread" );
+
+    if ( !gs_socketInitCount )
     {
         wxSocketManager * const manager = wxSocketManager::Get();
         if ( !manager || !manager->OnInit() )
-        {
-            m_countInit--;
-
             return false;
-        }
     }
+
+    gs_socketInitCount++;
 
     return true;
 }
 
 void wxSocketBase::Shutdown()
 {
-    // we should be initialized
-    wxASSERT_MSG( m_countInit > 0, _T("extra call to Shutdown()") );
-    if ( --m_countInit == 0 )
+    wxCHECK_RET( wxIsMainThread(), "must be called from the main thread" );
+
+    wxCHECK_RET( gs_socketInitCount > 0, "too many calls to Shutdown()" );
+
+    if ( !--gs_socketInitCount )
     {
         wxSocketManager * const manager = wxSocketManager::Get();
         wxCHECK_RET( manager, "should have a socket manager" );
@@ -815,12 +833,16 @@ void wxSocketBase::Init()
     m_eventmask    =
     m_eventsgot    = 0;
 
-    if ( !IsInitialized() )
+    // when we create the first socket in the main thread we initialize the
+    // OS-dependent socket stuff: notice that this means that the user code
+    // needs to call wxSocket::Initialize() itself if the first socket it
+    // creates is not created in the main thread
+    if ( wxIsMainThread() )
     {
-        // this Initialize() will be undone by wxSocketModule::OnExit(), all
-        // the other calls to it should be matched by a call to Shutdown()
-        if (!Initialize())
-            wxLogError("Cannot initialize wxSocketBase");
+        if ( !Initialize() )
+        {
+            wxLogError(_("Cannot initialize sockets"));
+        }
     }
 }
 
@@ -840,12 +862,6 @@ wxSocketBase::wxSocketBase(wxSocketFlags flags, wxSocketType type)
 
 wxSocketBase::~wxSocketBase()
 {
-    // Just in case the app called Destroy() *and* then deleted the socket
-    // immediately: don't leave dangling pointers.
-    wxAppTraits *traits = wxTheApp ? wxTheApp->GetTraits() : NULL;
-    if ( traits )
-        traits->RemoveFromPendingDelete(this);
-
     // Shutdown and close the socket
     if (!m_beingDeleted)
         Close();
@@ -854,8 +870,7 @@ wxSocketBase::~wxSocketBase()
     delete m_impl;
 
     // Free the pushback buffer
-    if (m_unread)
-        free(m_unread);
+    free(m_unread);
 }
 
 bool wxSocketBase::Destroy()
@@ -871,14 +886,13 @@ bool wxSocketBase::Destroy()
     // Suppress events from now on
     Notify(false);
 
-    // schedule this object for deletion
-    wxAppTraits *traits = wxTheApp ? wxTheApp->GetTraits() : NULL;
-    if ( traits )
+    // Schedule this object for deletion instead of destroying it right now if
+    // possible as we may have other events pending for it
+    if ( wxTheApp )
     {
-        // let the traits object decide what to do with us
-        traits->ScheduleForDestroy(this);
+        wxTheApp->ScheduleForDestruction(this);
     }
-    else // no app or no traits
+    else // no app
     {
         // in wxBase we might have no app object at all, don't leak memory
         delete this;
@@ -1094,6 +1108,9 @@ wxSocketBase& wxSocketBase::ReadMsg(void* buffer, wxUint32 nbytes)
 wxSocketBase& wxSocketBase::Peek(void* buffer, wxUint32 nbytes)
 {
     wxSocketReadGuard read(this);
+
+    // Peek() should never block
+    wxSocketWaitModeChanger changeFlags(this, wxSOCKET_NOWAIT);
 
     m_lcount = DoRead(buffer, nbytes);
 
@@ -1616,19 +1633,28 @@ void wxSocketBase::OnRequest(wxSocketNotify notification)
 
         case wxSOCKET_CONNECTION:
             flag = wxSOCKET_CONNECTION_FLAG;
+
+            // we're now successfully connected
+            m_connected = true;
+            m_establishing = false;
+
+            // error was previously set to wxSOCKET_WOULDBLOCK, but this is not
+            // the case any longer
+            SetError(wxSOCKET_NOERROR);
             break;
 
         case wxSOCKET_LOST:
             flag = wxSOCKET_LOST_FLAG;
+
+            // if we lost the connection the socket is now closed and not
+            // connected any more
+            m_connected = false;
+            m_closed = true;
             break;
 
         default:
             wxFAIL_MSG( "unknown wxSocket notification" );
     }
-
-    // if we lost the connection the socket is now closed
-    if ( notification == wxSOCKET_LOST )
-        m_closed = true;
 
     // remember the events which were generated for this socket, we're going to
     // use this in DoWait()
@@ -1737,14 +1763,14 @@ wxSocketServer::wxSocketServer(const wxSockAddress& addr,
                                wxSocketFlags flags)
               : wxSocketBase(flags, wxSOCKET_SERVER)
 {
-    wxLogTrace( wxTRACE_Socket, _T("Opening wxSocketServer") );
+    wxLogTrace( wxTRACE_Socket, wxT("Opening wxSocketServer") );
 
     wxSocketManager * const manager = wxSocketManager::Get();
     m_impl = manager ? manager->CreateSocket(*this) : NULL;
 
     if (!m_impl)
     {
-        wxLogTrace( wxTRACE_Socket, _T("*** Failed to create m_impl") );
+        wxLogTrace( wxTRACE_Socket, wxT("*** Failed to create m_impl") );
         return;
     }
 
@@ -1763,14 +1789,13 @@ wxSocketServer::wxSocketServer(const wxSockAddress& addr,
 
     if (m_impl->CreateServer() != wxSOCKET_NOERROR)
     {
-        delete m_impl;
-        m_impl = NULL;
+        wxDELETE(m_impl);
 
-        wxLogTrace( wxTRACE_Socket, _T("*** CreateServer() failed") );
+        wxLogTrace( wxTRACE_Socket, wxT("*** CreateServer() failed") );
         return;
     }
 
-    wxLogTrace( wxTRACE_Socket, _T("wxSocketServer on fd %d"), m_impl->m_fd );
+    wxLogTrace( wxTRACE_Socket, wxT("wxSocketServer on fd %d"), m_impl->m_fd );
 }
 
 // --------------------------------------------------------------------------
@@ -1836,7 +1861,7 @@ bool wxSocketServer::WaitForAccept(long seconds, long milliseconds)
 
 bool wxSocketBase::GetOption(int level, int optname, void *optval, int *optlen)
 {
-    wxASSERT_MSG( m_impl, _T("Socket not initialised") );
+    wxASSERT_MSG( m_impl, wxT("Socket not initialised") );
 
     SOCKOPTLEN_T lenreal = *optlen;
     if ( getsockopt(m_impl->m_fd, level, optname,
@@ -1851,7 +1876,7 @@ bool wxSocketBase::GetOption(int level, int optname, void *optval, int *optlen)
 bool
 wxSocketBase::SetOption(int level, int optname, const void *optval, int optlen)
 {
-    wxASSERT_MSG( m_impl, _T("Socket not initialised") );
+    wxASSERT_MSG( m_impl, wxT("Socket not initialised") );
 
     return setsockopt(m_impl->m_fd, level, optname,
                       static_cast<const char *>(optval), optlen) == 0;
@@ -2004,8 +2029,7 @@ wxDatagramSocket::wxDatagramSocket( const wxSockAddress& addr,
 
     if ( m_impl->CreateUDP() != wxSOCKET_NOERROR )
     {
-        delete m_impl;
-        m_impl = NULL;
+        wxDELETE(m_impl);
         return;
     }
 
@@ -2027,7 +2051,7 @@ wxDatagramSocket& wxDatagramSocket::SendTo( const wxSockAddress& addr,
                                             const void* buf,
                                             wxUint32 nBytes )
 {
-    wxASSERT_MSG( m_impl, _T("Socket not initialised") );
+    wxASSERT_MSG( m_impl, wxT("Socket not initialised") );
 
     m_impl->SetPeer(addr.GetAddress());
     Write(buf, nBytes);
@@ -2073,7 +2097,7 @@ wxFORCE_LINK_MODULE( socketiohandler )
 #endif
 
 // and for OSXManagerSetter in the OS X one
-#ifdef __WXMAC__
+#ifdef __WXOSX__
     wxFORCE_LINK_MODULE( osxsocket )
 #endif
 

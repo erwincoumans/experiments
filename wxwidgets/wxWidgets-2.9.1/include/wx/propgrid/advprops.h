@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2004-09-25
-// RCS-ID:      $Id: advprops.h 60870 2009-06-02 01:51:46Z RD $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_PROPGRID_ADVPROPS_H_
@@ -18,27 +18,21 @@
 
 // -----------------------------------------------------------------------
 
-
 //
 // Additional Value Type Handlers
 //
-#ifndef SWIG
 bool WXDLLIMPEXP_PROPGRID
 operator==(const wxArrayInt& array1, const wxArrayInt& array2);
-#endif
-
 
 //
 // Additional Property Editors
 //
-#ifndef SWIG
 #if wxUSE_SPINBTN
 WX_PG_DECLARE_EDITOR_WITH_DECL(SpinCtrl,WXDLLIMPEXP_PROPGRID)
 #endif
 
 #if wxUSE_DATEPICKCTRL
 WX_PG_DECLARE_EDITOR_WITH_DECL(DatePickerCtrl,WXDLLIMPEXP_PROPGRID)
-#endif
 #endif
 
 // -----------------------------------------------------------------------
@@ -125,7 +119,6 @@ public:
         Init( type, colour );
     }
 
-#ifndef SWIG
     void operator=(const wxColourPropertyValue& cpv)
     {
         if (this != &cpv)
@@ -134,26 +127,13 @@ public:
 
 private:
     DECLARE_DYNAMIC_CLASS(wxColourPropertyValue)
-#endif
 };
 
 
-#ifndef SWIG
 bool WXDLLIMPEXP_PROPGRID
 operator==(const wxColourPropertyValue&, const wxColourPropertyValue&);
 
 DECLARE_VARIANT_OBJECT_EXPORTED(wxColourPropertyValue, WXDLLIMPEXP_PROPGRID)
-
-#endif
-
-#ifndef SWIG
-    #define wxPG_EMPTY_CPV          (*(NULL))
-    #define wxPG_NORMAL_FONT        (*wxNORMAL_FONT)
-#else
-    #define wxPG_EMPTY_CPV          wxCPV_wxPG_EMPTY
-    #define wxPG_NORMAL_FONT        wxFONT_wxPG_NORMAL_FONT
-#endif
-
 
 // -----------------------------------------------------------------------
 // Declare part of custom colour property macro pairs.
@@ -163,9 +143,6 @@ DECLARE_VARIANT_OBJECT_EXPORTED(wxColourPropertyValue, WXDLLIMPEXP_PROPGRID)
 #endif
 
 // -----------------------------------------------------------------------
-
-// Exclude class from wxPython bindings
-#ifndef SWIG
 
 /** @class wxFontProperty
     @ingroup classes
@@ -184,14 +161,13 @@ public:
     virtual wxString ValueToString( wxVariant& value, int argFlags = 0 ) const;
     virtual bool OnEvent( wxPropertyGrid* propgrid,
                           wxWindow* primary, wxEvent& event );
-    virtual void ChildChanged( wxVariant& thisValue,
-                               int childIndex, wxVariant& childValue ) const;
+    virtual wxVariant ChildChanged( wxVariant& thisValue,
+                                    int childIndex,
+                                    wxVariant& childValue ) const;
     virtual void RefreshChildren();
 
 protected:
 };
-
-#endif  // !SWIG
 
 // -----------------------------------------------------------------------
 
@@ -257,10 +233,10 @@ protected:
 
     // Special constructors to be used by derived classes.
     wxSystemColourProperty( const wxString& label, const wxString& name,
-        const wxChar** labels, const long* values, wxPGChoices* choicesCache,
+        const wxChar* const* labels, const long* values, wxPGChoices* choicesCache,
         const wxColourPropertyValue& value );
     wxSystemColourProperty( const wxString& label, const wxString& name,
-        const wxChar** labels, const long* values, wxPGChoices* choicesCache,
+        const wxChar* const* labels, const long* values, wxPGChoices* choicesCache,
         const wxColour& value );
 
     void Init( int type, const wxColour& colour );
@@ -303,9 +279,6 @@ private:
 };
 
 // -----------------------------------------------------------------------
-
-// Exclude classes from wxPython bindings
-#ifndef SWIG
 
 /** @class wxCursorProperty
     @ingroup classes
@@ -381,7 +354,6 @@ public:
                            const wxString& name,
                            const wxArrayString& strings,
                            const wxArrayString& value );
-#ifndef SWIG
     wxMultiChoiceProperty( const wxString& label,
                            const wxString& name,
                            const wxPGChoices& choices,
@@ -390,7 +362,7 @@ public:
     wxMultiChoiceProperty( const wxString& label = wxPG_LABEL,
                            const wxString& name = wxPG_LABEL,
                            const wxArrayString& value = wxArrayString() );
-#endif
+
     virtual ~wxMultiChoiceProperty();
 
     virtual void OnSetValue();
@@ -432,7 +404,7 @@ protected:
     <b>Supported special attributes:</b>
     - "DateFormat": Determines displayed date format.
     - "PickerStyle": Determines window style used with wxDatePickerCtrl.
-       Default is wxDP_DEFAULT | wxDP_SHOWCENTURY. Using wxDP_ALLOWNONE 
+       Default is wxDP_DEFAULT | wxDP_SHOWCENTURY. Using wxDP_ALLOWNONE
        enables additional support for unspecified property value.
 */
 class WXDLLIMPEXP_PROPGRID wxDateProperty : public wxPGProperty
@@ -489,8 +461,6 @@ protected:
 };
 
 #endif // wxUSE_DATETIME
-
-#endif // !SWIG
 
 // -----------------------------------------------------------------------
 

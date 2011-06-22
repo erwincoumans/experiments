@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: combobox.cpp 50067 2007-11-18 22:55:54Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -140,7 +140,7 @@ bool wxComboBox::Create(
         lSstyle |= CBS_DROPDOWN;
 
 
-    if (!OS2CreateControl( _T("COMBOBOX")
+    if (!OS2CreateControl( wxT("COMBOBOX")
                           ,lSstyle
                          ))
         return false;

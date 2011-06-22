@@ -3,7 +3,7 @@
 // Purpose:     HTTP and FTP file system
 // Author:      Vaclav Slavik
 // Copyright:   (c) 1999 Vaclav Slavik
-// RCS-ID:      $Id: fs_inet.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -152,7 +152,7 @@ class wxFileSystemInternetModule : public wxModule
             return true;
         }
 
-        virtual void OnExit() 
+        virtual void OnExit()
         {
             delete wxFileSystem::RemoveHandler(m_handler);
         }

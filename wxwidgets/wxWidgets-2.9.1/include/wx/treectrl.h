@@ -5,7 +5,7 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Karsten Ballueder
-// RCS-ID:      $Id: treectrl.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -22,7 +22,7 @@
 
 #include "wx/control.h"
 #include "wx/treebase.h"
-#include "wx/textctrl.h" // wxTextCtrl::ms_classinfo used through CLASSINFO macro
+#include "wx/textctrl.h" // wxTextCtrl::ms_classinfo used through wxCLASSINFO macro
 
 class WXDLLIMPEXP_FWD_CORE wxImageList;
 
@@ -210,6 +210,17 @@ public:
         //     control with a lot of items (~ O(number of items)).
     virtual size_t GetSelections(wxArrayTreeItemIds& selections) const = 0;
 
+        // get the last item to be clicked when the control has wxTR_MULTIPLE
+        // equivalent to GetSelection() if not wxTR_MULTIPLE
+    virtual wxTreeItemId GetFocusedItem() const = 0;
+
+
+        // Clears the currently focused item
+    virtual void ClearFocusedItem() = 0;
+        // Sets the currently focused item. Item should be valid
+    virtual void SetFocusedItem(const wxTreeItemId& item) = 0;
+
+
         // get the parent of this item (may return NULL if root)
     virtual wxTreeItemId GetItemParent(const wxTreeItemId& item) const = 0;
 
@@ -320,6 +331,9 @@ public:
     virtual void UnselectAll() = 0;
         // select this item
     virtual void SelectItem(const wxTreeItemId& item, bool select = true) = 0;
+        // selects all (direct) children for given parent (only for
+        // multiselection controls)
+    virtual void SelectChildren(const wxTreeItemId& parent) = 0;
         // unselect this item
     void UnselectItem(const wxTreeItemId& item) { SelectItem(item, false); }
         // toggle item selection
@@ -339,7 +353,7 @@ public:
         // been before. textCtrlClass parameter allows you to create an edit
         // control of arbitrary user-defined class deriving from wxTextCtrl.
     virtual wxTextCtrl *EditLabel(const wxTreeItemId& item,
-                      wxClassInfo* textCtrlClass = CLASSINFO(wxTextCtrl)) = 0;
+                      wxClassInfo* textCtrlClass = wxCLASSINFO(wxTextCtrl)) = 0;
         // returns the same pointer as StartEdit() if the item is being edited,
         // NULL otherwise (it's assumed that no more than one item may be
         // edited simultaneously)
@@ -396,7 +410,7 @@ public:
 protected:
     virtual wxSize DoGetBestSize() const;
 
-    // comon part of Get/SetItemState()
+    // common part of Get/SetItemState()
     virtual int DoGetItemState(const wxTreeItemId& item) const = 0;
     virtual void DoSetItemState(const wxTreeItemId& item, int state) = 0;
 

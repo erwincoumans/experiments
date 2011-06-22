@@ -3,7 +3,7 @@
 // Purpose:     wxMessageDialog for wxCocoa
 // Author:      Gareth Simpson
 // Created:     2007-10-09
-// RCS-ID:      $Id: msgdlg.mm 55483 2008-09-05 18:02:49Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -79,14 +79,17 @@ int wxCocoaMessageDialog::ShowModal()
     const long style = GetMessageDialogStyle();
 
     NSAlertStyle nsStyle = NSInformationalAlertStyle;
-    if (style & wxICON_EXCLAMATION)
-        nsStyle = NSWarningAlertStyle;
-    else if (style & wxICON_HAND)
-        nsStyle = NSCriticalAlertStyle;
-    else if (style & wxICON_INFORMATION)
-        nsStyle = NSInformationalAlertStyle;
-    else if (style & wxICON_QUESTION)
-        nsStyle = NSInformationalAlertStyle;
+
+    switch ( GetEffectiveIcon() )
+    {
+        case wxICON_ERROR:
+            nsStyle = NSCriticalAlertStyle;
+            break;
+
+        case wxICON_WARNING:
+            nsStyle = NSWarningAlertStyle;
+            break;
+    }
 
     [alert setAlertStyle:nsStyle];
 

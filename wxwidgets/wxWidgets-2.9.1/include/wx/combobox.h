@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     24.12.00
-// RCS-ID:      $Id: combobox.h 58919 2009-02-15 19:34:58Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1996-2000 wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,6 +46,9 @@ public:
     //     it anyhow to avoid ambiguity with the other GetSelection()
     virtual int GetSelection() const = 0;
     virtual void GetSelection(long *from, long *to) const = 0;
+
+    virtual void Popup() { wxFAIL_MSG( wxT("Not implemented") ); };
+    virtual void Dismiss() { wxFAIL_MSG( wxT("Not implemented") ); };
 
     // may return value different from GetSelection() when the combobox
     // dropdown is shown and the user selected, but not yet accepted, a value

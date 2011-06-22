@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrlcmn.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -107,8 +107,7 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
         {
             if (!Load(fileName))
             {
-                delete m_imp;
-                m_imp = NULL;
+                wxDELETE(m_imp);
                 return false;
             }
         }
@@ -172,8 +171,7 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
 
         if (!Load(location))
         {
-            delete m_imp;
-            m_imp = NULL;
+            wxDELETE(m_imp);
             return false;
         }
 

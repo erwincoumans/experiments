@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: font.h 60151 2009-04-14 20:04:53Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ enum wxOSXSystemFont
     wxOSX_SYSTEM_FONT_MINI,
     wxOSX_SYSTEM_FONT_MINI_BOLD,
     wxOSX_SYSTEM_FONT_LABELS,
-    wxOSX_SYSTEM_FONT_VIEWS
+    wxOSX_SYSTEM_FONT_VIEWS,
 };
 
 
@@ -36,6 +36,12 @@ class WXDLLIMPEXP_CORE wxFont : public wxFontBase
 public:
     // ctors and such
     wxFont() { }
+    
+    wxFont( wxOSXSystemFont systemFont );
+
+#if wxOSX_USE_COCOA
+    wxFont(WX_NSFont nsfont);
+#endif
 
 #if FUTURE_WXWIN_COMPATIBILITY_3_0
     wxFont(int size,
@@ -60,7 +66,7 @@ public:
     {
         Create(size, family, style, weight, underlined, face, encoding);
     }
-    
+
     wxFont(const wxSize& pixelSize,
            wxFontFamily family,
            wxFontStyle style,
@@ -72,7 +78,7 @@ public:
         Create(10, family, style, weight, underlined, face, encoding);
         SetPixelSize(pixelSize);
     }
-    
+
     bool Create(int size,
                 wxFontFamily family,
                 wxFontStyle style,
@@ -90,8 +96,6 @@ public:
 
     bool Create(const wxNativeFontInfo& info);
 
-    bool CreateSystemFont(wxOSXSystemFont font);
-    
     virtual ~wxFont();
 
     // implement base class pure virtuals
@@ -113,16 +117,12 @@ public:
     virtual void SetUnderlined(bool underlined);
     virtual void SetEncoding(wxFontEncoding encoding);
 
-    WXDECLARE_COMPAT_SETTERS
+    wxDECLARE_COMMON_FONT_METHODS();
 
     // implementation only from now on
     // -------------------------------
 
     virtual bool RealizeResource();
-
-    // Unofficial API, don't use
-    virtual void SetNoAntiAliasing( bool noAA = TRUE ) ;
-    virtual bool GetNoAntiAliasing() const  ;
 
     // Mac-specific, risks to change, don't use in portable code
 
@@ -157,6 +157,7 @@ public:
     WX_NSFont OSXGetNSFont() const;
     static WX_NSFont OSXCreateNSFont(wxOSXSystemFont font, wxNativeFontInfo* info);
     static WX_NSFont OSXCreateNSFont(const wxNativeFontInfo* info);
+    static void SetNativeInfoFromNSFont(WX_NSFont nsfont, wxNativeFontInfo* info);
 #endif
 
 #if wxOSX_USE_IPHONE

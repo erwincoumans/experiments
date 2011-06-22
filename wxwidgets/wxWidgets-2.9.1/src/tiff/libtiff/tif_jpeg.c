@@ -1,4 +1,4 @@
-/* $Id: tif_jpeg.c 48826 2007-09-20 00:16:14Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1994-1997 Sam Leffler

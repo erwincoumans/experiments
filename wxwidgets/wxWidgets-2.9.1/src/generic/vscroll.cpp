@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Brad Anderson, David Warkentin
 // Created:     30.05.03
-// RCS-ID:      $Id: vscroll.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -97,10 +97,6 @@ bool wxVarScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
     if ( wasSkipped )
         event.Skip(false);
 
-    // reset the skipped flag to false as it might have been set to true in
-    // ProcessEvent() above
-    event.Skip(false);
-
     if ( evType == wxEVT_SCROLLWIN_TOP ||
          evType == wxEVT_SCROLLWIN_BOTTOM ||
          evType == wxEVT_SCROLLWIN_LINEUP ||
@@ -127,8 +123,7 @@ bool wxVarScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
     }
 #endif // wxUSE_MOUSEWHEEL
 
-    if ( processed )
-        event.Skip(wasSkipped);
+    event.Skip(wasSkipped);
 
     return processed;
 }
@@ -144,7 +139,7 @@ bool wxVarScrollHelperEvtHandler::ProcessEvent(wxEvent& event)
 
 wxVarScrollHelperBase::wxVarScrollHelperBase(wxWindow *win)
 {
-    wxASSERT_MSG( win, _T("associated window can't be NULL in wxVarScrollHelperBase") );
+    wxASSERT_MSG( win, wxT("associated window can't be NULL in wxVarScrollHelperBase") );
 
 #if wxUSE_MOUSEWHEEL
     m_sumWheelRotation = 0;
@@ -332,7 +327,7 @@ size_t wxVarScrollHelperBase::GetNewScrollPosition(wxScrollWinEvent& event) cons
     }
 
     // unknown scroll event?
-    wxFAIL_MSG( _T("unknown scroll event type?") );
+    wxFAIL_MSG( wxT("unknown scroll event type?") );
     return 0;
 }
 
@@ -476,7 +471,7 @@ void wxVarScrollHelperBase::RefreshUnit(size_t unit)
 
 void wxVarScrollHelperBase::RefreshUnits(size_t from, size_t to)
 {
-    wxASSERT_MSG( from <= to, _T("RefreshUnits(): empty range") );
+    wxASSERT_MSG( from <= to, wxT("RefreshUnits(): empty range") );
 
     // clump the range to just the visible units -- it is useless to refresh
     // the other ones
@@ -674,6 +669,39 @@ bool wxVarScrollHelperBase::DoScrollPages(int pages)
 
 void wxVarScrollHelperBase::HandleOnSize(wxSizeEvent& event)
 {
+    if ( m_unitMax )
+    {
+        // sometimes change in varscrollable window's size can result in
+        // unused empty space after the last item. Fix it by decrementing
+        // first visible item position according to the available space.
+
+        // determine free space
+        const wxCoord sWindow = GetOrientationTargetSize();
+        wxCoord s = 0;
+        size_t unit;
+        for ( unit = m_unitFirst; unit < m_unitMax; ++unit )
+        {
+            if ( s > sWindow )
+                break;
+
+            s += OnGetUnitSize(unit);
+        }
+        wxCoord freeSpace = sWindow - s;
+
+        // decrement first visible item index as long as there is free space
+        size_t idealUnitFirst;
+        for ( idealUnitFirst = m_unitFirst;
+              idealUnitFirst > 0;
+              idealUnitFirst-- )
+        {
+            wxCoord us = OnGetUnitSize(idealUnitFirst-1);
+            if ( freeSpace < us )
+                break;
+            freeSpace -= us;
+        }
+        m_unitFirst = idealUnitFirst;
+    }
+
     UpdateScrollbar();
 
     event.Skip();
@@ -817,7 +845,7 @@ void wxVarHVScrollHelper::RefreshRowsColumns(size_t fromRow, size_t toRow,
                                              size_t fromColumn, size_t toColumn)
 {
     wxASSERT_MSG( fromRow <= toRow || fromColumn <= toColumn,
-        _T("RefreshRowsColumns(): empty range") );
+        wxT("RefreshRowsColumns(): empty range") );
 
     // clump the range to just the visible units -- it is useless to refresh
     // the other ones
@@ -936,7 +964,7 @@ IMPLEMENT_ABSTRACT_CLASS(wxHVScrolledWindow, wxPanel)
 // wxVarVScrollLegacyAdaptor
 // ===========================================================================
 
-size_t wxVarVScrollLegacyAdaptor::GetFirstVisibleLine() const 
+size_t wxVarVScrollLegacyAdaptor::GetFirstVisibleLine() const
 { return GetVisibleRowsBegin(); }
 
 size_t wxVarVScrollLegacyAdaptor::GetLastVisibleLine() const
@@ -953,19 +981,19 @@ void wxVarVScrollLegacyAdaptor::RefreshLine(size_t line)
 
 void wxVarVScrollLegacyAdaptor::RefreshLines(size_t from, size_t to)
 { RefreshRows(from, to); }
-        
+
 bool wxVarVScrollLegacyAdaptor::ScrollToLine(size_t line)
 { return ScrollToRow(line); }
 
 bool wxVarVScrollLegacyAdaptor::ScrollLines(int lines)
 { return ScrollRows(lines); }
-        
+
 bool wxVarVScrollLegacyAdaptor::ScrollPages(int pages)
 { return ScrollRowPages(pages); }
 
 wxCoord wxVarVScrollLegacyAdaptor::OnGetLineHeight(size_t WXUNUSED(n)) const
 {
-    wxFAIL_MSG( _T("OnGetLineHeight() must be overridden if OnGetRowHeight() isn't!") );
+    wxFAIL_MSG( wxT("OnGetLineHeight() must be overridden if OnGetRowHeight() isn't!") );
     return -1;
 }
 

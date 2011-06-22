@@ -3,7 +3,7 @@
 // Purpose:     common (for all platforms) wxFrame functions
 // Author:      Julian Smart, Vadim Zeitlin
 // Created:     01/02/97
-// Id:          $Id: framecmn.cpp 58478 2009-01-28 09:14:07Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -92,27 +92,15 @@ wxFrame *wxFrameBase::New(wxWindow *parent,
 void wxFrameBase::DeleteAllBars()
 {
 #if wxUSE_MENUS
-    if ( m_frameMenuBar )
-    {
-        delete m_frameMenuBar;
-        m_frameMenuBar = NULL;
-    }
+    wxDELETE(m_frameMenuBar);
 #endif // wxUSE_MENUS
 
 #if wxUSE_STATUSBAR
-    if ( m_frameStatusBar )
-    {
-        delete m_frameStatusBar;
-        m_frameStatusBar = NULL;
-    }
+    wxDELETE(m_frameStatusBar);
 #endif // wxUSE_STATUSBAR
 
 #if wxUSE_TOOLBAR
-    if ( m_frameToolBar )
-    {
-        delete m_frameToolBar;
-        m_frameToolBar = NULL;
-    }
+    wxDELETE(m_frameToolBar);
 #endif // wxUSE_TOOLBAR
 }
 
@@ -347,8 +335,10 @@ bool wxFrameBase::ShowMenuHelp(int menuId)
 {
 #if wxUSE_MENUS
     // if no help string found, we will clear the status bar text
+    //
+    // NB: wxID_NONE is used for (sub)menus themselves by wxMSW
     wxString helpString;
-    if ( menuId != wxID_SEPARATOR && menuId != -3 /* wxID_TITLE */ )
+    if ( menuId != wxID_SEPARATOR && menuId != wxID_NONE )
     {
         const wxMenuItem * const item = FindItemInMenuBar(menuId);
         if ( item && !item->IsSeparator() )
@@ -415,16 +405,31 @@ void wxFrameBase::DoGiveHelp(const wxString& help, bool show)
             if ( m_oldStatusText.empty() )
             {
                 // use special value to prevent us from doing this the next time
-                m_oldStatusText += _T('\0');
+                m_oldStatusText += wxT('\0');
             }
         }
 
+        m_lastHelpShown =
         text = help;
     }
     else // hide help, restore the original text
     {
-        text = m_oldStatusText;
-        m_oldStatusText.clear();
+        // clear the last shown help string but remember its value
+        wxString lastHelpShown;
+        lastHelpShown.swap(m_lastHelpShown);
+
+        // also clear the old status text but remember it too to restore it
+        // below
+        text.swap(m_oldStatusText);
+
+        if ( statbar->GetStatusText(m_statusBarPane) != lastHelpShown )
+        {
+            // if the text was changed with an explicit SetStatusText() call
+            // from the user code in the meanwhile, do not overwrite it with
+            // the old status bar contents -- this is almost certainly not what
+            // the user expects and would be very hard to avoid from user code
+            return;
+        }
     }
 
     statbar->SetStatusText(text, m_statusBarPane);
@@ -485,15 +490,40 @@ wxToolBar* wxFrameBase::OnCreateToolBar(long style,
 
 void wxFrameBase::SetToolBar(wxToolBar *toolbar)
 {
-    bool hadBar = m_frameToolBar != NULL;
-    m_frameToolBar = toolbar;
-
-    if ( (m_frameToolBar != NULL) != hadBar )
+    if ( (toolbar != NULL) != (m_frameToolBar != NULL) )
     {
-        PositionToolBar();
+        // the toolbar visibility must have changed so we need to both position
+        // the toolbar itself (if it appeared) and to relayout the frame
+        // contents in any case
+
+        if ( toolbar )
+        {
+            // we need to assign it to m_frameToolBar for PositionToolBar() to
+            // do anything
+            m_frameToolBar = toolbar;
+            PositionToolBar();
+        }
+        //else: tricky: do not reset m_frameToolBar yet as otherwise DoLayout()
+        //      wouldn't recognize the (still existing) toolbar as one of our
+        //      bars and wouldn't layout the single child of the frame correctly
+
+
+        // and this is even more tricky: we want DoLayout() to recognize the
+        // old toolbar for the purpose of not counting it among our non-bar
+        // children but we don't want to reserve any more space for it so we
+        // temporarily hide it
+        if ( m_frameToolBar )
+            m_frameToolBar->Hide();
 
         DoLayout();
+
+        if ( m_frameToolBar )
+            m_frameToolBar->Show();
     }
+
+    // this might have been already done above but it's simpler to just always
+    // do it unconditionally instead of testing for whether we already did it
+    m_frameToolBar = toolbar;
 }
 
 #endif // wxUSE_TOOLBAR

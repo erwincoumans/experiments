@@ -5,9 +5,9 @@
 // Author:      John Norris, minor changes by Axel Schlueter
 // Modified by:
 // Created:     08.02.01
-// RCS-ID:      $Id: tglbtn.h 57437 2008-12-19 16:04:31Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Johnny C. Norris II
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_TOGGLEBUTTON_H_
@@ -55,16 +55,16 @@ public:
     // Set the label
     virtual void SetLabel(const wxString& label) { wxControl::SetLabel(label); }
     virtual void SetLabel(const wxBitmap& label);
-    bool Enable(bool enable = TRUE);
+    bool Enable(bool enable = true);
 
 protected:
     void Init();
-    
+
     wxBitmap  m_bitmap;
     wxBitmap  m_disabledBitmap;
     bool      m_capturing;
     bool      m_depressed,m_oldValue;
-    
+
     void OnPaint(wxPaintEvent &event);
     void OnMouse(wxMouseEvent &event);
     void OnChar(wxKeyEvent &event);

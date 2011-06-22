@@ -3,7 +3,7 @@
 // Purpose:     declares wxTextEntry interface defining a simple text entry
 // Author:      Vadim Zeitlin
 // Created:     2007-09-24
-// RCS-ID:      $Id: textentry.h 59332 2009-03-05 12:46:40Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -18,6 +18,8 @@ typedef long wxTextPos;
 class WXDLLIMPEXP_FWD_BASE wxArrayString;
 class WXDLLIMPEXP_FWD_CORE wxTextEntryHintData;
 class WXDLLIMPEXP_FWD_CORE wxWindow;
+
+#include "wx/gdicmn.h"              // for wxPoint
 
 // ----------------------------------------------------------------------------
 // wxTextEntryBase
@@ -142,6 +144,60 @@ public:
     virtual wxString GetHint() const;
 
 
+    // margins
+    // -------
+
+    // margins are the empty space between borders of control and the text
+    // itself. When setting margin, use value -1 to indicate that specific
+    // margin should not be changed.
+
+    bool SetMargins(const wxPoint& pt)
+        { return DoSetMargins(pt); }
+    bool SetMargins(wxCoord left, wxCoord top = -1)
+        { return DoSetMargins(wxPoint(left, top)); }
+    wxPoint GetMargins() const
+        { return DoGetMargins(); }
+
+
+    // implementation only
+    // -------------------
+
+    // generate the wxEVT_COMMAND_TEXT_UPDATED event for GetEditableWindow(),
+    // like SetValue() does and return true if the event was processed
+    //
+    // NB: this is public for wxRichTextCtrl use only right now, do not call it
+    static bool SendTextUpdatedEvent(wxWindow *win);
+
+    // generate the wxEVT_COMMAND_TEXT_UPDATED event for this window
+    bool SendTextUpdatedEvent()
+    {
+        return SendTextUpdatedEvent(GetEditableWindow());
+    }
+
+
+    // generate the wxEVT_COMMAND_TEXT_UPDATED event for this window if the
+    // events are not currently disabled
+    void SendTextUpdatedEventIfAllowed()
+    {
+        if ( EventsAllowed() )
+            SendTextUpdatedEvent();
+    }
+
+    // this function is provided solely for the purpose of forwarding text
+    // change notifications state from one control to another, e.g. it can be
+    // used by a wxComboBox which derives from wxTextEntry if it delegates all
+    // of its methods to another wxTextCtrl
+    void ForwardEnableTextChangedEvents(bool enable)
+    {
+        // it's important to call the functions which update m_eventsBlock here
+        // and not just our own EnableTextChangedEvents() because our state
+        // (i.e. the result of EventsAllowed()) must change as well
+        if ( enable )
+            ResumeTextChangedEvents();
+        else
+            SuppressTextChangedEvents();
+    }
+
 protected:
     // flags for DoSetValue(): common part of SetValue() and ChangeValue() and
     // also used to implement WriteText() in wxMSW
@@ -158,6 +214,10 @@ protected:
     // override this to return the associated window, it will be used for event
     // generation and also by generic hints implementation
     virtual wxWindow *GetEditableWindow() = 0;
+
+    // margins functions
+    virtual bool DoSetMargins(const wxPoint& pt);
+    virtual wxPoint DoGetMargins() const;
 
 
     // class which should be used to temporarily disable text change events
@@ -187,9 +247,6 @@ protected:
 
     friend class EventsSuppressor;
 
-    // return true if the events are currently not suppressed
-    bool EventsAllowed() const { return m_eventsBlock == 0; }
-
 private:
     // suppress or resume the text changed events generation: don't use these
     // functions directly, use EventsSuppressor class above instead
@@ -213,6 +270,10 @@ private:
     // initially the generation of the events is enabled
     virtual void EnableTextChangedEvents(bool WXUNUSED(enable)) { }
 
+    // return true if the events are currently not suppressed
+    bool EventsAllowed() const { return m_eventsBlock == 0; }
+
+
     // if this counter is non-null, events are blocked
     unsigned m_eventsBlock;
 
@@ -228,6 +289,8 @@ private:
     };
 #elif defined(__WXGTK20__)
     #include "wx/gtk/textentry.h"
+#elif defined(__WXMAC__)
+    #include "wx/osx/textentry.h"
 #elif defined(__WXMSW__)
     #include "wx/msw/textentry.h"
 #elif defined(__WXMOTIF__)

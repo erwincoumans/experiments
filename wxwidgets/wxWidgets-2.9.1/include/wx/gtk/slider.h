@@ -2,7 +2,7 @@
 // Name:        wx/gtk/slider.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: slider.h 49355 2007-10-23 18:16:06Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -60,12 +60,19 @@ public:
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
 
     // implementation
+    void GTKDisableEvents();
+    void GTKEnableEvents();
+    bool GTKEventsDisabled() const;
+    
     double m_pos;
     int m_scrollEventType;
     bool m_needThumbRelease;
-    bool m_blockScrollEvent;
+    GtkWidget *m_scale;
 
 protected:
+    GtkWidget *m_minLabel,*m_maxLabel;
+    bool m_blockScrollEvent;
+
     virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
 
     // set the slider value unconditionally

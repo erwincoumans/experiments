@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: VZ at 16/11/98: WX_DECLARE_LIST() and typesafe lists added
 // Created:     04/01/98
-// RCS-ID:      $Id: list.cpp 58351 2009-01-24 13:40:46Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 ////////////////////////////////////////////////////////////////////////////////
@@ -201,7 +201,7 @@ void wxListBase::DoCopy(const wxListBase& list)
             }
     }
 
-    wxASSERT_MSG( m_count == list.m_count, _T("logic error in wxList::DoCopy") );
+    wxASSERT_MSG( m_count == list.m_count, wxT("logic error in wxList::DoCopy") );
 }
 
 wxListBase::~wxListBase()

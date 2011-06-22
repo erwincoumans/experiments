@@ -2,7 +2,7 @@
 #                                                                            *
 # Make file for VMS                                                          *
 # Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                             *
-# Date : 2 December 2008                                                     *
+# Date : 22 September 2009                                                   *
 #                                                                            *
 #*****************************************************************************
 .first
@@ -94,12 +94,12 @@ OBJECTS0= \
 	statbox.obj,\
 	statline.obj,\
 	stattext.obj,\
-	tbargtk.obj,\
+	toolbar.obj,\
 	textctrl.obj,\
 	tglbtn.obj,\
 	msgdlg.obj,\
 	treeentry_gtk.obj,textentry.obj,filectrl.obj,print.obj,win_gtk.obj,\
-	mnemonics.obj,private.obj
+	mnemonics.obj,private.obj,assertdlg_gtk.obj,infobar.obj
 
 SOURCES =\
 	animate.cpp,\
@@ -156,7 +156,7 @@ SOURCES =\
 	statbox.cpp,\
 	statline.cpp,\
 	stattext.cpp,\
-	tbargtk.cpp,\
+	toolbar.cpp,\
 	textctrl.cpp,\
 	tglbtn.cpp,\
 	timer.cpp,\
@@ -165,8 +165,8 @@ SOURCES =\
 	utilsgtk.cpp,\
 	window.cpp,\
 	treeentry_gtk.c,textentry.cpp,filectrl.cpp,print.cpp,win_gtk.cpp,\
-	mnemonics.cpp,private.cpp
-   
+	mnemonics.cpp,private.cpp,assertdlg_gtk.c,infobar.cpp
+
 all : $(SOURCES)
 	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)
 .ifdef __WXUNIVERSAL__
@@ -243,7 +243,7 @@ statbmp.obj : statbmp.cpp
 statbox.obj : statbox.cpp
 statline.obj : statline.cpp
 stattext.obj : stattext.cpp
-tbargtk.obj : tbargtk.cpp
+toolbar.obj : toolbar.cpp
 textctrl.obj : textctrl.cpp
 tglbtn.obj : tglbtn.cpp
 timer.obj : timer.cpp
@@ -258,3 +258,5 @@ print.obj : print.cpp
 win_gtk.obj : win_gtk.cpp
 mnemonics.obj : mnemonics.cpp
 private.obj : private.cpp
+assertdlg_gtk.obj : assertdlg_gtk.c
+infobar.obj : infobar.cpp

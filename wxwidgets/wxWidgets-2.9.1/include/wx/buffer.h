@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     12.04.99
-// RCS-ID:      $Id: buffer.h 59945 2009-03-30 18:28:42Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,12 +56,8 @@ struct UntypedBufferData
     bool m_owned;
 };
 
-// this has to be defined inside the DLL (and not e.g. as a static variable
-// inside an inline function) as otherwise MSVC gives link errors when the
-// functions are effectively inlined (i.e. in non-debug build)
-//
 // NB: this is defined in string.cpp and not the (non-existent) buffer.cpp
-extern WXDLLIMPEXP_DATA_BASE(UntypedBufferData * const) untypedNullDataPtr;
+WXDLLIMPEXP_BASE UntypedBufferData * GetUntypedNullData();
 
 } // namespace wxPrivate
 
@@ -99,7 +95,7 @@ public:
     // Creates "owned" buffer, i.e. takes over ownership of 'str' and frees it
     // in dtor (if ref.count reaches 0).
     static
-    const wxScopedCharTypeBuffer CreateOwned(const CharType *str,
+    const wxScopedCharTypeBuffer CreateOwned(CharType *str,
                                              size_t len = wxNO_LEN )
     {
         if ( len == wxNO_LEN )
@@ -107,7 +103,7 @@ public:
 
         wxScopedCharTypeBuffer buf;
         if ( str )
-            buf.m_data = new Data(StrCopy(str, len), len);
+            buf.m_data = new Data(str, len);
         return buf;
     }
 
@@ -142,8 +138,8 @@ public:
         if ( m_data == GetNullData() )
             return NULL;
 
-        wxASSERT_MSG( m_data->m_owned, _T("can't release non-owned buffer") );
-        wxASSERT_MSG( m_data->m_ref == 1, _T("can't release shared buffer") );
+        wxASSERT_MSG( m_data->m_owned, wxT("can't release non-owned buffer") );
+        wxASSERT_MSG( m_data->m_ref == 1, wxT("can't release shared buffer") );
 
         CharType * const p = m_data->Get();
 
@@ -186,7 +182,7 @@ protected:
     // placeholder for NULL string, to simplify this code
     static Data *GetNullData()
     {
-        return static_cast<Data *>(wxPrivate::untypedNullDataPtr);
+        return static_cast<Data *>(wxPrivate::GetUntypedNullData());
     }
 
     void IncRef()
@@ -343,6 +339,7 @@ public:
     }
 };
 
+WXDLLIMPEXP_TEMPLATE_INSTANCE_BASE( wxScopedCharTypeBuffer<char> )
 WXDLLIMPEXP_TEMPLATE_INSTANCE_BASE( wxCharTypeBuffer<char> )
 
 class wxCharBuffer : public wxCharTypeBuffer<char>
@@ -362,7 +359,7 @@ public:
     wxCharBuffer(const wxCStrData& cstr);
 };
 
-#if wxUSE_WCHAR_T
+WXDLLIMPEXP_TEMPLATE_INSTANCE_BASE( wxScopedCharTypeBuffer<wchar_t> )
 WXDLLIMPEXP_TEMPLATE_INSTANCE_BASE( wxCharTypeBuffer<wchar_t> )
 
 class wxWCharBuffer : public wxCharTypeBuffer<wchar_t>
@@ -381,7 +378,6 @@ public:
 
     wxWCharBuffer(const wxCStrData& cstr);
 };
-#endif // wxUSE_WCHAR_T
 
 // wxCharTypeBuffer<T> implicitly convertible to T*
 template <typename T>
@@ -472,6 +468,21 @@ private:
             delete this;
     }
 
+    void *release()
+    {
+        if ( m_data == NULL )
+            return NULL;
+
+        wxASSERT_MSG( m_ref == 1, "can't release shared buffer" );
+
+        void *p = m_data;
+        m_data = NULL;
+        m_len =
+        m_size = 0;
+
+        return p;
+    }
+
 
     // the buffer containing the data
     void  *m_data;
@@ -559,7 +570,7 @@ public:
     // Other ways to append to the buffer
     void  AppendByte(char data)
     {
-        wxCHECK_RET( m_bufdata->m_data, _T("invalid wxMemoryBuffer") );
+        wxCHECK_RET( m_bufdata->m_data, wxT("invalid wxMemoryBuffer") );
 
         m_bufdata->ResizeIfNeeded(m_bufdata->m_len + 1);
         *(((char*)m_bufdata->m_data) + m_bufdata->m_len) = data;
@@ -573,6 +584,13 @@ public:
     }
 
     operator const char *() const { return (const char*)GetData(); }
+
+    // gives up ownership of data, returns the pointer; after this call,
+    // data isn't freed by the buffer and its content is resent to empty
+    void *release()
+    {
+        return m_bufdata->release();
+    }
 
 private:
     wxMemoryBufferData*  m_bufdata;

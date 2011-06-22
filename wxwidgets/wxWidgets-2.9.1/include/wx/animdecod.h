@@ -2,7 +2,7 @@
 // Name:        wx/animdecod.h
 // Purpose:     wxAnimationDecoder
 // Author:      Francesco Montorsi
-// CVS-ID:      $Id: animdecod.h 58081 2009-01-13 19:20:47Z FM $
+// CVS-ID:      $Id$
 // Copyright:   (c) 2006 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,8 +16,9 @@
 
 #include "wx/colour.h"
 #include "wx/gdicmn.h"
+#include "wx/log.h"
+#include "wx/stream.h"
 
-class WXDLLIMPEXP_FWD_BASE wxInputStream;
 class WXDLLIMPEXP_FWD_CORE wxImage;
 
 /*
@@ -93,7 +94,28 @@ public:
     }
 
     virtual bool Load( wxInputStream& stream ) = 0;
-    virtual bool CanRead( wxInputStream& stream ) const = 0;
+
+    bool CanRead( wxInputStream& stream ) const
+    {
+        // NOTE: this code is the same of wxImageHandler::CallDoCanRead
+
+        if ( !stream.IsSeekable() )
+            return false;        // can't test unseekable stream
+
+        wxFileOffset posOld = stream.TellI();
+        bool ok = DoCanRead(stream);
+
+        // restore the old position to be able to test other formats and so on
+        if ( stream.SeekI(posOld) == wxInvalidOffset )
+        {
+            wxLogDebug(wxT("Failed to rewind the stream in wxAnimationDecoder!"));
+
+            // reading would fail anyhow as we're not at the right position
+            return false;
+        }
+
+        return ok;
+    }
 
     virtual wxAnimationDecoder *Clone() const = 0;
     virtual wxAnimationType GetType() const = 0;
@@ -129,6 +151,12 @@ public:
     unsigned int GetFrameCount() const { return m_nFrames; }
 
 protected:
+    // checks the signature of the data in the given stream and returns true if it
+    // appears to be a valid animation format recognized by the animation decoder;
+    // this function should modify the stream current position without taking care
+    // of restoring it since CanRead() will do it.
+    virtual bool DoCanRead(wxInputStream& stream) const = 0;
+
     wxSize m_szAnimation;
     unsigned int m_nFrames;
 

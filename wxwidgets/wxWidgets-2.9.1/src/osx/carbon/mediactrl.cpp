@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrl.cpp 60006 2009-04-04 09:05:21Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004-2006 Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -86,6 +86,11 @@ public:
 
     virtual bool Load(const wxString& fileName);
     virtual bool Load(const wxURI& location);
+    virtual bool Load(const wxURI& location,
+                      const wxURI& WXUNUSED(proxy))
+    {
+        return Load(location);
+    }
 
     virtual bool Play();
     virtual bool Pause();
@@ -322,7 +327,7 @@ wxQTMediaBackend::~wxQTMediaBackend()
         // Dispose of the movie controller
         ::DisposeMovieController(m_mc);
         m_mc = NULL;
-        
+
         // Dispose of offscreen GWorld
         ::DisposeGWorld(m_movieWorld);
     }
@@ -430,7 +435,7 @@ bool wxQTMediaBackend::Load(const wxString& fileName)
         NULL); // wasChanged
 
     // Do not use ::GetMoviesStickyError() here because it returns -2009
-    // a.k.a. invalid track on valid mpegs	     
+    // a.k.a. invalid track on valid mpegs
     if (err == noErr && ::GetMoviesError() == noErr)
     {
         ::CloseMovieFile(movieResFile);
@@ -870,11 +875,7 @@ wxMediaState wxQTMediaBackend::GetState()
 void wxQTMediaBackend::Cleanup()
 {
     m_bPlaying = false;
-    if (m_timer)
-    {
-        delete m_timer;
-        m_timer = NULL;
-    }
+    wxDELETE(m_timer);
 
     // Stop the movie:
     // Apple samples with CreateMovieControl typically

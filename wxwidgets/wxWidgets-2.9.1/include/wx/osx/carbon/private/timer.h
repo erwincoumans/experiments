@@ -1,9 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/private/timer.h
+// Name:        wx/osx/carbon/private/timer.h
 // Purpose:     wxTimer class
 // Author:      Stefan Csomor
 // Created:     1998-01-01
-// RCS-ID:      $Id: timer.h 54093 2008-06-11 06:56:47Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

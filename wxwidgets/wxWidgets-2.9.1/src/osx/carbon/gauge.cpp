@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: gauge.cpp 60007 2009-04-04 09:05:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:       wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,7 +23,7 @@ public :
     wxMacGaugeCarbonControl( wxWindowMac* peer ) : wxMacControl( peer )
     {
     }
-    
+
     void SetMaximum(wxInt32 v)
     {
         // switch back to determinate mode if not there already
@@ -34,7 +34,7 @@ public :
 
         wxMacControl::SetMaximum( v ) ;
     }
-    
+
     void SetValue(wxInt32 v)
     {
         // switch back to determinate mode if not there already
@@ -54,7 +54,7 @@ public :
                 SetNeedsDisplay(NULL) ;
         }
     }
-    
+
     void PulseGauge()
     {
         if ( GetData<Boolean>( kControlNoPart, kControlProgressBarIndeterminateTag ) != true )
@@ -70,15 +70,15 @@ public :
 };
 
 
-wxWidgetImplType* wxWidgetImpl::CreateGauge( wxWindowMac* wxpeer, 
-                                    wxWindowMac* parent, 
-                                    wxWindowID WXUNUSED(id), 
+wxWidgetImplType* wxWidgetImpl::CreateGauge( wxWindowMac* wxpeer,
+                                    wxWindowMac* parent,
+                                    wxWindowID WXUNUSED(id),
                                     wxInt32 value,
                                     wxInt32 minimum,
                                     wxInt32 maximum,
-                                    const wxPoint& pos, 
+                                    const wxPoint& pos,
                                     const wxSize& size,
-                                    long WXUNUSED(style), 
+                                    long WXUNUSED(style),
                                     long WXUNUSED(extraStyle))
 {
     Rect bounds = wxMacGetBoundsForControl( wxpeer, pos, size );

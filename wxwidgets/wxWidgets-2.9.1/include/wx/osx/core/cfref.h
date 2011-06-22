@@ -1,15 +1,15 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/corefoundation/cfref.h
+// Name:        wx/osx/core/cfref.h
 // Purpose:     wxCFRef template class
 // Author:      David Elliott <dfe@cox.net>
 // Modified by: Stefan Csomor
 // Created:     2007/05/10
-// RCS-ID:      $Id: cfref.h 51576 2008-02-06 20:10:07Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 David Elliott <dfe@cox.net>, Stefan Csomor
 // Licence:     wxWindows licence
 // Notes:       See http://developer.apple.com/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/index.html
 /////////////////////////////////////////////////////////////////////////////
-/*! @header     wx/mac/corefoundation/cfref.h
+/*! @header     wx/osx/core/cfref.h
     @abstract   wxCFRef template class
     @discussion FIXME: Convert doc tags to something less buggy with C++
 */
@@ -234,9 +234,12 @@ public:
     */
     wxCFRef& operator=(const wxCFRef& otherRef)
     {
-        wxCFRetain(otherRef.m_ptr);
-        wxCFRelease(m_ptr);
-        m_ptr = otherRef.m_ptr;
+        if (this != &otherRef)
+        {
+            wxCFRetain(otherRef.m_ptr);
+            wxCFRelease(m_ptr);
+            m_ptr = otherRef.m_ptr;
+        }
         return *this;
     }
 
@@ -308,6 +311,15 @@ public:
         wxCFRelease(m_ptr);
         m_ptr = p; // Automatic conversion should occur
     }
+
+    // Release the pointer, i.e. give up its ownership.
+    refType release()
+    {
+        refType p = m_ptr;
+        m_ptr = NULL;
+        return p;
+    }
+
 protected:
     /*! @var m_ptr      The raw pointer.
     */

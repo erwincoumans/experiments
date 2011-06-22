@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.10.99
-// RCS-ID:      $Id: listbox.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -96,10 +96,10 @@ public:
     int HitTest(int x, int y) const { return DoListHitTest(wxPoint(x, y)); }
 
 
-    // For generating events in multiple and extended mode
-    wxArrayInt m_oldSelections;
-    void UpdateOldSelections();
-    void CalcAndSendEvent();
+    // For generating events in multiple and extended mode: compare the current
+    // selections with the previously recorded ones (in m_oldSelections) and
+    // send the appropriate event if they differ, otherwise just return false.
+    bool CalcAndSendEvent();
 
 protected:
     virtual void DoSetFirstItem(int n) = 0;
@@ -109,6 +109,21 @@ protected:
     // there is already wxWindow::DoHitTest() so call this one differently
     virtual int DoListHitTest(const wxPoint& WXUNUSED(point)) const
         { return wxNOT_FOUND; }
+
+    // Send a listbox (de)selection or double click event.
+    //
+    // Returns true if the event was processed.
+    bool SendEvent(wxEventType evtType, int item, bool selected);
+
+    // Array storing the indices of all selected items that we already notified
+    // the user code about for multi selection list boxes.
+    //
+    // TODO-OPT: wxSelectionStore would be more efficient for big list boxes.
+    wxArrayInt m_oldSelections;
+
+    // Update m_oldSelections with currently selected items (does nothing in
+    // single selection mode).
+    void UpdateOldSelections();
 
 private:
     wxDECLARE_NO_COPY_CLASS(wxListBoxBase);

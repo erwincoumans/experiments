@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: menuitem.cpp 55419 2008-09-02 16:53:23Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,5 +21,5 @@
 
 #include "wx/osx/private.h"
 
-// because on mac carbon everything is done through MenuRef APIs both implementation 
+// because on mac carbon everything is done through MenuRef APIs both implementation
 // classes are in menu.cpp

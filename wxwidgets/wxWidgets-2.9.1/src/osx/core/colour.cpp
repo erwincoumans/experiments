@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: colour.cpp 58341 2009-01-23 19:50:28Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -72,13 +72,13 @@ void wxColour::InitRGBA (ChannelType r, ChannelType g, ChannelType b, ChannelTyp
     m_alpha = a ;
 
     CGColorRef col = 0 ;
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5
+#if wxOSX_USE_COCOA_OR_CARBON && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5
     if ( CGColorCreateGenericRGB != NULL )
         col = CGColorCreateGenericRGB( (CGFloat)(r / 255.0), (CGFloat) (g / 255.0), (CGFloat) (b / 255.0), (CGFloat) (a / 255.0) );
     else
 #endif
     {
-        CGFloat components[4] = { (CGFloat)(r / 255.0), (CGFloat) (g / 255.0), (CGFloat) (b / 255.0), (CGFloat) (a / 255.0) } ;    
+        CGFloat components[4] = { (CGFloat)(r / 255.0), (CGFloat) (g / 255.0), (CGFloat) (b / 255.0), (CGFloat) (a / 255.0) } ;
         col = CGColorCreate( wxMacGetGenericRGBColorSpace() , components ) ;
     }
     m_cgColour.reset( col );
@@ -94,13 +94,13 @@ void wxColour::InitRGBColor( const RGBColor& col )
     CGColorRef cfcol;
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5
     if ( CGColorCreateGenericRGB != NULL )
-        cfcol = CGColorCreateGenericRGB((CGFloat)(col.red / 65535.0), (CGFloat)(col.green / 65535.0),  
+        cfcol = CGColorCreateGenericRGB((CGFloat)(col.red / 65535.0), (CGFloat)(col.green / 65535.0),
                                         (CGFloat)(col.blue / 65535.0), (CGFloat) 1.0 );
     else
 #endif
     {
-        CGFloat components[4] = {   (CGFloat)(col.red / 65535.0), (CGFloat)(col.green / 65535.0),  
-                                    (CGFloat)(col.blue / 65535.0), (CGFloat) 1.0 } ;    
+        CGFloat components[4] = {   (CGFloat)(col.red / 65535.0), (CGFloat)(col.green / 65535.0),
+                                    (CGFloat)(col.blue / 65535.0), (CGFloat) 1.0 } ;
         cfcol = CGColorCreate( wxMacGetGenericRGBColorSpace() , components ) ;
     }
     m_cgColour.reset( cfcol );
@@ -111,30 +111,39 @@ void wxColour::InitCGColorRef( CGColorRef col )
 {
     m_cgColour.reset( col );
     size_t noComp = CGColorGetNumberOfComponents( col );
+    
+    const CGFloat *components = NULL;
     if ( noComp >= 1 && noComp <= 4 )
     {
         // TODO verify whether we really are on a RGB color space
         m_alpha = wxALPHA_OPAQUE;
-        const CGFloat *components = CGColorGetComponents( col );
-        if ( noComp >= 3 )
-        {
-            m_red = (int)(components[0]*255+0.5);
-            m_green = (int)(components[1]*255+0.5);
-            m_blue = (int)(components[2]*255+0.5);
-            if ( noComp == 4 )
-                m_alpha =  (int)(components[3]*255+0.5);
-        }
-        else
-        {
-            m_red = (int)(components[0]*255+0.5);
-            m_green = (int)(components[0]*255+0.5);
-            m_blue = (int)(components[0]*255+0.5);
-        }
+        components = CGColorGetComponents( col );
     }
-    else
+    InitFromComponents(components, noComp);
+}
+
+void wxColour::InitFromComponents(const CGFloat* components, size_t numComponents )
+{
+    if ( numComponents < 1 || !components )
     {
         m_alpha = wxALPHA_OPAQUE;
         m_red = m_green = m_blue = 0;
+        return;
+    }
+    
+    if ( numComponents >= 3 )
+    {
+        m_red = (int)(components[0]*255+0.5);
+        m_green = (int)(components[1]*255+0.5);
+        m_blue = (int)(components[2]*255+0.5);
+        if ( numComponents == 4 )
+            m_alpha =  (int)(components[3]*255+0.5);
+    }
+    else
+    {
+        m_red = (int)(components[0]*255+0.5);
+        m_green = (int)(components[0]*255+0.5);
+        m_blue = (int)(components[0]*255+0.5);
     }
 }
 

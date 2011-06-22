@@ -5,7 +5,7 @@
 *  Author:      Vadim Zeitlin
 *  Modified by: Ryan Norton (Converted to C)
 *  Created:     18.03.02
-*  RCS-ID:      $Id: features.h 60526 2009-05-06 11:42:16Z VZ $
+*  RCS-ID:      $Id$
 *  Copyright:   (c) 2002 Vadim Zeitlin <vadim@wxwidgets.org>
 *  Licence:     wxWindows licence
 */
@@ -103,6 +103,16 @@
 #ifdef wxHAS_RAW_BITMAP
     #define wxHAVE_RAW_BITMAP
 #endif
+
+/*
+   If this is defined, wxEvtHandler::Bind<>() is available (not all compilers
+   have the required template support for this and in particular under Windows
+   where only g++ and MSVC >= 7 currently support it.
+ */
+#if wxCHECK_GCC_VERSION(3, 2) || wxCHECK_VISUALC_VERSION(7)
+    #define wxHAS_EVENT_BIND
+#endif
+
 
 #endif /*  _WX_FEATURES_H_ */
 

@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     06.08.01
-// RCS-ID:      $Id: containr.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ public:
 
     void SetContainerWindow(wxWindow *winParent)
     {
-        wxASSERT_MSG( !m_winParent, _T("shouldn't be called twice") );
+        wxASSERT_MSG( !m_winParent, wxT("shouldn't be called twice") );
 
         m_winParent = winParent;
     }

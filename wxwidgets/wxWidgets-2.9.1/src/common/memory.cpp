@@ -4,7 +4,7 @@
 // Author:      Arthur Seaton, Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: memory.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -831,16 +831,16 @@ void wxDebugContext::OutputDumpLine(const wxChar *szFormat, ...)
     int count;
     va_list argptr;
     va_start(argptr, szFormat);
-    buf[sizeof(buf)/sizeof(wxChar)-1] = _T('\0');
+    buf[WXSIZEOF(buf)-1] = wxT('\0');
 
     // keep 3 bytes for a \r\n\0
-    count = wxVsnprintf(buf, sizeof(buf)/sizeof(wxChar)-3, szFormat, argptr);
+    count = wxVsnprintf(buf, WXSIZEOF(buf)-3, szFormat, argptr);
 
     if ( count < 0 )
-        count = sizeof(buf)/sizeof(wxChar)-3;
-    buf[count]=_T('\r');
-    buf[count+1]=_T('\n');
-    buf[count+2]=_T('\0');
+        count = WXSIZEOF(buf)-3;
+    buf[count]=wxT('\r');
+    buf[count+1]=wxT('\n');
+    buf[count+2]=wxT('\0');
 
     wxMessageOutputDebug dbgout;
     dbgout.Printf(buf);

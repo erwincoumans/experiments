@@ -1,11 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/statusbr.h
+// Name:        wx/osx/statusbr.h
 // Purpose:     native implementation of wxStatusBar.
 //              Optional: can use generic version instead.
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: statusbr.h 58786 2009-02-09 00:33:19Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -15,29 +15,28 @@
 
 class WXDLLIMPEXP_CORE wxStatusBarMac : public wxStatusBarGeneric
 {
-    DECLARE_DYNAMIC_CLASS(wxStatusBarMac)
-
+public:
     wxStatusBarMac();
     wxStatusBarMac(wxWindow *parent, wxWindowID id = wxID_ANY,
-           long style = wxST_SIZEGRIP,
+           long style = wxSTB_DEFAULT_STYLE,
            const wxString& name = wxStatusBarNameStr);
 
     virtual ~wxStatusBarMac();
 
     bool Create(wxWindow *parent, wxWindowID id = wxID_ANY,
-              long style = wxST_SIZEGRIP,
+              long style = wxSTB_DEFAULT_STYLE,
               const wxString& name = wxStatusBarNameStr);
-
-    virtual void DrawFieldText(wxDC& dc, const wxRect& rc, int i, int textHeight);
-    virtual void DrawField(wxDC& dc, int i, int textHeight);
-
-    virtual void SetStatusText(const wxString& text, int number = 0);
 
     // Implementation
     virtual void MacHiliteChanged();
     void OnPaint(wxPaintEvent& event);
 
 protected:
+    virtual void DrawFieldText(wxDC& dc, const wxRect& rc, int i, int textHeight);
+    virtual void DrawField(wxDC& dc, int i, int textHeight);
+    virtual void DoUpdateStatusText(int number = 0);
+
+    DECLARE_DYNAMIC_CLASS(wxStatusBarMac)
     DECLARE_EVENT_TABLE()
 };
 

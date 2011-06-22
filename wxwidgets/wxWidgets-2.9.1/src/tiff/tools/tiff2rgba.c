@@ -1,4 +1,4 @@
-/* $Id: tiff2rgba.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler

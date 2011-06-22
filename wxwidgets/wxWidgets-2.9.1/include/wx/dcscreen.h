@@ -5,7 +5,7 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Julian Smart
-// RCS-ID:      $Id: dcscreen.h 50348 2007-11-30 13:48:22Z RR $
+// RCS-ID:      $Id$
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -24,7 +24,7 @@ public:
         { return true; }
     static bool StartDrawingOnTop(wxRect * WXUNUSED(rect) =  NULL)
         { return true; }
-    static bool EndDrawingOnTop() 
+    static bool EndDrawingOnTop()
         { return true; }
 
 private:

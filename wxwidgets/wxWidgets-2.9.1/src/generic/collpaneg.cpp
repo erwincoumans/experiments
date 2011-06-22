@@ -4,7 +4,7 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     8/10/2006
-// Id:          $Id: collpaneg.cpp 58718 2009-02-07 18:59:25Z VZ $
+// Id:          $Id$
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,6 +16,11 @@
 
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
+
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
+
 #include "wx/defs.h"
 
 #if wxUSE_COLLPANE && wxUSE_BUTTON && wxUSE_STATLINE
@@ -82,24 +87,22 @@ bool wxGenericCollapsiblePane::Create(wxWindow *parent,
 
     m_strLabel = label;
 
-#if defined( __WXMAC__ ) && !defined(__WXUNIVERSAL__)
-    // on Mac we use the disclosure triangle
-    // we need a light gray line above and below, lets approximate with the frame
-    m_pStaticLine = NULL;
-    m_pButton = new wxDisclosureTriangle( this, wxID_ANY, GetBtnLabel(),
-                                         wxDefaultPosition, wxDefaultSize, wxSIMPLE_BORDER );
-    m_pButton->SetBackgroundColour( wxColour( 221, 226, 239 ) );
+    // sizer containing the expand button and possibly a static line
     m_sz = new wxBoxSizer(wxHORIZONTAL);
-    // m_sz->Add(4,4); where shall we put it?
-    m_sz->Add( m_pButton, 1);
+
+#if defined( __WXMAC__ ) && !defined(__WXUNIVERSAL__)
+    // on Mac we use the special disclosure triangle button
+    m_pStaticLine = NULL;
+    m_pButton = new wxDisclosureTriangle(this, wxID_ANY, GetBtnLabel());
+    m_sz->Add(m_pButton);
 #else
     // create children and lay them out using a wxBoxSizer
     // (so that we automatically get RTL features)
     m_pButton = new wxButton(this, wxID_ANY, GetBtnLabel(), wxPoint(0, 0),
                              wxDefaultSize, wxBU_EXACTFIT);
     m_pStaticLine = new wxStaticLine(this, wxID_ANY);
+
     // on other platforms we put the static line and the button horizontally
-    m_sz = new wxBoxSizer(wxHORIZONTAL);
     m_sz->Add(m_pButton, 0, wxLEFT|wxTOP|wxBOTTOM, GetBorder());
     m_sz->Add(m_pStaticLine, 1, wxALIGN_CENTER|wxLEFT|wxRIGHT, GetBorder());
 #endif

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     15.11.99
-// RCS-ID:      $Id: frame.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,7 @@
 // ----------------------------------------------------------------------------
 
 #include "wx/toplevel.h"      // the base class
+#include "wx/statusbr.h"
 
 // the default names for various classs
 extern WXDLLIMPEXP_DATA_CORE(const char) wxStatusLineNameStr[];
@@ -33,6 +34,8 @@ class WXDLLIMPEXP_FWD_CORE wxToolBar;
 // ----------------------------------------------------------------------------
 
 // wxFrame-specific (i.e. not for wxDialog) styles
+//
+// Also see the bit summary table in wx/toplevel.h.
 #define wxFRAME_NO_TASKBAR      0x0002  // No taskbar button (MSW only)
 #define wxFRAME_TOOL_WINDOW     0x0004  // No taskbar button, no system menu
 #define wxFRAME_FLOAT_ON_PARENT 0x0008  // Always above its parent
@@ -103,10 +106,9 @@ public:
 #if wxUSE_STATUSBAR
     // create the main status bar by calling OnCreateStatusBar()
     virtual wxStatusBar* CreateStatusBar(int number = 1,
-                                         long style = wxST_SIZEGRIP|wxFULL_REPAINT_ON_RESIZE,
+                                         long style = wxSTB_DEFAULT_STYLE,
                                          wxWindowID winid = 0,
-                                         const wxString& name =
-                                            wxStatusLineNameStr);
+                                         const wxString& name = wxStatusLineNameStr);
     // return a new status bar
     virtual wxStatusBar *OnCreateStatusBar(int number,
                                            long style,
@@ -169,17 +171,6 @@ public:
     // Implement internal behaviour (menu updating on some platforms)
     virtual void OnInternalIdle();
 
-    // if there is no real wxTopLevelWindow on this platform we have to define
-    // some wxTopLevelWindowBase pure virtual functions here to avoid breaking
-    // old ports (wxMotif) which don't define them in wxFrame
-#ifndef wxTopLevelWindowNative
-    virtual bool ShowFullScreen(bool WXUNUSED(show),
-                                long WXUNUSED(style) = wxFULLSCREEN_ALL)
-        { return false; }
-    virtual bool IsFullScreen() const
-        { return false; }
-#endif // no wxTopLevelWindowNative
-
 #if wxUSE_MENUS || wxUSE_TOOLBAR
     // show help text for the currently selected menu or toolbar item
     // (typically in the status bar) or hide it and restore the status bar text
@@ -221,6 +212,9 @@ protected:
 #if wxUSE_STATUSBAR && (wxUSE_MENUS || wxUSE_TOOLBAR)
     // the saved status bar text overwritten by DoGiveHelp()
     wxString m_oldStatusText;
+
+    // the last help string we have shown in the status bar
+    wxString m_lastHelpShown;
 #endif
 
 #if wxUSE_STATUSBAR

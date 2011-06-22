@@ -1,9 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/position.h
+// Name:        wx/position.h
 // Purpose:     Common structure and methods for positional information.
 // Author:      Vadim Zeitlin, Robin Dunn, Brad Anderson, Bryan Petty
 // Created:     2007-03-13
-// RCS-ID:      $Id: position.h 54350 2008-06-25 01:02:04Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 The wxWidgets Team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

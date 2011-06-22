@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     27/07/03
-// RCS-ID:      $Id: xtistrm.cpp 58579 2009-02-01 04:48:19Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -649,7 +649,7 @@ struct wxCodeDepersister::wxCodeDepersisterInternal
 
         if ( m_objectNames.find(objectID) == m_objectNames.end() )
         {
-            wxLogError( _("Passing an unkown object to GetObject") ) ;
+            wxLogError( _("Passing an unknown object to GetObject") ) ;
             return wxEmptyString ;
         }
         return wxString( m_objectNames[objectID].c_str() ) ;

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: cursor.h 58704 2009-02-07 13:25:58Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,7 +21,6 @@ public:
     wxCursor();
 
     wxCursor(const wxImage & image) ;
-    wxCursor(const char* const* bits);
     wxCursor(const wxString& name,
              wxBitmapType type = wxCURSOR_DEFAULT_TYPE,
              int hotSpotX = 0, int hotSpotY = 0);
@@ -32,18 +31,17 @@ public:
 #endif
     virtual ~wxCursor();
 
-    bool CreateFromXpm(const char* const* bits);
-
     void MacInstall() const ;
 
     void SetHCURSOR(WXHCURSOR cursor);
     WXHCURSOR GetHCURSOR() const;
 
-private:
-    void InitFromStock(wxStockCursor);
-
+protected:
     virtual wxGDIRefData *CreateGDIRefData() const;
     virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;
+
+private:
+    void InitFromStock(wxStockCursor);
 
     void CreateFromImage(const wxImage & image) ;
 

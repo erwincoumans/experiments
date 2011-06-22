@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: toolbar.cpp 61006 2009-06-11 23:08:53Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -167,14 +167,14 @@ public:
     {
         if ( wxToolBarToolBase::Toggle( toggle ) == false )
             return false;
-            
+
         UpdateToggleImage(toggle);
         return true;
     }
-    
+
     void UpdateHelpStrings()
     {
-#if wxOSX_USE_NATIVE_TOOLBAR            
+#if wxOSX_USE_NATIVE_TOOLBAR
         if ( m_toolbarItemRef )
         {
             wxFontEncoding enc = GetToolBarFontEncoding();
@@ -186,16 +186,16 @@ public:
         }
 #endif
     }
-    
+
     virtual bool SetShortHelp(const wxString& help)
     {
         if ( wxToolBarToolBase::SetShortHelp( help ) == false )
             return false;
-            
-        UpdateHelpStrings();        
+
+        UpdateHelpStrings();
         return true;
     }
-    
+
     virtual bool SetLongHelp(const wxString& help)
     {
         if ( wxToolBarToolBase::SetLongHelp( help ) == false )
@@ -205,12 +205,12 @@ public:
         return true;
     }
 
-    virtual void SetNormalBitmap(const wxBitmap& bmp) 
+    virtual void SetNormalBitmap(const wxBitmap& bmp)
     {
         wxToolBarToolBase::SetNormalBitmap(bmp);
         UpdateToggleImage(CanBeToggled() && IsToggled());
     }
-        
+
     virtual void SetLabel(const wxString& label)
     {
         wxToolBarToolBase::SetLabel(label);
@@ -429,7 +429,7 @@ bool wxToolBarTool::Enable( bool enable )
 {
     if ( wxToolBarToolBase::Enable( enable ) == false )
         return false;
-    
+
     if ( IsControl() )
     {
         GetControl()->Enable( enable );
@@ -927,25 +927,23 @@ bool wxToolBar::Create(
 wxToolBar::~wxToolBar()
 {
 #if wxOSX_USE_NATIVE_TOOLBAR
-    if (m_macToolbar != NULL)
-    {
-        // if this is the installed toolbar, then deinstall it
-        if (m_macUsesNativeToolbar)
-            MacInstallNativeToolbar( false );
+    // We could be not using a native tool bar at all, this happens when we're
+    // created with something other than the frame as parent for example.
+    if ( !m_macToolbar )
+        return;
 
-        CFIndex count = CFGetRetainCount( m_macToolbar ) ;
-        // Leopard seems to have one refcount more, so we cannot check reliably at the moment
-        if ( UMAGetSystemVersion() < 0x1050 )
+    CFIndex count = CFGetRetainCount( m_macToolbar ) ;
+    // Leopard seems to have one refcount more, so we cannot check reliably at the moment
+    if ( UMAGetSystemVersion() < 0x1050 )
+    {
+        if ( count != 1 )
         {
-            if ( count != 1 )
-            {
-                wxFAIL_MSG("Reference count of native control was not 1 in wxToolBar destructor");
-            }
+            wxFAIL_MSG("Reference count of native control was not 1 in wxToolBar destructor");
         }
-        CFRelease( (HIToolbarRef)m_macToolbar );
-        m_macToolbar = NULL;
     }
-#endif
+    CFRelease( (HIToolbarRef)m_macToolbar );
+    m_macToolbar = NULL;
+#endif // wxOSX_USE_NATIVE_TOOLBAR
 }
 
 bool wxToolBar::Show( bool show )
@@ -1108,18 +1106,18 @@ bool wxToolBar::MacInstallNativeToolbar(bool usesNative)
             bResult = true;
 
             SetWindowToolbar( tlw, (HIToolbarRef) m_macToolbar );
-            
+
             // ShowHideWindowToolbar will make the wxFrame grow
             // which we don't want in this case
             wxSize sz = GetParent()->GetSize();
             ShowHideWindowToolbar( tlw, true, false );
             // Restore the orginal size
             GetParent()->SetSize( sz );
-            
+
             ChangeWindowAttributes( tlw, kWindowToolbarButtonAttribute, 0 );
-            
+
             SetAutomaticControlDragTrackingEnabledForWindow( tlw, true );
-    
+
             m_peer->Move(0,0,0,0 );
             SetSize( wxSIZE_AUTO_WIDTH, 0 );
             m_peer->SetVisibility( false );
@@ -1135,7 +1133,7 @@ bool wxToolBar::MacInstallNativeToolbar(bool usesNative)
 
             ShowHideWindowToolbar( tlw, false, false );
             ChangeWindowAttributes( tlw, 0, kWindowToolbarButtonAttribute );
-            SetWindowToolbar( tlw, NULL );
+            MacUninstallNativeToolbar();
 
             m_peer->SetVisibility( true );
         }
@@ -1147,13 +1145,23 @@ bool wxToolBar::MacInstallNativeToolbar(bool usesNative)
 // wxLogDebug( wxT("    --> [%lx] - result [%s]"), (long)this, bResult ? wxT("T") : wxT("F") );
     return bResult;
 }
+
+void wxToolBar::MacUninstallNativeToolbar()
+{
+    if (!m_macToolbar)
+        return;
+        
+    WindowRef tlw = MAC_WXHWND(MacGetTopLevelWindowRef());
+    if (tlw)
+        SetWindowToolbar( tlw, NULL );
+}
 #endif
 
 bool wxToolBar::Realize()
 {
-    if (m_tools.GetCount() == 0)
+    if ( !wxToolBarBase::Realize() )
         return false;
-    
+
     wxSize tlw_sz = GetParent()->GetSize();
 
     int maxWidth = 0;
@@ -1314,6 +1322,10 @@ bool wxToolBar::Realize()
                             wxFAIL_MSG("Reference count of native tool was illegal before removal");
                         }
                         wxASSERT( IsValidControlHandle(tool->GetControl()->GetPeer()->GetControlRef() )) ;
+
+                        wxString label = tool->GetLabel();
+                        if ( !label.empty() )
+                            HIToolbarItemSetLabel( hiItemRef, wxCFStringRef(label, GetFont().GetEncoding()) );
                     }
                 }
 
@@ -1365,7 +1377,7 @@ bool wxToolBar::Realize()
 
     if (m_macUsesNativeToolbar)
         GetParent()->SetSize( tlw_sz );
-    
+
     if ( GetWindowStyleFlag() &  (wxTB_TOP|wxTB_BOTTOM) )
     {
         // if not set yet, only one row
@@ -1653,7 +1665,7 @@ bool wxToolBar::DoInsertTool(size_t WXUNUSED(pos), wxToolBarToolBase *toolBase)
 #if wxOSX_USE_NATIVE_TOOLBAR
             if (m_macToolbar != NULL)
             {
-                wxCHECK_MSG( tool->GetControl(), false, _T("control must be non-NULL") );
+                wxCHECK_MSG( tool->GetControl(), false, wxT("control must be non-NULL") );
                 HIToolbarItemRef    item;
                 HIViewRef viewRef = (HIViewRef) tool->GetControl()->GetHandle() ;
                 CFDataRef data = CFDataCreate( kCFAllocatorDefault , (UInt8*) &viewRef , sizeof(viewRef) ) ;

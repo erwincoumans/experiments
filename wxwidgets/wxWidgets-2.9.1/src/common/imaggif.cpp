@@ -2,7 +2,7 @@
 // Name:        src/common/imaggif.cpp
 // Purpose:     wxGIFHandler
 // Author:      Vaclav Slavik & Guillermo Rodriguez Garcia
-// RCS-ID:      $Id: imaggif.cpp 60029 2009-04-05 12:52:22Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik & Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -89,7 +89,9 @@ bool wxGIFHandler::SaveFile( wxImage * WXUNUSED(image),
                              wxOutputStream& WXUNUSED(stream), bool verbose )
 {
     if (verbose)
+    {
         wxLogDebug(wxT("GIF: the handler is read-only!!"));
+    }
 
     return false;
 }
@@ -98,14 +100,18 @@ bool wxGIFHandler::DoCanRead( wxInputStream& stream )
 {
     wxGIFDecoder decod;
     return decod.CanRead(stream);
+         // it's ok to modify the stream position here
 }
 
-int wxGIFHandler::GetImageCount( wxInputStream& stream )
+int wxGIFHandler::DoGetImageCount( wxInputStream& stream )
 {
     wxGIFDecoder decod;
     wxGIFErrorCode error = decod.LoadGIF(stream);
     if ( (error != wxGIF_OK) && (error != wxGIF_TRUNCATED) )
         return -1;
+
+    // NOTE: this function modifies the current stream position but it's ok
+    //       (see wxImageHandler::GetImageCount)
 
     return decod.GetFrameCount();
 }

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: gdiobj.cpp 59644 2009-03-20 13:56:57Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -59,12 +59,10 @@ const wxFont* wxStockGDIMac::GetFont(Item item)
         switch (item)
         {
         case FONT_NORMAL:
-            font = new wxFont;
-            font->CreateSystemFont(wxOSX_SYSTEM_FONT_NORMAL);
+            font = new wxFont(wxOSX_SYSTEM_FONT_NORMAL);
             break;
         case FONT_SMALL:
-            font = new wxFont;
-            font->CreateSystemFont(wxOSX_SYSTEM_FONT_SMALL);
+            font = new wxFont(wxOSX_SYSTEM_FONT_SMALL);
             break;
         default:
             font = const_cast<wxFont*>(super::GetFont(item));

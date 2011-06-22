@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.09.99 (extracted from src/common/log.cpp)
-// RCS-ID:      $Id: logg.cpp 59736 2009-03-22 17:18:07Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -53,10 +53,6 @@
 #include "wx/arrstr.h"
 #include "wx/msgout.h"
 
-#if wxUSE_THREADS
-    #include "wx/thread.h"
-#endif // wxUSE_THREADS
-
 #ifdef  __WXMSW__
     // for OutputDebugString()
     #include  "wx/msw/private.h"
@@ -80,7 +76,7 @@
 #include "wx/datetime.h"
 
 // the suffix we add to the button to show that the dialog can be expanded
-#define EXPAND_SUFFIX _T(" >>")
+#define EXPAND_SUFFIX wxT(" >>")
 
 #define CAN_SAVE_FILES (wxUSE_FILE && wxUSE_FILEDLG)
 
@@ -100,7 +96,7 @@ static wxString TimeStamp(const wxString& format, time_t t)
     if ( !wxStrftime(buf, WXSIZEOF(buf), format, wxLocaltime_r(&t, &tm)) )
     {
         // buffer is too small?
-        wxFAIL_MSG(_T("strftime() failed"));
+        wxFAIL_MSG(wxT("strftime() failed"));
     }
     return wxString(buf);
 #else // !wxUSE_DATETIME
@@ -201,62 +197,9 @@ static int OpenLogFile(wxFile& file, wxString *filename = NULL, wxWindow *parent
 
 #endif // CAN_SAVE_FILES
 
-// ----------------------------------------------------------------------------
-// global variables
-// ----------------------------------------------------------------------------
-
-// we use a global variable to store the frame pointer for wxLogStatus - bad,
-// but it's the easiest way
-static wxFrame *gs_pFrame = NULL; // FIXME MT-unsafe
-
 // ============================================================================
 // implementation
 // ============================================================================
-
-// ----------------------------------------------------------------------------
-// global functions
-// ----------------------------------------------------------------------------
-
-// accepts an additional argument which tells to which frame the output should
-// be directed
-void wxVLogStatus(wxFrame *pFrame, const wxString& format, va_list argptr)
-{
-  wxString msg;
-
-  wxLog *pLog = wxLog::GetActiveTarget();
-  if ( pLog != NULL ) {
-    msg.PrintfV(format, argptr);
-
-    wxASSERT( gs_pFrame == NULL ); // should be reset!
-    gs_pFrame = pFrame;
-#ifdef __WXWINCE__
-    wxLog::OnLog(wxLOG_Status, msg, 0);
-#else
-    wxLog::OnLog(wxLOG_Status, msg, time(NULL));
-#endif
-    gs_pFrame = NULL;
-  }
-}
-
-#if !wxUSE_UTF8_LOCALE_ONLY
-void wxDoLogStatusWchar(wxFrame *pFrame, const wxChar *format, ...)
-{
-    va_list argptr;
-    va_start(argptr, format);
-    wxVLogStatus(pFrame, format, argptr);
-    va_end(argptr);
-}
-#endif // !wxUSE_UTF8_LOCALE_ONLY
-
-#if wxUSE_UNICODE_UTF8
-void wxDoLogStatusUtf8(wxFrame *pFrame, const char *format, ...)
-{
-    va_list argptr;
-    va_start(argptr, format);
-    wxVLogStatus(pFrame, format, argptr);
-    va_end(argptr);
-}
-#endif // wxUSE_UNICODE_UTF8
 
 // ----------------------------------------------------------------------------
 // wxLogGui implementation (FIXME MT-unsafe)
@@ -351,6 +294,8 @@ wxLogGui::DoShowMultipleLogMessages(const wxArrayString& messages,
 
 void wxLogGui::Flush()
 {
+    wxLog::Flush();
+
     if ( !m_bHasMessages )
         return;
 
@@ -403,16 +348,19 @@ void wxLogGui::Flush()
 }
 
 // log all kinds of messages
-void wxLogGui::DoLog(wxLogLevel level, const wxString& szString, time_t t)
+void wxLogGui::DoLogRecord(wxLogLevel level,
+                           const wxString& msg,
+                           const wxLogRecordInfo& info)
 {
-    switch ( level ) {
+    switch ( level )
+    {
         case wxLOG_Info:
             if ( GetVerbose() )
         case wxLOG_Message:
             {
-                m_aMessages.Add(szString);
+                m_aMessages.Add(msg);
                 m_aSeverity.Add(wxLOG_Message);
-                m_aTimes.Add((long)t);
+                m_aTimes.Add((long)info.timestamp);
                 m_bHasMessages = true;
             }
             break;
@@ -420,8 +368,16 @@ void wxLogGui::DoLog(wxLogLevel level, const wxString& szString, time_t t)
         case wxLOG_Status:
 #if wxUSE_STATUSBAR
             {
+                wxFrame *pFrame = NULL;
+
+                // check if the frame was passed to us explicitly
+                wxUIntPtr ptr = 0;
+                if ( info.GetNumValue(wxLOG_KEY_FRAME, &ptr) )
+                {
+                    pFrame = static_cast<wxFrame *>(wxUIntToPtr(ptr));
+                }
+
                 // find the top window and set it's status text if it has any
-                wxFrame *pFrame = gs_pFrame;
                 if ( pFrame == NULL ) {
                     wxWindow *pWin = wxTheApp->GetTopWindow();
                     if ( pWin != NULL && pWin->IsKindOf(CLASSINFO(wxFrame)) ) {
@@ -430,15 +386,9 @@ void wxLogGui::DoLog(wxLogLevel level, const wxString& szString, time_t t)
                 }
 
                 if ( pFrame && pFrame->GetStatusBar() )
-                    pFrame->SetStatusText(szString);
+                    pFrame->SetStatusText(msg);
             }
 #endif // wxUSE_STATUSBAR
-            break;
-
-        case wxLOG_FatalError:
-            // show this one immediately
-            wxMessageBox(szString, _("Fatal error"), wxICON_HAND);
-            wxExit();
             break;
 
         case wxLOG_Error:
@@ -461,16 +411,31 @@ void wxLogGui::DoLog(wxLogLevel level, const wxString& szString, time_t t)
                 m_bWarnings = true;
             }
 
-            m_aMessages.Add(szString);
+            m_aMessages.Add(msg);
             m_aSeverity.Add((int)level);
-            m_aTimes.Add((long)t);
+            m_aTimes.Add((long)info.timestamp);
             m_bHasMessages = true;
             break;
 
-        default:
-            // let the base class deal with debug/trace messages as well as any
-            // custom levels
-            wxLog::DoLog(level, szString, t);
+        case wxLOG_Debug:
+        case wxLOG_Trace:
+            // let the base class deal with debug/trace messages
+            wxLog::DoLogRecord(level, msg, info);
+            break;
+
+        case wxLOG_FatalError:
+        case wxLOG_Max:
+            // fatal errors are shown immediately and terminate the program so
+            // we should never see them here
+            wxFAIL_MSG("unexpected log level");
+            break;
+
+        case wxLOG_Progress:
+        case wxLOG_User:
+            // just ignore those: passing them to the base class would result
+            // in asserts from DoLogText() because DoLogTextAtLevel() would
+            // call it as it doesn't know how to handle these levels otherwise
+            break;
     }
 }
 
@@ -499,14 +464,11 @@ public:
 #endif // CAN_SAVE_FILES
     void OnClear(wxCommandEvent& event);
 
-    // this function is safe to call from any thread (notice that it should be
-    // also called from the main thread to ensure that the messages logged from
-    // it appear in correct order with the messages from the other threads)
-    void AddLogMessage(const wxString& message);
-
-    // actually append the messages logged from secondary threads to the text
-    // control during idle time in the main thread
-    virtual void OnInternalIdle();
+    // do show the message in the text control
+    void ShowLogMessage(const wxString& message)
+    {
+        m_pTextCtrl->AppendText(message + wxS('\n'));
+    }
 
 private:
     // use standard ids for our commands!
@@ -520,23 +482,8 @@ private:
     // common part of OnClose() and OnCloseWindow()
     void DoClose();
 
-    // do show the message in the text control
-    void DoShowLogMessage(const wxString& message)
-    {
-        m_pTextCtrl->AppendText(message);
-    }
-
     wxTextCtrl  *m_pTextCtrl;
     wxLogWindow *m_log;
-
-    // queue of messages logged from other threads which need to be displayed
-    wxArrayString m_pendingMessages;
-
-#if wxUSE_THREADS
-    // critical section to protect access to m_pendingMessages
-    wxCriticalSection m_critSection;
-#endif // wxUSE_THREADS
-
 
     DECLARE_EVENT_TABLE()
     wxDECLARE_NO_COPY_CLASS(wxLogFrame);
@@ -650,43 +597,6 @@ void wxLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
     m_pTextCtrl->Clear();
 }
 
-void wxLogFrame::OnInternalIdle()
-{
-    {
-        wxCRIT_SECT_LOCKER(locker, m_critSection);
-
-        const size_t count = m_pendingMessages.size();
-        for ( size_t n = 0; n < count; n++ )
-        {
-            DoShowLogMessage(m_pendingMessages[n]);
-        }
-
-        m_pendingMessages.clear();
-    } // release m_critSection
-
-    wxFrame::OnInternalIdle();
-}
-
-void wxLogFrame::AddLogMessage(const wxString& message)
-{
-    wxCRIT_SECT_LOCKER(locker, m_critSection);
-
-#if wxUSE_THREADS
-    if ( !wxThread::IsMain() || !m_pendingMessages.empty() )
-    {
-        // message needs to be queued for later showing
-        m_pendingMessages.Add(message);
-
-        wxWakeUpIdle();
-    }
-    else // we are the main thread and no messages are queued, so we can
-         // log the message directly
-#endif // wxUSE_THREADS
-    {
-        DoShowLogMessage(message);
-    }
-}
-
 wxLogFrame::~wxLogFrame()
 {
     m_log->OnFrameDelete(this);
@@ -713,46 +623,20 @@ void wxLogWindow::Show(bool bShow)
     m_pLogFrame->Show(bShow);
 }
 
-void wxLogWindow::DoLog(wxLogLevel level, const wxString& szString, time_t t)
+void wxLogWindow::DoLogTextAtLevel(wxLogLevel level, const wxString& msg)
 {
-    // first let the previous logger show it
-    wxLogPassThrough::DoLog(level, szString, t);
+    if ( !m_pLogFrame )
+        return;
 
-    if ( m_pLogFrame ) {
-        switch ( level ) {
-            case wxLOG_Status:
-                // by default, these messages are ignored by wxLog, so process
-                // them ourselves
-                if ( !szString.empty() )
-                {
-                    wxString str;
-                    str << _("Status: ") << szString;
-                    LogString(str, t);
-                }
-                break;
+    // don't put trace messages in the text window for 2 reasons:
+    // 1) there are too many of them
+    // 2) they may provoke other trace messages (e.g. wxMSW code uses
+    //    wxLogTrace to log Windows messages and adding text to the control
+    //    sends more of them) thus sending a program into an infinite loop
+    if ( level == wxLOG_Trace )
+        return;
 
-                // don't put trace messages in the text window for 2 reasons:
-                // 1) there are too many of them
-                // 2) they may provoke other trace messages thus sending a program
-                //    into an infinite loop
-            case wxLOG_Trace:
-                break;
-
-            default:
-                // and this will format it nicely and call our DoLogString()
-                wxLog::DoLog(level, szString, t);
-        }
-    }
-}
-
-void wxLogWindow::DoLogString(const wxString& szString, time_t WXUNUSED(t))
-{
-    wxString msg;
-
-    TimeStamp(&msg);
-    msg << szString << wxT('\n');
-
-    m_pLogFrame->AddLogMessage(msg);
+    m_pLogFrame->ShowLogMessage(msg);
 }
 
 wxFrame *wxLogWindow::GetFrame() const
@@ -917,10 +801,13 @@ wxLogDialog::wxLogDialog(wxWindow *parent,
 
 void wxLogDialog::CreateDetailsControls(wxWindow *parent)
 {
+    wxString fmt = wxLog::GetTimestamp();
+    bool hasTimeStamp = !fmt.IsEmpty();
+
     // create the list ctrl now
     m_listctrl = new wxListCtrl(parent, wxID_ANY,
                                 wxDefaultPosition, wxDefaultSize,
-                                wxSUNKEN_BORDER |
+                                wxBORDER_SIMPLE |
                                 wxLC_REPORT |
                                 wxLC_NO_HEADER |
                                 wxLC_SINGLE_SEL);
@@ -932,15 +819,17 @@ void wxLogDialog::CreateDetailsControls(wxWindow *parent)
 
     // no need to translate these strings as they're not shown to the
     // user anyhow (we use wxLC_NO_HEADER style)
-    m_listctrl->InsertColumn(0, _T("Message"));
-    m_listctrl->InsertColumn(1, _T("Time"));
+    m_listctrl->InsertColumn(0, wxT("Message"));
+
+    if (hasTimeStamp)
+        m_listctrl->InsertColumn(1, wxT("Time"));
 
     // prepare the imagelist
     static const int ICON_SIZE = 16;
     wxImageList *imageList = new wxImageList(ICON_SIZE, ICON_SIZE);
 
     // order should be the same as in the switch below!
-    static const wxChar* icons[] =
+    static const wxChar* const icons[] =
     {
         wxART_ERROR,
         wxART_WARNING,
@@ -968,14 +857,7 @@ void wxLogDialog::CreateDetailsControls(wxWindow *parent)
 
     m_listctrl->SetImageList(imageList, wxIMAGE_LIST_SMALL);
 
-    // and fill it
-    wxString fmt = wxLog::GetTimestamp();
-    if ( !fmt )
-    {
-        // default format
-        fmt = _T("%c");
-    }
-
+    // fill the listctrl
     size_t count = m_messages.GetCount();
     for ( size_t n = 0; n < count; n++ )
     {
@@ -1007,12 +889,15 @@ void wxLogDialog::CreateDetailsControls(wxWindow *parent)
         msg = EllipsizeString(msg);
 
         m_listctrl->InsertItem(n, msg, image);
-        m_listctrl->SetItem(n, 1, TimeStamp(fmt, (time_t)m_times[n]));
+
+        if (hasTimeStamp)
+            m_listctrl->SetItem(n, 1, TimeStamp(fmt, (time_t)m_times[n]));
     }
 
     // let the columns size themselves
     m_listctrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_listctrl->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    if (hasTimeStamp)
+        m_listctrl->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     // calculate an approximately nice height for the listctrl
     int height = GetCharHeight()*(count + 4);
@@ -1108,7 +993,9 @@ void wxLogDialog::OnSave(wxCommandEvent& WXUNUSED(event))
     }
 
     if ( !rc || !file.Write(GetLogMessages()) || !file.Close() )
+    {
         wxLogError(_("Can't save log contents to file."));
+    }
 }
 
 #endif // CAN_SAVE_FILES
@@ -1141,7 +1028,7 @@ static int OpenLogFile(wxFile& file, wxString *pFilename, wxWindow *parent)
 
     // open file
     // ---------
-    bool bOk;
+    bool bOk = true; // suppress warning about it being possible uninitialized
     if ( wxFile::Exists(filename) ) {
         bool bAppend = false;
         wxString strMsg;
@@ -1196,13 +1083,9 @@ wxLogTextCtrl::wxLogTextCtrl(wxTextCtrl *pTextCtrl)
     m_pTextCtrl = pTextCtrl;
 }
 
-void wxLogTextCtrl::DoLogString(const wxString& szString, time_t WXUNUSED(t))
+void wxLogTextCtrl::DoLogText(const wxString& msg)
 {
-    wxString msg;
-    TimeStamp(&msg);
-
-    msg << szString << wxT('\n');
-    m_pTextCtrl->AppendText(msg);
+    m_pTextCtrl->AppendText(msg + wxS('\n'));
 }
 
 #endif // wxUSE_LOG && wxUSE_TEXTCTRL

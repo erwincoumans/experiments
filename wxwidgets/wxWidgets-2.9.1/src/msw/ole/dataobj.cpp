@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.05.98
-// RCS-ID:      $Id: dataobj.cpp 59933 2009-03-29 21:30:28Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -54,7 +54,7 @@
 #include "wx/msw/dib.h"
 
 #ifndef CFSTR_SHELLURL
-#define CFSTR_SHELLURL _T("UniformResourceLocator")
+#define CFSTR_SHELLURL wxT("UniformResourceLocator")
 #endif
 
 // ----------------------------------------------------------------------------
@@ -1154,7 +1154,7 @@ bool wxFileDataObject::GetDataHere(void *WXUNUSED_IN_WINCE(pData)) const
 // Work around bug in Wine headers
 #if defined(__WINE__) && defined(CFSTR_SHELLURL) && wxUSE_UNICODE
 #undef CFSTR_SHELLURL
-#define CFSTR_SHELLURL _T("CFSTR_SHELLURL")
+#define CFSTR_SHELLURL wxT("CFSTR_SHELLURL")
 #endif
 
 class CFSTR_SHELLURLDataObject : public wxCustomDataObject
@@ -1181,23 +1181,6 @@ public:
     {
         return buffer;
     }
-
-#if wxUSE_UNICODE
-    virtual bool GetDataHere( void* buffer ) const
-    {
-        // CFSTR_SHELLURL is _always_ ANSI!
-        wxCharBuffer char_buffer( GetDataSize() );
-        wxCustomDataObject::GetDataHere( (void*)char_buffer.data() );
-        wxString unicode_buffer( char_buffer, wxConvLibc );
-        memcpy( buffer, unicode_buffer.c_str(),
-                ( unicode_buffer.length() + 1 ) * sizeof(wxChar) );
-
-        return true;
-    }
-    virtual bool GetDataHere(const wxDataFormat& WXUNUSED(format),
-                             void *buf) const
-        { return GetDataHere(buf); }
-#endif
 
     wxDECLARE_NO_COPY_CLASS(CFSTR_SHELLURLDataObject);
 };
@@ -1234,11 +1217,30 @@ bool wxURLDataObject::SetData(const wxDataFormat& format,
 wxString wxURLDataObject::GetURL() const
 {
     wxString url;
-    wxCHECK_MSG( m_dataObjectLast, url, _T("no data in wxURLDataObject") );
+    wxCHECK_MSG( m_dataObjectLast, url, wxT("no data in wxURLDataObject") );
 
-    size_t len = m_dataObjectLast->GetDataSize();
+    if ( m_dataObjectLast->GetPreferredFormat() == CFSTR_SHELLURL )
+    {
+        const size_t len = m_dataObjectLast->GetDataSize();
+        if ( !len )
+            return wxString();
 
-    m_dataObjectLast->GetDataHere(wxStringBuffer(url, len));
+        // CFSTR_SHELLURL is always ANSI so we need to convert it from it in
+        // Unicode build
+#if wxUSE_UNICODE
+        wxCharBuffer buf(len);
+
+        if ( m_dataObjectLast->GetDataHere(buf.data()) )
+            url = buf;
+#else // !wxUSE_UNICODE
+        // in ANSI build no conversion is necessary
+        m_dataObjectLast->GetDataHere(wxStringBuffer(url, len));
+#endif // wxUSE_UNICODE/!wxUSE_UNICODE
+    }
+    else // must be wxTextDataObject
+    {
+        url = static_cast<wxTextDataObject *>(m_dataObjectLast)->GetText();
+    }
 
     return url;
 }
@@ -1248,16 +1250,22 @@ void wxURLDataObject::SetURL(const wxString& url)
     wxCharBuffer urlMB(url.mb_str());
     if ( urlMB )
     {
-        const size_t len = strlen(urlMB) + 1; // size with trailing NUL
+        const size_t len = strlen(urlMB);
+
 #if !wxUSE_UNICODE
+        // wxTextDataObject takes the number of characters in the string, not
+        // the size of the buffer (which would be len+1)
         SetData(wxDF_TEXT, len, urlMB);
-#endif
-        SetData(wxDataFormat(CFSTR_SHELLURL), len, urlMB);
+#endif // !wxUSE_UNICODE
+
+        // however CFSTR_SHELLURLDataObject doesn't append NUL automatically
+        // but we probably still want to have it on the clipboard (just to be
+        // safe), so do append it
+        SetData(wxDataFormat(CFSTR_SHELLURL), len + 1, urlMB);
     }
 
 #if wxUSE_UNICODE
-    // notice that SetData() takes size in bytes
-    SetData(wxDF_UNICODETEXT, (url.length() + 1)*sizeof(wxChar), url.wc_str());
+    SetData(wxDF_UNICODETEXT, url.length()*sizeof(wxChar), url.wc_str());
 #endif
 }
 

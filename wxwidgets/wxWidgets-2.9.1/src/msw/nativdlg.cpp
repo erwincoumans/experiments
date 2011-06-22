@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: nativdlg.cpp 52336 2008-03-05 15:18:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -162,7 +162,7 @@ wxWindow* wxWindow::GetWindowChild(wxWindowID id)
 
 wxWindow* wxWindow::CreateWindowFromHWND(wxWindow* parent, WXHWND hWnd)
 {
-    wxCHECK_MSG( parent, NULL, _T("must have valid parent for a control") );
+    wxCHECK_MSG( parent, NULL, wxT("must have valid parent for a control") );
 
     wxString str(wxGetWindowClass(hWnd));
     str.UpperCase();

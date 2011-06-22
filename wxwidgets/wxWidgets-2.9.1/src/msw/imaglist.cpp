@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: imaglist.cpp 50348 2007-11-30 13:48:22Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -76,17 +76,15 @@ bool wxImageList::Create(int width, int height, bool mask, int initial)
 {
     UINT flags = 0;
 
-    // set appropriate color depth
+    // as we want to be able to use 32bpp bitmaps in the image lists, we always
+    // use ILC_COLOR32, even if the display resolution is less -- the system
+    // will make the best effort to show the bitmap if we do this resulting in
+    // quite acceptable display while using a lower depth ILC_COLOR constant
+    // (e.g. ILC_COLOR16) shows completely broken bitmaps
 #ifdef __WXWINCE__
     flags |= ILC_COLOR;
 #else
-    int dd = wxDisplayDepth();
-
-    if (dd <= 4)       flags |= ILC_COLOR;   // 16 color
-    else if (dd <= 8)  flags |= ILC_COLOR8;  // 256 color
-    else if (dd <= 16) flags |= ILC_COLOR16; // 64k hi-color
-    else if (dd <= 24) flags |= ILC_COLOR24; // 16m truecolor
-    else if (dd <= 32) flags |= ILC_COLOR32; // 16m truecolor
+    flags |= ILC_COLOR32;
 #endif
 
     if ( mask )
@@ -119,7 +117,7 @@ wxImageList::~wxImageList()
 // Returns the number of images in the image list.
 int wxImageList::GetImageCount() const
 {
-    wxASSERT_MSG( m_hImageList, _T("invalid image list") );
+    wxASSERT_MSG( m_hImageList, wxT("invalid image list") );
 
     return ImageList_GetImageCount(GetHImageList());
 }
@@ -127,7 +125,7 @@ int wxImageList::GetImageCount() const
 // Returns the size (same for all images) of the images in the list
 bool wxImageList::GetSize(int WXUNUSED(index), int &width, int &height) const
 {
-    wxASSERT_MSG( m_hImageList, _T("invalid image list") );
+    wxASSERT_MSG( m_hImageList, wxT("invalid image list") );
 
     return ImageList_GetIconSize(GetHImageList(), &width, &height) != 0;
 }
@@ -247,9 +245,9 @@ bool wxImageList::Draw(int index,
     wxMSWDCImpl *msw_impl = wxDynamicCast( impl, wxMSWDCImpl );
     if (!msw_impl)
        return false;
-    
+
     HDC hDC = GetHdcOf(*msw_impl);
-    wxCHECK_MSG( hDC, false, _T("invalid wxDC in wxImageList::Draw") );
+    wxCHECK_MSG( hDC, false, wxT("invalid wxDC in wxImageList::Draw") );
 
     COLORREF clr = CLR_NONE;    // transparent by default
     if ( solidBackground )

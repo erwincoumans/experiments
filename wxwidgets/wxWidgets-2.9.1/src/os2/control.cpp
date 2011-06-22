@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/17/99
-// RCS-ID:      $Id: control.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -106,15 +106,15 @@ bool wxControl::OS2CreateControl( const wxChar*   zClassname,
     if (!pParent)
         return false;
 
-    if ((wxStrcmp(zClassname, _T("COMBOBOX"))) == 0)
+    if ((wxStrcmp(zClassname, wxT("COMBOBOX"))) == 0)
         zClass = WC_COMBOBOX;
-    else if ((wxStrcmp(zClassname, _T("STATIC"))) == 0)
+    else if ((wxStrcmp(zClassname, wxT("STATIC"))) == 0)
         zClass = WC_STATIC;
-    else if ((wxStrcmp(zClassname, _T("BUTTON"))) == 0)
+    else if ((wxStrcmp(zClassname, wxT("BUTTON"))) == 0)
         zClass = WC_BUTTON;
-    else if ((wxStrcmp(zClassname, _T("NOTEBOOK"))) == 0)
+    else if ((wxStrcmp(zClassname, wxT("NOTEBOOK"))) == 0)
         zClass = WC_NOTEBOOK;
-    else if ((wxStrcmp(zClassname, _T("CONTAINER"))) == 0)
+    else if ((wxStrcmp(zClassname, wxT("CONTAINER"))) == 0)
         zClass = WC_CONTAINER;
     if ((zClass == WC_STATIC) || (zClass == WC_BUTTON))
         dwStyle |= DT_MNEMONIC;

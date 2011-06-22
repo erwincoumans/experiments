@@ -3,7 +3,7 @@
 // Purpose:     implementation of platform-independent wxAcceleratorEntry parts
 // Author:      Vadim Zeitlin
 // Created:     2007-05-05
-// RCS-ID:      $Id: accelcmn.cpp 48603 2007-09-07 21:47:45Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ static int IsNumberedAccelKey(const wxString& str,
     {
         // this must be a mistake, chances that this is a valid name of another
         // key are vanishingly small
-        wxLogDebug(_T("Invalid key string \"%s\""), str.c_str());
+        wxLogDebug(wxT("Invalid key string \"%s\""), str.c_str());
         return 0;
     }
 
@@ -259,7 +259,7 @@ wxAcceleratorEntry::ParseAccel(const wxString& text, int *flagsOut, int *keyOut)
     }
 
 
-    wxASSERT_MSG( keyCode, _T("logic error: should have key code here") );
+    wxASSERT_MSG( keyCode, wxT("logic error: should have key code here") );
 
     if ( flagsOut )
         *flagsOut = accelFlags;
@@ -291,11 +291,11 @@ wxString wxAcceleratorEntry::ToString() const
 
     int flags = GetFlags();
     if ( flags & wxACCEL_ALT )
-        text += _("Alt-");
+        text += _("Alt+");
     if ( flags & wxACCEL_CTRL )
-        text += _("Ctrl-");
+        text += _("Ctrl+");
     if ( flags & wxACCEL_SHIFT )
-        text += _("Shift-");
+        text += _("Shift+");
 
     const int code = GetKeyCode();
 
@@ -323,7 +323,9 @@ wxString wxAcceleratorEntry::ToString() const
             // must be a simple key
             if (
 #if !wxUSE_UNICODE
-                 isascii(code) &&
+                 // we can't call wxIsalnum() for non-ASCII characters in ASCII
+                 // build as they're only defined for the ASCII range (or EOF)
+                 wxIsascii(code) &&
 #endif // ANSI
                     wxIsalnum(code) )
             {

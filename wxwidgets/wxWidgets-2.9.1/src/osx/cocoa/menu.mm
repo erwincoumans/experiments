@@ -55,7 +55,7 @@
 
 @end
 
-@interface wxNSMenuController : NSObject
+@interface wxNSMenuController : NSObject wxOSX_10_6_AND_LATER(<NSMenuDelegate>)
 {
 }
 
@@ -117,11 +117,11 @@
 
 @end
 
-@interface NSApplication(MissingAppleMenuCall) 
-- (void)setAppleMenu:(NSMenu *)menu; 
-@end 
+@interface NSApplication(MissingAppleMenuCall)
+- (void)setAppleMenu:(NSMenu *)menu;
+@end
 
-class wxMenuCocoaImpl : public wxMenuImpl 
+class wxMenuCocoaImpl : public wxMenuImpl
 {
 public :
     wxMenuCocoaImpl( wxMenu* peer , wxNSMenu* menu) : wxMenuImpl(peer), m_osxMenu(menu)
@@ -133,23 +133,42 @@ public :
         }
         [menu setDelegate:controller];
         [m_osxMenu setImplementation:this];
+        // gc aware
+        if ( m_osxMenu )
+            CFRetain(m_osxMenu);
+        [m_osxMenu release];
     }
-    
+
     virtual ~wxMenuCocoaImpl();
-        
-    virtual void InsertOrAppend(wxMenuItem *pItem, size_t pos) 
+
+    virtual void InsertOrAppend(wxMenuItem *pItem, size_t pos)
     {
-        if ( pos == (size_t) -1 )
-            [m_osxMenu addItem:(NSMenuItem*) pItem->GetPeer()->GetHMenuItem() ];
-        else
-            [m_osxMenu insertItem:(NSMenuItem*) pItem->GetPeer()->GetHMenuItem() atIndex:pos];
-    }
+        NSMenuItem* nsmenuitem = (NSMenuItem*) pItem->GetPeer()->GetHMenuItem();
+        // make sure a call of SetSubMenu is also reflected (occuring after Create)
+        // update the native menu item accordingly
         
-    virtual void Remove( wxMenuItem *pItem ) 
+        if ( pItem->IsSubMenu() )
+        {
+            wxMenu* wxsubmenu = pItem->GetSubMenu();
+            WXHMENU nssubmenu = wxsubmenu->GetHMenu();
+            if ( [nsmenuitem submenu] != nssubmenu )
+            {
+                wxsubmenu->GetPeer()->SetTitle( pItem->GetItemLabelText() );
+                [nsmenuitem setSubmenu:nssubmenu];
+            }
+        }
+        
+        if ( pos == (size_t) -1 )
+            [m_osxMenu addItem:nsmenuitem ];
+        else
+            [m_osxMenu insertItem:nsmenuitem atIndex:pos];
+    }
+
+    virtual void Remove( wxMenuItem *pItem )
     {
         [m_osxMenu removeItem:(NSMenuItem*) pItem->GetPeer()->GetHMenuItem()];
     }
-    
+
     virtual void MakeRoot()
     {
         [NSApp setMainMenu:m_osxMenu];
@@ -159,7 +178,7 @@ public :
     virtual void Enable( bool WXUNUSED(enable) )
     {
     }
-    
+
     virtual void SetTitle( const wxString& text )
     {
         wxCFStringRef cfText(text);
@@ -196,7 +215,9 @@ wxMenuCocoaImpl::~wxMenuCocoaImpl()
 {
     [m_osxMenu setDelegate:nil];
     [m_osxMenu setImplementation:nil];
-    [m_osxMenu release];
+    // gc aware
+    if ( m_osxMenu )
+        CFRelease(m_osxMenu);
 }
 
 wxMenuImpl* wxMenuImpl::Create( wxMenu* peer, const wxString& title )

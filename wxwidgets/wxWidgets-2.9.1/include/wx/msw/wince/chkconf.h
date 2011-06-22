@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2005-03-07
-// RCS-ID:      $Id: chkconf.h 60241 2009-04-19 07:20:34Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,6 +28,12 @@
     #define wxUSE_DISPLAY 0
 #endif
 
+// eVC doesn't have standard streams
+#ifdef __EVC4__
+    #undef wxUSE_STD_IOSTREAM
+    #define wxUSE_STD_IOSTREAM 0
+#endif
+
 // wxFSVolume currently doesn't compile under CE and it's not clear if it makes
 // sense at all there (the drives and their names are fixed on CE systems)
 #undef wxUSE_FSVOLUME
@@ -46,7 +52,7 @@
 #define wxUSE_JOYSTICK 0
 
 // libtiff doesn't build with eVC but is ok with VC8
-#if !wxCHECK_VISUALC_VERSION(8)
+#ifdef __EVC4__
     #undef wxUSE_LIBTIFF
     #define wxUSE_LIBTIFF 0
 #endif
@@ -84,7 +90,7 @@
 #define wxUSE_PRINTING_ARCHITECTURE 0
 
 // regex doesn't build with eVC but is ok with VC8
-#if !wxCHECK_VISUALC_VERSION(8)
+#ifdef __EVC4__
     #undef wxUSE_REGEX
     #define wxUSE_REGEX 0
 #endif
@@ -140,14 +146,6 @@
     #undef wxUSE_COLOURDLG
     #define wxUSE_COLOURDLG 0
 #endif // __SMARTPHONE__
-
-// eVC can't compile template Bind() but VC8 can
-#if !wxEVENTS_COMPATIBILITY_2_8
-#   if !wxCHECK_VISUALC_VERSION(8)
-#       undef wxEVENTS_COMPATIBILITY_2_8
-#       define wxEVENTS_COMPATIBILITY_2_8 1
-#   endif
-#endif
 
 #endif // _WX_MSW_WINCE_CHKCONF_H_
 

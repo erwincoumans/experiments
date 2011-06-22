@@ -2,7 +2,7 @@
 // Name:        src/gtk/notebook.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: notebook.cpp 58877 2009-02-13 10:25:38Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -357,7 +357,7 @@ wxNotebookPage *wxNotebook::DoRemovePage( size_t page )
     wxGtkNotebookPage* p = GetNotebookPage(page);
     m_pagesData.DeleteObject(p);
     delete p;
-    
+
     return client;
 }
 
@@ -373,7 +373,7 @@ bool wxNotebook::InsertPage( size_t position,
                wxT("Can't add a page whose parent is not the notebook!") );
 
     wxCHECK_MSG( position <= GetPageCount(), false,
-                 _T("invalid page index in wxNotebookPage::InsertPage()") );
+                 wxT("invalid page index in wxNotebookPage::InsertPage()") );
 
     // Hack Alert! (Part II): See above in wxNotebook::AddChildGTK
     // why this has to be done.

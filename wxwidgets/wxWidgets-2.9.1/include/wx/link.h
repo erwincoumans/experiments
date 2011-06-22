@@ -3,7 +3,7 @@
 // Purpose:     macros to force linking modules which might otherwise be
 //              discarded by the linker
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: link.h 35722 2005-09-26 12:29:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@
 // Purpose:     Hyperlink control
 // Author:      Francesco Montorsi
 // Created:     14/2/2007
-// RCS-ID:      $Id: hyperlink.cpp 55288 2008-08-26 16:19:23Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -107,7 +107,6 @@ bool wxHyperlinkCtrl::Create(wxWindow *parent, wxWindowID id,
         m_parent->DoAddChild( this );
 
         PostCreation(size);
-        SetInitialSize(size);
 
         // wxWindowGTK will connect to the enter_notify and leave_notify GTK+ signals
         // thus overriding GTK+'s internal signal handlers which set the cursor of
@@ -152,7 +151,7 @@ wxString wxHyperlinkCtrl::GetURL() const
     if ( UseNative() )
     {
         const gchar *str = gtk_link_button_get_uri(GTK_LINK_BUTTON(m_widget));
-        return wxString(str, *wxConvFileName);
+        return wxString::FromUTF8(str);
     }
 
     return wxGenericHyperlinkCtrl::GetURL();

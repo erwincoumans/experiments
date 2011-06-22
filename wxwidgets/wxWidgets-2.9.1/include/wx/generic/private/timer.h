@@ -2,7 +2,7 @@
 // Name:        wx/generic/private/timer.h
 // Purpose:     Generic implementation of wxTimer class
 // Author:      Vaclav Slavik
-// Id:          $Id: timer.h 50646 2007-12-12 01:35:53Z VZ $
+// Id:          $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

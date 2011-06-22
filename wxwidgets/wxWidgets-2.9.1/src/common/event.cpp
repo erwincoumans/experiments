@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: event.cpp 60002 2009-04-03 16:57:30Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -118,7 +118,7 @@ wxEventHashTable &wxEvtHandler::GetEventHashTable() const
 wxEventHashTable wxEvtHandler::sm_eventHashTable(wxEvtHandler::sm_eventTable);
 
 const wxEventTableEntry wxEvtHandler::sm_eventTableEntries[] =
-    { DECLARE_EVENT_TABLE_TERMINATOR() };
+    { wxDECLARE_EVENT_TABLE_TERMINATOR() };
 
 
 // wxUSE_MEMORY_TRACING considers memory freed from the static objects dtors
@@ -151,8 +151,8 @@ IMPLEMENT_DYNAMIC_CLASS(wxEventTableEntryModule, wxModule)
 
 const wxEventType wxEVT_FIRST = 10000;
 const wxEventType wxEVT_USER_FIRST = wxEVT_FIRST + 2000;
+const wxEventType wxEVT_NULL = wxNewEventType();
 
-DEFINE_EVENT_TYPE(wxEVT_NULL)
 wxDEFINE_EVENT( wxEVT_IDLE, wxIdleEvent );
 
 #endif // wxUSE_BASE
@@ -363,6 +363,7 @@ wxEvent::wxEvent(int theId, wxEventType commandType)
     m_id = theId;
     m_skipped = false;
     m_callbackUserData = NULL;
+    m_handlerToProcessOnlyIn = NULL;
     m_isCommandEvent = false;
     m_propagationLevel = wxEVENT_PROPAGATE_NONE;
     m_wasProcessed = false;
@@ -375,6 +376,7 @@ wxEvent::wxEvent(const wxEvent& src)
     , m_timeStamp(src.m_timeStamp)
     , m_id(src.m_id)
     , m_callbackUserData(src.m_callbackUserData)
+    , m_handlerToProcessOnlyIn(NULL)
     , m_propagationLevel(src.m_propagationLevel)
     , m_skipped(src.m_skipped)
     , m_isCommandEvent(src.m_isCommandEvent)
@@ -391,6 +393,7 @@ wxEvent& wxEvent::operator=(const wxEvent& src)
     m_timeStamp = src.m_timeStamp;
     m_id = src.m_id;
     m_callbackUserData = src.m_callbackUserData;
+    m_handlerToProcessOnlyIn = NULL;
     m_propagationLevel = src.m_propagationLevel;
     m_skipped = src.m_skipped;
     m_isCommandEvent = src.m_isCommandEvent;
@@ -703,34 +706,6 @@ bool wxMouseEvent::Button(int but) const
     }
 }
 
-bool wxMouseEvent::ButtonIsDown(int but) const
-{
-    switch (but)
-    {
-        default:
-            wxFAIL_MSG(wxT("invalid parameter in wxMouseEvent::ButtonIsDown"));
-            // fall through
-
-        case wxMOUSE_BTN_ANY:
-            return LeftIsDown() || MiddleIsDown() || RightIsDown() || Aux1Down() || Aux2Down();
-
-        case wxMOUSE_BTN_LEFT:
-            return LeftIsDown();
-
-        case wxMOUSE_BTN_MIDDLE:
-            return MiddleIsDown();
-
-        case wxMOUSE_BTN_RIGHT:
-            return RightIsDown();
-
-        case wxMOUSE_BTN_AUX1:
-            return Aux1IsDown();
-
-        case wxMOUSE_BTN_AUX2:
-            return Aux2IsDown();
-    }
-}
-
 int wxMouseEvent::GetButton() const
 {
     for ( int i = 1; i < wxMOUSE_BTN_MAX; i++ )
@@ -778,6 +753,46 @@ wxKeyEvent::wxKeyEvent(const wxKeyEvent& evt)
 #if wxUSE_UNICODE
     m_uniChar = evt.m_uniChar;
 #endif
+}
+
+bool wxKeyEvent::IsKeyInCategory(int category) const
+{
+    switch ( GetKeyCode() )
+    {
+        case WXK_LEFT:
+        case WXK_RIGHT:
+        case WXK_UP:
+        case WXK_DOWN:
+        case WXK_NUMPAD_LEFT:
+        case WXK_NUMPAD_RIGHT:
+        case WXK_NUMPAD_UP:
+        case WXK_NUMPAD_DOWN:
+            return (category & WXK_CATEGORY_ARROW) != 0;
+
+        case WXK_PAGEDOWN:
+        case WXK_END:
+        case WXK_NUMPAD_PAGEUP:
+        case WXK_NUMPAD_PAGEDOWN:
+            return (category & WXK_CATEGORY_PAGING) != 0;
+
+        case WXK_HOME:
+        case WXK_PAGEUP:
+        case WXK_NUMPAD_HOME:
+        case WXK_NUMPAD_END:
+            return (category & WXK_CATEGORY_JUMP) != 0;
+
+        case WXK_TAB:
+        case WXK_NUMPAD_TAB:
+            return (category & WXK_CATEGORY_TAB) != 0;
+
+        case WXK_BACK:
+        case WXK_DELETE:
+        case WXK_NUMPAD_DELETE:
+            return (category & WXK_CATEGORY_CUT) != 0;
+
+        default:
+            return false;
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -872,8 +887,7 @@ void wxEventHashTable::Clear()
         delete eTTnode;
     }
 
-    delete[] m_eventTypeTable;
-    m_eventTypeTable = NULL;
+    wxDELETEA(m_eventTypeTable);
 
     m_size = 0;
 }
@@ -1318,6 +1332,18 @@ bool wxEvtHandler::TryBefore(wxEvent& event)
 
 bool wxEvtHandler::TryAfter(wxEvent& event)
 {
+    // We only want to pass the window to the application object once even if
+    // there are several chained handlers. Ensure that this is what happens by
+    // only calling DoTryApp() if there is no next handler (which would do it).
+    //
+    // Notice that, unlike simply calling TryAfter() on the last handler in the
+    // chain only from ProcessEvent(), this also works with wxWindow object in
+    // the middle of the chain: its overridden TryAfter() will still be called
+    // and propagate the event upwards the window hierarchy even if it's not
+    // the last one in the chain (which, admittedly, shouldn't happen often).
+    if ( GetNextHandler() )
+        return GetNextHandler()->TryAfter(event);
+
 #if WXWIN_COMPATIBILITY_2_8
     // as above, call the old virtual function for compatibility
     return TryParent(event);
@@ -1328,11 +1354,12 @@ bool wxEvtHandler::TryAfter(wxEvent& event)
 
 bool wxEvtHandler::ProcessEvent(wxEvent& event)
 {
-    // allow the application to hook into event processing
+    // The very first thing we do is to allow the application to hook into
+    // event processing in order to globally pre-process all events.
     //
-    // note that we should only do it if we're the first event handler called
+    // Note that we should only do it if we're the first event handler called
     // to avoid calling FilterEvent() multiple times as the event goes through
-    // the event handler chain and possibly upwards the window hierarchy
+    // the event handler chain and possibly upwards the window hierarchy.
     if ( !event.WasProcessed() )
     {
         if ( wxTheApp )
@@ -1349,29 +1376,101 @@ bool wxEvtHandler::ProcessEvent(wxEvent& event)
         }
     }
 
-    if ( ProcessEventHere(event) )
+    // Short circuit the event processing logic if we're requested to process
+    // this event in this handler only, see DoTryChain() for more details.
+    if ( event.ShouldProcessOnlyIn(this) )
+        return TryBeforeAndHere(event);
+
+
+    // Try to process the event in this handler itself.
+    if ( ProcessEventLocally(event) )
+    {
+        // It is possible that DoTryChain() called from ProcessEventLocally()
+        // returned true but the event was not really processed: this happens
+        // if a custom handler ignores the request to process the event in this
+        // handler only and in this case we should skip the post processing
+        // done in TryAfter() but still return the correct value ourselves to
+        // indicate whether we did or did not find a handler for this event.
+        return !event.GetSkipped();
+    }
+
+    // If we still didn't find a handler, propagate the event upwards the
+    // window chain and/or to the application object.
+    if ( TryAfter(event) )
         return true;
 
-    // pass the event to the next handler, notice that we shouldn't call
-    // TryAfter() even if it doesn't handle the event as the last handler in
-    // the chain will do it
-    if ( GetNextHandler() )
-        return GetNextHandler()->ProcessEvent(event);
 
-    // propagate the event upwards the window chain and/or to the application
-    // object if it wasn't processed at this level
-    return TryAfter(event);
+    // No handler found anywhere, bail out.
+    return false;
 }
 
-bool wxEvtHandler::ProcessEventHere(wxEvent& event)
+bool wxEvtHandler::ProcessEventLocally(wxEvent& event)
+{
+    // Try the hooks which should be called before our own handlers and this
+    // handler itself first. Notice that we should not call ProcessEvent() on
+    // this one as we're already called from it, which explains why we do it
+    // here and not in DoTryChain()
+    return TryBeforeAndHere(event) || DoTryChain(event);
+}
+
+bool wxEvtHandler::DoTryChain(wxEvent& event)
+{
+    for ( wxEvtHandler *h = GetNextHandler(); h; h = h->GetNextHandler() )
+    {
+        // We need to process this event at the level of this handler only
+        // right now, the pre-/post-processing was either already done by
+        // ProcessEvent() from which we were called or will be done by it when
+        // we return.
+        //
+        // However we must call ProcessEvent() and not TryHereOnly() because the
+        // existing code (including some in wxWidgets itself) expects the
+        // overridden ProcessEvent() in its custom event handlers pushed on a
+        // window to be called.
+        //
+        // So we must call ProcessEvent() but it must not do what it usually
+        // does. To resolve this paradox we set up a special flag inside the
+        // object itself to let ProcessEvent() know that it shouldn't do any
+        // pre/post-processing for this event if it gets it. Note that this
+        // only applies to this handler, if the event is passed to another one
+        // by explicitly calling its ProcessEvent(), pre/post-processing should
+        // be done as usual.
+        //
+        // Final complication is that if the implementation of ProcessEvent()
+        // called wxEvent::DidntHonourProcessOnlyIn() (as the gross hack that
+        // is wxScrollHelperEvtHandler::ProcessEvent() does) and ignored our
+        // request to process event in this handler only, we have to compensate
+        // for it by not processing the event further because this was already
+        // done by that rogue event handler.
+        wxEventProcessInHandlerOnly processInHandlerOnly(event, h);
+        if ( h->ProcessEvent(event) )
+        {
+            // Make sure "skipped" flag is not set as the event was really
+            // processed in this case. Normally it shouldn't be set anyhow but
+            // make sure just in case the user code does something strange.
+            event.Skip(false);
+
+            return true;
+        }
+
+        if ( !event.ShouldProcessOnlyIn(h) )
+        {
+            // Still return true to indicate that no further processing should
+            // be undertaken but ensure that "skipped" flag is set so that the
+            // caller knows that the event was not really processed.
+            event.Skip();
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool wxEvtHandler::TryHereOnly(wxEvent& event)
 {
     // If the event handler is disabled it doesn't process any events
     if ( !GetEvtHandlerEnabled() )
         return false;
-
-    // Try the hooks which should be called before our own handlers
-    if ( TryBefore(event) )
-        return true;
 
     // Handle per-instance dynamic event tables first
     if ( m_dynamicEvents && SearchDynamicEventTable(event) )
@@ -1443,11 +1542,11 @@ bool wxEvtHandler::SearchEventTable(wxEventTable& table, wxEvent& event)
     return false;
 }
 
-void wxEvtHandler::DoConnect(int id,
-                             int lastId,
-                             wxEventType eventType,
-                             wxEventFunctor *func,
-                             wxObject *userData)
+void wxEvtHandler::DoBind(int id,
+                          int lastId,
+                          wxEventType eventType,
+                          wxEventFunctor *func,
+                          wxObject *userData)
 {
     wxDynamicEventTableEntry *entry =
         new wxDynamicEventTableEntry(eventType, id, lastId, func, userData);
@@ -1471,11 +1570,11 @@ void wxEvtHandler::DoConnect(int id,
 }
 
 bool
-wxEvtHandler::DoDisconnect(int id,
-                           int lastId,
-                           wxEventType eventType,
-                           const wxEventFunctor& func,
-                           wxObject *userData)
+wxEvtHandler::DoUnbind(int id,
+                       int lastId,
+                       wxEventType eventType,
+                       const wxEventFunctor& func,
+                       wxObject *userData)
 {
     if (!m_dynamicEvents)
         return false;
@@ -1497,7 +1596,7 @@ wxEvtHandler::DoDisconnect(int id,
         if ((entry->m_id == id) &&
             ((entry->m_lastId == lastId) || (lastId == wxID_ANY)) &&
             ((entry->m_eventType == eventType) || (eventType == wxEVT_NULL)) &&
-            entry->m_fn->Matches(func) &&
+            entry->m_fn->IsMatching(func) &&
             ((entry->m_callbackUserData == userData) || !userData))
         {
             delete entry->m_callbackUserData;

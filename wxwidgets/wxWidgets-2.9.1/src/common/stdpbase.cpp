@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2004-10-19
-// RCS-ID:      $Id: stdpbase.cpp 58259 2009-01-21 14:01:30Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -43,10 +43,10 @@ static wxStandardPaths gs_stdPaths;
 // ============================================================================
 
 /* static */
-wxStandardPathsBase& wxStandardPathsBase::Get()
+wxStandardPaths& wxStandardPathsBase::Get()
 {
     wxAppTraits * const traits = wxTheApp ? wxTheApp->GetTraits() : NULL;
-    wxCHECK_MSG( traits, gs_stdPaths, _T("create wxApp before calling this") );
+    wxCHECK_MSG( traits, gs_stdPaths, wxT("create wxApp before calling this") );
 
     return traits->GetStandardPaths();
 }
@@ -72,7 +72,7 @@ wxString wxStandardPathsBase::GetExecutablePath() const
     return filename.GetFullPath();
 }
 
-wxStandardPathsBase& wxAppTraitsBase::GetStandardPaths()
+wxStandardPaths& wxAppTraitsBase::GetStandardPaths()
 {
     return gs_stdPaths;
 }
@@ -133,7 +133,7 @@ wxStandardPathsBase::AppendPathComponent(const wxString& dir,
         if ( !component.empty() )
         {
             const wxChar ch = *(subdir.end() - 1);
-            if ( !wxFileName::IsPathSeparator(ch) && ch != _T('.') )
+            if ( !wxFileName::IsPathSeparator(ch) && ch != wxT('.') )
                 subdir += wxFileName::GetPathSeparator();
 
             subdir += component;

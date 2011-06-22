@@ -2,7 +2,7 @@
 // Name:        src/gtk/treeentry_gtk.c
 // Purpose:     GtkTreeEntry implementation
 // Author:      Ryan Norton
-// Id:          $Id: treeentry_gtk.c 50875 2007-12-21 09:58:20Z JJ $
+// Id:          $Id$
 // Copyright:   (c) 2006 Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////// */
@@ -11,6 +11,7 @@
 #include <types.h>
 typedef pid_t GPid;
 #define G_GNUC_INTERNAL 
+#define GSEAL(x) x
 #endif
 
 #include "wx/gtk/treeentry_gtk.h"

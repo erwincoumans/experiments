@@ -4,7 +4,7 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     17.07.02
-// RCS-ID:      $Id: msgout.cpp 54485 2008-07-04 14:05:16Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) the wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -144,9 +144,11 @@ void wxMessageOutputStderr::Output(const wxString& str)
     const wxWX2MBbuf buf = strWithLF.mb_str();
 
     if ( buf )
-        fprintf(stderr, "%s", (const char*) buf);
+        fprintf(m_fp, "%s", (const char*) buf);
     else // print at least something
-        fprintf(stderr, "%s", (const char*) strWithLF.ToAscii());
+        fprintf(m_fp, "%s", (const char*) strWithLF.ToAscii());
+
+    fflush(m_fp);
 }
 
 // ----------------------------------------------------------------------------
@@ -176,7 +178,7 @@ void wxMessageOutputLog::Output(const wxString& str)
 
     out.Replace(wxT("\t"), wxT("        "));
 
-    ::wxLogMessage(wxT("%s"), out.c_str());
+    wxLogMessage(wxT("%s"), out.c_str());
 }
 
 #endif // wxUSE_BASE

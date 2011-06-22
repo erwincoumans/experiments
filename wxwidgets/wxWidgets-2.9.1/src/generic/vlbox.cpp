@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     31.05.03
-// RCS-ID:      $Id: vlbox.cpp 57643 2008-12-29 16:06:53Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -138,10 +138,10 @@ bool wxVListBox::IsSelected(size_t line) const
 bool wxVListBox::Select(size_t item, bool select)
 {
     wxCHECK_MSG( m_selStore, false,
-                 _T("Select() may only be used with multiselection listbox") );
+                 wxT("Select() may only be used with multiselection listbox") );
 
     wxCHECK_MSG( item < GetItemCount(), false,
-                 _T("Select(): invalid item index") );
+                 wxT("Select(): invalid item index") );
 
     bool changed = m_selStore->SelectItem(item, select);
     if ( changed )
@@ -158,7 +158,7 @@ bool wxVListBox::Select(size_t item, bool select)
 bool wxVListBox::SelectRange(size_t from, size_t to)
 {
     wxCHECK_MSG( m_selStore, false,
-                 _T("SelectRange() may only be used with multiselection listbox") );
+                 wxT("SelectRange() may only be used with multiselection listbox") );
 
     // make sure items are in correct order
     if ( from > to )
@@ -169,7 +169,7 @@ bool wxVListBox::SelectRange(size_t from, size_t to)
     }
 
     wxCHECK_MSG( to < GetItemCount(), false,
-                    _T("SelectRange(): invalid item index") );
+                    wxT("SelectRange(): invalid item index") );
 
     wxArrayInt changed;
     if ( !m_selStore->SelectRange(from, to, true, &changed) )
@@ -201,7 +201,7 @@ bool wxVListBox::SelectRange(size_t from, size_t to)
 bool wxVListBox::DoSelectAll(bool select)
 {
     wxCHECK_MSG( m_selStore, false,
-                 _T("SelectAll may only be used with multiselection listbox") );
+                 wxT("SelectAll may only be used with multiselection listbox") );
 
     size_t count = GetItemCount();
     if ( count )
@@ -224,7 +224,7 @@ bool wxVListBox::DoSetCurrent(int current)
 {
     wxASSERT_MSG( current == wxNOT_FOUND ||
                     (current >= 0 && (size_t)current < GetItemCount()),
-                  _T("wxVListBox::DoSetCurrent(): invalid item index") );
+                  wxT("wxVListBox::DoSetCurrent(): invalid item index") );
 
     if ( current == m_current )
     {
@@ -270,7 +270,7 @@ void wxVListBox::InitEvent(wxCommandEvent& event, int n)
 void wxVListBox::SendSelectedEvent()
 {
     wxASSERT_MSG( m_current != wxNOT_FOUND,
-                    _T("SendSelectedEvent() shouldn't be called") );
+                    wxT("SendSelectedEvent() shouldn't be called") );
 
     wxCommandEvent event(wxEVT_COMMAND_LISTBOX_SELECTED, GetId());
     InitEvent(event, m_current);
@@ -281,7 +281,7 @@ void wxVListBox::SetSelection(int selection)
 {
     wxCHECK_RET( selection == wxNOT_FOUND ||
                   (selection >= 0 && (size_t)selection < GetItemCount()),
-                  _T("wxVListBox::SetSelection(): invalid item index") );
+                  wxT("wxVListBox::SetSelection(): invalid item index") );
 
     if ( HasMultipleSelection() )
     {
@@ -311,7 +311,7 @@ int wxVListBox::GetFirstSelected(unsigned long& cookie) const
 int wxVListBox::GetNextSelected(unsigned long& cookie) const
 {
     wxCHECK_MSG( m_selStore, wxNOT_FOUND,
-                  _T("GetFirst/NextSelected() may only be used with multiselection listboxes") );
+                  wxT("GetFirst/NextSelected() may only be used with multiselection listboxes") );
 
     while ( cookie < GetItemCount() )
     {
@@ -605,14 +605,17 @@ void wxVListBox::OnKeyDown(wxKeyEvent& event)
     switch ( event.GetKeyCode() )
     {
         case WXK_HOME:
+        case WXK_NUMPAD_HOME:
             current = 0;
             break;
 
         case WXK_END:
+        case WXK_NUMPAD_END:
             current = GetRowCount() - 1;
             break;
 
         case WXK_DOWN:
+        case WXK_NUMPAD_DOWN:
             if ( m_current == (int)GetRowCount() - 1 )
                 return;
 
@@ -620,6 +623,7 @@ void wxVListBox::OnKeyDown(wxKeyEvent& event)
             break;
 
         case WXK_UP:
+        case WXK_NUMPAD_UP:
             if ( m_current == wxNOT_FOUND )
                 current = GetRowCount() - 1;
             else if ( m_current != 0 )
@@ -629,11 +633,13 @@ void wxVListBox::OnKeyDown(wxKeyEvent& event)
             break;
 
         case WXK_PAGEDOWN:
+        case WXK_NUMPAD_PAGEDOWN:
             PageDown();
             current = GetVisibleBegin();
             break;
 
         case WXK_PAGEUP:
+        case WXK_NUMPAD_PAGEUP:
             if ( m_current == (int)GetVisibleBegin() )
             {
                 PageUp();

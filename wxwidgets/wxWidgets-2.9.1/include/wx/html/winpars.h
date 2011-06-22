@@ -2,7 +2,7 @@
 // Name:        winpars.h
 // Purpose:     wxHtmlWinParser class (parser to be used with wxHtmlWindow)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: winpars.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,8 @@ public:
     // Set's the DC used for parsing. If SetDC() is not called,
     // parsing won't proceed
     virtual void SetDC(wxDC *dc, double pixel_scale = 1.0)
-        { m_DC = dc; m_PixelScale = pixel_scale; }
+        { SetDC(dc, pixel_scale, pixel_scale); }
+    void SetDC(wxDC *dc, double pixel_scale, double font_scale);
 
     wxDC *GetDC() {return m_DC;}
     double GetPixelScale() {return m_PixelScale;}
@@ -106,6 +107,8 @@ public:
 
     int GetFontSize() const {return m_FontSize;}
     void SetFontSize(int s);
+    // Try to map a font size in points to the HTML 1-7 font size range.
+    void SetFontPointSize(int pt);
     int GetFontBold() const {return m_FontBold;}
     void SetFontBold(int x) {m_FontBold = x;}
     int GetFontItalic() const {return m_FontItalic;}
@@ -171,7 +174,7 @@ private:
         // temporary variables used by AddText
     wxHtmlWindowInterface *m_windowInterface;
             // window we're parsing for
-    double m_PixelScale;
+    double m_PixelScale, m_FontScale;
     wxDC *m_DC;
             // Device Context we're parsing for
     static wxList m_Modules;

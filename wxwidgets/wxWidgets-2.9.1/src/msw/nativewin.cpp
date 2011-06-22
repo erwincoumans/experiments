@@ -3,7 +3,7 @@
 // Purpose:     wxNativeWindow implementation
 // Author:      Vadim Zeitlin
 // Created:     2008-03-05
-// RCS-ID:      $Id: nativewin.cpp 52527 2008-03-15 02:12:20Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,11 @@ bool wxNativeContainerWindow::Create(wxNativeContainerWindowHandle hwnd)
     AdoptAttributesFromHWND();
 
     return true;
+}
+
+bool wxNativeContainerWindow::IsShown() const
+{
+    return (IsWindowVisible(static_cast<HWND>(m_hWnd)) != 0);
 }
 
 void wxNativeContainerWindow::OnNativeDestroyed()

@@ -4,7 +4,7 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/04/27
-// RCS-ID:      $Id: NSScroller.h 38031 2006-03-12 15:10:23Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

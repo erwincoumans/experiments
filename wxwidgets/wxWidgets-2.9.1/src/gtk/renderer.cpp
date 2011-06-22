@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.07.2003
-// RCS-ID:      $Id: renderer.cpp 59280 2009-03-02 20:09:10Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -114,7 +114,7 @@ public:
                                 const wxRect& rect,
                                 int flags=0);
 
-    virtual void DrawRadioButton(wxWindow* win,
+    virtual void DrawRadioBitmap(wxWindow* win,
                                 wxDC& dc,
                                 const wxRect& rect,
                                 int flags=0);
@@ -530,27 +530,21 @@ wxRendererGTK::DrawItemSelectionRect(wxWindow* win,
                                      const wxRect& rect,
                                      int flags )
 {
-    GtkWidget *tree = wxGTKPrivate::GetTreeWidget();
-
     GdkWindow* gdk_window = wxGetGdkWindowForDC(win, dc);
     wxASSERT_MSG( gdk_window,
                   wxT("cannot use wxRendererNative on wxDC of this type") );
 
-    int x_diff = 0;
-    if (win->GetLayoutDirection() == wxLayout_RightToLeft)
-        x_diff = rect.width;
-
-    GtkStateType state = GTK_STATE_NORMAL;
-
     if (flags & wxCONTROL_SELECTED)
     {
+        int x_diff = 0;
+        if (win->GetLayoutDirection() == wxLayout_RightToLeft)
+            x_diff = rect.width;
+
         // the wxCONTROL_FOCUSED state is deduced
         // directly from the m_wxwindow by GTK+
-        state = GTK_STATE_SELECTED;
-
-        gtk_paint_flat_box( tree->style, // win->m_widget->style,
+        gtk_paint_flat_box(wxGTKPrivate::GetTreeWidget()->style,
                         gdk_window,
-                        state,
+                        GTK_STATE_SELECTED,
                         GTK_SHADOW_NONE,
                         NULL,
                         win->m_wxwindow,
@@ -560,32 +554,9 @@ wxRendererGTK::DrawItemSelectionRect(wxWindow* win,
                         rect.width,
                         rect.height );
     }
-    else // !wxCONTROL_SELECTED
-    {
-        state = GTK_STATE_NORMAL;
-    }
 
     if ((flags & wxCONTROL_CURRENT) && (flags & wxCONTROL_FOCUSED))
-    {
-        if (flags & wxCONTROL_SELECTED)
-            state = GTK_STATE_SELECTED;
-
-        gtk_paint_focus( tree->style,
-                         gdk_window,
-                         state,
-                         NULL,
-                         win->m_wxwindow,
-                         // Detail "treeview" causes warning with GTK+ 2.12 Clearlooks theme:
-                         // "... no property named `row-ending-details'"
-                         // Using "treeview-middle" would fix the warning, but the right
-                         // edge of the focus rect is not getting erased properly either.
-                         // Better to not specify this detail unless the drawing is fixed.
-                         "",
-                         dc.LogicalToDeviceX(rect.x),
-                         dc.LogicalToDeviceY(rect.y),
-                         rect.width,
-                         rect.height );
-    }
+        DrawFocusRect(win, dc, rect, flags);
 }
 
 void wxRendererGTK::DrawFocusRect(wxWindow* win, wxDC& dc, const wxRect& rect, int flags)
@@ -728,7 +699,7 @@ void wxRendererGTK::DrawChoice(wxWindow* win, wxDC& dc,
 
 
 // Draw a themed radio button
-void wxRendererGTK::DrawRadioButton(wxWindow* win, wxDC& dc, const wxRect& rect, int flags)
+void wxRendererGTK::DrawRadioBitmap(wxWindow* win, wxDC& dc, const wxRect& rect, int flags)
 {
     GtkWidget *button = wxGTKPrivate::GetRadioButtonWidget();
 

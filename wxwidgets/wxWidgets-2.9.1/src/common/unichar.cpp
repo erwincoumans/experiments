@@ -3,7 +3,7 @@
 // Purpose:     wxUniChar and wxUniCharRef classes
 // Author:      Vaclav Slavik
 // Created:     2007-03-19
-// RCS-ID:      $Id: unichar.cpp 55333 2008-08-28 19:19:11Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 REA Elektronik GmbH
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,36 +44,45 @@ wxUniChar::value_type wxUniChar::FromHi8bit(char c)
 
     return wxT('?'); // FIXME-UTF8: what to use as failure character?
 #else
-    wchar_t buf[2];
-    if ( wxConvLibc.ToWChar(buf, 2, &c, 1) != 2 )
+    char cbuf[2];
+    cbuf[0] = c;
+    cbuf[1] = '\0';
+    wchar_t wbuf[2];
+    if ( wxConvLibc.ToWChar(wbuf, 2, cbuf, 2) != 2 )
     {
         wxFAIL_MSG( "invalid multibyte character" );
         return wxT('?'); // FIXME-UTF8: what to use as failure character?
     }
-    return buf[0];
+    return wbuf[0];
 #endif
 }
 
 /* static */
-char wxUniChar::ToHi8bit(wxUniChar::value_type c)
+char wxUniChar::ToHi8bit(wxUniChar::value_type v)
 {
-#if wxUSE_UTF8_LOCALE_ONLY
-    wxFAIL_MSG( "character cannot be converted to single UTF-8 byte" );
-    wxUnusedVar(c);
-
-    return '?'; // FIXME-UTF8: what to use as failure character?
-#else
-    wchar_t in = c;
-    char buf[2];
-    if ( wxConvLibc.FromWChar(buf, 2, &in, 1) != 2 )
+    char c;
+    if ( !GetAsHi8bit(v, &c) )
     {
         wxFAIL_MSG( "character cannot be converted to single byte" );
-        return '?'; // FIXME-UTF8: what to use as failure character?
+        c = '?'; // FIXME-UTF8: what to use as failure character?
     }
-    return buf[0];
-#endif
+
+    return c;
 }
 
+/* static */
+bool wxUniChar::GetAsHi8bit(value_type v, char *c)
+{
+    wchar_t wbuf[2];
+    wbuf[0] = v;
+    wbuf[1] = L'\0';
+    char cbuf[2];
+    if ( wxConvLibc.FromWChar(cbuf, 2, wbuf, 2) != 2 )
+        return false;
+
+    *c = cbuf[0];
+    return true;
+}
 
 // ---------------------------------------------------------------------------
 // wxUniCharRef
@@ -126,7 +135,7 @@ wxUniCharRef& wxUniCharRef::operator=(const wxUniChar& c)
 
             if ( iterNum == STATIC_SIZE )
             {
-                wxLogTrace( _T("utf8"), _T("unexpectedly many iterators") );
+                wxLogTrace( wxT("utf8"), wxT("unexpectedly many iterators") );
 
                 size_t total = iterNum + 1;
                 for ( wxStringIteratorNode *it2 = it; it2; it2 = it2->m_next )

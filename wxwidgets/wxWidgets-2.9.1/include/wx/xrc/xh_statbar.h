@@ -3,7 +3,7 @@
 // Purpose:     XML resource handler for wxStatusBar
 // Author:      Brian Ravnsgaard Riis
 // Created:     2004/01/21
-// RCS-ID:      $Id: xh_statbar.h 58022 2009-01-11 12:00:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Brian Ravnsgaard Riis
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

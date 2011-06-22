@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Vadim Zeitlin to check error codes, added Detach() method
 // Created:     24/06/98
-// RCS-ID:      $Id: process.h 59784 2009-03-23 16:23:44Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -106,7 +106,7 @@ public:
 
     // implementation only - don't use!
     // --------------------------------
-    
+
     // needs to be public since it needs to be used from wxExecute() global func
     void SetPid(long pid) { m_pid = pid; }
 

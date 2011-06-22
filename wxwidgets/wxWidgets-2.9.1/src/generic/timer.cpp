@@ -2,7 +2,7 @@
 // Name:        src/generic/timer.cpp
 // Purpose:     wxTimer implementation
 // Author:      Vaclav Slavik
-// Id:          $Id: timer.cpp 45544 2007-04-20 01:29:16Z VZ $
+// Id:          $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +44,7 @@
 
     typedef ulong wxTimerTick_t;
 
-    #define wxTimerTickFmtSpec _T("lu")
+    #define wxTimerTickFmtSpec wxT("lu")
     #define wxTimerTickPrintfArg(tt) (tt)
 
     #ifdef __DOS__
@@ -74,10 +74,10 @@
     typedef wxLongLong wxTimerTick_t;
 
     #if wxUSE_LONGLONG_WX
-        #define wxTimerTickFmtSpec wxLongLongFmtSpec _T("d")
+        #define wxTimerTickFmtSpec wxLongLongFmtSpec "d"
         #define wxTimerTickPrintfArg(tt) (tt.GetValue())
     #else // using native wxLongLong
-        #define wxTimerTickFmtSpec _T("s")
+        #define wxTimerTickFmtSpec wxT("s")
         #define wxTimerTickPrintfArg(tt) (tt.ToString().c_str())
     #endif // wx/native long long
 
@@ -273,7 +273,7 @@ DECLARE_DYNAMIC_CLASS(wxTimerModule)
 public:
     wxTimerModule() {}
     bool OnInit() { return true; }
-    void OnExit() { delete gs_scheduler; gs_scheduler = NULL; }
+    void OnExit() { wxDELETE(gs_scheduler); }
 };
 
 IMPLEMENT_DYNAMIC_CLASS(wxTimerModule, wxModule)

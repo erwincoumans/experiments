@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: radiobut.h 58319 2009-01-23 08:40:26Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -39,18 +39,18 @@ public:
     virtual void SetValue(bool val);
     virtual bool GetValue() const ;
 
-    // implementation 
-    
+    // implementation
+
     void Command(wxCommandEvent& event);
     wxRadioButton *AddInCycle(wxRadioButton *cycle);
     void RemoveFromCycle();
     inline wxRadioButton *NextInCycle() {return m_cycle;}
-    
+
     // osx specific event handling common for all osx-ports
-    
+
     virtual bool        OSXHandleClicked( double timestampsec );
   protected:
-  
+
     wxRadioButton *m_cycle;
 };
 

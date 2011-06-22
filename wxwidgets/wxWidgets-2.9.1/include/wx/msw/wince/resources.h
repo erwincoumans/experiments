@@ -4,9 +4,9 @@
 // Author:      Wlodzimierz ABX Skiba
 // Modified by:
 // Created:     01.05.2004
-// RCS-ID:      $Id: resources.h 47755 2007-07-27 20:19:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Wlodzimierz Skiba
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // Windows CE dummy menu for SHCreateMenuBar()

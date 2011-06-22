@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.11.97
-// RCS-ID:      $Id: menuitem.h 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,10 @@
 // ----------------------------------------------------------------------------
 
 #if wxUSE_OWNER_DRAWN
-    #include  "wx/ownerdrw.h"   // base class
+    #include "wx/ownerdrw.h"
+    #include "wx/bitmap.h"
+
+    struct tagRECT;
 #endif
 
 // ----------------------------------------------------------------------------
@@ -41,7 +44,6 @@ public:
 
     // override base class virtuals
     virtual void SetItemLabel(const wxString& strName);
-    virtual void SetCheckable(bool checkable);
 
     virtual void Enable(bool bDoEnable = true);
     virtual void Check(bool bDoCheck = true);
@@ -76,6 +78,54 @@ public:
     );
 #endif
 
+#if wxUSE_OWNER_DRAWN
+
+    void SetBitmaps(const wxBitmap& bmpChecked,
+                    const wxBitmap& bmpUnchecked = wxNullBitmap)
+    {
+        m_bmpChecked = bmpChecked;
+        m_bmpUnchecked = bmpUnchecked;
+        SetOwnerDrawn(true);
+    }
+
+    void SetBitmap(const wxBitmap& bmp, bool bChecked = true)
+    {
+        if ( bChecked )
+            m_bmpChecked = bmp;
+        else
+            m_bmpUnchecked = bmp;
+        SetOwnerDrawn(true);
+    }
+
+    void SetDisabledBitmap(const wxBitmap& bmpDisabled)
+    {
+        m_bmpDisabled = bmpDisabled;
+        SetOwnerDrawn(true);
+    }
+
+    const wxBitmap& GetBitmap(bool bChecked = true) const
+        { return (bChecked ? m_bmpChecked : m_bmpUnchecked); }
+
+    const wxBitmap& GetDisabledBitmap() const
+        { return m_bmpDisabled; }
+
+    int MeasureAccelWidth() const;
+
+    // override wxOwnerDrawn base class virtuals
+    virtual wxString GetName() const;
+    virtual bool OnMeasureItem(size_t *pwidth, size_t *pheight);
+    virtual bool OnDrawItem(wxDC& dc, const wxRect& rc, wxODAction act, wxODStatus stat);
+
+protected:
+    virtual void GetFontToUse(wxFont& font) const;
+    virtual void GetColourToUse(wxODStatus stat, wxColour& colText, wxColour& colBack) const;
+
+private:
+    // helper function for draw std menu check mark
+    void DrawStdCheckMark(WXHDC hdc, const tagRECT* rc, wxODStatus stat);
+
+#endif // wxUSE_OWNER_DRAWN
+
 private:
     // common part of all ctors
     void Init();
@@ -92,6 +142,13 @@ private:
 
     // does this item start a radio group?
     bool m_isRadioGroupStart;
+
+#if wxUSE_OWNER_DRAWN
+    // item bitmaps
+    wxBitmap m_bmpChecked,     // bitmap to put near the item
+             m_bmpUnchecked,   // (checked is used also for 'uncheckable' items)
+             m_bmpDisabled;
+#endif // wxUSE_OWNER_DRAWN
 
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxMenuItem)
 };

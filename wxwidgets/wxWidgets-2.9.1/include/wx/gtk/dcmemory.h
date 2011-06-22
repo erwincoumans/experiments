@@ -2,7 +2,7 @@
 // Name:        dcmemory.h
 // Purpose:
 // Author:      Robert Roebling
-// RCS-ID:      $Id: dcmemory.h 53406 2008-04-28 20:39:57Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,7 +23,7 @@ public:
     wxMemoryDCImpl( wxMemoryDC *owner );
     wxMemoryDCImpl( wxMemoryDC *owner, wxBitmap& bitmap );
     wxMemoryDCImpl( wxMemoryDC *owner, wxDC *dc );
-    
+
     virtual ~wxMemoryDCImpl();
 
     // these get reimplemented for mono-bitmaps to behave
@@ -48,12 +48,12 @@ public:
 
 private:
     wxBitmap  m_selected;
-    
+
     void Init();
 
     DECLARE_ABSTRACT_CLASS(wxMemoryDCImpl)
 };
 
-#endif 
+#endif
     // _WX_GTK_DCMEMORY_H_
 

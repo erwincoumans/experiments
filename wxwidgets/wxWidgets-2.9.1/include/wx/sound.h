@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2004/02/01
-// RCS-ID:      $Id: sound.h 54125 2008-06-11 19:17:41Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004, Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,7 +40,7 @@ public:
     {
         wxASSERT_MSG( (flags & wxSOUND_LOOP) == 0 ||
                       (flags & wxSOUND_ASYNC) != 0,
-                     _T("sound can only be looped asynchronously") );
+                     wxT("sound can only be looped asynchronously") );
         return DoPlay(flags);
     }
 

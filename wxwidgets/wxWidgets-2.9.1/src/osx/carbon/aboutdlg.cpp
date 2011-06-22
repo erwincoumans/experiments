@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        mac/carbon/aboutdlg.cpp
+// Name:        osx/carbon/aboutdlg.cpp
 // Purpose:     native wxAboutBox() implementation for wxMac
 // Author:      Vadim Zeitlin
 // Created:     2006-10-08
-// RCS-ID:      $Id: aboutdlg.cpp 57245 2008-12-11 12:14:14Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ public:
 // implementation
 // ============================================================================
 
-void wxAboutBox(const wxAboutDialogInfo& info)
+void wxAboutBox(const wxAboutDialogInfo& info, wxWindow *parent)
 {
     // Mac native about box currently can show only name, version, copyright
     // and description fields and we also shoehorn the credits text into the
@@ -69,10 +69,7 @@ void wxAboutBox(const wxAboutDialogInfo& info)
         opts.Set(kHIAboutBoxNameKey, info.GetName());
 
         if ( info.HasVersion() )
-        {
-            opts.Set(kHIAboutBoxVersionKey,
-                     wxString::Format(_("Version %s"), info.GetVersion()));
-        }
+            opts.Set(kHIAboutBoxVersionKey,info.GetLongVersion());
 
         if ( info.HasCopyright() )
             opts.Set(kHIAboutBoxCopyrightKey, info.GetCopyrightToDisplay());
@@ -84,7 +81,7 @@ void wxAboutBox(const wxAboutDialogInfo& info)
     else // simple "native" version is not enough
     {
         // we need to use the full-blown generic version
-        wxGenericAboutBox(info);
+        wxGenericAboutBox(info, parent);
     }
 }
 

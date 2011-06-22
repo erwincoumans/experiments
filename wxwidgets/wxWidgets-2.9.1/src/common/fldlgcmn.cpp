@@ -4,22 +4,23 @@
 // Author:      John Labenski
 // Modified by:
 // Created:     14.06.03 (extracted from src/*/filedlg.cpp)
-// RCS-ID:      $Id: fldlgcmn.cpp 58353 2009-01-24 14:04:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
-
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
+
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
 
 #if wxUSE_FILEDLG
 
 #include "wx/filedlg.h"
 #include "wx/dirdlg.h"
+#include "wx/filename.h"
 
 #ifndef WX_PRECOMP
     #include "wx/string.h"
@@ -65,14 +66,14 @@ bool wxFileDialogBase::Create(wxWindow *parent,
 
     // check that the styles are not contradictory
     wxASSERT_MSG( !(HasFdFlag(wxFD_SAVE) && HasFdFlag(wxFD_OPEN)),
-                  _T("can't specify both wxFD_SAVE and wxFD_OPEN at once") );
+                  wxT("can't specify both wxFD_SAVE and wxFD_OPEN at once") );
 
     wxASSERT_MSG( !HasFdFlag(wxFD_SAVE) ||
                     (!HasFdFlag(wxFD_MULTIPLE) && !HasFdFlag(wxFD_FILE_MUST_EXIST)),
-                   _T("wxFD_MULTIPLE or wxFD_FILE_MUST_EXIST can't be used with wxFD_SAVE" ) );
+                   wxT("wxFD_MULTIPLE or wxFD_FILE_MUST_EXIST can't be used with wxFD_SAVE" ) );
 
     wxASSERT_MSG( !HasFdFlag(wxFD_OPEN) || !HasFdFlag(wxFD_OVERWRITE_PROMPT),
-                  _T("wxFD_OVERWRITE_PROMPT can't be used with wxFD_OPEN") );
+                  wxT("wxFD_OVERWRITE_PROMPT can't be used with wxFD_OPEN") );
 
     if ( wildCard.empty() || wildCard == wxFileSelectorDefaultWildcardStr )
     {
@@ -85,7 +86,7 @@ bool wxFileDialogBase::Create(wxWindow *parent,
         // convert m_wildCard from "*.bar" to "bar files (*.bar)|*.bar"
         if ( m_wildCard.Find(wxT('|')) == wxNOT_FOUND )
         {
-            wxString::size_type nDot = m_wildCard.find(_T("*."));
+            wxString::size_type nDot = m_wildCard.find(wxT("*."));
             if ( nDot != wxString::npos )
                 nDot++;
             else
@@ -178,6 +179,27 @@ wxSize wxFileDialogBase::GetExtraControlSize()
     // creating the native dialog and this seems to be the only way
     wxDialog dlg(NULL, wxID_ANY, "");
     return (*m_extraControlCreator)(&dlg)->GetSize();
+}
+
+void wxFileDialogBase::SetPath(const wxString& path)
+{
+    wxString ext;
+    wxFileName::SplitPath(path, &m_dir, &m_fileName, &ext);
+    if ( !ext.empty() )
+        m_fileName << _T('.') << ext;
+    m_path = path;
+}
+
+void wxFileDialogBase::SetDirectory(const wxString& dir)
+{
+    m_dir = dir;
+    m_path = wxFileName(m_dir, m_fileName).GetFullPath();
+}
+
+void wxFileDialogBase::SetFilename(const wxString& name)
+{
+    m_fileName = name;
+    m_path = wxFileName(m_dir, m_fileName).GetFullPath();
 }
 
 //----------------------------------------------------------------------------
@@ -300,7 +322,7 @@ static wxString wxDefaultFileSelector(bool load,
     wxString ext;
     if ( !extension.empty() )
     {
-        if ( extension[0u] == _T('.') )
+        if ( extension[0u] == wxT('.') )
             ext = extension.substr(1);
         else
             ext = extension;
@@ -313,7 +335,8 @@ static wxString wxDefaultFileSelector(bool load,
     }
 
     return wxFileSelector(prompt, wxEmptyString, default_name, ext, wild,
-                          load ? wxFD_OPEN : wxFD_SAVE, parent);
+                          load ? (wxFD_OPEN | wxFD_FILE_MUST_EXIST) : wxFD_SAVE,
+                          parent);
 }
 
 //----------------------------------------------------------------------------

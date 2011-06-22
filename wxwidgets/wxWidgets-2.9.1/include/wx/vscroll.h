@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/vscroll.h
+// Name:        wx/vscroll.h
 // Purpose:     Variable scrolled windows (wx[V/H/HV]ScrolledWindow)
 // Author:      Vadim Zeitlin
 // Modified by: Brad Anderson, Bryan Petty
 // Created:     30.05.03
-// RCS-ID:      $Id: vscroll.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -840,7 +840,7 @@ public:
                        long style = 0,
                        const wxString& name = wxPanelNameStr)
         : wxPanel(),
-          wxVarHVScrollHelper(this) 
+          wxVarHVScrollHelper(this)
     {
         (void)Create(parent, id, pos, size, style, name);
     }

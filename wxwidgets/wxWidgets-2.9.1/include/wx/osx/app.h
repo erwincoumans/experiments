@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: app.h 58911 2009-02-15 14:25:08Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,6 +22,7 @@ class WXDLLIMPEXP_FWD_CORE wxWindowMac;
 class WXDLLIMPEXP_FWD_CORE wxApp ;
 class WXDLLIMPEXP_FWD_CORE wxKeyEvent;
 class WXDLLIMPEXP_FWD_BASE wxLog;
+class WXDLLIMPEXP_FWD_CORE wxMacAutoreleasePool;
 
 // Force an exit from main loop
 void WXDLLIMPEXP_CORE wxExit();
@@ -36,7 +37,7 @@ class WXDLLIMPEXP_CORE wxApp: public wxAppBase
     DECLARE_DYNAMIC_CLASS(wxApp)
 
     wxApp();
-    virtual ~wxApp() {}
+    virtual ~wxApp();
 
     virtual void WakeUpIdle();
 
@@ -50,6 +51,8 @@ class WXDLLIMPEXP_CORE wxApp: public wxAppBase
     virtual bool OnInitGui();
 #endif // wxUSE_GUI
 
+    virtual int OnRun();
+
     virtual bool ProcessIdle();
 
     // implementation only
@@ -59,6 +62,7 @@ class WXDLLIMPEXP_CORE wxApp: public wxAppBase
 
 protected:
     int                   m_printMode; // wxPRINT_WINDOWS, wxPRINT_POSTSCRIPT
+    wxMacAutoreleasePool* m_macPool;
 
 public:
 
@@ -78,6 +82,7 @@ public:
     // we want to delete and cannot do it immediately
     // TODO change semantics to be in line with cocoa (make autrelease NOT increase the count)
     void                  MacAddToAutorelease( void* cfrefobj );
+    void                  MacReleaseAutoreleasePool();
 public:
     static wxWindow*      s_captureWindow ;
     static long           s_lastModifiers ;
@@ -92,7 +97,6 @@ private:
     WXEVENTHANDLERREF     m_macEventHandler ;
     WXEVENTHANDLERCALLREF m_macCurrentEventHandlerCallRef ;
     WXEVENTREF            m_macCurrentEvent ;
-    CFRunLoopSourceRef    m_macEventPosted ;
 
 public:
     static long           s_macAboutMenuItemId ;

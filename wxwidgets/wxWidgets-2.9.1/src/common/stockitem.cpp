@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2004-08-15
-// RCS-ID:      $Id: stockitem.cpp 58702 2009-02-07 13:07:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik, 2004
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -199,11 +199,32 @@ wxString wxGetStockLabel(wxWindowID id, long flags)
         STOCKITEM(wxID_ZOOM_OUT,            _("Zoom &Out"))
 
         default:
-            wxFAIL_MSG( _T("invalid stock item ID") );
+            wxFAIL_MSG( wxT("invalid stock item ID") );
             break;
     };
 
     #undef STOCKITEM
+
+    if ( flags & wxSTOCK_WITHOUT_ELLIPSIS )
+    {
+        wxString baseLabel;
+        if ( stockLabel.EndsWith("...", &baseLabel) )
+            stockLabel = baseLabel;
+
+        // accelerators only make sense for the menu items which should have
+        // ellipsis too while wxSTOCK_WITHOUT_ELLIPSIS is mostly useful for
+        // buttons which shouldn't have accelerators in their labels
+        wxASSERT_MSG( !(flags & wxSTOCK_WITH_ACCELERATOR),
+                        "labels without ellipsis shouldn't use accelerators" );
+    }
+
+#ifdef __WXMSW__
+    // special case: the "Cancel" button shouldn't have a mnemonic under MSW
+    // for consistency with the native dialogs (which don't use any mnemonic
+    // for it because it is already bound to Esc implicitly)
+    if ( id == wxID_CANCEL )
+        flags &= ~wxSTOCK_WITH_MNEMONIC;
+#endif // __WXMSW__
 
     if ( !(flags & wxSTOCK_WITH_MNEMONIC) )
     {
@@ -215,7 +236,7 @@ wxString wxGetStockLabel(wxWindowID id, long flags)
     {
         wxAcceleratorEntry accel = wxGetStockAccelerator(id);
         if (accel.IsOk())
-            stockLabel << _T('\t') << accel.ToString();
+            stockLabel << wxT('\t') << accel.ToString();
     }
 #endif // wxUSE_ACCEL
 
@@ -308,7 +329,7 @@ bool wxIsStockLabel(wxWindowID id, const wxString& label)
     if (label == stock)
         return true;
 
-    stock.Replace(_T("&"), wxEmptyString);
+    stock.Replace(wxT("&"), wxEmptyString);
     if (label == stock)
         return true;
 

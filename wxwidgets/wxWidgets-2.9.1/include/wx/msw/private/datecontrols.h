@@ -3,7 +3,7 @@
 // Purpose:     implementation helpers for wxDatePickerCtrl and wxCalendarCtrl
 // Author:      Vadim Zeitlin
 // Created:     2008-04-04
-// RCS-ID:      $Id: datecontrols.h 53697 2008-05-22 00:49:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

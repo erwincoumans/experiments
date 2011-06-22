@@ -25,6 +25,11 @@
 
 IMPLEMENT_DYNAMIC_CLASS(wxButton, wxControl)
 
+BEGIN_EVENT_TABLE(wxButton, wxControl)
+    EVT_ENTER_WINDOW(wxButton::OnEnterWindow)
+    EVT_LEAVE_WINDOW(wxButton::OnLeaveWindow)
+END_EVENT_TABLE()
+
 bool wxButton::Create(wxWindow *parent,
     wxWindowID id,
     const wxString& lbl,
@@ -34,6 +39,21 @@ bool wxButton::Create(wxWindow *parent,
     const wxValidator& validator,
     const wxString& name)
 {
+    m_marginX =
+    m_marginY = 0;
+
+    // FIXME: this hack is needed because we're called from
+    //        wxBitmapButton::Create() with this style and we currently use a
+    //        different wxWidgetImpl method (CreateBitmapButton() rather than
+    //        CreateButton()) for creating bitmap buttons, but we really ought
+    //        to unify the creation of buttons of all kinds and then remove
+    //        this check
+    if ( style & wxBU_NOTEXT )
+    {
+        return wxControl::Create(parent, id, pos, size, style,
+                                 validator, name);
+    }
+
     wxString label(lbl);
     if (label.empty() && wxIsStockID(id) && !(id == wxID_HELP))
         label = wxGetStockLabel(id);
@@ -43,13 +63,54 @@ bool wxButton::Create(wxWindow *parent,
     if ( !wxButtonBase::Create(parent, id, pos, size, style, validator, name) )
         return false;
 
-    m_labelOrig = m_label = label ;
-    
+    m_labelOrig =
+    m_label = label ;
+
     m_peer = wxWidgetImpl::CreateButton( this, parent, id, label, pos, size, style, GetExtraStyle() );
 
     MacPostControlCreate( pos, size );
 
     return true;
+}
+
+void wxButton::SetLabel(const wxString& label)
+{
+    if ( GetId() == wxID_HELP || HasFlag(wxBU_NOTEXT) )
+    {
+        // just store the label internally but don't really use it for the
+        // button
+        m_labelOrig =
+        m_label = label;
+        return;
+    }
+
+    wxButtonBase::SetLabel(label);
+}
+
+wxBitmap wxButton::DoGetBitmap(State which) const
+{
+    return m_bitmaps[which];
+}
+
+void wxButton::DoSetBitmap(const wxBitmap& bitmap, State which)
+{
+    m_bitmaps[which] = bitmap;
+    
+    if ( which == State_Normal )
+        m_peer->SetBitmap(bitmap);
+    else if ( which == State_Pressed )
+    {
+        wxButtonImpl* bi = dynamic_cast<wxButtonImpl*> (m_peer);
+        if ( bi )
+            bi->SetPressedBitmap(bitmap);
+    }
+    InvalidateBestSize();
+}
+
+void wxButton::DoSetBitmapPosition(wxDirection dir)
+{
+    m_peer->SetBitmapPosition(dir);
+    InvalidateBestSize();
 }
 
 wxWindow *wxButton::SetDefault()
@@ -70,6 +131,18 @@ void wxButton::Command (wxCommandEvent & WXUNUSED(event))
 {
     m_peer->PerformClick() ;
     // ProcessCommand(event);
+}
+
+void wxButton::OnEnterWindow( wxMouseEvent& WXUNUSED(event))
+{
+    if ( DoGetBitmap( State_Current ).IsOk() )
+        m_peer->SetBitmap( DoGetBitmap( State_Current ) );       
+}
+
+void wxButton::OnLeaveWindow( wxMouseEvent& WXUNUSED(event))
+{
+    if ( DoGetBitmap( State_Current ).IsOk() )
+        m_peer->SetBitmap( DoGetBitmap( State_Normal ) );       
 }
 
 bool wxButton::OSXHandleClicked( double WXUNUSED(timestampsec) )
@@ -95,9 +168,9 @@ bool wxDisclosureTriangle::Create(wxWindow *parent, wxWindowID id, const wxStrin
     m_peer = wxWidgetImpl::CreateDisclosureTriangle(this, parent, id, label, pos, size, style, GetExtraStyle() );
 
     MacPostControlCreate( pos, size );
-    // passing the text in the param doesn't seem to work, so lets do if again
+    // passing the text in the param doesn't seem to work, so lets do it again
     SetLabel( label );
-    
+
     return true;
 }
 
@@ -123,6 +196,14 @@ bool wxDisclosureTriangle::OSXHandleClicked( double WXUNUSED(timestampsec) )
 
 wxSize wxDisclosureTriangle::DoGetBestSize() const
 {
-    return wxWindow::DoGetBestSize();
+    wxSize size = wxWindow::DoGetBestSize();
+
+    // under Carbon the base class GetBestSize() implementation doesn't seem to
+    // take the label into account at all, correct for it here
+#if wxOSX_USE_CARBON
+    size.x += GetTextExtent(GetLabel()).x;
+#endif // wxOSX_USE_CARBON
+
+    return size;
 }
 

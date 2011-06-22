@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: statbmp.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -52,13 +52,13 @@ class WXDLLIMPEXP_CORE wxStaticBitmap: public wxStaticBitmapBase
   void  SetIcon(const wxIcon& icon) { SetBitmap( (const wxBitmap &)icon ) ; }
 
   // overriden base class virtuals
-  virtual bool AcceptsFocus() const { return FALSE; }
+  virtual bool AcceptsFocus() const { return false; }
 
  protected:
     virtual wxSize DoGetBestSize() const;
 
     wxBitmap m_bitmap;
-    DECLARE_EVENT_TABLE() 
+    DECLARE_EVENT_TABLE()
 };
 
 #endif

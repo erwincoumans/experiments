@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     01.06.01
-// RCS-ID:      $Id: evtloop.h 59284 2009-03-02 20:45:22Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -14,6 +14,19 @@
 
 #include "wx/event.h"
 #include "wx/utils.h"
+
+// TODO: implement wxEventLoopSource for MSW (it should wrap a HANDLE and be
+//       monitored using MsgWaitForMultipleObjects())
+#if defined(__WXOSX__) || defined(__UNIX__)
+    #define wxUSE_EVENTLOOP_SOURCE 1
+#else
+    #define wxUSE_EVENTLOOP_SOURCE 0
+#endif
+
+#if wxUSE_EVENTLOOP_SOURCE
+    class wxEventLoopSource;
+    class wxEventLoopSourceHandler;
+#endif
 
 /*
     NOTE ABOUT wxEventLoopBase::YieldFor LOGIC
@@ -64,6 +77,12 @@ public:
     // returns true if this is the main loop
     bool IsMain() const;
 
+#if wxUSE_EVENTLOOP_SOURCE
+    // create a new event loop source wrapping the given file descriptor and
+    // start monitoring it
+    virtual wxEventLoopSource *
+      AddSourceForFD(int fd, wxEventLoopSourceHandler *handler, int flags) = 0;
+#endif // wxUSE_EVENTLOOP_SOURCE
 
     // dispatch&processing
     // -------------------
@@ -99,12 +118,13 @@ public:
     // idle handling
     // -------------
 
-    // make sure that idle events are sent again
+        // make sure that idle events are sent again
     virtual void WakeUpIdle();
 
         // this virtual function is called  when the application
-        // becomes idle and normally just sends wxIdleEvent to all interested
-        // parties
+        // becomes idle and by default it forwards to wxApp::ProcessIdle() and
+        // while it can be overridden in a custom event loop, you must call the
+        // base class version to ensure that idle events are still generated
         //
         // it should return true if more idle events are needed, false if not
     virtual bool ProcessIdle();
@@ -113,25 +133,25 @@ public:
     // Yield-related hooks
     // -------------------
 
-        // process all currently pending events right now
-        //
-        // it is an error to call Yield() recursively unless the value of
-        // onlyIfNeeded is true
-        //
-        // WARNING: this function is dangerous as it can lead to unexpected
-        //          reentrancies (i.e. when called from an event handler it
-        //          may result in calling the same event handler again), use
-        //          with _extreme_ care or, better, don't use at all!
+    // process all currently pending events right now
+    //
+    // it is an error to call Yield() recursively unless the value of
+    // onlyIfNeeded is true
+    //
+    // WARNING: this function is dangerous as it can lead to unexpected
+    //          reentrancies (i.e. when called from an event handler it
+    //          may result in calling the same event handler again), use
+    //          with _extreme_ care or, better, don't use at all!
     bool Yield(bool onlyIfNeeded = false);
     virtual bool YieldFor(long eventsToProcess) = 0;
 
-        // returns true if the main thread is inside a Yield() call
+    // returns true if the main thread is inside a Yield() call
     virtual bool IsYielding() const
         { return m_isInsideYield; }
 
-        // returns true if events of the given event category should be immediately
-        // processed inside a wxApp::Yield() call or rather should be queued for
-        // later processing by the main event loop
+    // returns true if events of the given event category should be immediately
+    // processed inside a wxApp::Yield() call or rather should be queued for
+    // later processing by the main event loop
     virtual bool IsEventAllowedInsideYield(wxEventCategory cat) const
         { return (m_eventsToProcessInsideYield & cat) != 0; }
 
@@ -164,7 +184,7 @@ protected:
     wxDECLARE_NO_COPY_CLASS(wxEventLoopBase);
 };
 
-#if defined(__WXMSW__) || defined(__WXMAC__) || defined(__WXDFB__) || defined(__UNIX__)
+#if defined(__WXMSW__) || defined(__WXMAC__) || defined(__WXDFB__) || (defined(__UNIX__) && !defined(__WXOSX__))
 
 // this class can be used to implement a standard event loop logic using
 // Pending() and Dispatch()
@@ -194,6 +214,15 @@ protected:
 
     // should we exit the loop?
     bool m_shouldExit;
+
+private:
+    // process all already pending events and dispatch a new one (blocking
+    // until it appears in the event queue if necessary)
+    //
+    // returns the return value of Dispatch()
+    bool ProcessEvents();
+
+    wxDECLARE_NO_COPY_CLASS(wxEventLoopManual);
 };
 
 #endif // platforms using "manual" loop
@@ -201,15 +230,23 @@ protected:
 // we're moving away from old m_impl wxEventLoop model as otherwise the user
 // code doesn't have access to platform-specific wxEventLoop methods and this
 // can sometimes be very useful (e.g. under MSW this is necessary for
-// integration with MFC) but currently this is done for MSW only, other ports
-// should follow a.s.a.p.
+// integration with MFC) but currently this is not done for all ports yet (e.g.
+// wxX11) so fall back to the old wxGUIEventLoop definition below for them
+
 #if defined(__WXPALMOS__)
     #include "wx/palmos/evtloop.h"
 #elif defined(__WXMSW__)
+    // this header defines both console and GUI loops for MSW
     #include "wx/msw/evtloop.h"
-#elif defined(__WXMAC__)
+#elif defined(__WXOSX__)
+    // CoreFoundation-based event loop is currently in wxBase so include it in
+    // any case too (although maybe it actually shouldn't be there at all)
     #include "wx/osx/evtloop.h"
-#elif defined(__WXCOCOA__)
+#elif wxUSE_GUI
+
+// include the appropriate header defining wxGUIEventLoop
+
+#if defined(__WXCOCOA__)
     #include "wx/cocoa/evtloop.h"
 #elif defined(__WXDFB__)
     #include "wx/dfb/evtloop.h"
@@ -226,6 +263,19 @@ class WXDLLIMPEXP_CORE wxGUIEventLoop : public wxEventLoopBase
 public:
     wxGUIEventLoop() { m_impl = NULL; }
     virtual ~wxGUIEventLoop();
+
+#if wxUSE_EVENTLOOP_SOURCE
+    // We need to define a base class pure virtual method but we can't provide
+    // a generic implementation for it so simply fail.
+    virtual wxEventLoopSource *
+    AddSourceForFD(int WXUNUSED(fd),
+                   wxEventLoopSourceHandler * WXUNUSED(handler),
+                   int WXUNUSED(flags))
+    {
+        wxFAIL_MSG( "support for event loop sources not implemented" );
+        return NULL;
+    }
+#endif // wxUSE_EVENTLOOP_SOURCE
 
     virtual int Run();
     virtual void Exit(int rc = 0);
@@ -257,16 +307,18 @@ protected:
 
 #endif // platforms
 
-// also include the header defining wxConsoleEventLoop for Unix systems
+#endif // wxUSE_GUI
+
+// include the header defining wxConsoleEventLoop for Unix systems
 #if defined(__UNIX__)
-    #include "wx/unix/evtloop.h"
+#include "wx/unix/evtloop.h"
 #endif
 
-// we use a class rather than a typedef because wxEventLoop is forward-declared
-// in many places
 #if wxUSE_GUI
+    // we use a class rather than a typedef because wxEventLoop is
+    // forward-declared in many places
     class wxEventLoop : public wxGUIEventLoop { };
-#else // !GUI
+#else // !wxUSE_GUI
     // we can't define wxEventLoop differently in GUI and base libraries so use
     // a #define to still allow writing wxEventLoop in the user code
     #if wxUSE_CONSOLE_EVENTLOOP && (defined(__WXMSW__) || defined(__UNIX__))
@@ -278,7 +330,7 @@ protected:
 
 inline bool wxEventLoopBase::IsRunning() const { return GetActive() == this; }
 
-#if wxUSE_GUI
+#if wxUSE_GUI && !defined(__WXOSX__)
 // ----------------------------------------------------------------------------
 // wxModalEventLoop
 // ----------------------------------------------------------------------------

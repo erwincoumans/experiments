@@ -4,7 +4,7 @@
 // Authors:     Lukasz Michalski
 // Created:     December 2006
 // Copyright:   (c) Lukasz Michalski
-// RCS-ID:      $Id: fdiodispatcher.h 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 

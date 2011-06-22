@@ -3,7 +3,7 @@
 // Purpose:     helper functions used with native BUTTON control
 // Author:      Vadim Zeitlin
 // Created:     2008-06-07
-// RCS-ID:      $Id: button.h 55474 2008-09-05 14:10:50Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -38,20 +38,26 @@ namespace wxMSWButton
 // returns BS_MULTILINE if the label contains new lines or 0 otherwise
 inline int GetMultilineStyle(const wxString& label)
 {
-    return label.find(_T('\n')) == wxString::npos ? 0 : BS_MULTILINE;
+    return label.find(wxT('\n')) == wxString::npos ? 0 : BS_MULTILINE;
 }
 
 // update the style of the specified HWND to include or exclude BS_MULTILINE
 // depending on whether the label contains the new lines
 void UpdateMultilineStyle(HWND hwnd, const wxString& label);
 
+// flags for ComputeBestSize() and GetFittingSize()
+enum
+{
+    Size_AuthNeeded = 1
+};
+
 // common implementation of wxButton and wxToggleButton::DoGetBestSize()
 // (implemented in src/msw/button.cpp)
-wxSize ComputeBestSize(wxControl *btn);
+wxSize ComputeBestSize(wxControl *btn, int flags = 0);
 
 // compute the button size (as if wxBU_EXACTFIT were specified, i.e. without
 // adjusting it to be of default size if it's smaller) for the given label size
-wxSize GetFittingSize(wxWindow *win, const wxSize& sizeLabel);
+wxSize GetFittingSize(wxWindow *win, const wxSize& sizeLabel, int flags = 0);
 
 } // namespace wxMSWButton
 

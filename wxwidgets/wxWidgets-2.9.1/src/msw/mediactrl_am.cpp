@@ -4,7 +4,7 @@
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     01/29/05
-// RCS-ID:      $Id: mediactrl_am.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1616,7 +1616,7 @@ bool wxAMMediaBackend::CreateControl(wxControl* ctrl, wxWindow* parent,
     // First get the AMGetErrorText procedure in debug
     // mode for more meaningful messages
 #if wxDEBUG_LEVEL
-    if ( m_dllQuartz.Load(_T("quartz.dll"), wxDL_VERBATIM) )
+    if ( m_dllQuartz.Load(wxT("quartz.dll"), wxDL_VERBATIM) )
     {
         m_lpAMGetErrorText = (LPAMGETERRORTEXT)
                                 m_dllQuartz.GetSymbolAorW(wxT("AMGetErrorText"));
@@ -2092,36 +2092,37 @@ void wxAMMediaBackend::DoGetDownloadProgress(wxLongLong* pLoadProgress,
                                              wxLongLong* pLoadTotal)
 {
 #ifndef __WXWINCE__
-    LONGLONG loadTotal = 0, loadProgress = 0;
-    IUnknown* pFG;
-    IAMOpenProgress* pOP;
-    HRESULT hr;
-    hr = m_pAM->get_FilterGraph(&pFG);
-    if(SUCCEEDED(hr))
+    IUnknown* pFG = NULL;
+
+    HRESULT hr = m_pAM->get_FilterGraph(&pFG);
+
+    // notice that the call above may return S_FALSE and leave pFG NULL
+    if(SUCCEEDED(hr) && pFG)
     {
+        IAMOpenProgress* pOP = NULL;
         hr = pFG->QueryInterface(IID_IAMOpenProgress, (void**)&pOP);
-        if(SUCCEEDED(hr))
-    {
+        if(SUCCEEDED(hr) && pOP)
+        {
+            LONGLONG
+                loadTotal = 0,
+                loadProgress = 0;
             hr = pOP->QueryProgress(&loadTotal, &loadProgress);
             pOP->Release();
+
+            if(SUCCEEDED(hr))
+            {
+                *pLoadProgress = loadProgress;
+                *pLoadTotal = loadTotal;
+                pFG->Release();
+                return;
+            }
         }
         pFG->Release();
     }
+#endif // !__WXWINCE__
 
-    if(SUCCEEDED(hr))
-    {
-        *pLoadProgress = loadProgress;
-        *pLoadTotal = loadTotal;
-    }
-    else
-#endif
-    {
-        // When not loading from a URL QueryProgress will return
-        // E_NOINTERFACE or whatever
-        // wxAMFAIL(hr);
-        *pLoadProgress = 0;
-        *pLoadTotal = 0;
-    }
+    *pLoadProgress = 0;
+    *pLoadTotal = 0;
 }
 
 //---------------------------------------------------------------------------

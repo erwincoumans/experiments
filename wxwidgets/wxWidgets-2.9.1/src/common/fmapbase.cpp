@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     21.06.2003 (extracted from common/fontmap.cpp)
-// RCS-ID:      $Id: fmapbase.cpp 60146 2009-04-14 18:38:21Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999-2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -55,7 +55,7 @@
 // ----------------------------------------------------------------------------
 
 // encodings supported by GetEncodingDescription
-static wxFontEncoding gs_encodings[] =
+static const wxFontEncoding gs_encodings[] =
 {
     wxFONTENCODING_ISO8859_1,
     wxFONTENCODING_ISO8859_2,
@@ -101,7 +101,7 @@ static wxFontEncoding gs_encodings[] =
     wxFONTENCODING_GB2312,
     wxFONTENCODING_ISO2022_JP,
 
-    wxFONTENCODING_MACROMAN, 
+    wxFONTENCODING_MACROMAN,
     wxFONTENCODING_MACJAPANESE,
     wxFONTENCODING_MACCHINESETRAD,
     wxFONTENCODING_MACKOREAN,
@@ -144,7 +144,7 @@ static wxFontEncoding gs_encodings[] =
 };
 
 // the descriptions for them
-static const char* gs_encodingDescs[] =
+static const char* const gs_encodingDescs[] =
 {
     wxTRANSLATE( "Western European (ISO-8859-1)" ),
     wxTRANSLATE( "Central European (ISO-8859-2)" ),
@@ -240,25 +240,25 @@ static const char* gs_encodingDescs[] =
 };
 
 // and the internal names (these are not translated on purpose!)
-static const wxChar* gs_encodingNames[WXSIZEOF(gs_encodingDescs)][9] =
+static const wxChar* const gs_encodingNames[WXSIZEOF(gs_encodingDescs)][9] =
 {
     // names from the columns correspond to these OS:
     //      Linux        Solaris and IRIX       HP-UX             AIX
-    { _T("ISO-8859-1"),  _T("ISO8859-1"),  _T("iso88591"),  _T("8859-1"), wxT("iso_8859_1"), NULL },
-    { _T("ISO-8859-2"),  _T("ISO8859-2"),  _T("iso88592"),  _T("8859-2"), NULL },
-    { _T("ISO-8859-3"),  _T("ISO8859-3"),  _T("iso88593"),  _T("8859-3"), NULL },
-    { _T("ISO-8859-4"),  _T("ISO8859-4"),  _T("iso88594"),  _T("8859-4"), NULL },
-    { _T("ISO-8859-5"),  _T("ISO8859-5"),  _T("iso88595"),  _T("8859-5"), NULL },
-    { _T("ISO-8859-6"),  _T("ISO8859-6"),  _T("iso88596"),  _T("8859-6"), NULL },
-    { _T("ISO-8859-7"),  _T("ISO8859-7"),  _T("iso88597"),  _T("8859-7"), NULL },
-    { _T("ISO-8859-8"),  _T("ISO8859-8"),  _T("iso88598"),  _T("8859-8"), NULL },
-    { _T("ISO-8859-9"),  _T("ISO8859-9"),  _T("iso88599"),  _T("8859-9"), NULL },
-    { _T("ISO-8859-10"), _T("ISO8859-10"), _T("iso885910"), _T("8859-10"), NULL },
-    { _T("ISO-8859-11"), _T("ISO8859-11"), _T("iso885911"), _T("8859-11"), NULL },
-    { _T("ISO-8859-12"), _T("ISO8859-12"), _T("iso885912"), _T("8859-12"), NULL },
-    { _T("ISO-8859-13"), _T("ISO8859-13"), _T("iso885913"), _T("8859-13"), NULL },
-    { _T("ISO-8859-14"), _T("ISO8859-14"), _T("iso885914"), _T("8859-14"), NULL },
-    { _T("ISO-8859-15"), _T("ISO8859-15"), _T("iso885915"), _T("8859-15"), NULL },
+    { wxT("ISO-8859-1"),  wxT("ISO8859-1"),  wxT("iso88591"),  wxT("8859-1"), wxT("iso_8859_1"), NULL },
+    { wxT("ISO-8859-2"),  wxT("ISO8859-2"),  wxT("iso88592"),  wxT("8859-2"), NULL },
+    { wxT("ISO-8859-3"),  wxT("ISO8859-3"),  wxT("iso88593"),  wxT("8859-3"), NULL },
+    { wxT("ISO-8859-4"),  wxT("ISO8859-4"),  wxT("iso88594"),  wxT("8859-4"), NULL },
+    { wxT("ISO-8859-5"),  wxT("ISO8859-5"),  wxT("iso88595"),  wxT("8859-5"), NULL },
+    { wxT("ISO-8859-6"),  wxT("ISO8859-6"),  wxT("iso88596"),  wxT("8859-6"), NULL },
+    { wxT("ISO-8859-7"),  wxT("ISO8859-7"),  wxT("iso88597"),  wxT("8859-7"), NULL },
+    { wxT("ISO-8859-8"),  wxT("ISO8859-8"),  wxT("iso88598"),  wxT("8859-8"), NULL },
+    { wxT("ISO-8859-9"),  wxT("ISO8859-9"),  wxT("iso88599"),  wxT("8859-9"), NULL },
+    { wxT("ISO-8859-10"), wxT("ISO8859-10"), wxT("iso885910"), wxT("8859-10"), NULL },
+    { wxT("ISO-8859-11"), wxT("ISO8859-11"), wxT("iso885911"), wxT("8859-11"), NULL },
+    { wxT("ISO-8859-12"), wxT("ISO8859-12"), wxT("iso885912"), wxT("8859-12"), NULL },
+    { wxT("ISO-8859-13"), wxT("ISO8859-13"), wxT("iso885913"), wxT("8859-13"), NULL },
+    { wxT("ISO-8859-14"), wxT("ISO8859-14"), wxT("iso885914"), wxT("8859-14"), NULL },
+    { wxT("ISO-8859-15"), wxT("ISO8859-15"), wxT("iso885915"), wxT("8859-15"), NULL },
 
     // although koi8-ru is not strictly speaking the same as koi8-r,
     // they are similar enough to make mapping it to koi8 better than
@@ -306,7 +306,7 @@ static const wxChar* gs_encodingNames[WXSIZEOF(gs_encodingDescs)][9] =
     { wxT( "GB2312" ), NULL },
     { wxT( "ISO-2022-JP" ), NULL },
 
- 
+
     { wxT( "MacRoman" ), NULL },
     { wxT( "MacJapanese" ), NULL },
     { wxT( "MacChineseTrad" ), NULL },
@@ -423,7 +423,7 @@ wxFontMapperBase *wxFontMapperBase::Get()
             sm_instance = traits->CreateFontMapper();
 
             wxASSERT_MSG( sm_instance,
-                            _T("wxAppTraits::CreateFontMapper() failed") );
+                            wxT("wxAppTraits::CreateFontMapper() failed") );
         }
 
         if ( !sm_instance )
@@ -634,7 +634,7 @@ wxFontMapperBase::NonInteractiveCharsetToEncoding(const wxString& charset)
         // discard the optional quotes
         if ( !cs.empty() )
         {
-            if ( cs[0u] == _T('"') && cs.Last() == _T('"') )
+            if ( cs[0u] == wxT('"') && cs.Last() == wxT('"') )
             {
                 cs = wxString(cs.c_str(), cs.length() - 1);
             }
@@ -642,7 +642,7 @@ wxFontMapperBase::NonInteractiveCharsetToEncoding(const wxString& charset)
 
         for ( size_t i = 0; i < WXSIZEOF(gs_encodingNames); ++i )
         {
-            for ( const wxChar** encName = gs_encodingNames[i]; *encName; ++encName )
+            for ( const wxChar* const* encName = gs_encodingNames[i]; *encName; ++encName )
             {
                 if ( cs.CmpNoCase(*encName) == 0 )
                     return gs_encodings[i];
@@ -775,7 +775,7 @@ size_t wxFontMapperBase::GetSupportedEncodingsCount()
 wxFontEncoding wxFontMapperBase::GetEncoding(size_t n)
 {
     wxCHECK_MSG( n < WXSIZEOF(gs_encodings), wxFONTENCODING_SYSTEM,
-                    _T("wxFontMapper::GetEncoding(): invalid index") );
+                    wxT("wxFontMapper::GetEncoding(): invalid index") );
 
     return gs_encodings[n];
 }
@@ -831,17 +831,17 @@ wxString wxFontMapperBase::GetEncodingName(wxFontEncoding encoding)
 /* static */
 const wxChar** wxFontMapperBase::GetAllEncodingNames(wxFontEncoding encoding)
 {
-    static const wxChar* dummy[] = { NULL };
+    static const wxChar* const dummy[] = { NULL };
 
     for ( size_t i = 0; i < WXSIZEOF(gs_encodingNames); i++ )
     {
         if ( gs_encodings[i] == encoding )
         {
-            return gs_encodingNames[i];
+            return const_cast<const wxChar**>(gs_encodingNames[i]);
         }
     }
 
-    return dummy;
+    return const_cast<const wxChar**>(dummy);
 }
 
 /* static */
@@ -851,7 +851,7 @@ wxFontEncoding wxFontMapperBase::GetEncodingFromName(const wxString& name)
 
     for ( size_t i = 0; i < count; i++ )
     {
-        for ( const wxChar** encName = gs_encodingNames[i]; *encName; ++encName )
+        for ( const wxChar* const* encName = gs_encodingNames[i]; *encName; ++encName )
         {
             if ( name.CmpNoCase(*encName) == 0 )
                 return gs_encodings[i];

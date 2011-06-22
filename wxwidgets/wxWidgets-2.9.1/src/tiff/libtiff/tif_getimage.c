@@ -1,4 +1,4 @@
-/* $Id: tif_getimage.c 48869 2007-09-21 12:44:10Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler

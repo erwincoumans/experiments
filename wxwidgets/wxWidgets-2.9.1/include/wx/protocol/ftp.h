@@ -5,7 +5,7 @@
 // Modified by: Mark Johnson, wxWindows@mj10777.de
 //              20000917 : RmDir, GetLastResult, GetList
 // Created:     07/07/1997
-// RCS-ID:      $Id: ftp.h 58137 2009-01-16 15:08:13Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,8 +35,9 @@ public:
     virtual ~wxFTP();
 
     // Connecting and disconnecting
-    bool Connect(const wxSockAddress& addr, bool wait = true);
-    bool Connect(const wxString& host);
+    virtual bool Connect(const wxSockAddress& addr, bool wait = true);
+    virtual bool Connect(const wxString& host) { return Connect(host, 0); }
+    virtual bool Connect(const wxString& host, unsigned short port);
 
     // disconnect
     virtual bool Close();
@@ -169,7 +170,7 @@ protected:
 
 // the trace mask used by assorted wxLogTrace() in ftp code, do
 // wxLog::AddTraceMask(FTP_TRACE_MASK) to see them in output
-#define FTP_TRACE_MASK _T("ftp")
+#define FTP_TRACE_MASK wxT("ftp")
 
 #endif // wxUSE_PROTOCOL_FTP
 

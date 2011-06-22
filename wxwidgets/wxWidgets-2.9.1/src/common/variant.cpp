@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/09/98
-// RCS-ID:      $Id: variant.cpp 59887 2009-03-27 15:33:55Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,13 +62,13 @@ WX_DEFINE_LIST(wxVariantList)
 IMPLEMENT_DYNAMIC_CLASS(wxVariant, wxObject)
 
 wxVariant::wxVariant()
+    : wxObject()
 {
-    m_data = NULL;
 }
 
 bool wxVariant::IsNull() const
 {
-     return (m_data == NULL);
+     return (m_refData == NULL);
 }
 
 void wxVariant::MakeNull()
@@ -84,8 +84,6 @@ void wxVariant::Clear()
 wxVariant::wxVariant(const wxVariant& variant)
     : wxObject()
 {
-    m_data = NULL;
-
     if (!variant.IsNull())
         Ref(variant);
 
@@ -93,14 +91,26 @@ wxVariant::wxVariant(const wxVariant& variant)
 }
 
 wxVariant::wxVariant(wxVariantData* data, const wxString& name) // User-defined data
+    : wxObject()
 {
-    m_data = data;
+    m_refData = data;
     m_name = name;
 }
 
 wxVariant::~wxVariant()
 {
-    UnRef();
+}
+
+wxObjectRefData *wxVariant::CreateRefData() const
+{
+    // We cannot create any particular wxVariantData.
+    wxFAIL_MSG("wxVariant::CreateRefData() cannot be implemented");
+    return NULL;
+}
+
+wxObjectRefData *wxVariant::CloneRefData(const wxObjectRefData *data) const
+{
+    return ((wxVariantData*) data)->Clone();
 }
 
 // Assignment
@@ -114,7 +124,7 @@ void wxVariant::operator= (const wxVariant& variant)
 void wxVariant::operator= (wxVariantData* variantData)
 {
     UnRef();
-    m_data = variantData;
+    m_refData = variantData;
 }
 
 bool wxVariant::operator== (const wxVariant& variant) const
@@ -147,60 +157,17 @@ wxString wxVariant::MakeString() const
 void wxVariant::SetData(wxVariantData* data)
 {
     UnRef();
-    m_data = data;
-}
-
-void wxVariant::Ref(const wxVariant& clone)
-{
-    // nothing to be done
-    if (m_data == clone.m_data)
-        return;
-
-    // delete reference to old data
-    UnRef();
-
-    // reference new data
-    if ( clone.m_data )
-    {
-        m_data = clone.m_data;
-        m_data->m_count++;
-    }
-}
-
-
-void wxVariant::UnRef()
-{
-    if ( m_data )
-    {
-        wxASSERT_MSG( m_data->m_count > 0, _T("invalid ref data count") );
-
-        m_data->DecRef();
-        m_data = NULL;
-    }
+    m_refData = data;
 }
 
 bool wxVariant::Unshare()
 {
-    if ( m_data && m_data->GetRefCount() > 1 )
-    {
-        // note that ref is not going to be destroyed in this case...
-        const wxVariantData* ref = m_data;
-        UnRef();
-
-        // ... so we can still access it
-        m_data = ref->Clone();
-
-        wxASSERT_MSG( (m_data && m_data->GetRefCount() == 1),
-                  _T("wxVariant::AllocExclusive() failed.") );
-
-        if (!m_data || m_data->GetRefCount() != 1)
-            return false;
-        else
-            return true;
-    }
-    //else: data is null or ref count is 1, so we are exclusive owners of m_refData anyhow
-    else
+    if ( !m_refData || m_refData->GetRefCount() == 1 )
         return true;
+
+    wxObject::UnShare();
+
+    return (m_refData && m_refData->GetRefCount() == 1);
 }
 
 
@@ -226,6 +193,52 @@ bool wxVariant::IsValueKindOf(const wxClassInfo* type) const
     return info ? info->IsKindOf(type) : false ;
 }
 
+// -----------------------------------------------------------------
+// wxVariant <-> wxAny conversion code
+// -----------------------------------------------------------------
+
+#if wxUSE_ANY
+
+wxAnyToVariantRegistration::
+    wxAnyToVariantRegistration(wxVariantDataFactory factory)
+        : m_factory(factory)
+{
+    wxPreRegisterAnyToVariant(this);
+}
+
+wxAnyToVariantRegistration::~wxAnyToVariantRegistration()
+{
+}
+
+wxVariant::wxVariant(const wxAny& any)
+    : wxObject()
+{
+    wxVariant variant;
+    if ( !any.GetAs(&variant) )
+    {
+        wxFAIL_MSG("wxAny of this type cannot be converted to wxVariant");
+        return;
+    }
+
+    *this = variant;
+}
+
+wxAny wxVariant::GetAny() const
+{
+    if ( IsNull() )
+        return wxAny();
+
+    wxAny any;
+    wxVariantData* data = GetData();
+
+    if ( data->GetAsAny(&any) )
+        return any;
+
+    // If everything else fails, wrap the whole wxVariantData
+    return wxAny(data);
+}
+
+#endif // wxUSE_ANY
 
 // -----------------------------------------------------------------
 // wxVariantDataLong
@@ -257,9 +270,28 @@ public:
 
     virtual wxString GetType() const { return wxT("long"); }
 
+#if wxUSE_ANY
+    // Since wxAny does not have separate type for integers shorter than
+    // longlong, we do not usually implement wxVariant->wxAny conversion
+    // here (but in wxVariantDataLongLong instead).
+  #ifndef wxLongLong_t
+    DECLARE_WXANY_CONVERSION()
+  #else
+    bool GetAsAny(wxAny* any) const
+    {
+        *any = m_value;
+        return true;
+    }
+  #endif
+#endif // wxUSE_ANY
+
 protected:
     long m_value;
 };
+
+#ifndef wxLongLong_t
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(long, wxVariantDataLong)
+#endif
 
 bool wxVariantDataLong::Eq(wxVariantData& data) const
 {
@@ -321,19 +353,19 @@ bool wxVariantDataLong::Read(wxString& str)
 
 wxVariant::wxVariant(long val, const wxString& name)
 {
-    m_data = new wxVariantDataLong(val);
+    m_refData = new wxVariantDataLong(val);
     m_name = name;
 }
 
 wxVariant::wxVariant(int val, const wxString& name)
 {
-    m_data = new wxVariantDataLong((long)val);
+    m_refData = new wxVariantDataLong((long)val);
     m_name = name;
 }
 
 wxVariant::wxVariant(short val, const wxString& name)
 {
-    m_data = new wxVariantDataLong((long)val);
+    m_refData = new wxVariantDataLong((long)val);
     m_name = name;
 }
 
@@ -354,14 +386,14 @@ bool wxVariant::operator!= (long value) const
 void wxVariant::operator= (long value)
 {
     if (GetType() == wxT("long") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataLong*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataLong(value);
+        m_refData = new wxVariantDataLong(value);
     }
 }
 
@@ -406,9 +438,13 @@ public:
     virtual wxString GetType() const { return wxT("double"); }
 
     wxVariantData* Clone() const { return new wxVariantDoubleData(m_value); }
+
+    DECLARE_WXANY_CONVERSION()
 protected:
     double m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(double, wxVariantDoubleData)
 
 bool wxVariantDoubleData::Eq(wxVariantData& data) const
 {
@@ -469,7 +505,7 @@ bool wxVariantDoubleData::Read(wxString& str)
 
 wxVariant::wxVariant(double val, const wxString& name)
 {
-    m_data = new wxVariantDoubleData(val);
+    m_refData = new wxVariantDoubleData(val);
     m_name = name;
 }
 
@@ -490,14 +526,14 @@ bool wxVariant::operator!= (double value) const
 void wxVariant::operator= (double value)
 {
     if (GetType() == wxT("double") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDoubleData*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDoubleData(value);
+        m_refData = new wxVariantDoubleData(value);
     }
 }
 
@@ -542,9 +578,13 @@ public:
     virtual wxString GetType() const { return wxT("bool"); }
 
     wxVariantData* Clone() const { return new wxVariantDataBool(m_value); }
+
+    DECLARE_WXANY_CONVERSION()
 protected:
     bool m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(bool, wxVariantDataBool)
 
 bool wxVariantDataBool::Eq(wxVariantData& data) const
 {
@@ -608,7 +648,7 @@ bool wxVariantDataBool::Read(wxString& str)
 
 wxVariant::wxVariant(bool val, const wxString& name)
 {
-    m_data = new wxVariantDataBool(val);
+    m_refData = new wxVariantDataBool(val);
     m_name = name;
 }
 
@@ -629,14 +669,14 @@ bool wxVariant::operator!= (bool value) const
 void wxVariant::operator= (bool value)
 {
     if (GetType() == wxT("bool") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataBool*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataBool(value);
+        m_refData = new wxVariantDataBool(value);
     }
 }
 
@@ -679,9 +719,12 @@ public:
     virtual wxString GetType() const { return wxT("char"); }
     wxVariantData* Clone() const { return new wxVariantDataChar(m_value); }
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxUniChar m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(wxUniChar, wxVariantDataChar)
 
 bool wxVariantDataChar::Eq(wxVariantData& data) const
 {
@@ -749,19 +792,19 @@ bool wxVariantDataChar::Read(wxString& str)
 
 wxVariant::wxVariant(const wxUniChar& val, const wxString& name)
 {
-    m_data = new wxVariantDataChar(val);
+    m_refData = new wxVariantDataChar(val);
     m_name = name;
 }
 
 wxVariant::wxVariant(char val, const wxString& name)
 {
-    m_data = new wxVariantDataChar(val);
+    m_refData = new wxVariantDataChar(val);
     m_name = name;
 }
 
 wxVariant::wxVariant(wchar_t val, const wxString& name)
 {
-    m_data = new wxVariantDataChar(val);
+    m_refData = new wxVariantDataChar(val);
     m_name = name;
 }
 
@@ -777,14 +820,14 @@ bool wxVariant::operator==(const wxUniChar& value) const
 wxVariant& wxVariant::operator=(const wxUniChar& value)
 {
     if (GetType() == wxT("char") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataChar*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataChar(value);
+        m_refData = new wxVariantDataChar(value);
     }
 
     return *this;
@@ -831,9 +874,32 @@ public:
     virtual wxString GetType() const { return wxT("string"); }
     wxVariantData* Clone() const { return new wxVariantDataString(m_value); }
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxString m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(wxString, wxVariantDataString)
+
+#if wxUSE_ANY
+// This allows converting string literal wxAnys to string variants
+wxVariantData* wxVariantDataFromConstCharPAny(const wxAny& any)
+{
+    return new wxVariantDataString(wxANY_AS(any, const char*));
+}
+
+wxVariantData* wxVariantDataFromConstWchar_tPAny(const wxAny& any)
+{
+    return new wxVariantDataString(wxANY_AS(any, const wchar_t*));
+}
+
+_REGISTER_WXANY_CONVERSION(const char*,
+                           ConstCharP,
+                           wxVariantDataFromConstCharPAny)
+_REGISTER_WXANY_CONVERSION(const wchar_t*,
+                           ConstWchar_tP,
+                           wxVariantDataFromConstWchar_tPAny)
+#endif
 
 bool wxVariantDataString::Eq(wxVariantData& data) const
 {
@@ -886,39 +952,53 @@ bool wxVariantDataString::Read(wxString& str)
 
 wxVariant::wxVariant(const wxString& val, const wxString& name)
 {
-    m_data = new wxVariantDataString(val);
+    m_refData = new wxVariantDataString(val);
     m_name = name;
 }
 
 wxVariant::wxVariant(const char* val, const wxString& name)
 {
-    m_data = new wxVariantDataString(wxString(val));
+    m_refData = new wxVariantDataString(wxString(val));
     m_name = name;
 }
 
 wxVariant::wxVariant(const wchar_t* val, const wxString& name)
 {
-    m_data = new wxVariantDataString(wxString(val));
+    m_refData = new wxVariantDataString(wxString(val));
     m_name = name;
 }
 
 wxVariant::wxVariant(const wxCStrData& val, const wxString& name)
 {
-    m_data = new wxVariantDataString(val.AsString());
+    m_refData = new wxVariantDataString(val.AsString());
     m_name = name;
 }
 
 wxVariant::wxVariant(const wxScopedCharBuffer& val, const wxString& name)
 {
-    m_data = new wxVariantDataString(wxString(val));
+    m_refData = new wxVariantDataString(wxString(val));
     m_name = name;
 }
 
 wxVariant::wxVariant(const wxScopedWCharBuffer& val, const wxString& name)
 {
-    m_data = new wxVariantDataString(wxString(val));
+    m_refData = new wxVariantDataString(wxString(val));
     m_name = name;
 }
+
+#if wxUSE_STD_STRING
+wxVariant::wxVariant(const std::string& val, const wxString& name)
+{
+    m_refData = new wxVariantDataString(wxString(val));
+    m_name = name;
+}
+
+wxVariant::wxVariant(const wxStdWideString& val, const wxString& name)
+{
+    m_refData = new wxVariantDataString(wxString(val));
+    m_name = name;
+}
+#endif // wxUSE_STD_STRING
 
 bool wxVariant::operator== (const wxString& value) const
 {
@@ -937,14 +1017,14 @@ bool wxVariant::operator!= (const wxString& value) const
 wxVariant& wxVariant::operator= (const wxString& value)
 {
     if (GetType() == wxT("string") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataString*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataString(value);
+        m_refData = new wxVariantDataString(value);
     }
     return *this;
 }
@@ -987,9 +1067,12 @@ public:
 
     virtual wxClassInfo* GetValueClassInfo();
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxObject* m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(wxObject*, wxVariantDataWxObjectPtr)
 
 bool wxVariantDataWxObjectPtr::Eq(wxVariantData& data) const
 {
@@ -1056,7 +1139,7 @@ bool wxVariantDataWxObjectPtr::Read(wxString& WXUNUSED(str))
 
 wxVariant::wxVariant( wxObject* val, const wxString& name)
 {
-    m_data = new wxVariantDataWxObjectPtr(val);
+    m_refData = new wxVariantDataWxObjectPtr(val);
     m_name = name;
 }
 
@@ -1073,12 +1156,12 @@ bool wxVariant::operator!= (wxObject* value) const
 void wxVariant::operator= (wxObject* value)
 {
     UnRef();
-    m_data = new wxVariantDataWxObjectPtr(value);
+    m_refData = new wxVariantDataWxObjectPtr(value);
 }
 
 wxObject* wxVariant::GetWxObjectPtr() const
 {
-    return (wxObject*) ((wxVariantDataWxObjectPtr*) m_data)->GetValue();
+    return (wxObject*) ((wxVariantDataWxObjectPtr*) m_refData)->GetValue();
 }
 
 // ----------------------------------------------------------------------------
@@ -1106,9 +1189,12 @@ public:
     virtual wxString GetType() const { return wxT("void*"); }
     virtual wxVariantData* Clone() const { return new wxVariantDataVoidPtr(m_value); }
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     void* m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(void*, wxVariantDataVoidPtr)
 
 bool wxVariantDataVoidPtr::Eq(wxVariantData& data) const
 {
@@ -1153,7 +1239,7 @@ bool wxVariantDataVoidPtr::Read(wxString& WXUNUSED(str))
 
 wxVariant::wxVariant( void* val, const wxString& name)
 {
-    m_data = new wxVariantDataVoidPtr(val);
+    m_refData = new wxVariantDataVoidPtr(val);
     m_name = name;
 }
 
@@ -1169,14 +1255,14 @@ bool wxVariant::operator!= (void* value) const
 
 void wxVariant::operator= (void* value)
 {
-    if (GetType() == wxT("void*") && (m_data->GetRefCount() == 1))
+    if (GetType() == wxT("void*") && (m_refData->GetRefCount() == 1))
     {
         ((wxVariantDataVoidPtr*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataVoidPtr(value);
+        m_refData = new wxVariantDataVoidPtr(value);
     }
 }
 
@@ -1188,7 +1274,7 @@ void* wxVariant::GetVoidPtr() const
 
     wxASSERT( GetType() == wxT("void*") );
 
-    return (void*) ((wxVariantDataVoidPtr*) m_data)->GetValue();
+    return (void*) ((wxVariantDataVoidPtr*) m_refData)->GetValue();
 }
 
 // ----------------------------------------------------------------------------
@@ -1218,10 +1304,12 @@ public:
     virtual wxString GetType() const { return wxT("datetime"); }
     virtual wxVariantData* Clone() const { return new wxVariantDataDateTime(m_value); }
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxDateTime m_value;
 };
 
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(wxDateTime, wxVariantDataDateTime)
 
 bool wxVariantDataDateTime::Eq(wxVariantData& data) const
 {
@@ -1279,7 +1367,7 @@ bool wxVariantDataDateTime::Read(wxString& str)
 
 wxVariant::wxVariant(const wxDateTime& val, const wxString& name) // Date
 {
-    m_data = new wxVariantDataDateTime(val);
+    m_refData = new wxVariantDataDateTime(val);
     m_name = name;
 }
 
@@ -1300,14 +1388,14 @@ bool wxVariant::operator!= (const wxDateTime& value) const
 void wxVariant::operator= (const wxDateTime& value)
 {
     if (GetType() == wxT("datetime") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataDateTime*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataDateTime(value);
+        m_refData = new wxVariantDataDateTime(value);
     }
 }
 
@@ -1349,9 +1437,12 @@ public:
     virtual wxString GetType() const { return wxT("arrstring"); }
     virtual wxVariantData* Clone() const { return new wxVariantDataArrayString(m_value); }
 
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxArrayString m_value;
 };
+
+IMPLEMENT_TRIVIAL_WXANY_CONVERSION(wxArrayString, wxVariantDataArrayString)
 
 bool wxVariantDataArrayString::Eq(wxVariantData& data) const
 {
@@ -1376,7 +1467,7 @@ bool wxVariantDataArrayString::Write(wxString& str) const
     for ( size_t n = 0; n < count; n++ )
     {
         if ( n )
-            str += _T(';');
+            str += wxT(';');
 
         str += m_value[n];
     }
@@ -1396,7 +1487,7 @@ bool wxVariantDataArrayString::Read(wxSTD istream& WXUNUSED(str))
 
 bool wxVariantDataArrayString::Read(wxString& str)
 {
-    wxStringTokenizer tk(str, _T(";"));
+    wxStringTokenizer tk(str, wxT(";"));
     while ( tk.HasMoreTokens() )
     {
         m_value.Add(tk.GetNextToken());
@@ -1409,13 +1500,13 @@ bool wxVariantDataArrayString::Read(wxString& str)
 
 wxVariant::wxVariant(const wxArrayString& val, const wxString& name) // Strings
 {
-    m_data = new wxVariantDataArrayString(val);
+    m_refData = new wxVariantDataArrayString(val);
     m_name = name;
 }
 
 bool wxVariant::operator==(const wxArrayString& WXUNUSED(value)) const
 {
-    wxFAIL_MSG( _T("TODO") );
+    wxFAIL_MSG( wxT("TODO") );
 
     return false;
 }
@@ -1428,14 +1519,14 @@ bool wxVariant::operator!=(const wxArrayString& value) const
 void wxVariant::operator=(const wxArrayString& value)
 {
     if (GetType() == wxT("arrstring") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataArrayString *)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataArrayString(value);
+        m_refData = new wxVariantDataArrayString(value);
     }
 }
 
@@ -1446,6 +1537,405 @@ wxArrayString wxVariant::GetArrayString() const
 
     return wxArrayString();
 }
+
+// ----------------------------------------------------------------------------
+// wxVariantDataLongLong
+// ----------------------------------------------------------------------------
+
+#if wxUSE_LONGLONG
+
+class WXDLLIMPEXP_BASE wxVariantDataLongLong : public wxVariantData
+{
+public:
+    wxVariantDataLongLong() { m_value = 0; }
+    wxVariantDataLongLong(wxLongLong value) { m_value = value; }
+
+    wxLongLong GetValue() const { return m_value; }
+    void SetValue(wxLongLong value) { m_value = value; }
+
+    virtual bool Eq(wxVariantData& data) const;
+
+    virtual bool Read(wxString& str);
+    virtual bool Write(wxString& str) const;
+#if wxUSE_STD_IOSTREAM
+    virtual bool Read(wxSTD istream& str);
+    virtual bool Write(wxSTD ostream& str) const;
+#endif
+#if wxUSE_STREAMS
+    virtual bool Read(wxInputStream& str);
+    virtual bool Write(wxOutputStream &str) const;
+#endif // wxUSE_STREAMS
+
+    wxVariantData* Clone() const
+    {
+        return new wxVariantDataLongLong(m_value);
+    }
+
+    virtual wxString GetType() const { return wxS("longlong"); }
+
+    DECLARE_WXANY_CONVERSION()
+protected:
+    wxLongLong m_value;
+};
+
+//
+// wxLongLong type requires customized wxAny conversion code
+//
+#if wxUSE_ANY
+#ifdef wxLongLong_t
+
+bool wxVariantDataLongLong::GetAsAny(wxAny* any) const
+{
+    *any = m_value.GetValue();
+    return true;
+}
+
+wxVariantData* wxVariantDataLongLong::VariantDataFactory(const wxAny& any)
+{
+    return new wxVariantDataLongLong(wxANY_AS(any, wxLongLong_t));
+}
+
+REGISTER_WXANY_CONVERSION(wxLongLong_t, wxVariantDataLongLong)
+
+#else // if !defined(wxLongLong_t)
+
+bool wxVariantDataLongLong::GetAsAny(wxAny* any) const
+{
+    *any = m_value;
+    return true;
+}
+
+wxVariantData* wxVariantDataLongLong::VariantDataFactory(const wxAny& any)
+{
+    return new wxVariantDataLongLong(wxANY_AS(any, wxLongLong));
+}
+
+REGISTER_WXANY_CONVERSION(wxLongLong, wxVariantDataLongLong)
+
+#endif // defined(wxLongLong_t)/!defined(wxLongLong_t)
+#endif // wxUSE_ANY
+
+bool wxVariantDataLongLong::Eq(wxVariantData& data) const
+{
+    wxASSERT_MSG( (data.GetType() == wxS("longlong")),
+                  "wxVariantDataLongLong::Eq: argument mismatch" );
+
+    wxVariantDataLongLong& otherData = (wxVariantDataLongLong&) data;
+
+    return (otherData.m_value == m_value);
+}
+
+#if wxUSE_STD_IOSTREAM
+bool wxVariantDataLongLong::Write(wxSTD ostream& str) const
+{
+    wxString s;
+    Write(s);
+    str << (const char*) s.mb_str();
+    return true;
+}
+#endif
+
+bool wxVariantDataLongLong::Write(wxString& str) const
+{
+#ifdef wxLongLong_t
+    str.Printf(wxS("%lld"), m_value.GetValue());
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if wxUSE_STD_IOSTREAM
+bool wxVariantDataLongLong::Read(wxSTD istream& WXUNUSED(str))
+{
+    wxFAIL_MSG(wxS("Unimplemented"));
+    return false;
+}
+#endif
+
+#if wxUSE_STREAMS
+bool wxVariantDataLongLong::Write(wxOutputStream& str) const
+{
+    wxTextOutputStream s(str);
+    s.Write32(m_value.GetLo());
+    s.Write32(m_value.GetHi());
+    return true;
+}
+
+bool wxVariantDataLongLong::Read(wxInputStream& str)
+{
+   wxTextInputStream s(str);
+   unsigned long lo = s.Read32();
+   long hi = s.Read32();
+   m_value = wxLongLong(hi, lo);
+   return true;
+}
+#endif // wxUSE_STREAMS
+
+bool wxVariantDataLongLong::Read(wxString& str)
+{
+#ifdef wxLongLong_t
+    wxLongLong_t value_t;
+    if ( !str.ToLongLong(&value_t) )
+        return false;
+    m_value = value_t;
+    return true;
+#else
+    return false;
+#endif
+}
+
+// wxVariant
+
+wxVariant::wxVariant(wxLongLong val, const wxString& name)
+{
+    m_refData = new wxVariantDataLongLong(val);
+    m_name = name;
+}
+
+bool wxVariant::operator==(wxLongLong value) const
+{
+    wxLongLong thisValue;
+    if ( !Convert(&thisValue) )
+        return false;
+    else
+        return (value == thisValue);
+}
+
+bool wxVariant::operator!=(wxLongLong value) const
+{
+    return (!((*this) == value));
+}
+
+void wxVariant::operator=(wxLongLong value)
+{
+    if ( GetType() == wxS("longlong") &&
+         m_refData->GetRefCount() == 1 )
+    {
+        ((wxVariantDataLongLong*)GetData())->SetValue(value);
+    }
+    else
+    {
+        UnRef();
+        m_refData = new wxVariantDataLongLong(value);
+    }
+}
+
+wxLongLong wxVariant::GetLongLong() const
+{
+    wxLongLong value;
+    if ( Convert(&value) )
+    {
+        return value;
+    }
+    else
+    {
+        wxFAIL_MSG(wxT("Could not convert to a long long"));
+        return 0;
+    }
+}
+
+#endif // wxUSE_LONGLONG
+
+// ----------------------------------------------------------------------------
+// wxVariantDataULongLong
+// ----------------------------------------------------------------------------
+
+#if wxUSE_LONGLONG
+
+class WXDLLIMPEXP_BASE wxVariantDataULongLong : public wxVariantData
+{
+public:
+    wxVariantDataULongLong() { m_value = 0; }
+    wxVariantDataULongLong(wxULongLong value) { m_value = value; }
+
+    wxULongLong GetValue() const { return m_value; }
+    void SetValue(wxULongLong value) { m_value = value; }
+
+    virtual bool Eq(wxVariantData& data) const;
+
+    virtual bool Read(wxString& str);
+    virtual bool Write(wxString& str) const;
+#if wxUSE_STD_IOSTREAM
+    virtual bool Read(wxSTD istream& str);
+    virtual bool Write(wxSTD ostream& str) const;
+#endif
+#if wxUSE_STREAMS
+    virtual bool Read(wxInputStream& str);
+    virtual bool Write(wxOutputStream &str) const;
+#endif // wxUSE_STREAMS
+
+    wxVariantData* Clone() const
+    {
+        return new wxVariantDataULongLong(m_value);
+    }
+
+    virtual wxString GetType() const { return wxS("ulonglong"); }
+
+    DECLARE_WXANY_CONVERSION()
+protected:
+    wxULongLong m_value;
+};
+
+//
+// wxULongLong type requires customized wxAny conversion code
+//
+#if wxUSE_ANY
+#ifdef wxLongLong_t
+
+bool wxVariantDataULongLong::GetAsAny(wxAny* any) const
+{
+    *any = m_value.GetValue();
+    return true;
+}
+
+wxVariantData* wxVariantDataULongLong::VariantDataFactory(const wxAny& any)
+{
+    return new wxVariantDataULongLong(wxANY_AS(any, wxULongLong_t));
+}
+
+REGISTER_WXANY_CONVERSION(wxULongLong_t, wxVariantDataULongLong)
+
+#else // if !defined(wxLongLong_t)
+
+bool wxVariantDataULongLong::GetAsAny(wxAny* any) const
+{
+    *any = m_value;
+    return true;
+}
+
+wxVariantData* wxVariantDataULongLong::VariantDataFactory(const wxAny& any)
+{
+    return new wxVariantDataULongLong(wxANY_AS(any, wxULongLong));
+}
+
+REGISTER_WXANY_CONVERSION(wxULongLong, wxVariantDataULongLong)
+
+#endif // defined(wxLongLong_t)/!defined(wxLongLong_t)
+#endif // wxUSE_ANY
+
+
+bool wxVariantDataULongLong::Eq(wxVariantData& data) const
+{
+    wxASSERT_MSG( (data.GetType() == wxS("ulonglong")),
+                  "wxVariantDataULongLong::Eq: argument mismatch" );
+
+    wxVariantDataULongLong& otherData = (wxVariantDataULongLong&) data;
+
+    return (otherData.m_value == m_value);
+}
+
+#if wxUSE_STD_IOSTREAM
+bool wxVariantDataULongLong::Write(wxSTD ostream& str) const
+{
+    wxString s;
+    Write(s);
+    str << (const char*) s.mb_str();
+    return true;
+}
+#endif
+
+bool wxVariantDataULongLong::Write(wxString& str) const
+{
+#ifdef wxLongLong_t
+    str.Printf(wxS("%llu"), m_value.GetValue());
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if wxUSE_STD_IOSTREAM
+bool wxVariantDataULongLong::Read(wxSTD istream& WXUNUSED(str))
+{
+    wxFAIL_MSG(wxS("Unimplemented"));
+    return false;
+}
+#endif
+
+#if wxUSE_STREAMS
+bool wxVariantDataULongLong::Write(wxOutputStream& str) const
+{
+    wxTextOutputStream s(str);
+    s.Write32(m_value.GetLo());
+    s.Write32(m_value.GetHi());
+    return true;
+}
+
+bool wxVariantDataULongLong::Read(wxInputStream& str)
+{
+   wxTextInputStream s(str);
+   unsigned long lo = s.Read32();
+   long hi = s.Read32();
+   m_value = wxULongLong(hi, lo);
+   return true;
+}
+#endif // wxUSE_STREAMS
+
+bool wxVariantDataULongLong::Read(wxString& str)
+{
+#ifdef wxLongLong_t
+    wxULongLong_t value_t;
+    if ( !str.ToULongLong(&value_t) )
+        return false;
+    m_value = value_t;
+    return true;
+#else
+    return false;
+#endif
+}
+
+// wxVariant
+
+wxVariant::wxVariant(wxULongLong val, const wxString& name)
+{
+    m_refData = new wxVariantDataULongLong(val);
+    m_name = name;
+}
+
+bool wxVariant::operator==(wxULongLong value) const
+{
+    wxULongLong thisValue;
+    if ( !Convert(&thisValue) )
+        return false;
+    else
+        return (value == thisValue);
+}
+
+bool wxVariant::operator!=(wxULongLong value) const
+{
+    return (!((*this) == value));
+}
+
+void wxVariant::operator=(wxULongLong value)
+{
+    if ( GetType() == wxS("ulonglong") &&
+         m_refData->GetRefCount() == 1 )
+    {
+        ((wxVariantDataULongLong*)GetData())->SetValue(value);
+    }
+    else
+    {
+        UnRef();
+        m_refData = new wxVariantDataULongLong(value);
+    }
+}
+
+wxULongLong wxVariant::GetULongLong() const
+{
+    wxULongLong value;
+    if ( Convert(&value) )
+    {
+        return value;
+    }
+    else
+    {
+        wxFAIL_MSG(wxT("Could not convert to a long long"));
+        return 0;
+    }
+}
+
+#endif // wxUSE_LONGLONG
 
 // ----------------------------------------------------------------------------
 // wxVariantDataList
@@ -1475,9 +1965,53 @@ public:
     void Clear();
 
     wxVariantData* Clone() const { return new wxVariantDataList(m_value); }
+
+    DECLARE_WXANY_CONVERSION()
 protected:
     wxVariantList  m_value;
 };
+
+#if wxUSE_ANY
+
+//
+// Convert to/from list of wxAnys
+//
+
+WX_DEFINE_LIST(wxAnyList)
+
+bool wxVariantDataList::GetAsAny(wxAny* any) const
+{
+    wxAnyList dst;
+    wxVariantList::compatibility_iterator node = m_value.GetFirst();
+    while (node)
+    {
+        wxVariant* pVar = node->GetData();
+        dst.push_back(new wxAny(((const wxVariant&)*pVar)));
+        node = node->GetNext();
+    }
+
+    *any = dst;
+    return true;
+}
+
+wxVariantData* wxVariantDataList::VariantDataFactory(const wxAny& any)
+{
+    wxAnyList src = wxANY_AS(any, wxAnyList);
+    wxVariantList dst;
+    wxAnyList::compatibility_iterator node = src.GetFirst();
+    while (node)
+    {
+        wxAny* pAny = node->GetData();
+        dst.push_back(new wxVariant(*pAny));
+        node = node->GetNext();
+    }
+
+    return new wxVariantDataList(dst);
+}
+
+REGISTER_WXANY_CONVERSION(wxAnyList, wxVariantDataList)
+
+#endif // wxUSE_ANY
 
 wxVariantDataList::wxVariantDataList(const wxVariantList& list)
 {
@@ -1580,7 +2114,7 @@ bool wxVariantDataList::Read(wxString& WXUNUSED(str))
 
 wxVariant::wxVariant(const wxVariantList& val, const wxString& name) // List of variants
 {
-    m_data = new wxVariantDataList(val);
+    m_refData = new wxVariantDataList(val);
     m_name = name;
 }
 
@@ -1600,14 +2134,14 @@ bool wxVariant::operator!= (const wxVariantList& value) const
 void wxVariant::operator= (const wxVariantList& value)
 {
     if (GetType() == wxT("list") &&
-        m_data->GetRefCount() == 1)
+        m_refData->GetRefCount() == 1)
     {
         ((wxVariantDataList*)GetData())->SetValue(value);
     }
     else
     {
         UnRef();
-        m_data = new wxVariantDataList(value);
+        m_refData = new wxVariantDataList(value);
     }
 }
 
@@ -1615,7 +2149,7 @@ wxVariantList& wxVariant::GetList() const
 {
     wxASSERT( (GetType() == wxT("list")) );
 
-    return (wxVariantList&) ((wxVariantDataList*) m_data)->GetValue();
+    return (wxVariantList&) ((wxVariantDataList*) m_refData)->GetValue();
 }
 
 // Make empty list
@@ -1674,14 +2208,14 @@ void wxVariant::ClearList()
 {
     if (!IsNull() && (GetType() == wxT("list")))
     {
-        ((wxVariantDataList*) m_data)->Clear();
+        ((wxVariantDataList*) m_refData)->Clear();
     }
     else
     {
         if (!GetType().IsSameAs(wxT("list")))
             UnRef();
 
-        m_data = new wxVariantDataList;
+        m_refData = new wxVariantDataList;
     }
 }
 
@@ -1692,7 +2226,7 @@ wxVariant wxVariant::operator[] (size_t idx) const
 
     if (GetType() == wxT("list"))
     {
-        wxVariantDataList* data = (wxVariantDataList*) m_data;
+        wxVariantDataList* data = (wxVariantDataList*) m_refData;
         wxASSERT_MSG( (idx < data->GetValue().GetCount()), wxT("Invalid index for array") );
         return *(data->GetValue().Item(idx)->GetData());
     }
@@ -1706,7 +2240,7 @@ wxVariant& wxVariant::operator[] (size_t idx)
 
     wxASSERT_MSG( (GetType() == wxT("list")), wxT("Invalid type for array operator") );
 
-    wxVariantDataList* data = (wxVariantDataList*) m_data;
+    wxVariantDataList* data = (wxVariantDataList*) m_refData;
     wxASSERT_MSG( (idx < data->GetValue().GetCount()), wxT("Invalid index for array") );
 
     return * (data->GetValue().Item(idx)->GetData());
@@ -1719,7 +2253,7 @@ size_t wxVariant::GetCount() const
 
     if (GetType() == wxT("list"))
     {
-        wxVariantDataList* data = (wxVariantDataList*) m_data;
+        wxVariantDataList* data = (wxVariantDataList*) m_refData;
         return data->GetValue().GetCount();
     }
     return 0;
@@ -1732,14 +2266,32 @@ size_t wxVariant::GetCount() const
 bool wxVariant::Convert(long* value) const
 {
     wxString type(GetType());
-    if (type == wxT("double"))
+    if (type == wxS("double"))
         *value = (long) (((wxVariantDoubleData*)GetData())->GetValue());
-    else if (type == wxT("long"))
+    else if (type == wxS("long"))
         *value = ((wxVariantDataLong*)GetData())->GetValue();
-    else if (type == wxT("bool"))
+    else if (type == wxS("bool"))
         *value = (long) (((wxVariantDataBool*)GetData())->GetValue());
-    else if (type == wxT("string"))
+    else if (type == wxS("string"))
         *value = wxAtol(((wxVariantDataString*)GetData())->GetValue());
+#if wxUSE_LONGLONG
+    else if (type == wxS("longlong"))
+    {
+        wxLongLong v = ((wxVariantDataLongLong*)GetData())->GetValue();
+        // Don't convert if return value would be vague
+        if ( v < LONG_MIN || v > LONG_MAX )
+            return false;
+        *value = v.ToLong();
+    }
+    else if (type == wxS("ulonglong"))
+    {
+        wxULongLong v = ((wxVariantDataULongLong*)GetData())->GetValue();
+        // Don't convert if return value would be vague
+        if ( v.GetHi() )
+            return false;
+        *value = (long) v.ToULong();
+    }
+#endif
     else
         return false;
 
@@ -1783,6 +2335,16 @@ bool wxVariant::Convert(double* value) const
         *value = (double) (((wxVariantDataBool*)GetData())->GetValue());
     else if (type == wxT("string"))
         *value = (double) wxAtof(((wxVariantDataString*)GetData())->GetValue());
+#if wxUSE_LONGLONG
+    else if (type == wxS("longlong"))
+    {
+        *value = ((wxVariantDataLongLong*)GetData())->GetValue().ToDouble();
+    }
+    else if (type == wxS("ulonglong"))
+    {
+        *value = ((wxVariantDataULongLong*)GetData())->GetValue().ToDouble();
+    }
+#endif
     else
         return false;
 
@@ -1827,6 +2389,91 @@ bool wxVariant::Convert(wxString* value) const
     *value = MakeString();
     return true;
 }
+
+#if wxUSE_LONGLONG
+bool wxVariant::Convert(wxLongLong* value) const
+{
+    wxString type(GetType());
+    if (type == wxS("longlong"))
+        *value = ((wxVariantDataLongLong*)GetData())->GetValue();
+    else if (type == wxS("long"))
+        *value = ((wxVariantDataLong*)GetData())->GetValue();
+    else if (type == wxS("string"))
+    {
+        wxString s = ((wxVariantDataString*)GetData())->GetValue();
+#ifdef wxLongLong_t
+        wxLongLong_t value_t;
+        if ( !s.ToLongLong(&value_t) )
+            return false;
+        *value = value_t;
+#else
+        long l_value;
+        if ( !s.ToLong(&l_value) )
+            return false;
+        *value = l_value;
+#endif
+    }
+    else if (type == wxS("bool"))
+        *value = (long) (((wxVariantDataBool*)GetData())->GetValue());
+    else if (type == wxS("double"))
+    {
+        value->Assign(((wxVariantDoubleData*)GetData())->GetValue());
+    }
+    else if (type == wxS("ulonglong"))
+        *value = ((wxVariantDataULongLong*)GetData())->GetValue();
+    else
+        return false;
+
+    return true;
+}
+
+bool wxVariant::Convert(wxULongLong* value) const
+{
+    wxString type(GetType());
+    if (type == wxS("ulonglong"))
+        *value = ((wxVariantDataULongLong*)GetData())->GetValue();
+    else if (type == wxS("long"))
+        *value = ((wxVariantDataLong*)GetData())->GetValue();
+    else if (type == wxS("string"))
+    {
+        wxString s = ((wxVariantDataString*)GetData())->GetValue();
+#ifdef wxLongLong_t
+        wxULongLong_t value_t;
+        if ( !s.ToULongLong(&value_t) )
+            return false;
+        *value = value_t;
+#else
+        unsigned long l_value;
+        if ( !s.ToULong(&l_value) )
+            return false;
+        *value = l_value;
+#endif
+    }
+    else if (type == wxS("bool"))
+        *value = (long) (((wxVariantDataBool*)GetData())->GetValue());
+    else if (type == wxS("double"))
+    {
+        double value_d = ((wxVariantDoubleData*)GetData())->GetValue();
+
+        if ( value_d < 0.0 )
+            return false;
+
+#ifdef wxLongLong_t
+        *value = (wxULongLong_t) value_d;
+#else
+        wxLongLong temp;
+        temp.Assign(value_d);
+        *value = temp;
+#endif
+    }
+    else if (type == wxS("longlong"))
+        *value = ((wxVariantDataLongLong*)GetData())->GetValue();
+    else
+        return false;
+
+    return true;
+}
+#endif // wxUSE_LONGLONG
 
 #if wxUSE_DATETIME
 bool wxVariant::Convert(wxDateTime* value) const

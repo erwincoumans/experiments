@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: utils.cpp 58974 2009-02-17 18:46:24Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -194,45 +194,6 @@ void wxClientDisplayRect(int *x, int *y, int *width, int *height)
 }
 
 #endif // wxUSE_GUI
-
-#if wxUSE_BASE
-// ----------------------------------------------------------------------------
-// Common Event Support
-// ----------------------------------------------------------------------------
-
-void wxMacWakeUp()
-{
-    OSStatus err = noErr;
-
-#if wxOSX_USE_CARBON
-#if 0
-    // lead sometimes to race conditions, although all calls used should be thread safe ...
-    static wxMacCarbonEvent s_wakeupEvent;
-    if ( !s_wakeupEvent.IsValid() )
-    {
-       err = s_wakeupEvent.Create( 'WXMC', 'WXMC', GetCurrentEventTime(),
-                    kEventAttributeNone );
-    }
-    if ( err == noErr )
-    {
-
-        if ( IsEventInQueue( GetMainEventQueue() , s_wakeupEvent ) )
-            return;
-        s_wakeupEvent.SetCurrentTime();
-        err = PostEventToQueue(GetMainEventQueue(), s_wakeupEvent,
-                              kEventPriorityHigh );
-    }
-#else
-    wxMacCarbonEvent wakeupEvent;
-    wakeupEvent.Create( 'WXMC', 'WXMC', GetCurrentEventTime(),
-                        kEventAttributeNone );
-    err = PostEventToQueue(GetMainEventQueue(), wakeupEvent,
-                           kEventPriorityHigh );
-#endif
-#endif
-}
-
-#endif // wxUSE_BASE
 
 #if wxUSE_GUI
 
@@ -624,6 +585,11 @@ OSStatus wxMacDataBrowserControl::SetDisclosureColumn( DataBrowserPropertyID pro
     return SetDataBrowserListViewDisclosureColumn( m_controlRef, property, expandableRows);
 }
 
+OSStatus wxMacDataBrowserControl::GetItemPartBounds( DataBrowserItemID item, DataBrowserPropertyID property, DataBrowserPropertyPart part, Rect * bounds )
+{
+    return GetDataBrowserItemPartBounds( m_controlRef, item, property, part, bounds);
+}
+
 // ============================================================================
 // Higher-level Databrowser
 // ============================================================================
@@ -756,13 +722,7 @@ Boolean wxMacDataItemBrowserControl::CompareItems(DataBrowserItemID itemOneID,
 {
     wxMacDataItem* itemOne = (wxMacDataItem*) itemOneID;
     wxMacDataItem* itemTwo = (wxMacDataItem*) itemTwoID;
-    return CompareItems( itemOne , itemTwo , sortProperty );
-}
 
-Boolean wxMacDataItemBrowserControl::CompareItems(const wxMacDataItem*  itemOne,
-    const wxMacDataItem*  itemTwo,
-    DataBrowserPropertyID sortProperty)
-{
     Boolean retval = false;
     if ( itemOne != NULL )
         retval = itemOne->IsLessThan( this , itemTwo , sortProperty);
@@ -776,15 +736,6 @@ OSStatus wxMacDataItemBrowserControl::GetSetItemData(
     Boolean changeValue )
 {
     wxMacDataItem* item = (wxMacDataItem*) itemID;
-    return GetSetItemData(item, property, itemData , changeValue );
-}
-
-OSStatus wxMacDataItemBrowserControl::GetSetItemData(
-    wxMacDataItem* item,
-    DataBrowserPropertyID property,
-    DataBrowserItemDataRef itemData,
-    Boolean changeValue )
-{
     OSStatus err = errDataBrowserPropertyNotSupported;
     switch( property )
     {
@@ -810,14 +761,6 @@ void wxMacDataItemBrowserControl::ItemNotification(
     DataBrowserItemDataRef itemData)
 {
     wxMacDataItem* item = (wxMacDataItem*) itemID;
-    ItemNotification( item , message, itemData);
-}
-
-void wxMacDataItemBrowserControl::ItemNotification(
-    const wxMacDataItem* item,
-    DataBrowserItemNotification message,
-    DataBrowserItemDataRef itemData)
-{
     if (item != NULL)
         item->Notification( this, message, itemData);
 }
@@ -994,6 +937,7 @@ void wxMacDataItemBrowserControl::RemoveItems(wxMacDataItem *container, wxArrayM
 
 void wxMacDataItemBrowserControl::RemoveAllItems(wxMacDataItem *container)
 {
+    SetScrollPosition(0, 0);
     OSStatus err = wxMacDataBrowserControl::RemoveItems( (DataBrowserItemID)container, 0 , NULL , kDataBrowserItemNoProperty );
     verify_noerr( err );
 }
@@ -1053,7 +997,7 @@ void wxMacDataItemBrowserControl::MacInsert( unsigned int n, wxMacDataItem* item
 {
     if ( m_sortOrder == SortOrder_None )
     {
-        
+
         // increase the order of the lines to be shifted
         unsigned int lines = MacGetCount();
         for ( unsigned int i = n; i < lines; ++i)
@@ -1061,7 +1005,7 @@ void wxMacDataItemBrowserControl::MacInsert( unsigned int n, wxMacDataItem* item
             wxMacDataItem* iter = (wxMacDataItem*) GetItemFromLine(i);
             iter->SetOrder( iter->GetOrder() + 1 );
         }
-     
+
 #if 0
         // I don't understand what this code is supposed to do, RR.
         SInt32 frontLineOrder = 0;
@@ -1070,7 +1014,7 @@ void wxMacDataItemBrowserControl::MacInsert( unsigned int n, wxMacDataItem* item
             wxMacDataItem* iter = (wxMacDataItem*) GetItemFromLine(n-1);
             frontLineOrder = iter->GetOrder()+1;
         }
-#else   
+#else
         item->SetOrder( n );
 #endif
     }

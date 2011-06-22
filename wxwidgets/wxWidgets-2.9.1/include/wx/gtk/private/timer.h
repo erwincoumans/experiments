@@ -2,7 +2,7 @@
 // Name:        wx/private/gtk/timer.h
 // Purpose:     wxTimerImpl for wxGTK
 // Author:      Robert Roebling
-// Id:          $Id: timer.h 47323 2007-07-11 00:00:33Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

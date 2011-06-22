@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: filefn.cpp 59868 2009-03-26 15:55:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -131,7 +131,7 @@ const int wxInvalidOffset = -1;
 // regardless of the mode parameter. This hack works around the problem by
 // setting the mode with _wchmod.
 //
-int wxCRT_Open(const wchar_t *pathname, int flags, mode_t mode)
+int wxCRT_OpenW(const wchar_t *pathname, int flags, mode_t mode)
 {
     int moreflags = 0;
 
@@ -309,30 +309,7 @@ static inline CharType* MYcopystring(const CharType* s)
 bool
 wxFileExists (const wxString& filename)
 {
-#if defined(__WXPALMOS__)
-    return false;
-#elif defined(__WIN32__) && !defined(__WXMICROWIN__)
-    // we must use GetFileAttributes() instead of the ANSI C functions because
-    // it can cope with network (UNC) paths unlike them
-    DWORD ret = ::GetFileAttributes(filename.fn_str());
-
-    return (ret != INVALID_FILE_ATTRIBUTES) && !(ret & FILE_ATTRIBUTE_DIRECTORY);
-#else // !__WIN32__
-    #ifndef S_ISREG
-        #define S_ISREG(mode) ((mode) & S_IFREG)
-    #endif
-    wxStructStat st;
-#ifndef wxNEED_WX_UNISTD_H
-    return (wxStat( filename.fn_str() , &st) == 0 && S_ISREG(st.st_mode))
-#ifdef __OS2__
-      || (errno == EACCES) // if access is denied something with that name
-                            // exists and is opened in exclusive mode.
-#endif
-      ;
-#else
-    return wxStat( filename , &st) == 0 && S_ISREG(st.st_mode);
-#endif
-#endif // __WIN32__/!__WIN32__
+    return wxFileName::FileExists(filename);
 }
 
 bool
@@ -955,8 +932,8 @@ static void wxDoDos2UnixFilename(T *s)
   if (s)
     while (*s)
       {
-        if (*s == _T('\\'))
-          *s = _T('/');
+        if (*s == wxT('\\'))
+          *s = wxT('/');
 #ifdef __WXMSW__
         else
           *s = wxTolower(*s);        // Case INDEPENDENT
@@ -1102,7 +1079,7 @@ wxCopyFile (const wxString& file1, const wxString& file2, bool overwrite)
 
     wxStructStat fbuf;
     // get permissions of file1
-    if ( wxStat( file1.c_str(), &fbuf) != 0 )
+    if ( wxStat( file1, &fbuf) != 0 )
     {
         // the file probably doesn't exist or we haven't the rights to read
         // from it anyhow
@@ -1279,7 +1256,7 @@ bool wxMkdir(const wxString& dir, int perm)
 #else  // !MSW, !DOS and !OS/2 VAC++
     wxUnusedVar(perm);
   #ifdef __WXWINCE__
-    if ( CreateDirectory(dir, NULL) == 0 )
+    if ( CreateDirectory(dir.fn_str(), NULL) == 0 )
   #else
     if ( wxMkDir(dir.fn_str()) != 0 )
   #endif
@@ -1304,7 +1281,7 @@ bool wxRmdir(const wxString& dir, int WXUNUSED(flags))
   #if defined(__OS2__)
     if ( ::DosDeleteDir(dir.c_str()) != 0 )
   #elif defined(__WXWINCE__)
-    if ( RemoveDirectory(dir) == 0 )
+    if ( RemoveDirectory(dir.fn_str()) == 0 )
   #else
     if ( wxRmDir(dir.fn_str()) != 0 )
   #endif
@@ -1320,54 +1297,7 @@ bool wxRmdir(const wxString& dir, int WXUNUSED(flags))
 // does the path exists? (may have or not '/' or '\\' at the end)
 bool wxDirExists(const wxString& pathName)
 {
-    wxString strPath(pathName);
-
-#if defined(__WINDOWS__) || defined(__OS2__)
-    // Windows fails to find directory named "c:\dir\" even if "c:\dir" exists,
-    // so remove all trailing backslashes from the path - but don't do this for
-    // the paths "d:\" (which are different from "d:") nor for just "\"
-    while ( wxEndsWithPathSeparator(strPath) )
-    {
-        size_t len = strPath.length();
-        if ( len == 1 || (len == 3 && strPath[len - 2] == _T(':')) )
-            break;
-
-        strPath.Truncate(len - 1);
-    }
-#endif // __WINDOWS__
-
-#ifdef __OS2__
-    // OS/2 can't handle "d:", it wants either "d:\" or "d:."
-    if (strPath.length() == 2 && strPath[1u] == _T(':'))
-        strPath << _T('.');
-#endif
-
-#if defined(__WXPALMOS__)
-    return false;
-#elif defined(__WIN32__) && !defined(__WXMICROWIN__)
-    // stat() can't cope with network paths
-    DWORD ret = ::GetFileAttributes(strPath.fn_str());
-
-    return (ret != INVALID_FILE_ATTRIBUTES) && (ret & FILE_ATTRIBUTE_DIRECTORY);
-#elif defined(__OS2__)
-    FILESTATUS3 Info = {{0}};
-    APIRET rc = ::DosQueryPathInfo((PSZ)(WXSTRINGCAST strPath), FIL_STANDARD,
-                                   (void*) &Info, sizeof(FILESTATUS3));
-
-    return ((rc == NO_ERROR) && (Info.attrFile & FILE_DIRECTORY)) ||
-      (rc == ERROR_SHARING_VIOLATION);
-    // If we got a sharing violation, there must be something with this name.
-#else // !__WIN32__
-
-    wxStructStat st;
-#ifndef __VISAGECPP__
-    return wxStat(strPath.c_str(), &st) == 0 && ((st.st_mode & S_IFMT) == S_IFDIR);
-#else
-    // S_IFMT not supported in VA compilers.. st_mode is a 2byte value only
-    return wxStat(strPath.c_str(), &st) == 0 && (st.st_mode == S_IFDIR);
-#endif
-
-#endif // __WIN32__/!__WIN32__
+    return wxFileName::DirExists(pathName);
 }
 
 #if WXWIN_COMPATIBILITY_2_8
@@ -1477,11 +1407,11 @@ wxChar *wxDoGetCwd(wxChar *buf, int sz)
 {
 #if defined(__WXPALMOS__)
     // TODO
-    if(buf && sz>0) buf[0] = _T('\0');
+    if(buf && sz>0) buf[0] = wxT('\0');
     return buf;
 #elif defined(__WXWINCE__)
     // TODO
-    if(buf && sz>0) buf[0] = _T('\0');
+    if(buf && sz>0) buf[0] = wxT('\0');
     return buf;
 #else
     if ( !buf )
@@ -1555,7 +1485,7 @@ wxChar *wxDoGetCwd(wxChar *buf, int sz)
         //     sense at all to me - empty string is a better error indicator
         //     (NULL might be even better but I'm afraid this could lead to
         //     problems with the old code assuming the return is never NULL)
-        buf[0] = _T('\0');
+        buf[0] = wxT('\0');
     }
     else // ok, but we might need to massage the path into the right format
     {
@@ -1613,7 +1543,7 @@ bool wxSetWorkingDirectory(const wxString& d)
 #if defined(__OS2__)
     if (d[1] == ':')
     {
-        ::DosSetDefaultDisk(wxToupper(d[0]) - _T('A') + 1);
+        ::DosSetDefaultDisk(wxToupper(d[0]) - wxT('A') + 1);
     // do not call DosSetCurrentDir when just changing drive,
     // since it requires e.g. "d:." instead of "d:"!
     if (d.length() == 2)
@@ -1670,7 +1600,7 @@ wxString wxGetOSDirectory()
     GetWindowsDirectory(buf, 256);
     return wxString(buf);
 #elif defined(__WXMAC__) && wxOSX_USE_CARBON
-    return wxMacFindFolder(kOnSystemDisk, 'macs', false);
+    return wxMacFindFolderNoSeparator(kOnSystemDisk, 'macs', false);
 #else
     return wxEmptyString;
 #endif
@@ -1686,7 +1616,7 @@ bool wxFindFileInPath(wxString *pStr, const wxString& szPath, const wxString& sz
 {
     // we assume that it's not empty
     wxCHECK_MSG( !szFile.empty(), false,
-                 _T("empty file name in wxFindFileInPath"));
+                 wxT("empty file name in wxFindFileInPath"));
 
     // skip path separator in the beginning of the file name if present
     wxString szFile2;
@@ -1767,7 +1697,7 @@ int WXDLLIMPEXP_BASE wxParseCommonDialogsFilter(const wxString& filterStr,
             }
             else
             {
-                wxFAIL_MSG( _T("missing '|' in the wildcard string!") );
+                wxFAIL_MSG( wxT("missing '|' in the wildcard string!") );
             }
 
             break;
@@ -1818,13 +1748,13 @@ int WXDLLIMPEXP_BASE wxParseCommonDialogsFilter(const wxString& filterStr,
                 {
                     wxString before = descriptions[k].Left(pos);
                     wxString after = descriptions[k].Mid(pos+filters[k].Len());
-                    pos = before.Find(_T('('),true);
-                    if (pos>before.Find(_T(')'),true))
+                    pos = before.Find(wxT('('),true);
+                    if (pos>before.Find(wxT(')'),true))
                     {
                         before = before.Left(pos+1);
                         before << filters[k];
-                        pos = after.Find(_T(')'));
-                        int pos1 = after.Find(_T('('));
+                        pos = after.Find(wxT(')'));
+                        int pos1 = after.Find(wxT('('));
                         if (pos != wxNOT_FOUND && (pos<pos1 || pos1==wxNOT_FOUND))
                         {
                             before << after.Mid(pos);

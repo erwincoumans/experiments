@@ -1,4 +1,4 @@
-/* "$Id: mkg3states.c 48894 2007-09-21 19:56:41Z VZ $ */
+/* "$Id$ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler

@@ -3,7 +3,7 @@
 // Purpose:     Various utilities
 // Author:      David Elliott
 // Created:     2003/??/??
-// RCS-ID:      $Id: utils.mm 57934 2009-01-09 10:36:59Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets dev team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

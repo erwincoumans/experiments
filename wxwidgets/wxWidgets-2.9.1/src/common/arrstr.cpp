@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: arrstr.cpp 59535 2009-03-14 18:41:18Z SN $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -343,6 +343,14 @@ wxArrayString::insert(iterator it, const_iterator first, const_iterator last)
 
         ++first;
     }
+}
+
+void wxArrayString::resize(size_type n, value_type v)
+{
+  if ( n < m_nCount )
+      m_nCount = n;
+  else if ( n > m_nCount )
+      Add(v, n - m_nCount);
 }
 
 // expand the array

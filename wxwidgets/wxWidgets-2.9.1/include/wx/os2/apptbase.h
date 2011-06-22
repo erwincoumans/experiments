@@ -4,7 +4,7 @@
 // Author:      Stefan Neis
 // Modified by:
 // Created:     22.09.2003
-// RCS-ID:      $Id: apptbase.h 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Stefan Neis <Stefan.Neis@t-online.de>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

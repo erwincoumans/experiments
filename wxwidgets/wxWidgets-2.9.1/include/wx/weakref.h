@@ -3,7 +3,7 @@
 // Purpose:     wxWeakRef - Generic weak references for wxWidgets
 // Author:      Arne Steinarson
 // Created:     27 Dec 07
-// RCS-ID:      $Id: weakref.h 59001 2009-02-18 18:02:53Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Arne Steinarson
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -149,7 +149,7 @@ protected:
         DoAssign( pobj, ptbase );
     }
 
-#ifdef HAVE_DYNAMIC_CAST
+#ifndef wxNO_RTTI
     void AssignHelper(T* pobj, wxInt2Type<false>)
     {
         // A last way to get a trackable pointer
@@ -165,7 +165,7 @@ protected:
             Release();
         }
     }
-#endif // HAVE_DYNAMIC_CAST
+#endif // RTTI enabled
 
     void AssignCopy(const wxWeakRefImpl& wr)
     {
@@ -206,8 +206,21 @@ class wxWeakRef : public
 #endif
 {
 public:
+    typedef T element_type;
+
     // Default ctor
     wxWeakRef() { }
+
+    // Enabling this ctor for VC6 results in mysterious compilation failures in
+    // wx/window.h when assigning wxWindow pointers (FIXME-VC6)
+#ifndef __VISUALC6__
+    // Ctor from the object of this type: this is needed as the template ctor
+    // below is not used by at least g++4 when a literal NULL is used
+    wxWeakRef(T *pobj)
+    {
+        Assign(pobj);
+    }
+#endif // !__VISUALC6__
 
     // When we have the full type here, static_cast<> will always work
     // (or give a straight compiler error).
@@ -222,13 +235,6 @@ public:
     wxWeakRef(const wxWeakRef<T>& wr)
     {
         Assign(wr.get());
-    }
-
-    template <class TDerived>
-    wxWeakRef<T>& operator=(TDerived* pobj)
-    {
-        this->Assign(pobj);
-        return *this;
     }
 
     wxWeakRef<T>& operator=(const wxWeakRef<T>& wr)
@@ -248,7 +254,7 @@ public:
 };
 
 
-#ifdef HAVE_DYNAMIC_CAST
+#ifndef wxNO_RTTI
 
 // Weak ref implementation assign objects are queried for wxTrackable
 // using dynamic_cast<>
@@ -332,7 +338,7 @@ protected:
     T *m_pobj;
 };
 
-#endif // #ifdef HAVE_DYNAMIC_CAST
+#endif // RTTI enabled
 
 
 // Provide some basic types of weak references

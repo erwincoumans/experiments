@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: dirdlg.cpp 55419 2008-09-02 16:53:23Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -88,7 +88,9 @@ int wxDirDialog::ShowModal()
         err = NavCreateChooseFolderDialog(&options, sStandardNavEventFilter , NULL,  this , &dialog);
         if (err == noErr)
         {
+            wxDialog::OSXBeginModalDialog();
             err = NavDialogRun(dialog);
+            wxDialog::OSXEndModalDialog();
             if ( err == noErr )
             {
                 err = NavDialogGetReply(dialog, &reply);
@@ -132,8 +134,8 @@ int wxDirDialog::ShowModal()
     if ( err != noErr && err != userCanceledErr )
         m_path = wxEmptyString ;
 
-	if ( dialog )
-    	::NavDialogDispose(dialog);
+    if ( dialog )
+        ::NavDialogDispose(dialog);
 
     return (err == noErr) ? wxID_OK : wxID_CANCEL ;
 }

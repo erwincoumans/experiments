@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: file.cpp 55726 2008-09-19 08:11:44Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -312,7 +312,12 @@ bool wxFile::Write(const wxString& s, const wxMBConv& conv)
   if ( !buf )
       return false;
 
-  const size_t size = strlen(buf); // FIXME: use buf.length() when available
+#if wxUSE_UNICODE
+  const size_t size = buf.length();
+#else
+  const size_t size = s.length();
+#endif
+
   return Write(buf, size) == size;
 }
 
@@ -342,15 +347,15 @@ bool wxFile::Flush()
 // seek
 wxFileOffset wxFile::Seek(wxFileOffset ofs, wxSeekMode mode)
 {
-    wxASSERT_MSG( IsOpened(), _T("can't seek on closed file") );
+    wxASSERT_MSG( IsOpened(), wxT("can't seek on closed file") );
     wxCHECK_MSG( ofs != wxInvalidOffset || mode != wxFromStart,
                  wxInvalidOffset,
-                 _T("invalid absolute file offset") );
+                 wxT("invalid absolute file offset") );
 
     int origin;
     switch ( mode ) {
         default:
-            wxFAIL_MSG(_T("unknown seek origin"));
+            wxFAIL_MSG(wxT("unknown seek origin"));
 
         case wxFromStart:
             origin = SEEK_SET;
@@ -450,14 +455,17 @@ bool wxFile::Eof() const
     iRc = wxEof(m_fd);
 #endif // Windows/Unix
 
-    if ( iRc == 1)
-        {}
-    else if ( iRc == 0 )
+    if ( iRc == 0 )
         return false;
-    else if ( iRc == wxInvalidOffset )
+
+    if ( iRc == wxInvalidOffset )
+    {
         wxLogSysError(_("can't determine if the end of file is reached on descriptor %d"), m_fd);
-    else
-        wxFAIL_MSG(_T("invalid eof() return value."));
+    }
+    else if ( iRc != 1 )
+    {
+        wxFAIL_MSG(wxT("invalid eof() return value."));
+    }
 
     return true;
 }
@@ -560,7 +568,9 @@ void wxTempFile::Discard()
 {
     m_file.Close();
     if ( wxRemove(m_strTemp) != 0 )
+    {
         wxLogSysError(_("can't remove temporary file '%s'"), m_strTemp.c_str());
+    }
 }
 
 #endif // wxUSE_FILE

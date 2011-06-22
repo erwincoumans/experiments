@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: listbox.h 53743 2008-05-25 20:54:30Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ class WXDLLIMPEXP_CORE wxListBox : public wxListBoxBase
 {
 public:
     // ctors and such
-    wxListBox();
+    wxListBox() { Init(); }
     wxListBox(wxWindow *parent, wxWindowID id,
             const wxPoint& pos = wxDefaultPosition,
             const wxSize& size = wxDefaultSize,
@@ -47,6 +47,8 @@ public:
             const wxValidator& validator = wxDefaultValidator,
             const wxString& name = wxListBoxNameStr)
     {
+        Init();
+
         Create(parent, id, pos, size, n, choices, style, validator, name);
     }
     wxListBox(wxWindow *parent, wxWindowID id,
@@ -57,6 +59,8 @@ public:
             const wxValidator& validator = wxDefaultValidator,
             const wxString& name = wxListBoxNameStr)
     {
+        Init();
+
         Create(parent, id, pos, size, choices, style, validator, name);
     }
 
@@ -86,8 +90,15 @@ public:
     virtual int GetSelection() const;
     virtual int GetSelections(wxArrayInt& aSelections) const;
 
-    // wxCheckListBox support
+    // return the index of the item at this position or wxNOT_FOUND
+    int HitTest(const wxPoint& pt) const { return DoHitTestList(pt); }
+    int HitTest(wxCoord x, wxCoord y) const { return DoHitTestList(wxPoint(x, y)); }
+
+    // ownerdrawn wxListBox and wxCheckListBox support
 #if wxUSE_OWNER_DRAWN
+    // override base class virtuals
+    virtual bool SetFont(const wxFont &font);
+
     bool MSWOnMeasure(WXMEASUREITEMSTRUCT *item);
     bool MSWOnDraw(WXDRAWITEMSTRUCT *item);
 
@@ -99,6 +110,12 @@ public:
 
     // get the index of the given item
     int GetItemIndex(wxOwnerDrawn *item) const { return m_aItems.Index(item); }
+
+    // get rect of the given item index
+    bool GetItemRect(size_t n, wxRect& rect) const;
+
+    // redraw the given item
+    bool RefreshItem(size_t n);
 #endif // wxUSE_OWNER_DRAWN
 
     // Windows-specific code to update the horizontal extent of the listbox, if
@@ -132,7 +149,13 @@ public:
     // returns true if the platform should explicitly apply a theme border
     virtual bool CanApplyThemeBorder() const { return false; }
 
+    virtual void OnInternalIdle();
+
+    virtual WXLRESULT MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam);
+
 protected:
+    virtual wxSize DoGetBestClientSize() const;
+
     virtual void DoClear();
     virtual void DoDeleteOneItem(unsigned int n);
 
@@ -145,17 +168,14 @@ protected:
     virtual void DoSetFirstItem(int n);
     virtual void DoSetItemClientData(unsigned int n, void* clientData);
     virtual void* DoGetItemClientData(unsigned int n) const;
-    virtual int DoListHitTest(const wxPoint& point) const;
 
-    bool m_updateHorizontalExtent;
-    virtual void OnInternalIdle();
+    // this can't be called DoHitTest() because wxWindow already has this method
+    virtual int DoHitTestList(const wxPoint& point) const;
 
     // free memory (common part of Clear() and dtor)
     void Free();
 
     unsigned int m_noItems;
-
-    virtual wxSize DoGetBestSize() const;
 
 #if wxUSE_OWNER_DRAWN
     // control items
@@ -163,6 +183,22 @@ protected:
 #endif
 
 private:
+    // common part of all ctors
+    void Init();
+
+    // call this when items are added to or deleted from the listbox or an
+    // items text changes
+    void MSWOnItemsChanged();
+
+    // flag indicating whether the max horizontal extent should be updated,
+    // i.e. if we need to call SetHorizontalExtent() from OnInternalIdle()
+    bool m_updateHorizontalExtent;
+
+    // flag set to true when we get a keyboard event and reset to false when we
+    // get a mouse one: this is used to find the correct item for the selection
+    // event
+    bool m_selectedByKeyboard;
+
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxListBox)
 };
 

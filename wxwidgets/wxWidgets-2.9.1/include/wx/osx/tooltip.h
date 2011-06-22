@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/tooltip.h
+// Name:        wx/osx/tooltip.h
 // Purpose:     wxToolTip class - tooltip control
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     31.01.99
-// RCS-ID:      $Id: tooltip.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Robert Roebling, Vadim Zeitlin, Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

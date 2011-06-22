@@ -2,7 +2,7 @@
 // Name:        wx/gtk/listbox.h
 // Purpose:     wxListBox class declaration
 // Author:      Robert Roebling
-// Id:          $Id: listbox.h 58876 2009-02-13 10:10:36Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -95,10 +95,10 @@ public:
     bool       m_hasCheckBoxes;
 #endif // wxUSE_CHECKLISTBOX
 
-    struct _GtkTreeEntry* GtkGetEntry(unsigned pos) const;
+    struct _GtkTreeEntry* GTKGetEntry(unsigned pos) const;
 
-    void GtkDisableEvents();
-    void GtkEnableEvents();
+    void GTKDisableEvents();
+    void GTKEnableEvents();
 
 protected:
     virtual void DoClear();
@@ -119,13 +119,13 @@ protected:
     virtual int DoListHitTest(const wxPoint& point) const;
 
     // get the iterator for the given index, returns false if invalid
-    bool GtkGetIteratorFor(unsigned pos, _GtkTreeIter *iter) const;
+    bool GTKGetIteratorFor(unsigned pos, _GtkTreeIter *iter) const;
 
     // get the index for the given iterator, return wxNOT_FOUND on failure
-    int GtkGetIndexFor(_GtkTreeIter& iter) const;
+    int GTKGetIndexFor(_GtkTreeIter& iter) const;
 
     // set the specified item
-    void GtkSetItem(_GtkTreeIter& iter, const _GtkTreeEntry *entry);
+    void GTKSetItem(_GtkTreeIter& iter, const _GtkTreeEntry *entry);
 
     // common part of DoSetFirstItem() and EnsureVisible()
     void DoScrollToCell(int n, float alignY, float alignX);

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcmemory.cpp 54962 2008-08-03 17:34:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -58,8 +58,7 @@ wxMemoryDCImpl::~wxMemoryDCImpl()
     if ( m_selected.Ok() )
     {
         m_selected.EndRawAccess() ;
-        delete m_graphicContext ;
-        m_graphicContext = NULL ;
+        wxDELETE(m_graphicContext);
     }
 }
 
@@ -68,8 +67,7 @@ void wxMemoryDCImpl::DoSelect( const wxBitmap& bitmap )
     if ( m_selected.Ok() )
     {
         m_selected.EndRawAccess() ;
-        delete m_graphicContext ;
-        m_graphicContext = NULL ;
+        wxDELETE(m_graphicContext);
     }
 
     m_selected = bitmap;
@@ -78,8 +76,8 @@ void wxMemoryDCImpl::DoSelect( const wxBitmap& bitmap )
         if ( m_selected.GetDepth() != 1 )
             m_selected.UseAlpha() ;
         m_selected.BeginRawAccess() ;
-		m_width = bitmap.GetWidth();
-		m_height = bitmap.GetHeight();
+        m_width = bitmap.GetWidth();
+        m_height = bitmap.GetHeight();
         CGColorSpaceRef genericColorSpace  = wxMacGetGenericRGBColorSpace();
         CGContextRef bmCtx = (CGContextRef) m_selected.GetHBITMAP();
 
@@ -87,7 +85,7 @@ void wxMemoryDCImpl::DoSelect( const wxBitmap& bitmap )
         {
             CGContextSetFillColorSpace( bmCtx, genericColorSpace );
             CGContextSetStrokeColorSpace( bmCtx, genericColorSpace );
-			SetGraphicsContext( wxGraphicsContext::CreateFromNative( bmCtx ) );
+            SetGraphicsContext( wxGraphicsContext::CreateFromNative( bmCtx ) );
         }
         m_ok = (m_graphicContext != NULL) ;
     }

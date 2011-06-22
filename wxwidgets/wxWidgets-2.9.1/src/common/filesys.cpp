@@ -3,7 +3,7 @@
 // Purpose:     wxFileSystem class - interface for opening files
 // Author:      Vaclav Slavik
 // Copyright:   (c) 1999 Vaclav Slavik
-// CVS-ID:      $Id: filesys.cpp 59510 2009-03-13 15:04:05Z VS $
+// CVS-ID:      $Id$
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -89,54 +89,54 @@ wxString wxFileSystemHandler::GetMimeTypeFromExt(const wxString& location)
         {
             static const wxFileTypeInfo fallbacks[] =
             {
-                wxFileTypeInfo(_T("image/jpeg"),
+                wxFileTypeInfo(wxT("image/jpeg"),
                     wxEmptyString,
                     wxEmptyString,
-                    _T("JPEG image (from fallback)"),
-                    _T("jpg"), _T("jpeg"), _T("JPG"), _T("JPEG"), wxNullPtr),
-                wxFileTypeInfo(_T("image/gif"),
+                    wxT("JPEG image (from fallback)"),
+                    wxT("jpg"), wxT("jpeg"), wxT("JPG"), wxT("JPEG"), wxNullPtr),
+                wxFileTypeInfo(wxT("image/gif"),
                     wxEmptyString,
                     wxEmptyString,
-                    _T("GIF image (from fallback)"),
-                    _T("gif"), _T("GIF"), wxNullPtr),
-                wxFileTypeInfo(_T("image/png"),
+                    wxT("GIF image (from fallback)"),
+                    wxT("gif"), wxT("GIF"), wxNullPtr),
+                wxFileTypeInfo(wxT("image/png"),
                     wxEmptyString,
                     wxEmptyString,
-                    _T("PNG image (from fallback)"),
-                    _T("png"), _T("PNG"), wxNullPtr),
-                wxFileTypeInfo(_T("image/bmp"),
+                    wxT("PNG image (from fallback)"),
+                    wxT("png"), wxT("PNG"), wxNullPtr),
+                wxFileTypeInfo(wxT("image/bmp"),
                     wxEmptyString,
                     wxEmptyString,
-                    _T("windows bitmap image (from fallback)"),
-                    _T("bmp"), _T("BMP"), wxNullPtr),
-                wxFileTypeInfo(_T("text/html"),
+                    wxT("windows bitmap image (from fallback)"),
+                    wxT("bmp"), wxT("BMP"), wxNullPtr),
+                wxFileTypeInfo(wxT("text/html"),
                     wxEmptyString,
                     wxEmptyString,
-                    _T("HTML document (from fallback)"),
-                    _T("htm"), _T("html"), _T("HTM"), _T("HTML"), wxNullPtr),
+                    wxT("HTML document (from fallback)"),
+                    wxT("htm"), wxT("html"), wxT("HTM"), wxT("HTML"), wxNullPtr),
                 // must terminate the table with this!
                 wxFileTypeInfo()
             };
             wxTheMimeTypesManager->AddFallbacks(fallbacks);
             s_MinimalMimeEnsured = true;
         }
-        
+
         wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
         if ( !ft || !ft -> GetMimeType(&mime) )
         {
             mime = wxEmptyString;
         }
-        
+
         delete ft;
-        
+
         return mime;
     }
     else
 #endif
     {
-        if ( ext.IsSameAs(wxT("htm"), false) || ext.IsSameAs(_T("html"), false) )
+        if ( ext.IsSameAs(wxT("htm"), false) || ext.IsSameAs(wxT("html"), false) )
             return wxT("text/html");
-        if ( ext.IsSameAs(wxT("jpg"), false) || ext.IsSameAs(_T("jpeg"), false) )
+        if ( ext.IsSameAs(wxT("jpg"), false) || ext.IsSameAs(wxT("jpeg"), false) )
             return wxT("image/jpeg");
         if ( ext.IsSameAs(wxT("gif"), false) )
             return wxT("image/gif");
@@ -543,7 +543,7 @@ bool wxFileSystem::FindFileInPath(wxString *pStr,
 {
     // we assume that it's not empty
     wxCHECK_MSG( !basename.empty(), false,
-                _T("empty file name in wxFileSystem::FindFileInPath"));
+                wxT("empty file name in wxFileSystem::FindFileInPath"));
 
     wxString name;
     // skip path separator in the beginning of the file name if present
@@ -656,6 +656,42 @@ wxFileName wxFileSystem::URLToFileName(const wxString& url)
     return wxFileName(path, wxPATH_NATIVE);
 }
 
+// Escapes non-ASCII and others characters in file: URL to be valid URLs
+static wxString EscapeFileNameCharsInURL(const char *in)
+{
+    wxString s;
+
+    for ( const unsigned char *p = (const unsigned char*)in; *p; ++p )
+    {
+        const unsigned char c = *p;
+
+        // notice that all colons *must* be encoded in the paths used by
+        // wxFileSystem even though this makes URLs produced by this method
+        // unusable with IE under Windows as it requires "file:///c:/foo.bar"
+        // and doesn't accept "file:///c%3a/foo.bar" -- but then we never made
+        // any guarantees about general suitability of the strings returned by
+        // this method, they must work with wxFileSystem only and not encoding
+        // the colon breaks handling of
+        // "http://wherever/whatever.zip#zip:filename.ext" URLs so we really
+        // can't do this without heavy changes to the parsing code here, in
+        // particular in GetRightLocation()
+
+        if ( c == '/' || c == '-' || c == '.' || c == '_' || c == '~' ||
+             (c >= '0' && c <= '9') ||
+             (c >= 'a' && c <= 'z') ||
+             (c >= 'A' && c <= 'Z') )
+        {
+            s << c;
+        }
+        else
+        {
+            s << wxString::Format("%%%02x", c);
+        }
+    }
+
+    return s;
+}
+
 // Returns the file URL for a native path
 wxString wxFileSystem::FileNameToURL(const wxFileName& filename)
 {
@@ -680,21 +716,10 @@ wxString wxFileSystem::FileNameToURL(const wxFileName& filename)
 #endif
 
     url.Replace(g_nativePathString, g_unixPathString);
-    url.Replace(wxT("%"), wxT("%25")); // '%'s must be replaced first!
-    url.Replace(wxT("#"), wxT("%23"));
 
-    // notice that all colons *must* be encoded in the paths used by
-    // wxFileSystem even though this makes URLs produced by this method
-    // unusable with IE under Windows as it requires "file:///c:/foo.bar" and
-    // doesn't accept "file:///c%3a/foo.bar" -- but then we never made any
-    // guarantees about general suitability of the strings returned by this
-    // method, they must work with wxFileSystem only and not encoding the colon
-    // breaks handling of "http://wherever/whatever.zip#zip:filename.ext" URLs
-    // so we really can't do this without heavy changes to the parsing code
-    // here, in particular in GetRightLocation()
-    url.Replace(wxT(":"), wxT("%3A"));
-    url = wxT("file:") + url;
-    return url;
+    // Do wxURI- and common practice-compatible escaping: encode the string
+    // into UTF-8, then escape anything non-ASCII:
+    return wxT("file:") + EscapeFileNameCharsInURL(url.utf8_str());
 }
 
 

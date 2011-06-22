@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2004-10-03
-// RCS-ID:      $Id: fontdlgosx.mm 61299 2009-07-03 07:16:53Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -191,17 +191,9 @@ int RunMixedFontDialog(wxFontDialog* dialog)
     else
         [[NSColorPanel sharedColorPanel] setColor:[NSColor blackColor]];
 #endif
-
-    NSModalSession session = [NSApp beginModalSessionForWindow:fontPanel];
-
-    for (;;) 
-    {
-        if ([NSApp runModalSession:session] != NSRunContinuesResponse)
-            break;
-    }
     
-    [NSApp endModalSession:session];
-
+    [NSApp runModalForWindow:fontPanel];
+    
     // if we don't reenable it, FPShowHideFontPanel does not work
     [[fontPanel standardWindowButton:NSWindowCloseButton] setEnabled:YES] ;
 #if wxOSX_USE_CARBON
@@ -216,20 +208,7 @@ int RunMixedFontDialog(wxFontDialog* dialog)
 #if wxOSX_USE_COCOA
         NSFont* theFont = [fontPanel panelConvertFont:[NSFont userFontOfSize:0]];
 
-        //Get more information about the user's chosen font
-        NSFontTraitMask theTraits = [[NSFontManager sharedFontManager] traitsOfFont:theFont];
-        int theFontWeight = [[NSFontManager sharedFontManager] weightOfFont:theFont];
-        int theFontSize = (int) [theFont pointSize];
-
-        wxFontFamily fontFamily = wxFONTFAMILY_DEFAULT;
-        //Set the wx font to the appropriate data
-        if(theTraits & NSFixedPitchFontMask)
-            fontFamily = wxFONTFAMILY_TELETYPE;
-
-        fontdata.m_chosenFont = wxFont( theFontSize, fontFamily,
-            theTraits & NSItalicFontMask ? wxFONTSTYLE_ITALIC : 0,
-            theFontWeight < 5 ? wxLIGHT : theFontWeight >= 9 ? wxBOLD : wxNORMAL,
-            false, wxStringWithNSString([theFont familyName]) );
+        fontdata.m_chosenFont = wxFont( theFont );
 
         //Get the shared color panel along with the chosen color and set the chosen color
         NSColor* theColor = [[[NSColorPanel sharedColorPanel] color] colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
@@ -474,6 +453,7 @@ int wxFontDialog::ShowModal()
     //  the color panel until the color panel closes, switching
     //  back to the font panel modal loop once it does close.
     //
+    wxDialog::OSXBeginModalDialog();
     do
     {
         //
@@ -512,7 +492,8 @@ int wxFontDialog::ShowModal()
         //out of its modal loop because the color panel was
         //opened) return the font panel modal loop
     }while([theFPDelegate isClosed] == NO);
-
+    wxDialog::OSXEndModalDialog();
+    
     //free up the memory for the delegates - we don't need them anymore
     [theFPDelegate release];
     [theCPDelegate release];

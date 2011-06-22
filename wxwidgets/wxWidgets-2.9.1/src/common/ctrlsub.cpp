@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.10.99
-// RCS-ID:      $Id: ctrlsub.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -109,7 +109,7 @@ void wxItemContainer::Clear()
 
 void wxItemContainer::Delete(unsigned int pos)
 {
-    wxCHECK_RET( pos < GetCount(), _T("invalid index") );
+    wxCHECK_RET( pos < GetCount(), wxT("invalid index") );
 
     if ( HasClientObjectData() )
         ResetItemClientObject(pos);
@@ -123,7 +123,7 @@ void wxItemContainer::Delete(unsigned int pos)
 }
 
 // ----------------------------------------------------------------------------
-// 
+//
 // ----------------------------------------------------------------------------
 
 int wxItemContainer::DoInsertItemsInLoop(const wxArrayStringsAdapter& items,
@@ -150,7 +150,7 @@ int
 wxItemContainer::DoInsertOneItem(const wxString& WXUNUSED(item),
                                  unsigned int WXUNUSED(pos))
 {
-    wxFAIL_MSG( _T("Must be overridden if DoInsertItemsInLoop() is used") );
+    wxFAIL_MSG( wxT("Must be overridden if DoInsertItemsInLoop() is used") );
 
     return wxNOT_FOUND;
 }
@@ -233,7 +233,7 @@ void wxItemContainer::AssignNewItemClientData(unsigned int pos,
             break;
 
         default:
-            wxFAIL_MSG( _T("unknown client data type") );
+            wxFAIL_MSG( wxT("unknown client data type") );
             // fall through
 
         case wxClientData_None:

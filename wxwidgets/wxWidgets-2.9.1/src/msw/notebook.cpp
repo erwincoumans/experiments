@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.06.98
-// RCS-ID:      $Id: notebook.cpp 59897 2009-03-27 22:37:22Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -30,6 +30,7 @@
     #include "wx/dcclient.h"
     #include "wx/dcmemory.h"
     #include "wx/control.h"
+    #include "wx/panel.h"
 #endif  // WX_PRECOMP
 
 #include "wx/imaglist.h"
@@ -334,7 +335,7 @@ bool wxNotebook::Create(wxWindow *parent,
             }
             else
             {
-                wxLogLastError(_T("GetClassInfoEx(SysTabCtl32)"));
+                wxLogLastError(wxT("GetClassInfoEx(SysTabCtl32)"));
             }
         }
 
@@ -492,6 +493,8 @@ int wxNotebook::ChangeSelection(size_t nPage)
 {
     wxCHECK_MSG( IS_VALID_PAGE(nPage), wxNOT_FOUND, wxT("notebook page out of range") );
 
+    const int selOld = m_nSelection;
+
     if ( m_nSelection == wxNOT_FOUND || nPage != (size_t)m_nSelection )
     {
         TabCtrl_SetCurSel(GetHwnd(), nPage);
@@ -499,7 +502,7 @@ int wxNotebook::ChangeSelection(size_t nPage)
         UpdateSelection(nPage);
     }
 
-    return m_nSelection;
+    return selOld;
 }
 
 bool wxNotebook::SetPageText(size_t nPage, const wxString& strText)
@@ -665,7 +668,7 @@ wxSize wxNotebook::CalcSizeFromPage(const wxSize& sizePage) const
 
 void wxNotebook::AdjustPageSize(wxNotebookPage *page)
 {
-    wxCHECK_RET( page, _T("NULL page in wxNotebook::AdjustPageSize") );
+    wxCHECK_RET( page, wxT("NULL page in wxNotebook::AdjustPageSize") );
 
     const wxRect r = GetPageSize();
     if ( !r.IsEmpty() )
@@ -753,12 +756,12 @@ bool wxNotebook::InsertPage(size_t nPage,
                             bool bSelect,
                             int imageId)
 {
-    wxCHECK_MSG( pPage != NULL, false, _T("NULL page in wxNotebook::InsertPage") );
+    wxCHECK_MSG( pPage != NULL, false, wxT("NULL page in wxNotebook::InsertPage") );
     wxCHECK_MSG( IS_VALID_PAGE(nPage) || nPage == GetPageCount(), false,
-                 _T("invalid index in wxNotebook::InsertPage") );
+                 wxT("invalid index in wxNotebook::InsertPage") );
 
     wxASSERT_MSG( pPage->GetParent() == this,
-                    _T("notebook pages must have notebook as parent") );
+                    wxT("notebook pages must have notebook as parent") );
 
     // add a new tab to the control
     // ----------------------------
@@ -815,6 +818,14 @@ bool wxNotebook::InsertPage(size_t nPage,
 
     // succeeded: save the pointer to the page
     m_pages.Insert(pPage, nPage);
+
+    // also ensure that the notebook background is used for its pages by making
+    // them transparent: this ensures that MSWGetBgBrush() queries the notebook
+    // for the background brush to be used for erasing them
+    if ( wxPanel *panel = wxDynamicCast(pPage, wxPanel) )
+    {
+        panel->MSWSetTransparentBackground();
+    }
 
     // we may need to adjust the size again if the notebook size changed:
     // normally this only happens for the first page we add (the tabs which
@@ -1127,11 +1138,21 @@ void wxNotebook::OnNavigationKey(wxNavigationKeyEvent& event)
         // the wxObject* casts are required to avoid MinGW GCC 2.95.3 ICE
         const bool isFromParent = event.GetEventObject() == (wxObject*) parent;
         const bool isFromSelf = event.GetEventObject() == (wxObject*) this;
+        const bool isForward = event.GetDirection();
 
-        if ( isFromParent || isFromSelf )
+        if ( isFromSelf && !isForward )
+        {
+            // focus is currently on notebook tab and should leave
+            // it backwards (Shift-TAB)
+            event.SetCurrentFocus(this);
+            parent->HandleWindowEvent(event);
+        }
+        else if ( isFromParent || isFromSelf )
         {
             // no, it doesn't come from child, case (b) or (c): forward to a
-            // page but only if direction is backwards (TAB) or from ourselves,
+            // page but only if entering notebook page (i.e. direction is
+            // backwards (Shift-TAB) comething from out-of-notebook, or
+            // direction is forward (TAB) from ourselves),
             if ( m_nSelection != wxNOT_FOUND &&
                     (!event.GetDirection() || isFromSelf) )
             {
@@ -1157,7 +1178,7 @@ void wxNotebook::OnNavigationKey(wxNavigationKeyEvent& event)
             // if the direction is forwards. Otherwise set the focus to the
             // notebook itself. The notebook is always the 'first' control of a
             // page.
-            if ( !event.GetDirection() )
+            if ( !isForward )
             {
                 SetFocus();
             }
@@ -1248,26 +1269,26 @@ void wxNotebook::UpdateBgBrush()
     }
 }
 
-WXHBRUSH wxNotebook::MSWGetBgBrushForChild(WXHDC hDC, WXHWND hWnd)
+WXHBRUSH wxNotebook::MSWGetBgBrushForChild(WXHDC hDC, wxWindow *child)
 {
     if ( m_hbrBackground )
     {
         // before drawing with the background brush, we need to position it
         // correctly
         RECT rc;
-        ::GetWindowRect((HWND)hWnd, &rc);
+        ::GetWindowRect(GetHwndOf(child), &rc);
 
         ::MapWindowPoints(NULL, GetHwnd(), (POINT *)&rc, 1);
 
         if ( !::SetBrushOrgEx((HDC)hDC, -rc.left, -rc.top, NULL) )
         {
-            wxLogLastError(_T("SetBrushOrgEx(notebook bg brush)"));
+            wxLogLastError(wxT("SetBrushOrgEx(notebook bg brush)"));
         }
 
         return m_hbrBackground;
     }
 
-    return wxNotebookBase::MSWGetBgBrushForChild(hDC, hWnd);
+    return wxNotebookBase::MSWGetBgBrushForChild(hDC, child);
 }
 
 bool wxNotebook::MSWPrintChild(WXHDC hDC, wxWindow *child)

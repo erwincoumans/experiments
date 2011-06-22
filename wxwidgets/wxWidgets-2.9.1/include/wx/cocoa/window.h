@@ -4,7 +4,7 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/26
-// RCS-ID:      $Id: window.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -173,7 +173,7 @@ public:
     // Get character size
     virtual int GetCharHeight() const;
     virtual int GetCharWidth() const;
-    virtual void GetTextExtent(const wxString& string, int *x, int *y,
+    virtual void DoGetTextExtent(const wxString& string, int *x, int *y,
                              int *descent = NULL,
                              int *externalLeading = NULL,
                              const wxFont *theFont = NULL) const;

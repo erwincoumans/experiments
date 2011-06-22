@@ -1,13 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        clipbrd.h
 // Purpose:     Clipboard functionality.
-//              Note: this functionality is under review, and
-//              is derived from wxWidgets 1.xx code. Please contact
-//              the wxWidgets developers for further information.
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: clipbrd.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,21 +14,14 @@
 
 #if wxUSE_CLIPBOARD
 
-#include "wx/list.h"
-#include "wx/module.h"
-#include "wx/dataobj.h"     // for wxDataFormat
-
 #include "wx/osx/core/cfref.h"
 
 //-----------------------------------------------------------------------------
 // wxClipboard
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_FWD_CORE wxDataObject;
 class WXDLLIMPEXP_CORE wxClipboard : public wxClipboardBase
 {
-    DECLARE_DYNAMIC_CLASS(wxClipboard)
-
 public:
     wxClipboard();
     virtual ~wxClipboard();
@@ -69,6 +59,8 @@ private:
     wxDataObject     *m_data;
     bool              m_open;
     wxCFRef<PasteboardRef> m_pasteboard;
+
+    DECLARE_DYNAMIC_CLASS(wxClipboard)
 };
 
 #endif // wxUSE_CLIPBOARD

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcclient.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ wxWindowDCImpl::wxWindowDCImpl( wxDC *owner ) :
 wxWindowDCImpl::wxWindowDCImpl( wxDC *owner, wxWindow *window ) :
    wxMSWDCImpl( owner )
 {
-    wxCHECK_RET( window, _T("invalid window in wxWindowDCImpl") );
+    wxCHECK_RET( window, wxT("invalid window in wxWindowDCImpl") );
 
     m_window = window;
     m_hDC = (WXHDC) ::GetWindowDC(GetHwndOf(m_window));
@@ -117,7 +117,7 @@ void wxWindowDCImpl::InitDC()
 
 void wxWindowDCImpl::DoGetSize(int *width, int *height) const
 {
-    wxCHECK_RET( m_window, _T("wxWindowDCImpl without a window?") );
+    wxCHECK_RET( m_window, wxT("wxWindowDCImpl without a window?") );
 
     m_window->GetSize(width, height);
 }
@@ -136,7 +136,7 @@ wxClientDCImpl::wxClientDCImpl( wxDC *owner ) :
 wxClientDCImpl::wxClientDCImpl( wxDC *owner, wxWindow *window ) :
    wxWindowDCImpl( owner )
 {
-    wxCHECK_RET( window, _T("invalid window in wxClientDCImpl") );
+    wxCHECK_RET( window, wxT("invalid window in wxClientDCImpl") );
 
     m_window = window;
     m_hDC = (WXHDC)::GetDC(GetHwndOf(window));
@@ -177,7 +177,7 @@ wxClientDCImpl::~wxClientDCImpl()
 
 void wxClientDCImpl::DoGetSize(int *width, int *height) const
 {
-    wxCHECK_RET( m_window, _T("wxClientDCImpl without a window?") );
+    wxCHECK_RET( m_window, wxT("wxClientDCImpl without a window?") );
 
     m_window->GetClientSize(width, height);
 }
@@ -236,6 +236,11 @@ wxPaintDCImpl::wxPaintDCImpl( wxDC *owner, wxWindow *window ) :
     }
     else // not in cache, create a new one
     {
+        // see comments in src/msw/window.cpp where this is defined
+        extern bool wxDidCreatePaintDC;
+
+        wxDidCreatePaintDC = true;
+
         m_hDC = (WXHDC)::BeginPaint(GetHwndOf(m_window), &g_paintStruct);
         if (m_hDC)
             ms_cache.Add(new wxPaintDCInfo(m_window, this));

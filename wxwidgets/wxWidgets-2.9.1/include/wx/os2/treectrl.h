@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     01/23/03
-// RCS-ID:      $Id: treectrl.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -442,7 +442,7 @@ public:
     // interface compatibility, only.
     //
     wxTextCtrl* EditLabel( const wxTreeItemId& rItem
-                          ,wxClassInfo*        pTextCtrlClass = CLASSINFO(wxTextCtrl)
+                          ,wxClassInfo*        pTextCtrlClass = wxCLASSINFO(wxTextCtrl)
                          );
 
     //

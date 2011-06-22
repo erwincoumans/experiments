@@ -2,7 +2,7 @@
 // Name:        wx/imaggif.h
 // Purpose:     wxImage GIF handler
 // Author:      Vaclav Slavik & Guillermo Rodriguez Garcia
-// RCS-ID:      $Id: imaggif.h 60029 2009-04-05 12:52:22Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,8 +35,9 @@ public:
                           bool verbose = true, int index = -1);
     virtual bool SaveFile(wxImage *image, wxOutputStream& stream,
                           bool verbose=true);
-    virtual int GetImageCount(wxInputStream& stream);
+
 protected:
+    virtual int DoGetImageCount(wxInputStream& stream);
     virtual bool DoCanRead(wxInputStream& stream);
 #endif // wxUSE_STREAMS
 

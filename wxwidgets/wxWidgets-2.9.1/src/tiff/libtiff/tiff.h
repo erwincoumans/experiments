@@ -1,4 +1,4 @@
-/* $Id: tiff.h 48824 2007-09-20 00:01:33Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -27,7 +27,11 @@
 #ifndef _TIFF_
 #define	_TIFF_
 
+#ifdef __APPLE__
+#include <tif_config.h>
+#else
 #include <tiffconf.h>
+#endif
 
 /*
  * Tag Image File Format (TIFF)

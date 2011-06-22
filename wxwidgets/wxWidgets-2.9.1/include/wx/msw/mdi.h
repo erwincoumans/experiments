@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: 2008-10-31 Vadim Zeitlin: derive from the base classes
 // Created:     01/02/97
-// RCS-ID:      $Id: mdi.h 59164 2009-02-26 16:16:31Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997 Julian Smart
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence
@@ -24,7 +24,7 @@ class WXDLLIMPEXP_FWD_CORE wxAcceleratorTable;
 class WXDLLIMPEXP_CORE wxMDIParentFrame : public wxMDIParentFrameBase
 {
 public:
-    wxMDIParentFrame() { }
+    wxMDIParentFrame() { Init(); }
     wxMDIParentFrame(wxWindow *parent,
                      wxWindowID id,
                      const wxString& title,
@@ -33,6 +33,8 @@ public:
                      long style = wxDEFAULT_FRAME_STYLE | wxVSCROLL | wxHSCROLL,
                      const wxString& name = wxFrameNameStr)
     {
+        Init();
+
         Create(parent, id, title, pos, size, style, name);
     }
 
@@ -121,6 +123,9 @@ protected:
     void UpdateClientSize();
 
 private:
+    // common part of all ctors
+    void Init();
+
 #if wxUSE_MENUS
     // "Window" menu commands event handlers
     void OnMDICommand(wxCommandEvent& event);
@@ -212,6 +217,7 @@ public:
 protected:
     virtual void DoGetScreenPosition(int *x, int *y) const;
     virtual void DoGetPosition(int *x, int *y) const;
+    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags);
     virtual void DoSetClientSize(int width, int height);
     virtual void InternalSetMenuBar();
     virtual bool IsMDIChild() const { return true; }

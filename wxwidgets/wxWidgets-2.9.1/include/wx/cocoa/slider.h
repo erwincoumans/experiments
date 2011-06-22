@@ -5,7 +5,7 @@
 //              Mark Oxenham
 // Modified by:
 // Created:     2003/06/19
-// RCS-ID:      $Id: slider.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 David Elliott
 //              (c) 2007 Software 2000 Ltd.
 // Licence:     wxWindows licence
@@ -92,7 +92,7 @@ public:
     // these methods get/set the length of the slider pointer in pixels
     virtual void SetThumbLength(int lenPixels);
     virtual int GetThumbLength() const;
-    
+
     // copied from (wxSliderCocoa.h)
     virtual void SetTickFreq(int n, int pos);
     virtual int GetTickFreq() const;

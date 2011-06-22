@@ -1,4 +1,4 @@
-/* $Id: iptcutil.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 #include "tif_config.h"
 

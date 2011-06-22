@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: app.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -386,8 +386,7 @@ bool wxApp::RegisterWindowClasses( HAB vHab )
 //
 void wxApp::CleanUp()
 {
-    delete[] wxBuffer;
-    wxBuffer = NULL;
+    wxDELETEA(wxBuffer);
 
     //
     // PM-SPECIFIC CLEANUP
@@ -414,8 +413,7 @@ void wxApp::CleanUp()
 // TODO:        ::DeleteObject( wxDisableButtonBrush );
     }
 
-    delete wxWinHandleHash;
-    wxWinHandleHash = NULL;
+    wxDELETE(wxWinHandleHash);
 
     // Delete Message queue
     if (wxTheApp->m_hMq)

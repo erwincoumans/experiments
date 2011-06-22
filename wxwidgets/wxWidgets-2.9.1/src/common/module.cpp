@@ -4,7 +4,7 @@
 // Author:      Wolfram Gloger/adapted by Guilhem Lavaux
 // Modified by:
 // Created:     04/11/98
-// RCS-ID:      $Id: module.cpp 50012 2007-11-17 00:12:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Wolfram Gloger and Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@
 
 #include "wx/listimpl.cpp"
 
-#define TRACE_MODULE _T("module")
+#define TRACE_MODULE wxT("module")
 
 WX_DEFINE_LIST(wxModuleList)
 
@@ -192,7 +192,7 @@ void wxModule::DoCleanUpModules(const wxModuleList& modules)
         wxModule * module = node->GetData();
 
         wxASSERT_MSG( module->m_state == State_Initialized,
-                        _T("not initialized module being cleaned up") );
+                        wxT("not initialized module being cleaned up") );
 
         module->Exit();
         module->m_state = State_Registered;

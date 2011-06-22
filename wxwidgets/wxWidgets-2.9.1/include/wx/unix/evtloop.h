@@ -3,7 +3,7 @@
 // Purpose:     declares wxEventLoop class
 // Author:      Lukasz Michalski (lm@zork.pl)
 // Created:     2007-05-07
-// RCS-ID:      $Id: evtloop.h 59018 2009-02-19 07:35:55Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Lukasz Michalski
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -18,13 +18,19 @@
 // ----------------------------------------------------------------------------
 
 class wxFDIODispatcher;
+class wxUnixEventLoopSource;
 
 namespace wxPrivate
 {
     class PipeIOHandler;
 }
 
-class WXDLLIMPEXP_BASE wxConsoleEventLoop : public wxEventLoopManual
+class WXDLLIMPEXP_BASE wxConsoleEventLoop 
+#ifdef __WXOSX__
+: public wxCFEventLoop
+#else
+: public wxEventLoopManual
+#endif
 {
 public:
     // initialize the event loop, use IsOk() to check if we were successful
@@ -38,6 +44,11 @@ public:
     virtual void WakeUp();
     virtual bool IsOk() const { return m_dispatcher != NULL; }
     virtual bool YieldFor(long WXUNUSED(eventsToProcess)) { return true; }
+
+#if wxUSE_EVENTLOOP_SOURCE
+    virtual wxEventLoopSource *
+      AddSourceForFD(int fd, wxEventLoopSourceHandler *handler, int flags);
+#endif // wxUSE_EVENTLOOP_SOURCE
 
 protected:
     virtual void OnNextIteration();

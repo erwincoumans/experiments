@@ -1,10 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/wx_cwcocoa_cm.h
+// Name:        wx/wx_cwcocoa_cm.h
 // Purpose:     Metrowerks wxCocoa PCH common definitions
 // Author:      Tommy Tian (tommy.tian@webex.com)
 // Modified by:
 // Created:     10/04/2004
-// RCS-ID:      $Id: wx_cwcocoa_cm.h 30235 2004-11-02 06:22:11Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) Tommy Tian
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@
     */
 #elif defined( __WXCOCOA__) //tommy
     #if defined(__OBJC__)
-        #include "CocoaHeaders.m"        
+        #include "CocoaHeaders.m"
     #endif //defined(__OBJC__)
 #endif
 

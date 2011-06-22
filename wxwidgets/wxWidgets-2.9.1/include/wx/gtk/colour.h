@@ -2,7 +2,7 @@
 // Name:        wx/gtk/colour.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: colour.h 50897 2007-12-22 15:03:58Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

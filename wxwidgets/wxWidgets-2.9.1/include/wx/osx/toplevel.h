@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/toplevel.h
+// Name:        wx/osx/toplevel.h
 // Purpose:     wxTopLevelWindowMac is the Mac implementation of wxTLW
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     20.09.01
-// RCS-ID:      $Id: toplevel.h 59515 2009-03-13 18:43:46Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,6 +35,8 @@ public:
         (void)Create(parent, id, title, pos, size, style, name);
     }
 
+    virtual ~wxTopLevelWindowMac();
+
     bool Create(wxWindow *parent,
                 wxWindowID id,
                 const wxString& title,
@@ -42,14 +44,14 @@ public:
                 const wxSize& size = wxDefaultSize,
                 long style = wxDEFAULT_FRAME_STYLE,
                 const wxString& name = wxFrameNameStr);
-
-    virtual ~wxTopLevelWindowMac();
+    
+    bool Create(wxWindow *parent, WXWindow nativeWindow);
     
     virtual bool Destroy();
 
     virtual wxPoint GetClientAreaOrigin() const;
 
-    virtual bool SetShape(const wxRegion& region) 
+    virtual bool SetShape(const wxRegion& region)
         { return DoSetShape(region); }
 
     // Attracts the users attention to this window if the application is
@@ -62,7 +64,10 @@ public:
     virtual void Iconize(bool iconize = true);
     virtual bool IsIconized() const;
     virtual void Restore();
+    
+    virtual bool IsActive();
 
+    virtual void ShowWithoutActivating();
     virtual bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL) ;
     virtual bool IsFullScreen() const ;
 
@@ -71,7 +76,10 @@ public:
 
     virtual void SetTitle( const wxString& title);
     virtual wxString GetTitle() const;
-     
+
+    virtual void OSXSetModified(bool modified);
+    virtual bool OSXIsModified() const;
+
 protected:
     // common part of all ctors
     void Init();

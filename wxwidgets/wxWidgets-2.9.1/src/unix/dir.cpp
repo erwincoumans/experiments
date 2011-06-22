@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     08.12.99
-// RCS-ID:      $Id: dir.cpp 58227 2009-01-19 13:55:27Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,7 @@ wxDirData::wxDirData(const wxString& dirname)
 
     // throw away the trailing slashes
     size_t n = m_dirname.length();
-    wxCHECK_RET( n, _T("empty dir name in wxDir") );
+    wxCHECK_RET( n, wxT("empty dir name in wxDir") );
 
     while ( n > 0 && m_dirname[--n] == '/' )
         ;
@@ -108,7 +108,7 @@ wxDirData::~wxDirData()
     {
         if ( closedir(m_dir) != 0 )
         {
-            wxLogLastError(_T("closedir"));
+            wxLogLastError(wxT("closedir"));
         }
     }
 }
@@ -120,7 +120,7 @@ bool wxDirData::Read(wxString *filename)
 
     // speed up string concatenation in the loop a bit
     wxString path = m_dirname;
-    path += _T('/');
+    path += wxT('/');
     path.reserve(path.length() + 255);
 
     wxString de_d_name;
@@ -183,7 +183,7 @@ bool wxDirData::Read(wxString *filename)
 
 wxDirData::wxDirData(const wxString& WXUNUSED(dirname))
 {
-    wxFAIL_MSG(_T("not implemented"));
+    wxFAIL_MSG(wxT("not implemented"));
 }
 
 wxDirData::~wxDirData()
@@ -196,16 +196,6 @@ bool wxDirData::Read(wxString * WXUNUSED(filename))
 }
 
 #endif // not or new VMS/old VMS
-
-// ----------------------------------------------------------------------------
-// wxDir helpers
-// ----------------------------------------------------------------------------
-
-/* static */
-bool wxDir::Exists(const wxString& dir)
-{
-    return wxDirExists(dir);
-}
 
 // ----------------------------------------------------------------------------
 // wxDir construction/destruction
@@ -245,7 +235,7 @@ wxString wxDir::GetName() const
     if ( m_data )
     {
         name = M_DIR->GetName();
-        if ( !name.empty() && (name.Last() == _T('/')) )
+        if ( !name.empty() && (name.Last() == wxT('/')) )
         {
             // chop off the last (back)slash
             name.Truncate(name.length() - 1);
@@ -268,7 +258,7 @@ bool wxDir::GetFirst(wxString *filename,
                      const wxString& filespec,
                      int flags) const
 {
-    wxCHECK_MSG( IsOpened(), false, _T("must wxDir::Open() first") );
+    wxCHECK_MSG( IsOpened(), false, wxT("must wxDir::Open() first") );
 
     M_DIR->Rewind();
 
@@ -280,16 +270,16 @@ bool wxDir::GetFirst(wxString *filename,
 
 bool wxDir::GetNext(wxString *filename) const
 {
-    wxCHECK_MSG( IsOpened(), false, _T("must wxDir::Open() first") );
+    wxCHECK_MSG( IsOpened(), false, wxT("must wxDir::Open() first") );
 
-    wxCHECK_MSG( filename, false, _T("bad pointer in wxDir::GetNext()") );
+    wxCHECK_MSG( filename, false, wxT("bad pointer in wxDir::GetNext()") );
 
     return M_DIR->Read(filename);
 }
 
 bool wxDir::HasSubDirs(const wxString& spec) const
 {
-    wxCHECK_MSG( IsOpened(), false, _T("must wxDir::Open() first") );
+    wxCHECK_MSG( IsOpened(), false, wxT("must wxDir::Open() first") );
 
     if ( spec.empty() )
     {
@@ -304,7 +294,7 @@ bool wxDir::HasSubDirs(const wxString& spec) const
         // caller will learn it soon enough when it calls GetFirst(wxDIR)
         // anyhow
         wxStructStat stBuf;
-        if ( wxStat(M_DIR->GetName().c_str(), &stBuf) == 0 )
+        if ( wxStat(M_DIR->GetName(), &stBuf) == 0 )
         {
             switch ( stBuf.st_nlink )
             {

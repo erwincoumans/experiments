@@ -1,11 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/msgdlg.h
+// Name:        wx/osx/msgdlg.h
 // Purpose:     wxMessageDialog class. Use generic version if no
 //              platform-specific implementation.
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: msgdlg.h 58168 2009-01-17 10:43:43Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,12 +23,24 @@ public:
                     const wxPoint& pos = wxDefaultPosition);
 
     virtual int ShowModal();
+    
+#if wxOSX_USE_COCOA
+    virtual void ShowWindowModal();
+    virtual void ModalFinishedCallback(void* panel, int resultCode);
+#endif
 
 protected:
     // not supported for message dialog
     virtual void DoSetSize(int WXUNUSED(x), int WXUNUSED(y),
                            int WXUNUSED(width), int WXUNUSED(height),
                            int WXUNUSED(sizeFlags) = wxSIZE_AUTO) {}
+
+#if wxOSX_USE_COCOA
+    void* ConstructNSAlert();
+#endif
+
+    int m_buttonId[3];
+    int m_buttonCount;
 
     DECLARE_DYNAMIC_CLASS(wxMessageDialog)
 };

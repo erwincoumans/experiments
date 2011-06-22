@@ -3,7 +3,7 @@
 // Purpose:     wxSpinButton
 // Author:      Robert
 // Modified by:
-// RCS-ID:      $Id: spinbutt.cpp 58194 2009-01-18 12:34:23Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -177,13 +177,11 @@ void wxSpinButton::OnSize( wxSizeEvent &WXUNUSED(event) )
 
 bool wxSpinButton::Enable( bool enable )
 {
-    bool isEnabled = IsEnabled();
-
-    if ( !wxControl::Enable( enable ) )
+    if (!base_type::Enable(enable))
         return false;
 
     // Work around lack of visual update when enabling
-    if (!isEnabled && enable)
+    if (enable)
         GTKFixSensitivity(false /* fix even if not under mouse */);
 
     return true;

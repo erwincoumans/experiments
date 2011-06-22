@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     23.06.2003
-// RCS-ID:      $Id: apptrait.h 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -63,7 +63,7 @@ public:
 #endif
 
 #if (defined(__WXMAC__) || defined(__WXCOCOA__)) && wxUSE_STDPATHS
-    virtual wxStandardPathsBase& GetStandardPaths();
+    virtual wxStandardPaths& GetStandardPaths();
 #endif
     virtual wxPortId GetToolkitVersion(int *majVer = NULL, int *minVer = NULL) const;
 

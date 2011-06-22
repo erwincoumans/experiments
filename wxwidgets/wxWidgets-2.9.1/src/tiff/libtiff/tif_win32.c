@@ -1,4 +1,4 @@
-/* $Id: tif_win32.c 52058 2008-02-24 23:05:45Z VZ $ */
+/* $Id$ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler

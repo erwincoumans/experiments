@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: (or rather rewritten by) Vadim Zeitlin
 // Created:     04/22/98
-// RCS-ID:      $Id: tokenzr.h 47707 2007-07-24 20:00:12Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,7 +21,7 @@
 // ----------------------------------------------------------------------------
 
 // default: delimiters are usual white space characters
-#define wxDEFAULT_DELIMITERS (_T(" \t\r\n"))
+#define wxDEFAULT_DELIMITERS (wxT(" \t\r\n"))
 
 // wxStringTokenizer mode flags which determine its behaviour
 enum wxStringTokenizerMode

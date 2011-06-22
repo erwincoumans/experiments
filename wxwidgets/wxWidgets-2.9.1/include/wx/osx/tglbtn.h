@@ -1,13 +1,13 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/tglbtn.h
+// Name:        wx/osx/tglbtn.h
 // Purpose:     Declaration of the wxToggleButton class, which implements a
 //              toggle button under wxMac.
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     08.02.01
-// RCS-ID:      $Id: tglbtn.h 58319 2009-01-23 08:40:26Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 Stefan Csomor
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_TOGGLEBUTTON_H_
@@ -53,7 +53,7 @@ private:
 
     int m_marginX,
         m_marginY;
-        
+
 protected:
     virtual wxBorder GetDefaultBorder() const { return wxBORDER_NONE; }
     virtual wxSize DoGetBestSize() const;

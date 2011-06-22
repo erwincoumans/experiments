@@ -4,7 +4,7 @@
 // Author:      Julian Smart and Guillermo Rodriguez Garcia
 // Modified by: Francesco Montorsi
 // Created:     13/8/99
-// RCS-ID:      $Id: animateg.cpp 57917 2009-01-08 18:26:35Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart and Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -186,7 +186,7 @@ void wxAnimation::AddHandler( wxAnimationDecoder *handler )
         // a good reason to add and remove duplicate handlers (and they
         // may) we should probably refcount the duplicates.
 
-        wxLogDebug( _T("Adding duplicate animation handler for '%d' type"),
+        wxLogDebug( wxT("Adding duplicate animation handler for '%d' type"),
                     handler->GetType() );
         delete handler;
     }
@@ -202,7 +202,7 @@ void wxAnimation::InsertHandler( wxAnimationDecoder *handler )
     else
     {
         // see AddHandler for additional comments.
-        wxLogDebug( _T("Inserting duplicate animation handler for '%d' type"),
+        wxLogDebug( wxT("Inserting duplicate animation handler for '%d' type"),
                     handler->GetType() );
         delete handler;
     }
@@ -595,7 +595,7 @@ void wxAnimationCtrl::DisposeToBackground()
 }
 
 void wxAnimationCtrl::DisposeToBackground(wxDC& dc)
-{ 
+{
     wxColour col = IsUsingWindowBackgroundColour()
                     ? GetBackgroundColour()
                     : m_animation.GetBackgroundColour();
@@ -628,7 +628,7 @@ void wxAnimationCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
     if ( m_backingStore.IsOk() )
     {
         // NOTE: we draw the bitmap explicitely ignoring the mask (if any);
-        //       i.e. we don't want to combine the backing store with the 
+        //       i.e. we don't want to combine the backing store with the
         //       possibly wrong preexisting contents of the window!
         dc.DrawBitmap(m_backingStore, 0, 0, false /* no mask */);
     }
@@ -681,9 +681,9 @@ void wxAnimationCtrl::OnSize(wxSizeEvent &WXUNUSED(event))
     //     when using them inside sizers.
     if (m_animation.IsOk())
     {
-        // be careful to change the backing store *only* if we are 
-        // playing the animation as otherwise we may be displaying 
-        // the inactive bitmap and overwriting the backing store 
+        // be careful to change the backing store *only* if we are
+        // playing the animation as otherwise we may be displaying
+        // the inactive bitmap and overwriting the backing store
         // with the last played frame is wrong in this case
         if (IsPlaying())
         {

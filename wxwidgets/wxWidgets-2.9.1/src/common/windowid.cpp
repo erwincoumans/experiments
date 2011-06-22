@@ -3,7 +3,7 @@
 // Purpose:     wxWindowID class - a class for managing window ids
 // Author:      Brian Vanderburg II
 // Created:     2007-09-21
-// RCS-ID:      $Id: windowid.cpp 56057 2008-10-03 15:30:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Brian Vanderburg II
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,7 +25,7 @@
 // Not needed, included in defs.h
 // #include "wx/windowid.h"
 
-#define wxTRACE_WINDOWID _T("windowid")
+#define wxTRACE_WINDOWID wxT("windowid")
 
 namespace
 {
@@ -212,7 +212,7 @@ wxWindowID wxIdManager::ReserveId(int count)
         }
     }
 
-    ::wxLogError(_("Out of window IDs.  Recommend shutting down application."));
+    wxLogError(_("Out of window IDs.  Recommend shutting down application."));
     return wxID_NONE;
 #else // !wxUSE_AUTOID_MANAGEMENT
     // Make sure enough in the range

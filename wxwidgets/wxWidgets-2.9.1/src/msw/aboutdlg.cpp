@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxAboutBox() for wxMSW
 // Author:      Vadim Zeitlin
 // Created:     2006-10-07
-// RCS-ID:      $Id: aboutdlg.cpp 57840 2009-01-05 15:20:44Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@
 // ============================================================================
 
 // our public entry point
-void wxAboutBox(const wxAboutDialogInfo& info)
+void wxAboutBox(const wxAboutDialogInfo& info, wxWindow* parent)
 {
     // we prefer to show a simple message box if we don't have any fields which
     // can't be shown in it because as much as there is a standard about box
@@ -50,24 +50,24 @@ void wxAboutBox(const wxAboutDialogInfo& info)
         msg << name;
         if ( info.HasVersion() )
         {
-            msg << _T('\n');
-            msg << wxString::Format(_("Version %s"), info.GetVersion());
+            msg << wxT('\n');
+            msg << info.GetLongVersion();
         }
 
-        msg << _T("\n\n");
+        msg << wxT("\n\n");
 
         if ( info.HasCopyright() )
-            msg << info.GetCopyrightToDisplay() << _T('\n');
+            msg << info.GetCopyrightToDisplay() << wxT('\n');
 
         // add everything remaining
         msg << info.GetDescriptionAndCredits();
 
-        wxMessageBox(msg, wxString::Format(_("About %s"), name));
+        wxMessageBox(msg, wxString::Format(_("About %s"), name), wxOK | wxCENTRE, parent);
     }
     else // simple "native" version is not enough
     {
         // we need to use the full-blown generic version
-        wxGenericAboutBox(info);
+        wxGenericAboutBox(info, parent);
     }
 }
 

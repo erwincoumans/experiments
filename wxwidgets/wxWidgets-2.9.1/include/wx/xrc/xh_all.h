@@ -3,7 +3,7 @@
 // Purpose:     includes all xh_*.h files
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xh_all.h 58402 2009-01-25 16:00:32Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,6 +31,8 @@
 #include "wx/xrc/xh_datectrl.h"
 #include "wx/xrc/xh_dirpicker.h"
 #include "wx/xrc/xh_dlg.h"
+#include "wx/xrc/xh_editlbox.h"
+#include "wx/xrc/xh_filectrl.h"
 #include "wx/xrc/xh_filepicker.h"
 #include "wx/xrc/xh_fontpicker.h"
 #include "wx/xrc/xh_frame.h"

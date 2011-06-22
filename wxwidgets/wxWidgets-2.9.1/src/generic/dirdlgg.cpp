@@ -4,7 +4,7 @@
 // Author:      Harm van der Heijden, Robert Roebling & Julian Smart
 // Modified by:
 // Created:     12/12/98
-// RCS-ID:      $Id: dirdlgg.cpp 52234 2008-03-02 01:20:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Harm van der Heijden, Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +79,7 @@ bool wxGenericDirDialog::Create(wxWindow* parent,
 {
     wxBusyCursor cursor;
 
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, style);
 
     if (!wxDirDialogBase::Create(parent, title, defaultPath, style, pos, sz, name))
         return false;

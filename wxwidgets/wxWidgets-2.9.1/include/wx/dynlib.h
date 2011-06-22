@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux, Vadim Zeitlin, Vaclav Slavik
 // Modified by:
 // Created:     20/07/98
-// RCS-ID:      $Id: dynlib.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -18,14 +18,6 @@
 
 #include "wx/string.h"
 #include "wx/dynarray.h"
-
-#if defined(__OS2__) || defined(__EMX__)
-#include "wx/os2/private.h"
-#endif
-
-#ifdef __WXMSW__
-#include "wx/msw/private.h"
-#endif
 
 // note that we have our own dlerror() implementation under Darwin
 #if (defined(HAVE_DLERROR) && !defined(__EMX__)) || defined(__DARWIN__)
@@ -41,7 +33,7 @@ class WXDLLIMPEXP_FWD_BASE wxDynamicLibraryDetailsCreator;
 // Note: __OS2__/EMX has to be tested first, since we want to use
 // native version, even if configure detected presence of DLOPEN.
 #if defined(__OS2__) || defined(__EMX__) || defined(__WINDOWS__)
-    typedef HMODULE             wxDllType;
+    typedef WXHMODULE           wxDllType;
 #elif defined(__DARWIN__)
     // Don't include dlfcn.h on Darwin, we may be using our own replacements.
     typedef void               *wxDllType;
@@ -116,7 +108,7 @@ enum wxPluginCategory
 // type only once, as the first parameter, and creating a variable of this type
 // called "pfn<name>" initialized with the "name" from the "dynlib"
 #define wxDYNLIB_FUNCTION(type, name, dynlib) \
-    type pfn ## name = (type)(dynlib).GetSymbol(_T(#name))
+    type pfn ## name = (type)(dynlib).GetSymbol(wxT(#name))
 
 
 // a more convenient function replacing wxDYNLIB_FUNCTION above
@@ -356,6 +348,19 @@ public:
     // string on others:
     static wxString GetPluginsDirectory();
 
+
+#ifdef __WXMSW__
+    // return the handle (HMODULE/HINSTANCE) of the DLL with the given name
+    // and/or containing the specified address: for XP and later systems only
+    // the address is used and the name is ignored but for the previous systems
+    // only the name (which may be either a full path to the DLL or just its
+    // base name, possibly even without extension) is used
+    //
+    // the returned handle reference count is not incremented so it doesn't
+    // need to be freed using FreeLibrary() but it also means that it can
+    // become invalid if the DLL is unloaded
+    static WXHMODULE MSWGetModuleHandle(const char *name, void *addr);
+#endif // __WXMSW__
 
 protected:
     // common part of GetSymbol() and HasSymbol()

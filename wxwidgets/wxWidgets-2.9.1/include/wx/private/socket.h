@@ -3,7 +3,7 @@
 // Purpose:     wxSocketImpl and related declarations
 // Authors:     Guilhem Lavaux, Vadim Zeitlin
 // Created:     April 1997
-// RCS-ID:      $Id: socket.h 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1997 Guilhem Lavaux
 //              (c) 2008 Vadim Zeitlin
 // Licence:     wxWindows licence

@@ -4,7 +4,7 @@
 * Author:      John Labenski and others
 * Modified by:
 * Created:     02/02/03
-* RCS-ID:      $Id: math.h 55800 2008-09-22 16:20:43Z VZ $
+* RCS-ID:      $Id$
 * Copyright:   (c) John Labenski
 * Licence:     wxWindows licence
 */
@@ -115,7 +115,7 @@
     inline int wxRound(double x)
     {
         wxASSERT_MSG( x > INT_MIN - 0.5 && x < INT_MAX + 0.5,
-                      _T("argument out of supported range") );
+                      wxT("argument out of supported range") );
 
         #if defined(HAVE_ROUND)
             return int(round(x));
@@ -128,10 +128,8 @@
 
 #if defined(__WXMSW__) && !defined(__WXWINCE__)
     #define wxMulDivInt32( a , b , c ) ::MulDiv( a , b , c )
-#elif defined( __WXMAC__ )
-    #define wxMulDivInt32( a , b , c ) ( (wxInt32) ( ( (wxInt64)(a) * (wxInt64)(b) ) / (wxInt64)(c) ) )
 #else
-    #define wxMulDivInt32( a , b , c ) ((wxInt32)((a)*(((wxDouble)b)/((wxDouble)c))))
+    #define wxMulDivInt32( a , b , c ) (wxRound((a)*(((wxDouble)b)/((wxDouble)c))))
 #endif
 
 #if wxUSE_APPLE_IEEE

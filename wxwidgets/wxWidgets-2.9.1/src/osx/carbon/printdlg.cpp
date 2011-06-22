@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: printdlg.cpp 58184 2009-01-17 17:32:53Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,12 +35,14 @@ int wxMacPrintDialog::ShowModal()
     ((wxOSXPrintData*)m_printDialogData.GetPrintData().GetNativeData())->TransferFrom( &m_printDialogData );
 
     int result = wxID_CANCEL;
-    
+
     OSErr err = noErr;
     Boolean accepted;
     wxOSXPrintData* nativeData = (wxOSXPrintData*)m_printDialogData.GetPrintData().GetNativeData();
+    wxDialog::OSXBeginModalDialog();
     err = PMSessionPrintDialog(nativeData->GetPrintSession(), nativeData->GetPrintSettings(),
         nativeData->GetPageFormat(), &accepted );
+    wxDialog::OSXEndModalDialog();
 
     if ((err == noErr) && !accepted)
     {
@@ -80,8 +82,10 @@ int wxMacPageSetupDialog::ShowModal()
     OSErr err = noErr;
     Boolean accepted;
 
+    wxDialog::OSXBeginModalDialog();
     err = PMSessionPageSetupDialog( nativeData->GetPrintSession(), nativeData->GetPageFormat(),
         &accepted );
+    wxDialog::OSXEndModalDialog();
 
     if ((err == noErr) && !accepted)
     {

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2006-01-12
-// RCS-ID:      $Id: evtloop.cpp 58952 2009-02-16 17:22:02Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,6 +31,10 @@
     #include "wx/log.h"
 #endif // WX_PRECOMP
 
+#if wxUSE_GUI
+#include "wx/nonownedwnd.h"
+#endif
+
 #include "wx/osx/private.h"
 
 // ============================================================================
@@ -39,17 +43,9 @@
 
 wxGUIEventLoop::wxGUIEventLoop()
 {
-    m_sleepTime = kEventDurationNoWait;
 }
 
-void wxGUIEventLoop::WakeUp()
-{
-    extern void wxMacWakeUp();
-
-    wxMacWakeUp();
-}
-
-void wxGUIEventLoop::DispatchAndReleaseEvent(EventRef theEvent)
+static void DispatchAndReleaseEvent(EventRef theEvent)
 {
     if ( wxTheApp )
         wxTheApp->MacSetCurrentEvent( theEvent, NULL );
@@ -61,63 +57,10 @@ void wxGUIEventLoop::DispatchAndReleaseEvent(EventRef theEvent)
     ReleaseEvent( theEvent );
 }
 
-bool wxGUIEventLoop::Pending() const
+int wxGUIEventLoop::DoDispatchTimeout(unsigned long timeout)
 {
-    EventRef theEvent;
-
-    return ReceiveNextEvent
-           (
-            0,          // we want any event at all so we don't specify neither
-            NULL,       // the number of event types nor the types themselves
-            kEventDurationNoWait,
-            false,      // don't remove the event from queue
-            &theEvent
-           ) == noErr;
-}
-
-bool wxGUIEventLoop::Dispatch()
-{
-    if ( !wxTheApp )
-        return false;
-
     wxMacAutoreleasePool autoreleasepool;
-
-    EventRef theEvent;
-
-    OSStatus status = ReceiveNextEvent(0, NULL, m_sleepTime, true, &theEvent) ;
-
-    switch (status)
-    {
-        case eventLoopTimedOutErr :
-            if ( wxTheApp->ProcessIdle() )
-                m_sleepTime = kEventDurationNoWait ;
-            else
-            {
-                m_sleepTime = kEventDurationSecond;
-#if wxUSE_THREADS
-                wxMutexGuiLeave();
-                wxMilliSleep(20);
-                wxMutexGuiEnter();
-#endif
-            }
-            break;
-
-        case eventLoopQuitErr :
-            // according to QA1061 this may also occur
-            // when a WakeUp Process is executed
-            break;
-
-        default:
-            DispatchAndReleaseEvent(theEvent);
-            m_sleepTime = kEventDurationNoWait ;
-            break;
-    }
-
-    return true;
-}
-
-int wxGUIEventLoop::DispatchTimeout(unsigned long timeout)
-{
+    
     EventRef event;
     OSStatus status = ReceiveNextEvent(0, NULL, timeout/1000, true, &event);
     switch ( status )
@@ -130,6 +73,8 @@ int wxGUIEventLoop::DispatchTimeout(unsigned long timeout)
             return -1;
 
         case eventLoopQuitErr:
+            // according to QA1061 this may also occur
+            // when a WakeUp Process is executed
             return 0;
 
         case noErr:
@@ -138,39 +83,80 @@ int wxGUIEventLoop::DispatchTimeout(unsigned long timeout)
     }
 }
 
-bool wxGUIEventLoop::YieldFor(long eventsToProcess)
+void wxGUIEventLoop::DoRun()
 {
-#if wxUSE_THREADS
-    // Yielding from a non-gui thread needs to bail out, otherwise we end up
-    // possibly sending events in the thread too.
-    if ( !wxThread::IsMain() )
-    {
-        return true;
-    }
-#endif // wxUSE_THREADS
-
-    m_isInsideYield = true;
-    m_eventsToProcessInsideYield = eventsToProcess;
-
-#if wxUSE_LOG
-    // disable log flushing from here because a call to wxYield() shouldn't
-    // normally result in message boxes popping up &c
-    wxLog::Suspend();
-#endif // wxUSE_LOG
-
-    // process all pending events:
-    while ( Pending() )
-        Dispatch();
-
-    // it's necessary to call ProcessIdle() to update the frames sizes which
-    // might have been changed (it also will update other things set from
-    // OnUpdateUI() which is a nice (and desired) side effect)
-    while ( ProcessIdle() ) {}
-
-#if wxUSE_LOG
-    wxLog::Resume();
-#endif // wxUSE_LOG
-    m_isInsideYield = false;
-
-    return true;
+    wxMacAutoreleasePool autoreleasepool;
+    RunApplicationEventLoop();
 }
+
+void wxGUIEventLoop::DoStop()
+{
+    QuitApplicationEventLoop();
+}
+
+CFRunLoopRef wxGUIEventLoop::CFGetCurrentRunLoop() const
+{
+    return wxCFEventLoop::CFGetCurrentRunLoop();
+}
+
+// TODO move into a evtloop_osx.cpp
+
+wxModalEventLoop::wxModalEventLoop(wxWindow *modalWindow)
+{
+    m_modalWindow = wxDynamicCast(modalWindow, wxNonOwnedWindow);
+    wxASSERT_MSG( m_modalWindow != NULL, "must pass in a toplevel window for modal event loop" );
+    m_modalNativeWindow = m_modalWindow->GetWXWindow();
+}
+
+wxModalEventLoop::wxModalEventLoop(WXWindow modalNativeWindow)
+{
+    m_modalWindow = NULL;
+    wxASSERT_MSG( modalNativeWindow != NULL, "must pass in a toplevel window for modal event loop" );
+    m_modalNativeWindow = modalNativeWindow;
+}
+
+// END move into a evtloop_osx.cpp
+
+void wxModalEventLoop::DoRun()
+{
+    wxWindowDisabler disabler(m_modalWindow);
+    wxMacAutoreleasePool autoreleasepool;
+
+    bool resetGroupParent = false;
+
+    WindowGroupRef windowGroup = NULL;
+    WindowGroupRef formerParentGroup = NULL;
+    
+    // make sure modal dialogs are in the right layer so that they are not covered
+    if ( m_modalWindow != NULL )
+    {
+        if ( m_modalWindow->GetParent() == NULL )
+        {
+            windowGroup = GetWindowGroup(m_modalNativeWindow) ;
+            if ( windowGroup != GetWindowGroupOfClass( kMovableModalWindowClass ) )
+            {
+                formerParentGroup = GetWindowGroupParent( windowGroup );
+                SetWindowGroupParent( windowGroup, GetWindowGroupOfClass( kMovableModalWindowClass ) );
+                resetGroupParent = true;
+            }
+        }
+    }
+
+    m_modalWindow->SetFocus();
+    
+    RunAppModalLoopForWindow(m_modalNativeWindow);
+
+    if ( resetGroupParent )
+    {
+        SetWindowGroupParent( windowGroup , formerParentGroup );
+    }
+
+}
+
+void wxModalEventLoop::DoStop()
+{
+    wxMacAutoreleasePool autoreleasepool;
+    QuitAppModalLoopForWindow(m_modalNativeWindow);
+}
+
+

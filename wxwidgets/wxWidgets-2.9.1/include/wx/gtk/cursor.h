@@ -2,7 +2,7 @@
 // Name:        cursor.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: cursor.h 55884 2008-09-25 17:56:07Z FM $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,14 +30,14 @@ public:
 #endif
 #if wxUSE_IMAGE
     wxCursor( const wxImage & image );
+    wxCursor(const wxString& name,
+             wxBitmapType type = wxCURSOR_DEFAULT_TYPE,
+             int hotSpotX = 0, int hotSpotY = 0);
 #endif
     wxCursor( const char bits[], int width, int height,
               int hotSpotX = -1, int hotSpotY = -1,
               const char maskBits[] = NULL,
               const wxColour* fg = NULL, const wxColour* bg = NULL);
-    wxCursor(const wxString& name,
-             wxBitmapType type = wxCURSOR_DEFAULT_TYPE,
-             int hotSpotX = 0, int hotSpotY = 0);
     virtual ~wxCursor();
 
     // implementation
@@ -46,6 +46,9 @@ public:
 
 protected:
     void InitFromStock(wxStockCursor);
+#if wxUSE_IMAGE
+    void InitFromImage(const wxImage& image);
+#endif
 
     virtual wxGDIRefData *CreateGDIRefData() const;
     virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;

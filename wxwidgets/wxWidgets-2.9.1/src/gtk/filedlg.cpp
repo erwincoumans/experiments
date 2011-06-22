@@ -2,7 +2,7 @@
 // Name:        src/gtk/filedlg.cpp
 // Purpose:     native implementation of wxFileDialog
 // Author:      Robert Roebling, Zbigniew Zagorski, Mart Raudsepp
-// Id:          $Id: filedlg.cpp 55354 2008-08-29 15:46:48Z PC $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, 2004 Zbigniew Zagorski, 2005 Mart Raudsepp
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -10,7 +10,7 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wxprec.h"
 
-#if wxUSE_FILEDLG 
+#if wxUSE_FILEDLG
 
 #include "wx/filedlg.h"
 
@@ -51,7 +51,7 @@ static void gtk_filedialog_ok_callback(GtkWidget *widget, wxFileDialog *dialog)
 
                 msg.Printf(
                     _("File '%s' already exists, do you really want to overwrite it?"),
-                    wxString(filename, *wxConvFileName));
+                    wxString::FromUTF8(filename));
 
                 wxMessageDialog dlg(dialog, msg, _("Confirm"),
                                    wxYES_NO | wxICON_QUESTION);
@@ -173,7 +173,7 @@ wxFileDialog::wxFileDialog(wxWindow *parent, const wxString& message,
                            const wxString& name)
     : wxFileDialogBase()
 {
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, style);
 
     if (!wxFileDialogBase::Create(parent, message, defaultDir, defaultFileName,
                                   wildCard, style, pos, sz, name))
@@ -243,16 +243,30 @@ wxFileDialog::wxFileDialog(wxWindow *parent, const wxString& message,
     g_signal_connect (m_widget, "response",
         G_CALLBACK (gtk_filedialog_response_callback), this);
 
+
+    // deal with extensions/filters
     SetWildcard(wildCard);
+
+    wxString defaultFileNameWithExt = defaultFileName;
+    if ( !wildCard.empty() && !defaultFileName.empty() &&
+            !wxFileName(defaultFileName).HasExt() )
+    {
+        // append the default extension to the initial file name: GTK won't do
+        // it for us by default (unlike e.g. MSW)
+        const wxString defaultExt = m_fc.GetCurrentWildCard().AfterFirst('.');
+        if ( defaultExt.find_first_of("?*") == wxString::npos )
+            defaultFileNameWithExt += "." + defaultExt;
+    }
+
 
     // if defaultDir is specified it should contain the directory and
     // defaultFileName should contain the default name of the file, however if
     // directory is not given, defaultFileName contains both
     wxFileName fn;
     if ( defaultDir.empty() )
-        fn.Assign(defaultFileName);
-    else if ( !defaultFileName.empty() )
-        fn.Assign(defaultDir, defaultFileName);
+        fn.Assign(defaultFileNameWithExt);
+    else if ( !defaultFileNameWithExt.empty() )
+        fn.Assign(defaultDir, defaultFileNameWithExt);
     else
         fn.AssignDir(defaultDir);
 
@@ -320,8 +334,8 @@ int wxFileDialog::ShowModal()
     return wxDialog::ShowModal();
 }
 
-void wxFileDialog::DoSetSize(int WXUNUSED(x), int WXUNUSED(y), 
-                             int WXUNUSED(width), int WXUNUSED(height), 
+void wxFileDialog::DoSetSize(int WXUNUSED(x), int WXUNUSED(y),
+                             int WXUNUSED(width), int WXUNUSED(height),
                              int WXUNUSED(sizeFlags))
 {
 }
@@ -334,21 +348,7 @@ void wxFileDialog::OnSize(wxSizeEvent&)
 
 wxString wxFileDialog::GetPath() const
 {
-    wxFileName fn = m_fc.GetPath();
-    
-    if (HasFdFlag(wxFD_SAVE))
-    {
-        // add extension
-        if (!fn.HasExt())
-        {
-           wxFileName wildcard( "/dummy", m_fc.GetCurrentWildCard() );
-           wxString ext = wildcard.GetExt();
-           if (!ext.empty() && (ext.Find('?') == wxNOT_FOUND) && (ext.Find('*') == wxNOT_FOUND))
-               fn.SetExt( ext );
-        }
-    }
-
-    return fn.GetFullPath();
+    return m_fc.GetPath();
 }
 
 void wxFileDialog::GetFilenames(wxArrayString& files) const
@@ -369,40 +369,76 @@ void wxFileDialog::SetMessage(const wxString& message)
 
 void wxFileDialog::SetPath(const wxString& path)
 {
-    m_fc.SetPath( path );
+    // we need an absolute path for GTK native chooser so ensure that we have
+    // it
+    wxFileName fn(path);
+    fn.MakeAbsolute();
+    m_fc.SetPath(fn.GetFullPath());
 }
 
 void wxFileDialog::SetDirectory(const wxString& dir)
 {
-    m_fc.SetDirectory( dir );
+    if (m_fc.SetDirectory( dir ))
+    {
+        // Cache the dir, as gtk_file_chooser_get_current_folder()
+        // doesn't return anything until the dialog has been shown
+        m_dir = dir;
+    }
 }
 
 wxString wxFileDialog::GetDirectory() const
 {
-    return m_fc.GetDirectory();
+    wxString currentDir( m_fc.GetDirectory() );
+    if (currentDir.empty())
+    {
+        // m_fc.GetDirectory() will return empty until the dialog has been shown
+        // in which case use any previously provided value
+        currentDir = m_dir;
+    }
+    return currentDir;
 }
 
 void wxFileDialog::SetFilename(const wxString& name)
 {
     if (HasFdFlag(wxFD_SAVE))
+    {
         gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(m_widget), wxGTK_CONV(name));
+        m_fileName = name;
+    }
+
     else
-        SetPath(wxFileName(GetDirectory(), name).GetFullPath());
+    {
+        wxString path( GetDirectory() );
+        if (path.empty())
+        {
+            // SetPath() fires an assert if fed other than filepaths
+            return;
+        }
+        SetPath(wxFileName(path, name).GetFullPath());
+        m_fileName = name;
+    }
 }
 
 wxString wxFileDialog::GetFilename() const
 {
-    return m_fc.GetFilename();
+    wxString currentFilename( m_fc.GetFilename() );
+    if (currentFilename.empty())
+    {
+        // m_fc.GetFilename() will return empty until the dialog has been shown
+        // in which case use any previously provided value
+        currentFilename = m_fileName;
+    }
+    return currentFilename;
 }
 
 void wxFileDialog::SetWildcard(const wxString& wildCard)
 {
-    m_fc.SetWildcard( wildCard );
+    wxFileDialogBase::SetWildcard(wildCard);
+    m_fc.SetWildcard( GetWildcard() );
 }
 
 void wxFileDialog::SetFilterIndex(int filterIndex)
 {
-
     m_fc.SetFilterIndex( filterIndex);
 }
 
@@ -411,4 +447,4 @@ int wxFileDialog::GetFilterIndex() const
     return m_fc.GetFilterIndex();
 }
 
-#endif // wxUSE_FILEDLG 
+#endif // wxUSE_FILEDLG

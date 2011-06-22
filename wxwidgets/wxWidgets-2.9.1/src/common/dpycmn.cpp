@@ -4,9 +4,9 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     01.03.03
-// RCS-ID:      $Id: dpycmn.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003-2006 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -98,11 +98,7 @@ public:
     virtual bool OnInit() { return true; }
     virtual void OnExit()
     {
-        if ( gs_factory )
-        {
-            delete gs_factory;
-            gs_factory = NULL;
-        }
+        wxDELETE(gs_factory);
     }
 
     DECLARE_DYNAMIC_CLASS(wxDisplayModule)
@@ -147,7 +143,7 @@ wxDisplay::~wxDisplay()
 
 /* static */ int wxDisplay::GetFromWindow(const wxWindow *window)
 {
-    wxCHECK_MSG( window, wxNOT_FOUND, _T("invalid window") );
+    wxCHECK_MSG( window, wxNOT_FOUND, wxT("invalid window") );
 
     return Factory().GetFromWindow(window);
 }
@@ -158,21 +154,21 @@ wxDisplay::~wxDisplay()
 
 wxRect wxDisplay::GetGeometry() const
 {
-    wxCHECK_MSG( IsOk(), wxRect(), _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), wxRect(), wxT("invalid wxDisplay object") );
 
     return m_impl->GetGeometry();
 }
 
 wxRect wxDisplay::GetClientArea() const
 {
-    wxCHECK_MSG( IsOk(), wxRect(), _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), wxRect(), wxT("invalid wxDisplay object") );
 
     return m_impl->GetClientArea();
 }
 
 wxString wxDisplay::GetName() const
 {
-    wxCHECK_MSG( IsOk(), wxString(), _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), wxString(), wxT("invalid wxDisplay object") );
 
     return m_impl->GetName();
 }
@@ -186,21 +182,21 @@ bool wxDisplay::IsPrimary() const
 
 wxArrayVideoModes wxDisplay::GetModes(const wxVideoMode& mode) const
 {
-    wxCHECK_MSG( IsOk(), wxArrayVideoModes(), _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), wxArrayVideoModes(), wxT("invalid wxDisplay object") );
 
     return m_impl->GetModes(mode);
 }
 
 wxVideoMode wxDisplay::GetCurrentMode() const
 {
-    wxCHECK_MSG( IsOk(), wxVideoMode(), _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), wxVideoMode(), wxT("invalid wxDisplay object") );
 
     return m_impl->GetCurrentMode();
 }
 
 bool wxDisplay::ChangeMode(const wxVideoMode& mode)
 {
-    wxCHECK_MSG( IsOk(), false, _T("invalid wxDisplay object") );
+    wxCHECK_MSG( IsOk(), false, wxT("invalid wxDisplay object") );
 
     return m_impl->ChangeMode(mode);
 }

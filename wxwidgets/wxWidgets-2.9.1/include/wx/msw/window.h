@@ -5,7 +5,7 @@
 // Modified by: Vadim Zeitlin on 13.05.99: complete refont of message handling,
 //              elimination of Default(), ...
 // Created:     01/02/97
-// RCS-ID:      $Id: window.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,9 +13,17 @@
 #ifndef _WX_WINDOW_H_
 #define _WX_WINDOW_H_
 
-// ---------------------------------------------------------------------------
-// constants
-// ---------------------------------------------------------------------------
+#include "wx/settings.h"        // solely for wxSystemColour
+
+// if this is set to 1, we use deferred window sizing to reduce flicker when
+// resizing complicated window hierarchies, but this can in theory result in
+// different behaviour than the old code so we keep the possibility to use it
+// by setting this to 0 (in the future this should be removed completely)
+#ifdef __WXWINCE__
+    #define wxUSE_DEFERRED_SIZING 0
+#else
+    #define wxUSE_DEFERRED_SIZING 1
+#endif
 
 // ---------------------------------------------------------------------------
 // wxWindow declaration for MSW
@@ -89,12 +97,6 @@ public:
 
     virtual int GetCharHeight() const;
     virtual int GetCharWidth() const;
-    virtual void GetTextExtent(const wxString& string,
-                               int *x, int *y,
-                               int *descent = NULL,
-                               int *externalLeading = NULL,
-                               const wxFont *theFont = (const wxFont *) NULL)
-                               const;
 
     virtual void SetScrollbar( int orient, int pos, int thumbVisible,
                                int range, bool refresh = true );
@@ -185,7 +187,6 @@ public:
     // --------------
 
     void OnPaint(wxPaintEvent& event);
-    void OnEraseBackground(wxEraseEvent& event);
 #ifdef __WXWINCE__
     void OnInitDialog(wxInitDialogEvent& event);
 #endif
@@ -232,15 +233,6 @@ public:
     // current wxWindow object style (safe to call even if window isn't fully
     // created yet)
     void MSWUpdateStyle(long flagsOld, long exflagsOld);
-
-    // translate wxWidgets coords into Windows ones suitable to be passed to
-    // ::CreateWindow()
-    //
-    // returns true if non default coords are returned, false otherwise
-    bool MSWGetCreateWindowCoords(const wxPoint& pos,
-                                  const wxSize& size,
-                                  int& x, int& y,
-                                  int& w, int& h) const;
 
     // get the HWND to be used as parent of this window with CreateWindow()
     virtual WXHWND MSWGetParent() const;
@@ -400,17 +392,34 @@ public:
     // background or 0 if this window doesn't impose any particular background
     // on its children
     //
+    // the hDC parameter is the DC background will be drawn on, it can be used
+    // to call SetBrushOrgEx() on it if the returned brush is a bitmap one
+    //
+    // child parameter is never NULL, it can be this window itself or one of
+    // its (grand)children
+    //
     // the base class version returns a solid brush if we have a non default
     // background colour or 0 otherwise
-    virtual WXHBRUSH MSWGetBgBrushForChild(WXHDC hDC, WXHWND hWnd);
+    virtual WXHBRUSH MSWGetBgBrushForChild(WXHDC hDC, wxWindowMSW *child);
 
     // return the background brush to use for painting the given window by
-    // quering the parent windows via their MSWGetBgBrushForChild() recursively
-    //
-    // hWndToPaint is normally NULL meaning this window itself, but it can also
-    // be a child of this window which is used by the static box and could be
-    // potentially useful for other transparent controls
-    WXHBRUSH MSWGetBgBrush(WXHDC hDC, WXHWND hWndToPaint = NULL);
+    // querying the parent windows via MSWGetBgBrushForChild() recursively
+    WXHBRUSH MSWGetBgBrush(WXHDC hDC);
+
+    enum MSWThemeColour
+    {
+        ThemeColourText = 0,
+        ThemeColourBackground,
+        ThemeColourBorder
+    };
+
+    // returns a specific theme colour, or if that is not possible then
+    // wxSystemSettings::GetColour(fallback)
+    wxColour MSWGetThemeColour(const wchar_t *themeName,
+                               int themePart,
+                               int themeState,
+                               MSWThemeColour themeColour,
+                               wxSystemColour fallback) const;
 
     // gives the parent the possibility to draw its children background, e.g.
     // this is used by wxNotebook to do it using DrawThemeBackground()
@@ -429,6 +438,27 @@ public:
         return true;
     }
 
+#if !defined(__WXWINCE__) && !defined(__WXUNIVERSAL__)
+    #define wxHAS_MSW_BACKGROUND_ERASE_HOOK
+#endif
+
+#ifdef wxHAS_MSW_BACKGROUND_ERASE_HOOK
+    // allows the child to hook into its parent WM_ERASEBKGND processing: call
+    // MSWSetEraseBgHook() with a non-NULL window to make parent call
+    // MSWEraseBgHook() on this window (don't forget to reset it to NULL
+    // afterwards)
+    //
+    // this hack is used by wxToolBar, see comments there
+    void MSWSetEraseBgHook(wxWindow *child);
+
+    // return true if WM_ERASEBKGND is currently hooked
+    bool MSWHasEraseBgHook() const;
+
+    // called when the window on which MSWSetEraseBgHook() had been called
+    // receives WM_ERASEBKGND
+    virtual bool MSWEraseBgHook(WXHDC WXUNUSED(hDC)) { return false; }
+#endif // wxHAS_MSW_BACKGROUND_ERASE_HOOK
+
     // common part of Show/HideWithEffect()
     bool MSWShowWithEffect(bool show,
                            wxShowEffect effect,
@@ -445,9 +475,9 @@ public:
 
     // check if a native double-buffering applies for this window
     virtual bool IsDoubleBuffered() const;
-    
+
     void SetDoubleBuffered(bool on);
-    
+
     // synthesize a wxEVT_LEAVE_WINDOW event and set m_mouseInWindow to false
     void GenerateMouseLeave();
 
@@ -487,6 +517,11 @@ protected:
     int                   m_yThumbSize;
 
     // implement the base class pure virtuals
+    virtual void DoGetTextExtent(const wxString& string,
+                                 int *x, int *y,
+                                 int *descent = NULL,
+                                 int *externalLeading = NULL,
+                                 const wxFont *font = NULL) const;
     virtual void DoClientToScreen( int *x, int *y ) const;
     virtual void DoScreenToClient( int *x, int *y ) const;
     virtual void DoGetPosition( int *x, int *y ) const;
@@ -496,6 +531,8 @@ protected:
                            int width, int height,
                            int sizeFlags = wxSIZE_AUTO);
     virtual void DoSetClientSize(int width, int height);
+
+    virtual wxSize DoGetBorderSize() const;
 
     virtual void DoCaptureMouse();
     virtual void DoReleaseMouse();
@@ -546,6 +583,13 @@ protected:
     // for state as the system will decide for us what needs to be set
     void MSWUpdateUIState(int action, int state = 0);
 
+    // translate wxWidgets coords into Windows ones suitable to be passed to
+    // ::CreateWindow(), called from MSWCreate()
+    virtual void MSWGetCreateWindowCoords(const wxPoint& pos,
+                                          const wxSize& size,
+                                          int& x, int& y,
+                                          int& w, int& h) const;
+
 private:
     // common part of all ctors
     void Init();
@@ -556,16 +600,24 @@ private:
     bool HandleJoystickEvent(WXUINT msg, int x, int y, WXUINT flags);
     bool HandleNotify(int idCtrl, WXLPARAM lParam, WXLPARAM *result);
 
+#if wxUSE_DEFERRED_SIZING
+protected:
+    // this function is called after the window was resized to its new size
+    virtual void MSWEndDeferWindowPos()
+    {
+        m_pendingPosition = wxDefaultPosition;
+        m_pendingSize = wxDefaultSize;
+    }
 
     // current defer window position operation handle (may be NULL)
     WXHANDLE m_hDWP;
 
-protected:
     // When deferred positioning is done these hold the pending changes, and
     // are used for the default values if another size/pos changes is done on
     // this window before the group of deferred changes is completed.
     wxPoint     m_pendingPosition;
     wxSize      m_pendingSize;
+#endif // wxUSE_DEFERRED_SIZING
 
 private:
 #ifdef __POCKETPC__
@@ -587,7 +639,7 @@ private:
 
 // kbd code translation
 WXDLLIMPEXP_CORE int wxCharCodeMSWToWX(int keySym, WXLPARAM lParam = 0);
-WXDLLIMPEXP_CORE WXWORD wxCharCodeWXToMSW(int id, bool *IsVirtual = NULL);
+WXDLLIMPEXP_CORE WXWORD wxCharCodeWXToMSW(int id);
 
 // window creation helper class: before creating a new HWND, instantiate an
 // object of this class on stack - this allows to process the messages sent to

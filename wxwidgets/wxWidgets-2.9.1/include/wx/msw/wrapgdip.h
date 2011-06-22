@@ -3,7 +3,7 @@
 // Purpose:     wrapper around <gdiplus.h> header
 // Author:      Vadim Zeitlin
 // Created:     2007-03-15
-// RCS-ID:      $Id: wrapgdip.h 44815 2007-03-15 03:41:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

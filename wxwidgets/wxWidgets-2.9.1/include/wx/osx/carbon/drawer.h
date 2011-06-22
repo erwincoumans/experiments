@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/carbon/drawer.h
+// Name:        wx/osx/carbon/drawer.h
 // Purpose:     Drawer child window class.
 //              Drawer windows appear under their parent window and
 //              behave like a drawer, opening and closing to reveal
@@ -7,7 +7,7 @@
 // Author:      Jason Bagley
 // Modified by:
 // Created:     2004-30-01
-// RCS-ID:      $Id: drawer.h 50646 2007-12-12 01:35:53Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jason Bagley; Art & Logic, Inc.
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

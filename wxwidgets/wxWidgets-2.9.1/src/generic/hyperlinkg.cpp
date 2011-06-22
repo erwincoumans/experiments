@@ -4,7 +4,7 @@
 // Author:      David Norris <danorris@gmail.com>, Otto Wyss
 // Modified by: Ryan Norton, Francesco Montorsi
 // Created:     04/02/2005
-// RCS-ID:      $Id: hyperlinkg.cpp 52148 2008-02-27 17:45:15Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 David Norris
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,6 +79,7 @@ bool wxGenericHyperlinkCtrl::Create(wxWindow *parent, wxWindowID id,
     // colours
     m_normalColour = *wxBLUE;
     m_hoverColour = *wxRED;
+    m_visitedColour = wxColour("#551a8b");
     SetForegroundColour(m_normalColour);
 
     // by default the font of an hyperlink control is underlined
@@ -195,7 +196,7 @@ void wxGenericHyperlinkCtrl::OnLeftDown(wxMouseEvent& event)
 void wxGenericHyperlinkCtrl::OnLeftUp(wxMouseEvent& event)
 {
     // the click must be started and ended in the hyperlink rect
-    if (!m_clicking || !GetLabelRect().Contains(event.GetPosition())) 
+    if (!m_clicking || !GetLabelRect().Contains(event.GetPosition()))
         return;
 
     SetForegroundColour(m_visitedColour);

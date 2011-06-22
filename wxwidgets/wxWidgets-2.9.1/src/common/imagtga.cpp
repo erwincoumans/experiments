@@ -2,7 +2,7 @@
 // Name:        imagtga.cpp
 // Purpose:     wxImage TGA handler
 // Author:      Seth Jackson
-// CVS-ID:      $Id: imagtga.cpp 58080 2009-01-13 19:16:08Z FM $
+// CVS-ID:      $Id$
 // Copyright:   (c) 2005 Seth Jackson
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -669,7 +669,9 @@ bool wxTGAHandler::LoadFile(wxImage* image,
     if ( !CanRead(stream) )
     {
         if ( verbose )
+        {
             wxLogError(wxT("TGA: this is not a TGA file."));
+        }
 
         return false;
     }
@@ -741,7 +743,7 @@ bool wxTGAHandler::DoCanRead(wxInputStream& stream)
 {
     // read the fixed-size TGA headers
     unsigned char hdr[HDR_SIZE];
-    stream.Read(hdr, HDR_SIZE);
+    stream.Read(hdr, HDR_SIZE);     // it's ok to modify the stream position here
 
     // Check wether we can read the file or not.
 

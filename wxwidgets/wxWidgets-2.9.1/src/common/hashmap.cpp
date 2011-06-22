@@ -4,7 +4,7 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     29/01/2002
-// RCS-ID:      $Id: hashmap.cpp 54203 2008-06-14 01:53:29Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Mattia Barbon
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -70,7 +70,7 @@ unsigned long _wxHashTableBase2::GetNextPrime( unsigned long n )
     }
 
     /* someone might try to alloc a 2^32-element hash table */
-    wxFAIL_MSG( _T("hash table too big?") );
+    wxFAIL_MSG( wxT("hash table too big?") );
 
     /* quiet warning */
     return 0;

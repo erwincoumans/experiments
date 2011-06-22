@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/4/2006 10:32:31 AM
-// RCS-ID:      $Id: richtextbulletspage.h 59816 2009-03-24 19:09:52Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ class wxRichTextCtrl;
 
 ////@begin control identifiers
 #define SYMBOL_WXRICHTEXTBULLETSPAGE_STYLE wxRESIZE_BORDER|wxTAB_TRAVERSAL
-#define SYMBOL_WXRICHTEXTBULLETSPAGE_TITLE _T("")
+#define SYMBOL_WXRICHTEXTBULLETSPAGE_TITLE wxT("")
 #define SYMBOL_WXRICHTEXTBULLETSPAGE_IDNAME ID_RICHTEXTBULLETSPAGE
 #define SYMBOL_WXRICHTEXTBULLETSPAGE_SIZE wxSize(400, 300)
 #define SYMBOL_WXRICHTEXTBULLETSPAGE_POSITION wxDefaultPosition

@@ -3,7 +3,7 @@
 // Purpose:     font management for ports that don't have their own
 // Author:      Vaclav Slavik
 // Created:     2006-11-18
-// RCS-ID:      $Id: fontmgr.h 56726 2008-11-10 14:30:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001-2002 SciTech Software, Inc. (www.scitechsoft.com)
 //              (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
@@ -237,15 +237,10 @@ public:
     void SetUnderlined(bool underlined);
     void SetEncoding(wxFontEncoding encoding);
 
-    // Unofficial API, don't use
-    void SetNoAntiAliasing(bool no);
-    bool GetNoAntiAliasing() const { return m_noAA; }
-
 private:
     void EnsureValidFont();
 
     wxNativeFontInfo  m_info;
-    bool              m_noAA;
 
     wxFontFace       *m_fontFace;
     wxFontBundle     *m_fontBundle;

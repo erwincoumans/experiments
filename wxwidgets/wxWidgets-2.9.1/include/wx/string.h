@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: string.h 60241 2009-04-19 07:20:34Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -225,19 +225,19 @@ public:
 
     inline ~wxCStrData();
 
-    // methods defined inline below must be declared inline or mingw32 3.4.5
-    // warns about "<symbol> defined locally after being referenced with
-    // dllimport linkage"
-#if wxUSE_UNICODE_WCHAR
-    inline
-#endif
-    const wchar_t* AsWChar() const;
+    // AsWChar() and AsChar() can't be defined here as they use wxString and so
+    // must come after it and because of this won't be inlined when called from
+    // wxString methods (without a lot of work to extract these wxString methods
+    // from inside the class itself). But we still define them being inline
+    // below to let compiler inline them from elsewhere. And because of this we
+    // must declare them as inline here because otherwise some compilers give
+    // warnings about them, e.g. mingw32 3.4.5 warns about "<symbol> defined
+    // locally after being referenced with dllimport linkage" while IRIX
+    // mipsPro 7.4 warns about "function declared inline after being called".
+    inline const wchar_t* AsWChar() const;
     operator const wchar_t*() const { return AsWChar(); }
 
-#if !wxUSE_UNICODE || wxUSE_UTF8_LOCALE_ONLY
-    inline
-#endif
-    const char* AsChar() const;
+    inline const char* AsChar() const;
     const unsigned char* AsUnsignedChar() const
         { return (const unsigned char *) AsChar(); }
     operator const char*() const { return AsChar(); }
@@ -288,7 +288,7 @@ public:
     wxCStrData operator-(ptrdiff_t n) const
     {
         wxASSERT_MSG( n <= (ptrdiff_t)m_offset,
-                      _T("attempt to construct address before the beginning of the string") );
+                      wxT("attempt to construct address before the beginning of the string") );
         return wxCStrData(m_str, m_offset - n, m_owned);
     }
 
@@ -408,6 +408,7 @@ protected:
 #ifdef wxNEEDS_WXSTRING_PRINTF_MIXIN
     // "non dll-interface class 'wxStringPrintfMixin' used as base interface
     // for dll-interface class 'wxString'" -- this is OK in our case
+    #pragma warning (push)
     #pragma warning (disable:4275)
 #endif
 
@@ -1004,8 +1005,8 @@ public:
         { return iterator(str(), wxStringOperations::AddToIter(m_cur, -n)); }
 
   private:
-      iterator(wxString *str, underlying_iterator ptr)
-          : m_cur(ptr), m_node(str, &m_cur) {}
+      iterator(wxString *wxstr, underlying_iterator ptr)
+          : m_cur(ptr), m_node(wxstr, &m_cur) {}
 
       wxString* str() const { return const_cast<wxString*>(m_node.m_str); }
 
@@ -1049,8 +1050,8 @@ public:
 
   private:
       // for internal wxString use only:
-      const_iterator(const wxString *str, underlying_iterator ptr)
-          : m_cur(ptr), m_node(str, &m_cur) {}
+      const_iterator(const wxString *wxstr, underlying_iterator ptr)
+          : m_cur(ptr), m_node(wxstr, &m_cur) {}
 
       const wxString* str() const { return m_node.m_str; }
 
@@ -1340,14 +1341,18 @@ public:
 
   // Unlike ctor from std::string, we provide conversion to std::string only
   // if wxUSE_STL and not merely wxUSE_STD_STRING (which is on by default),
-  // because it conflicts with operator const char/wchar_t*:
-#if wxUSE_STL
+  // because it conflicts with operator const char/wchar_t* but we still
+  // provide explicit conversions to std::[w]string for convenience in any case
+#if wxUSE_STD_STRING
+  // We can avoid a copy if we already use this string type internally,
+  // otherwise we create a copy on the fly:
   #if wxUSE_UNICODE_WCHAR && wxUSE_STL_BASED_WXSTRING
-    // wxStringImpl is std::string in the encoding we want
-    operator const wxStdWideString&() const { return m_impl; }
+    #define wxStringToStdWstringRetType const wxStdWideString&
+    const wxStdWideString& ToStdWstring() const { return m_impl; }
   #else
     // wxStringImpl is either not std::string or needs conversion
-    operator wxStdWideString() const
+    #define wxStringToStdWstringRetType wxStdWideString
+    wxStdWideString ToStdWstring() const
     {
         wxScopedWCharBuffer buf(wc_str());
         return wxStdWideString(buf.data(), buf.length());
@@ -1356,16 +1361,30 @@ public:
 
   #if (!wxUSE_UNICODE || wxUSE_UTF8_LOCALE_ONLY) && wxUSE_STL_BASED_WXSTRING
     // wxStringImpl is std::string in the encoding we want
-    operator const std::string&() const { return m_impl; }
+    #define wxStringToStdStringRetType const std::string&
+    const std::string& ToStdString() const { return m_impl; }
   #else
     // wxStringImpl is either not std::string or needs conversion
-    operator std::string() const
+    #define wxStringToStdStringRetType std::string
+    std::string ToStdString() const
     {
         wxScopedCharBuffer buf(mb_str());
         return std::string(buf.data(), buf.length());
     }
   #endif
+
+#if wxUSE_STL
+  // In wxUSE_STL case we also provide implicit conversions as there is no
+  // ambiguity with the const char/wchar_t* ones as they are disabled in this
+  // build (for consistency with std::basic_string<>)
+  operator wxStringToStdStringRetType() const { return ToStdString(); }
+  operator wxStringToStdWstringRetType() const { return ToStdWstring(); }
 #endif // wxUSE_STL
+
+#undef wxStringToStdStringRetType
+#undef wxStringToStdWstringRetType
+
+#endif // wxUSE_STD_STRING
 
   wxString Clone() const
   {
@@ -1512,14 +1531,14 @@ public:
     // get last character
     wxUniChar Last() const
     {
-      wxASSERT_MSG( !empty(), _T("wxString: index out of bounds") );
+      wxASSERT_MSG( !empty(), wxT("wxString: index out of bounds") );
       return *rbegin();
     }
 
     // get writable last character
     wxUniCharRef Last()
     {
-      wxASSERT_MSG( !empty(), _T("wxString: index out of bounds") );
+      wxASSERT_MSG( !empty(), wxT("wxString: index out of bounds") );
       return *rbegin();
     }
 
@@ -1781,7 +1800,8 @@ public:
     // version for NUL-terminated data:
     static wxString From8BitData(const char *data)
       { return wxString(data); }
-    const char *To8BitData() const { return c_str(); }
+    const wxScopedCharBuffer To8BitData() const
+        { return wxScopedCharBuffer::CreateNonOwned(wx_str(), length()); }
 #endif // Unicode/ANSI
 
     // conversions with (possible) format conversions: have to return a
@@ -1962,7 +1982,7 @@ public:
   {
 #if WXWIN_COMPATIBILITY_2_8 && !wxUSE_STL_BASED_WXSTRING && !wxUSE_UNICODE_UTF8
     wxASSERT_MSG( s.IsValid(),
-                  _T("did you forget to call UngetWriteBuf()?") );
+                  wxT("did you forget to call UngetWriteBuf()?") );
 #endif
 
     append(s);
@@ -2056,36 +2076,34 @@ public:
   // stream-like functions
       // insert an int into string
   wxString& operator<<(int i)
-    { return (*this) << Format(_T("%d"), i); }
+    { return (*this) << Format(wxT("%d"), i); }
       // insert an unsigned int into string
   wxString& operator<<(unsigned int ui)
-    { return (*this) << Format(_T("%u"), ui); }
+    { return (*this) << Format(wxT("%u"), ui); }
       // insert a long into string
   wxString& operator<<(long l)
-    { return (*this) << Format(_T("%ld"), l); }
+    { return (*this) << Format(wxT("%ld"), l); }
       // insert an unsigned long into string
   wxString& operator<<(unsigned long ul)
-    { return (*this) << Format(_T("%lu"), ul); }
+    { return (*this) << Format(wxT("%lu"), ul); }
 #if defined wxLongLong_t && !defined wxLongLongIsLong
       // insert a long long if they exist and aren't longs
   wxString& operator<<(wxLongLong_t ll)
     {
-      const wxChar *fmt = _T("%") wxLongLongFmtSpec _T("d");
-      return (*this) << Format(fmt, ll);
+      return (*this) << Format("%" wxLongLongFmtSpec "d", ll);
     }
       // insert an unsigned long long
   wxString& operator<<(wxULongLong_t ull)
     {
-      const wxChar *fmt = _T("%") wxLongLongFmtSpec _T("u");
-      return (*this) << Format(fmt , ull);
+      return (*this) << Format("%" wxLongLongFmtSpec "u" , ull);
     }
 #endif // wxLongLong_t && !wxLongLongIsLong
       // insert a float into string
   wxString& operator<<(float f)
-    { return (*this) << Format(_T("%f"), f); }
+    { return (*this) << Format(wxT("%f"), f); }
       // insert a double into string
   wxString& operator<<(double d)
-    { return (*this) << Format(_T("%g"), d); }
+    { return (*this) << Format(wxT("%g"), d); }
 
   // string comparison
     // case-sensitive comparison (returns a value < 0, = 0 or > 0)
@@ -2263,7 +2281,6 @@ public:
       // convert to a double
   bool ToDouble(double *val) const;
 
-#if wxUSE_XLOCALE
   // conversions to numbers using C locale
       // convert to a signed integer
   bool ToCLong(long *val, int base = 10) const;
@@ -2271,8 +2288,14 @@ public:
   bool ToCULong(unsigned long *val, int base = 10) const;
       // convert to a double
   bool ToCDouble(double *val) const;
-#endif
-  
+
+  // create a string representing the given floating point number
+    // in the current locale
+  static wxString FromDouble(double val)
+    { return wxString::Format(wxS("%g"), val); }
+    // in C locale
+  static wxString FromCDouble(double val);
+
 #ifndef wxNEEDS_WXSTRING_PRINTF_MIXIN
   // formatted input/output
     // as sprintf(), returns the number of characters written or < 0 on error
@@ -2427,7 +2450,7 @@ public:
                CreateConstIterator(last).impl())
   {
       wxASSERT_MSG( first.m_str == last.m_str,
-                    _T("pointers must be into the same string") );
+                    wxT("pointers must be into the same string") );
   }
 #endif // WXWIN_COMPATIBILITY_STRING_PTR_AS_ITER
 
@@ -3576,7 +3599,7 @@ private:
 };
 
 #ifdef wxNEEDS_WXSTRING_PRINTF_MIXIN
-    #pragma warning (default:4275)
+    #pragma warning (pop)
 #endif
 
 // string iterator operators that satisfy STL Random Access Iterator
@@ -4164,7 +4187,7 @@ inline const wxStringCharType *wxCStrData::AsInternal() const
 inline wxUniChar wxCStrData::operator*() const
 {
     if ( m_str->empty() )
-        return wxUniChar(_T('\0'));
+        return wxUniChar(wxT('\0'));
     else
         return (*m_str)[m_offset];
 }

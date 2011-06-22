@@ -4,7 +4,7 @@
 // Author:      Michael Bedward (based on code by Julian Smart, Robin Dunn)
 // Modified by: Robin Dunn, Vadim Zeitlin, Santiago Palacios
 // Created:     1/08/1999
-// RCS-ID:      $Id: grideditors.cpp 60385 2009-04-26 11:12:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Michael Bedward (mbedward@ozemail.com.au)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -399,7 +399,10 @@ void wxGridCellTextEditor::DoCreate(wxWindow* parent,
                                     wxEvtHandler* evtHandler,
                                     long style)
 {
-    style |= wxTE_PROCESS_ENTER | wxTE_PROCESS_TAB | wxNO_BORDER;
+    // Use of wxTE_RICH2 is a strange hack to work around the bug #11681: a
+    // plain text control seems to lose its caret somehow when we hide it and
+    // show it again for a different cell.
+    style |= wxTE_PROCESS_ENTER | wxTE_PROCESS_TAB | wxNO_BORDER | wxTE_RICH2;
 
     m_control = new wxTextCtrl(parent, id, wxEmptyString,
                                wxDefaultPosition, wxDefaultSize,
@@ -604,7 +607,7 @@ void wxGridCellTextEditor::SetParameters(const wxString& params)
         }
         else
         {
-            wxLogDebug( _T("Invalid wxGridCellTextEditor parameter string '%s' ignored"), params.c_str() );
+            wxLogDebug( wxT("Invalid wxGridCellTextEditor parameter string '%s' ignored"), params.c_str() );
         }
     }
 }
@@ -666,7 +669,7 @@ void wxGridCellNumberEditor::BeginEdit(int row, int col, wxGrid* grid)
         wxString sValue = table->GetValue(row, col);
         if (! sValue.ToLong(&m_value) && ! sValue.empty())
         {
-            wxFAIL_MSG( _T("this cell doesn't have numeric value") );
+            wxFAIL_MSG( wxT("this cell doesn't have numeric value") );
             return;
         }
     }
@@ -808,11 +811,11 @@ void wxGridCellNumberEditor::SetParameters(const wxString& params)
     else
     {
         long tmp;
-        if ( params.BeforeFirst(_T(',')).ToLong(&tmp) )
+        if ( params.BeforeFirst(wxT(',')).ToLong(&tmp) )
         {
             m_min = (int)tmp;
 
-            if ( params.AfterFirst(_T(',')).ToLong(&tmp) )
+            if ( params.AfterFirst(wxT(',')).ToLong(&tmp) )
             {
                 m_max = (int)tmp;
 
@@ -821,7 +824,7 @@ void wxGridCellNumberEditor::SetParameters(const wxString& params)
             }
         }
 
-        wxLogDebug(_T("Invalid wxGridCellNumberEditor parameter string '%s' ignored"), params.c_str());
+        wxLogDebug(wxT("Invalid wxGridCellNumberEditor parameter string '%s' ignored"), params.c_str());
     }
 }
 
@@ -883,7 +886,7 @@ void wxGridCellFloatEditor::BeginEdit(int row, int col, wxGrid* grid)
         {
             if ( !value.ToDouble(&m_value) )
             {
-                wxFAIL_MSG( _T("this cell doesn't have float value") );
+                wxFAIL_MSG( wxT("this cell doesn't have float value") );
                 return;
             }
         }
@@ -953,7 +956,7 @@ void wxGridCellFloatEditor::StartingKey(wxKeyEvent& event)
     bool is_decimal_point = ( strbuf ==
        wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT, wxLOCALE_CAT_NUMBER) );
 #else
-    bool is_decimal_point = ( strbuf == _T(".") );
+    bool is_decimal_point = ( strbuf == wxT(".") );
 #endif
 
     if ( wxIsdigit(keycode) || keycode == '+' || keycode == '-'
@@ -979,11 +982,11 @@ void wxGridCellFloatEditor::SetParameters(const wxString& params)
     else
     {
         long tmp;
-        if ( params.BeforeFirst(_T(',')).ToLong(&tmp) )
+        if ( params.BeforeFirst(wxT(',')).ToLong(&tmp) )
         {
             m_width = (int)tmp;
 
-            if ( params.AfterFirst(_T(',')).ToLong(&tmp) )
+            if ( params.AfterFirst(wxT(',')).ToLong(&tmp) )
             {
                 m_precision = (int)tmp;
 
@@ -992,7 +995,7 @@ void wxGridCellFloatEditor::SetParameters(const wxString& params)
             }
         }
 
-        wxLogDebug(_T("Invalid wxGridCellFloatEditor parameter string '%s' ignored"), params.c_str());
+        wxLogDebug(wxT("Invalid wxGridCellFloatEditor parameter string '%s' ignored"), params.c_str());
     }
 }
 
@@ -1002,21 +1005,21 @@ wxString wxGridCellFloatEditor::GetString() const
     if ( m_precision == -1 && m_width != -1)
     {
         // default precision
-        fmt.Printf(_T("%%%d.f"), m_width);
+        fmt.Printf(wxT("%%%d.f"), m_width);
     }
     else if ( m_precision != -1 && m_width == -1)
     {
         // default width
-        fmt.Printf(_T("%%.%df"), m_precision);
+        fmt.Printf(wxT("%%.%df"), m_precision);
     }
     else if ( m_precision != -1 && m_width != -1 )
     {
-        fmt.Printf(_T("%%%d.%df"), m_width, m_precision);
+        fmt.Printf(wxT("%%%d.%df"), m_width, m_precision);
     }
     else
     {
         // default width/precision
-        fmt = _T("%f");
+        fmt = wxT("%f");
     }
 
     return wxString::Format(fmt, m_value);
@@ -1027,18 +1030,13 @@ bool wxGridCellFloatEditor::IsAcceptedKey(wxKeyEvent& event)
     if ( wxGridCellEditor::IsAcceptedKey(event) )
     {
         const int keycode = event.GetKeyCode();
-        if ( isascii(keycode) )
+        if ( wxIsascii(keycode) )
         {
-            char tmpbuf[2];
-            tmpbuf[0] = (char) keycode;
-            tmpbuf[1] = '\0';
-            wxString strbuf(tmpbuf, *wxConvCurrent);
-
 #if wxUSE_INTL
             const wxString decimalPoint =
                 wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT, wxLOCALE_CAT_NUMBER);
 #else
-            const wxString decimalPoint(_T('.'));
+            const wxString decimalPoint(wxT('.'));
 #endif
 
             // accept digits, 'e' as in '1e+6', also '-', '+', and '.'
@@ -1065,7 +1063,7 @@ bool wxGridCellFloatEditor::IsAcceptedKey(wxKeyEvent& event)
 // ----------------------------------------------------------------------------
 
 // the default values for GetValue()
-wxString wxGridCellBoolEditor::ms_stringValues[2] = { _T(""), _T("1") };
+wxString wxGridCellBoolEditor::ms_stringValues[2] = { wxT(""), wxT("1") };
 
 void wxGridCellBoolEditor::Create(wxWindow* parent,
                                   wxWindowID id,
@@ -1183,7 +1181,7 @@ void wxGridCellBoolEditor::BeginEdit(int row, int col, wxGrid* grid)
             // because we'll still overwrite it with something different and
             // this risks to be very surprising for the user code, let them
             // know about it
-            wxFAIL_MSG( _T("invalid value for a cell with bool editor!") );
+            wxFAIL_MSG( wxT("invalid value for a cell with bool editor!") );
         }
     }
 
@@ -1432,7 +1430,7 @@ void wxGridCellChoiceEditor::SetParameters(const wxString& params)
 
     m_choices.Empty();
 
-    wxStringTokenizer tk(params, _T(','));
+    wxStringTokenizer tk(params, wxT(','));
     while ( tk.HasMoreTokens() )
     {
         m_choices.Add(tk.GetNextToken());

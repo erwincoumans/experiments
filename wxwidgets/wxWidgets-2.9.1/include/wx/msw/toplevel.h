@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.09.01
-// RCS-ID:      $Id: toplevel.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,6 +64,7 @@ public:
 
     virtual bool Show(bool show = true);
 
+    virtual void ShowWithoutActivating();
     virtual bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL);
     virtual bool IsFullScreen() const { return m_fsIsShowing; }
 
@@ -145,6 +146,12 @@ protected:
     // using WM_SETICON with the specified wParam (ICOM_SMALL or ICON_BIG);
     // returns true if the icon was set
     bool DoSelectAndSetIcon(const wxIconBundle& icons, int smX, int smY, int i);
+
+    // override wxWindow virtual method to use CW_USEDEFAULT if necessary
+    virtual void MSWGetCreateWindowCoords(const wxPoint& pos,
+                                          const wxSize& size,
+                                          int& x, int& y,
+                                          int& w, int& h) const;
 
 
     // is the window currently iconized?

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.09.00
-// RCS-ID:      $Id: tipwin.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -267,7 +267,7 @@ void wxTipWindowView::Adjust(const wxString& text, wxCoord maxLength)
     bool breakLine = false;
     for ( const wxChar *p = text.c_str(); ; p++ )
     {
-        if ( *p == _T('\n') || *p == _T('\0') )
+        if ( *p == wxT('\n') || *p == wxT('\0') )
         {
             dc.GetTextExtent(current, &width, &height);
             if ( width > widthMax )
@@ -287,7 +287,7 @@ void wxTipWindowView::Adjust(const wxString& text, wxCoord maxLength)
             current.clear();
             breakLine = false;
         }
-        else if ( breakLine && (*p == _T(' ') || *p == _T('\t')) )
+        else if ( breakLine && (*p == wxT(' ') || *p == wxT('\t')) )
         {
             // word boundary - break the line here
             m_parent->m_textLines.Add(current);

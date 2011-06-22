@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-03-12
-// RCS-ID:      $Id: propdlg.cpp 51215 2008-01-14 22:23:01Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ bool wxPropertySheetDialog::Create(wxWindow* parent, wxWindowID id, const wxStri
                                        const wxPoint& pos, const wxSize& sz, long style,
                                        const wxString& name)
 {
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, style);
 
     if (!wxDialog::Create(parent, id, title, pos, sz, style|wxCLIP_CHILDREN, name))
         return false;
@@ -120,7 +120,7 @@ void wxPropertySheetDialog::CreateButtons(int flags)
     wxSystemOptions::SetOption(optionName,0);
 #endif
 
-    wxSizer *buttonSizer = CreateButtonSizer( flags & ButtonSizerFlags );
+    wxSizer *buttonSizer = CreateButtonSizer(flags);
     if( buttonSizer )
     {
         m_innerSizer->Add( buttonSizer, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxTOP|wxBOTTOM|wxLEFT|wxRIGHT, 2);

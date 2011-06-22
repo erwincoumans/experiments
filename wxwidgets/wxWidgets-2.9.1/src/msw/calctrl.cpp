@@ -3,7 +3,7 @@
 // Purpose:     wxCalendarCtrl implementation
 // Author:      Vadim Zeitlin
 // Created:     2008-04-04
-// RCS-ID:      $Id: calctrl.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (C) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +35,27 @@
 #include "wx/msw/private/datecontrols.h"
 
 IMPLEMENT_DYNAMIC_CLASS(wxCalendarCtrl, wxControl)
+
+// ----------------------------------------------------------------------------
+// constants
+// ----------------------------------------------------------------------------
+
+namespace
+{
+
+// values of week days used by the native control
+enum
+{
+    MonthCal_Monday,
+    MonthCal_Tuesday,
+    MonthCal_Wednesday,
+    MonthCal_Thursday,
+    MonthCal_Friday,
+    MonthCal_Saturday,
+    MonthCal_Sunday
+};
+
+} // anonymous namespace
 
 // ============================================================================
 // implementation
@@ -85,7 +106,7 @@ wxCalendarCtrl::Create(wxWindow *parent,
         }
         else
         {
-            wxLogLastError(_T("GetClassInfoEx(SysMonthCal32)"));
+            wxLogLastError(wxT("GetClassInfoEx(SysMonthCal32)"));
         }
     }
 
@@ -96,7 +117,7 @@ wxCalendarCtrl::Create(wxWindow *parent,
     if ( !MSWCreateControl(clsname, wxEmptyString, pos, size) )
         return false;
 
-    // initialize the control 
+    // initialize the control
     UpdateFirstDayOfWeek();
 
     SetDate(dt.IsValid() ? dt : wxDateTime::Today());
@@ -166,6 +187,15 @@ wxCalendarCtrl::HitTest(const wxPoint& pos,
                         wxDateTime::WeekDay *wd)
 {
     WinStruct<MCHITTESTINFO> hti;
+
+    // Vista and later SDKs add a few extra fields to MCHITTESTINFO which are
+    // not supported by the previous versions, as we don't use them anyhow we
+    // should pretend that we always use the old struct format to make the call
+    // below work on pre-Vista systems (see #11057)
+#ifdef MCHITTESTINFO_V1_SIZE
+    hti.cbSize = MCHITTESTINFO_V1_SIZE;
+#endif
+
     hti.pt.x = pos.x;
     hti.pt.y = pos.y;
     switch ( MonthCal_HitTest(GetHwnd(), &hti) )
@@ -184,13 +214,32 @@ wxCalendarCtrl::HitTest(const wxPoint& pos,
 
         case MCHT_CALENDARDATE:
             if ( date )
-                date->SetFromMSWSysTime(hti.st);
+                date->SetFromMSWSysDate(hti.st);
             return wxCAL_HITTEST_DAY;
 
         case MCHT_CALENDARDAY:
             if ( wd )
             {
-                *wd = static_cast<wxDateTime::WeekDay>(hti.st.wDayOfWeek);
+                int day = hti.st.wDayOfWeek;
+
+                // the native control returns incorrect day of the week when
+                // the first day isn't Monday, i.e. the first column is always
+                // "Monday" even if its label is "Sunday", compensate for it
+                const int first = LOWORD(MonthCal_GetFirstDayOfWeek(GetHwnd()));
+                if ( first == MonthCal_Monday )
+                {
+                    // as MonthCal_Monday is 0 while wxDateTime::Mon is 1,
+                    // normally we need to do this to transform from MSW
+                    // convention to wx one
+                    day++;
+                    day %= 7;
+                }
+                //else: but when the first day is MonthCal_Sunday, the native
+                //      control still returns 0 (i.e. MonthCal_Monday) for the
+                //      first column which looks like a bug in it but to work
+                //      around it it's enough to not apply the correction above
+
+                *wd = static_cast<wxDateTime::WeekDay>(day);
             }
             return wxCAL_HITTEST_HEADER;
 
@@ -215,15 +264,15 @@ bool wxCalendarCtrl::SetDate(const wxDateTime& dt)
     wxCHECK_MSG( dt.IsValid(), false, "invalid date" );
 
     SYSTEMTIME st;
-    dt.GetAsMSWSysTime(&st);
+    dt.GetAsMSWSysDate(&st);
     if ( !MonthCal_SetCurSel(GetHwnd(), &st) )
     {
-        wxLogDebug(_T("DateTime_SetSystemtime() failed"));
+        wxLogDebug(wxT("DateTime_SetSystemtime() failed"));
 
         return false;
     }
 
-    m_date = dt;
+    m_date = dt.GetDateOnly();
 
     return true;
 }
@@ -232,6 +281,7 @@ wxDateTime wxCalendarCtrl::GetDate() const
 {
 #if wxDEBUG_LEVEL
     SYSTEMTIME st;
+
     if ( !MonthCal_GetCurSel(GetHwnd(), &st) )
     {
         wxASSERT_MSG( !m_date.IsValid(), "mismatch between data and control" );
@@ -239,9 +289,14 @@ wxDateTime wxCalendarCtrl::GetDate() const
         return wxDefaultDateTime;
     }
 
-    wxDateTime dt(st);
+    wxDateTime dt;
+    dt.SetFromMSWSysDate(st);
 
-    wxASSERT_MSG( dt == m_date, "mismatch between data and control" );
+    // Windows XP and earlier didn't include the time component into the
+    // returned date but Windows 7 does, so we can't compare the full objects
+    // in the same way under all the Windows versions, just compare their date
+    // parts
+    wxASSERT_MSG( dt.IsSameDate(m_date), "mismatch between data and control" );
 #endif // wxDEBUG_LEVEL
 
     return m_date;
@@ -266,7 +321,7 @@ bool wxCalendarCtrl::SetDateRange(const wxDateTime& dt1, const wxDateTime& dt2)
 
     if ( !MonthCal_SetRange(GetHwnd(), flags, st) )
     {
-        wxLogDebug(_T("MonthCal_SetRange() failed"));
+        wxLogDebug(wxT("MonthCal_SetRange() failed"));
     }
 
     return flags != 0;
@@ -280,7 +335,7 @@ bool wxCalendarCtrl::GetDateRange(wxDateTime *dt1, wxDateTime *dt2) const
     if ( dt1 )
     {
         if ( flags & GDTR_MIN )
-            dt1->SetFromMSWSysTime(st[0]);
+            dt1->SetFromMSWSysDate(st[0]);
         else
             *dt1 = wxDefaultDateTime;
     }
@@ -288,7 +343,7 @@ bool wxCalendarCtrl::GetDateRange(wxDateTime *dt1, wxDateTime *dt2) const
     if ( dt2 )
     {
         if ( flags & GDTR_MAX )
-            dt2->SetFromMSWSysTime(st[1]);
+            dt2->SetFromMSWSysDate(st[1]);
         else
             *dt2 = wxDefaultDateTime;
     }
@@ -347,27 +402,40 @@ void wxCalendarCtrl::UpdateMarks()
     // before it and from the one after it so days from 3 different months can
     // be partially shown
     MONTHDAYSTATE states[3] = { 0 };
-    const int nMonths = MonthCal_GetMonthRange(GetHwnd(), GMR_DAYSTATE, NULL);
+    const DWORD nMonths = MonthCal_GetMonthRange(GetHwnd(), GMR_DAYSTATE, NULL);
 
     // although in principle the calendar might not show any days from the
     // preceding months, it seems like it always does, consider e.g. Feb 2010
     // which starts on Monday and ends on Sunday and so could fit on 4 lines
     // without showing any subsequent months -- the standard control still
     // shows it on 6 lines and the number of visible months is still 3
-    wxCHECK_RET( nMonths == (int)WXSIZEOF(states), "unexpected months range" );
-
-    // the fully visible month is the one in the middle
-    states[1] = m_marks | m_holidays;
-
-    if ( !MonthCal_SetDayState(GetHwnd(), nMonths, states) )
+    //
+    // OTOH Windows 7 control can show all 12 months or even years or decades
+    // in its window if you "zoom out" of it by double clicking on free areas
+    // so the return value can be (much, in case of decades view) greater than
+    // 3 but in this case marks are not visible anyhow so simply ignore it
+    if ( nMonths < WXSIZEOF(states) )
     {
-        wxLogLastError(_T("MonthCal_SetDayState"));
+        wxFAIL_MSG("unexpectedly few months shown in the control");
     }
+    else if ( nMonths == WXSIZEOF(states) )
+    {
+        // the fully visible month is the one in the middle
+        states[1] = m_marks | m_holidays;
+
+        if ( !MonthCal_SetDayState(GetHwnd(), nMonths, states) )
+        {
+            wxLogLastError(wxT("MonthCal_SetDayState"));
+        }
+    }
+    //else: not a month view at all
 }
 
 void wxCalendarCtrl::UpdateFirstDayOfWeek()
 {
-    MonthCal_SetFirstDayOfWeek(GetHwnd(), HasFlag(wxCAL_MONDAY_FIRST) ? 0 : 6);
+    MonthCal_SetFirstDayOfWeek(GetHwnd(),
+                               HasFlag(wxCAL_MONDAY_FIRST) ? MonthCal_Monday
+                                                           : MonthCal_Sunday);
 }
 
 // ----------------------------------------------------------------------------
@@ -385,7 +453,7 @@ bool wxCalendarCtrl::MSWOnNotify(int idCtrl, WXLPARAM lParam, WXLPARAM *result)
                 // which expects GetDate() to return the new date
                 const wxDateTime dateOld = m_date;
                 const NMSELCHANGE * const sch = (NMSELCHANGE *)lParam;
-                m_date.SetFromMSWSysTime(sch->stSelStart);
+                m_date.SetFromMSWSysDate(sch->stSelStart);
 
                 // changing the year or the month results in a second dummy
                 // MCN_SELCHANGE event on this system which doesn't really

@@ -3,7 +3,7 @@
 // Purpose:     macros for implementing type-safe vararg passing of strings
 // Author:      Vaclav Slavik
 // Created:     2007-02-19
-// RCS-ID:      $Id: strvararg.cpp 59939 2009-03-30 11:54:41Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2007 REA Elektronik GmbH
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -159,23 +159,23 @@ public:
 
         while ( *format )
         {
-            if ( CopyFmtChar(*format++) == _T('%') )
+            if ( CopyFmtChar(*format++) == wxT('%') )
             {
                 // skip any flags
                 while ( IsFlagChar(*format) )
                     CopyFmtChar(*format++);
 
                 // and possible width
-                if ( *format == _T('*') )
+                if ( *format == wxT('*') )
                     CopyFmtChar(*format++);
                 else
                     SkipDigits(&format);
 
                 // precision?
-                if ( *format == _T('.') )
+                if ( *format == wxT('.') )
                 {
                     CopyFmtChar(*format++);
-                    if ( *format == _T('*') )
+                    if ( *format == wxT('*') )
                         CopyFmtChar(*format++);
                     else
                         SkipDigits(&format);
@@ -211,16 +211,16 @@ public:
                 // and finally we should have the type
                 switch ( *format )
                 {
-                    case _T('S'):
-                    case _T('s'):
+                    case wxT('S'):
+                    case wxT('s'):
                         // all strings were converted into the same form by
                         // wxArgNormalizer<T>, this form depends on the context
                         // in which the value is used (scanf/printf/wprintf):
                         HandleString(*format, size, outConv, outSize);
                         break;
 
-                    case _T('C'):
-                    case _T('c'):
+                    case wxT('C'):
+                    case wxT('c'):
                         HandleChar(*format, size, outConv, outSize);
                         break;
 
@@ -240,11 +240,11 @@ public:
                     switch ( outSize )
                     {
                         case Size_Long:
-                            InsertFmtChar(_T('l'));
+                            InsertFmtChar(wxT('l'));
                             break;
 
                         case Size_Short:
-                            InsertFmtChar(_T('h'));
+                            InsertFmtChar(wxT('h'));
                             break;
 
                         case Size_Default:
@@ -353,13 +353,13 @@ private:
 
     static bool IsFlagChar(CharType ch)
     {
-        return ch == _T('-') || ch == _T('+') ||
-               ch == _T('0') || ch == _T(' ') || ch == _T('#');
+        return ch == wxT('-') || ch == wxT('+') ||
+               ch == wxT('0') || ch == wxT(' ') || ch == wxT('#');
     }
 
     void SkipDigits(const CharType **ptpc)
     {
-        while ( **ptpc >= _T('0') && **ptpc <= _T('9') )
+        while ( **ptpc >= wxT('0') && **ptpc <= wxT('9') )
             CopyFmtChar(*(*ptpc)++);
     }
 
@@ -637,12 +637,15 @@ template<typename CharType>
 wxFormatString::ArgumentType DoGetArgumentType(const CharType *format,
                                                unsigned n)
 {
-    wxCHECK_MSG( format, wxFormatString::Arg_Other,
+    wxCHECK_MSG( format, wxFormatString::Arg_Unknown,
                  "empty format string not allowed here" );
 
     wxPrintfConvSpecParser<CharType> parser(format);
 
-    wxCHECK_MSG( parser.pspec[n-1] != NULL, wxFormatString::Arg_Other,
+    wxCHECK_MSG( n <= parser.nargs, wxFormatString::Arg_Unknown,
+                 "more arguments than format string specifiers?" );
+
+    wxCHECK_MSG( parser.pspec[n-1] != NULL, wxFormatString::Arg_Unknown,
                  "requested argument not found - invalid format string?" );
 
     switch ( parser.pspec[n-1]->m_type )
@@ -651,9 +654,48 @@ wxFormatString::ArgumentType DoGetArgumentType(const CharType *format,
         case wxPAT_WCHAR:
             return wxFormatString::Arg_Char;
 
-        default:
-            return wxFormatString::Arg_Other;
+        case wxPAT_PCHAR:
+        case wxPAT_PWCHAR:
+            return wxFormatString::Arg_String;
+
+        case wxPAT_INT:
+            return wxFormatString::Arg_Int;
+        case wxPAT_LONGINT:
+            return wxFormatString::Arg_LongInt;
+#ifdef wxLongLong_t
+        case wxPAT_LONGLONGINT:
+            return wxFormatString::Arg_LongLongInt;
+#endif
+        case wxPAT_SIZET:
+            return wxFormatString::Arg_Size_t;
+
+        case wxPAT_DOUBLE:
+            return wxFormatString::Arg_Double;
+        case wxPAT_LONGDOUBLE:
+            return wxFormatString::Arg_LongDouble;
+
+        case wxPAT_POINTER:
+            return wxFormatString::Arg_Pointer;
+
+        case wxPAT_NINT:
+            return wxFormatString::Arg_IntPtr;
+        case wxPAT_NSHORTINT:
+            return wxFormatString::Arg_ShortIntPtr;
+        case wxPAT_NLONGINT:
+            return wxFormatString::Arg_LongIntPtr;
+
+        case wxPAT_STAR:
+            // "*" requires argument of type int
+            return wxFormatString::Arg_Int;
+
+        case wxPAT_INVALID:
+            // (handled after the switch statement)
+            break;
     }
+
+    // silence warning
+    wxFAIL_MSG( "unexpected argument type" );
+    return wxFormatString::Arg_Unknown;
 }
 
 } // anonymous namespace
@@ -670,5 +712,5 @@ wxFormatString::ArgumentType wxFormatString::GetArgumentType(unsigned n) const
         return DoGetArgumentType(m_cstr->AsInternal(), n);
 
     wxFAIL_MSG( "unreachable code" );
-    return Arg_Other;
+    return Arg_Unknown;
 }

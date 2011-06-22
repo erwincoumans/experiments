@@ -2,7 +2,7 @@
 // Name:        src/common/xpmdecod.cpp
 // Purpose:     wxXPMDecoder
 // Author:      John Cristy, Vaclav Slavik
-// RCS-ID:      $Id: xpmdecod.cpp 58080 2009-01-13 19:16:08Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) John Cristy, Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -120,9 +120,6 @@ bool wxXPMDecoder::CanRead(wxInputStream& stream)
     unsigned char buf[9];
 
     if ( !stream.Read(buf, WXSIZEOF(buf)) )
-        return false;
-
-    if (stream.SeekI(-(wxFileOffset)WXSIZEOF(buf), wxFromCurrent) == wxInvalidOffset)
         return false;
 
     return memcmp(buf, "/* XPM */", WXSIZEOF(buf)) == 0;
@@ -621,7 +618,7 @@ static bool GetRGBFromName(const char *inname, bool *isNone,
 
 static const char *ParseColor(const char *data)
 {
-    static const char *targets[] =
+    static const char *const targets[] =
                         {"c ", "g ", "g4 ", "m ", "b ", "s ", NULL};
 
     const char *p, *r;

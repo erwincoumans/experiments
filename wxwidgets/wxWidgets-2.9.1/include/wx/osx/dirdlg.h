@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: dirdlg.h 59354 2009-03-05 21:21:45Z KO $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,13 +17,18 @@ class WXDLLIMPEXP_CORE wxDirDialog : public wxDirDialogBase
 public:
     wxDirDialog(wxWindow *parent,
                 const wxString& message = wxDirSelectorPromptStr,
-                const wxString& defaultPath = _T(""),
+                const wxString& defaultPath = wxT(""),
                 long style = wxDD_DEFAULT_STYLE,
                 const wxPoint& pos = wxDefaultPosition,
                 const wxSize& size = wxDefaultSize,
                 const wxString& name = wxDirDialogNameStr);
 
     virtual int ShowModal();
+    
+#if wxOSX_USE_COCOA
+    virtual void ShowWindowModal();
+    virtual void ModalFinishedCallback(void* panel, int returnCode);
+#endif    
 
 protected:
 

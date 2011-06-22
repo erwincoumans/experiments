@@ -3,7 +3,7 @@
 // Purpose:     wxAppConsole implementation for Unix
 // Author:      Lukasz Michalski
 // Created:     28/01/2005
-// RCS-ID:      $Id: app.h 56994 2008-11-28 12:47:07Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Lukasz Michalski
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

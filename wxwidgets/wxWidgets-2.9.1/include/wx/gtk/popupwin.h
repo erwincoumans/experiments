@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:
-// Id:          $Id: popupwin.h 56141 2008-10-07 08:01:34Z RR $
+// Id:          $Id$
 // Copyright:   (c) 2001 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ public:
     bool Create(wxWindow *parent, int flags = wxBORDER_NONE);
 
     virtual bool Show(bool show = true);
-    
+
     virtual void SetFocus();
 
     // implementation

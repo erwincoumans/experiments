@@ -3,7 +3,7 @@
 // Author:      Robert Roebling
 // Purpose:     Implement GNOME printing support
 // Created:     09/20/04
-// RCS-ID:      $Id: gprint.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   Robert Roebling
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -843,8 +843,6 @@ bool wxGnomePrinter::Print(wxWindow *parent, wxPrintout *printout, bool prompt )
     native->SetPrintJob( job );
 
 
-    printout->SetIsPreview(false);
-
     if (m_printDialogData.GetMinPage() < 1)
         m_printDialogData.SetMinPage(1);
     if (m_printDialogData.GetMaxPage() < 1)
@@ -859,9 +857,6 @@ bool wxGnomePrinter::Print(wxWindow *parent, wxPrintout *printout, bool prompt )
 #else
         dc = new wxGnomePrinterDC( printdata );  // TODO: check that this works
 #endif
-
-    if (m_native_preview)
-        printout->SetIsPreview(true);
 
     if (!dc)
     {
@@ -1597,12 +1592,7 @@ void wxGnomePrinterDCImpl::DoDrawRotatedText(const wxString& text, wxCoord x, wx
 
     bool underlined = m_font.Ok() && m_font.GetUnderlined();
 
-    // FIXME-UTF8: wouldn't be needed if utf8_str() always returned a buffer
-#if wxUSE_UNICODE_UTF8
-    const char *data = text.utf8_str();
-#else
-    const wxCharBuffer data = text.utf8_str();
-#endif
+    const wxScopedCharBuffer data(text.utf8_str());
 
     size_t datalen = strlen(data);
     pango_layout_set_text( m_layout, data, datalen);
@@ -1913,12 +1903,7 @@ void wxGnomePrinterDCImpl::DoGetTextExtent(const wxString& string, wxCoord *widt
 
     // Set layout's text
 
-    // FIXME-UTF8: wouldn't be needed if utf8_str() always returned a buffer
-#if wxUSE_UNICODE_UTF8
-    const char *dataUTF8 = string.utf8_str();
-#else
-    const wxCharBuffer dataUTF8 = string.utf8_str();
-#endif
+    const wxScopedCharBuffer dataUTF8(string.utf8_str());
 
     gint oldSize = 0;
     if ( theFont )
@@ -2043,8 +2028,7 @@ bool wxGnomePrintModule::OnInit()
 
 void wxGnomePrintModule::OnExit()
 {
-    delete gs_libGnomePrint;
-    gs_libGnomePrint = NULL;
+    wxDELETE(gs_libGnomePrint);
 }
 
 IMPLEMENT_DYNAMIC_CLASS(wxGnomePrintModule, wxModule)

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2006-01-29
-// RCS-ID:      $Id: toolbkg.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,52 +129,12 @@ bool wxToolbook::Create(wxWindow *parent,
 // wxToolbook geometry management
 // ----------------------------------------------------------------------------
 
-wxSize wxToolbook::GetControllerSize() const
-{
-    const wxSize sizeClient = GetClientSize(),
-                 sizeBorder = m_bookctrl->GetSize() - m_bookctrl->GetClientSize(),
-                 sizeToolBar = GetToolBar()->GetSize() + sizeBorder;
-
-    wxSize size;
-
-    if ( IsVertical() )
-    {
-        size.x = sizeClient.x;
-        size.y = sizeToolBar.y;
-    }
-    else // left/right aligned
-    {
-        size.x = sizeToolBar.x;
-        size.y = sizeClient.y;
-    }
-
-    return size;
-}
-
 void wxToolbook::OnSize(wxSizeEvent& event)
 {
     if (m_needsRealizing)
         Realize();
 
     wxBookCtrlBase::OnSize(event);
-}
-
-wxSize wxToolbook::CalcSizeFromPage(const wxSize& sizePage) const
-{
-    // we need to add the size of the list control and the border between
-    const wxSize sizeToolBar = GetControllerSize();
-
-    wxSize size = sizePage;
-    if ( IsVertical() )
-    {
-        size.y += sizeToolBar.y + GetInternalBorder();
-    }
-    else // left/right aligned
-    {
-        size.x += sizeToolBar.x + GetInternalBorder();
-    }
-
-    return size;
 }
 
 // ----------------------------------------------------------------------------
@@ -205,7 +165,7 @@ wxString wxToolbook::GetPageText(size_t n) const
 
 int wxToolbook::GetPageImage(size_t WXUNUSED(n)) const
 {
-    wxFAIL_MSG( _T("wxToolbook::GetPageImage() not implemented") );
+    wxFAIL_MSG( wxT("wxToolbook::GetPageImage() not implemented") );
 
     return wxNOT_FOUND;
 }
@@ -268,15 +228,12 @@ void wxToolbook::Realize()
 {
     if (m_needsRealizing)
     {
+        m_needsRealizing = false;
+
         GetToolBar()->SetToolBitmapSize(m_maxBitmapSize);
 
-        int remap = wxSystemOptions::GetOptionInt(wxT("msw.remap"));
-        wxSystemOptions::SetOption(wxT("msw.remap"), 0);
         GetToolBar()->Realize();
-        wxSystemOptions::SetOption(wxT("msw.remap"), remap);
     }
-
-    m_needsRealizing = false;
 
     if (m_selection == -1)
         m_selection = 0;

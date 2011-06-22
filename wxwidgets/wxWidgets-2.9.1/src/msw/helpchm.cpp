@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin at 2008-03-01: refactoring, simplification
 // Created:     16/04/2000
-// RCS-ID:      $Id: helpchm.cpp 57876 2009-01-07 08:51:47Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -50,7 +50,7 @@ HTMLHELP GetHtmlHelpFunction()
 
     if ( !s_htmlHelp )
     {
-        static wxDynamicLibrary s_dllHtmlHelp(_T("HHCTRL.OCX"), wxDL_VERBATIM);
+        static wxDynamicLibrary s_dllHtmlHelp(wxT("HHCTRL.OCX"), wxDL_VERBATIM);
 
         if ( !s_dllHtmlHelp.IsLoaded() )
         {
@@ -156,8 +156,8 @@ wxCHMHelpController::DoDisplayTextPopup(const wxChar *text,
     popup.pszText = text;
     popup.pt.x = pos.x;
     popup.pt.y = pos.y;
-    popup.clrForeground =
-    popup.clrBackground = (COLORREF)-1;
+    popup.clrForeground = ::GetSysColor(COLOR_INFOTEXT);
+    popup.clrBackground = ::GetSysColor(COLOR_INFOBK);
     popup.rcMargins.top =
     popup.rcMargins.left =
     popup.rcMargins.right =

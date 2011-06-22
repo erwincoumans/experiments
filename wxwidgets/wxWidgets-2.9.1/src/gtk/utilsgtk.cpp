@@ -2,7 +2,7 @@
 // Name:        src/gtk/utilsgtk.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: utilsgtk.cpp 59725 2009-03-22 12:53:48Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -45,18 +45,6 @@
 #include "gtk/gtk.h"
 #include "gdk/gdkx.h"
 
-#ifdef HAVE_X11_XKBLIB_H
-    /* under HP-UX and Solaris 2.6, at least, XKBlib.h defines structures with
-     * field named "explicit" - which is, of course, an error for a C++
-     * compiler. To be on the safe side, just redefine it everywhere. */
-    #define explicit __wx_explicit
-
-    #include "X11/XKBlib.h"
-
-    #undef explicit
-#endif // HAVE_X11_XKBLIB_H
-
-
 #if wxUSE_DETECT_SM
     #include "X11/Xlib.h"
     #include "X11/SM/SMlib.h"
@@ -77,22 +65,6 @@ extern GtkWidget *wxGetRootWindow();
 void wxBell()
 {
     gdk_beep();
-}
-#endif
-
-/* Don't synthesize KeyUp events holding down a key and producing
-   KeyDown events with autorepeat. */
-#ifdef HAVE_X11_XKBLIB_H
-bool wxSetDetectableAutoRepeat( bool flag )
-{
-    Bool result;
-    XkbSetDetectableAutoRepeat( GDK_DISPLAY(), flag, &result );
-    return result;       /* true if keyboard hardware supports this mode */
-}
-#else
-bool wxSetDetectableAutoRepeat( bool WXUNUSED(flag) )
-{
-    return false;
 }
 #endif
 
@@ -189,7 +161,7 @@ const gchar *wx_pango_version_check (int major, int minor, int micro)
     // NOTE: you don't need to use this macro to check for Pango features
     //       added in pango-1.4 or earlier since GTK 2.4 (our minimum requirement
     //       for GTK lib) required pango 1.4...
-    
+
 #ifdef PANGO_VERSION_MAJOR
     if (!gtk_check_version (2,11,0))
     {
@@ -382,60 +354,60 @@ extern "C"
 bool wxGUIAppTraits::ShowAssertDialog(const wxString& msg)
 {
 #if wxDEBUG_LEVEL
-    // under GTK2 we prefer to use a dialog widget written using directly in
-    // GTK+ as use a dialog written using wxWidgets would need the wxWidgets
-    // idle processing to work correctly which might not be the case when
-    // assert happens
-    GtkWidget *dialog = gtk_assert_dialog_new();
-    gtk_assert_dialog_set_message(GTK_ASSERT_DIALOG(dialog), msg.mb_str());
+    // we can't show the dialog from another thread
+    if ( wxIsMainThread() )
+    {
+        // under GTK2 we prefer to use a dialog widget written using directly
+        // in GTK+ as use a dialog written using wxWidgets would need the
+        // wxWidgets idle processing to work correctly which might not be the
+        // case when assert happens
+        GtkWidget *dialog = gtk_assert_dialog_new();
+        gtk_assert_dialog_set_message(GTK_ASSERT_DIALOG(dialog), msg.mb_str());
 
 #if wxUSE_STACKWALKER
-    // don't show more than maxLines or we could get a dialog too tall to be
-    // shown on screen: 20 should be ok everywhere as even with 15 pixel high
-    // characters it is still only 300 pixels...
-    static const int maxLines = 20;
+        // save the current stack ow...
+        StackDump dump(GTK_ASSERT_DIALOG(dialog));
+        dump.SaveStack(100); // showing more than 100 frames is not very useful
 
-    // save current stack frame...
-    StackDump dump(GTK_ASSERT_DIALOG(dialog));
-    dump.SaveStack(maxLines);
+        // ...but process it only if the user needs it
+        gtk_assert_dialog_set_backtrace_callback
+        (
+            GTK_ASSERT_DIALOG(dialog),
+            (GtkAssertDialogStackFrameCallback)get_stackframe_callback,
+            &dump
+        );
+#endif // wxUSE_STACKWALKER
 
-    // ...but process it only if the user needs it
-    gtk_assert_dialog_set_backtrace_callback(GTK_ASSERT_DIALOG(dialog),
-                                             (GtkAssertDialogStackFrameCallback)get_stackframe_callback,
-                                             &dump);
-#endif      // wxUSE_STACKWALKER
+        gint result = gtk_dialog_run(GTK_DIALOG (dialog));
+        bool returnCode = false;
+        switch (result)
+        {
+            case GTK_ASSERT_DIALOG_STOP:
+                wxTrap();
+                break;
+            case GTK_ASSERT_DIALOG_CONTINUE:
+                // nothing to do
+                break;
+            case GTK_ASSERT_DIALOG_CONTINUE_SUPPRESSING:
+                // no more asserts
+                returnCode = true;
+                break;
 
-    gint result = gtk_dialog_run(GTK_DIALOG (dialog));
-    bool returnCode = false;
-    switch (result)
-    {
-    case GTK_ASSERT_DIALOG_STOP:
-        wxTrap();
-        break;
-    case GTK_ASSERT_DIALOG_CONTINUE:
-        // nothing to do
-        break;
-    case GTK_ASSERT_DIALOG_CONTINUE_SUPPRESSING:
-        // no more asserts
-        returnCode = true;
-        break;
+            default:
+                wxFAIL_MSG( wxT("unexpected return code from GtkAssertDialog") );
+        }
 
-    default:
-        wxFAIL_MSG( _T("unexpected return code from GtkAssertDialog") );
+        gtk_widget_destroy(dialog);
+        return returnCode;
     }
+#endif // wxDEBUG_LEVEL
 
-    gtk_widget_destroy(dialog);
-    return returnCode;
-#else // !wxDEBUG_LEVEL
-    // this function is never called in this case
-    wxUnusedVar(msg);
-    return false;
-#endif // wxDEBUG_LEVEL/!wxDEBUG_LEVEL
+    return wxAppTraitsBase::ShowAssertDialog(msg);
 }
 
 wxString wxGUIAppTraits::GetDesktopEnvironment() const
 {
-    wxString de = wxSystemOptions::GetOption(_T("gtk.desktop"));
+    wxString de = wxSystemOptions::GetOption(wxT("gtk.desktop"));
 #if wxUSE_DETECT_SM
     if ( de.empty() )
     {
@@ -484,18 +456,18 @@ wxString wxGetNameFromGtkOptionEntry(const GOptionEntry *opt)
     wxString ret;
 
     if (opt->short_name)
-        ret << _T("-") << opt->short_name;
+        ret << wxT("-") << opt->short_name;
     if (opt->long_name)
     {
         if (!ret.empty())
-            ret << _T(", ");
-        ret << _T("--") << opt->long_name;
+            ret << wxT(", ");
+        ret << wxT("--") << opt->long_name;
 
         if (opt->arg_description)
-            ret << _T("=") << opt->arg_description;
+            ret << wxT("=") << opt->arg_description;
     }
 
-    return _T("  ") + ret;
+    return wxT("  ") + ret;
 }
 
 #endif // __WXGTK26__

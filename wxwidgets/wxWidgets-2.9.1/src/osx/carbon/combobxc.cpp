@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: combobxc.cpp 58318 2009-01-23 08:36:16Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -478,10 +478,9 @@ void wxComboBox::SetEditable(bool editable)
     {
         m_text = new wxComboBoxText( this );
     }
-    else if ( ( m_text != NULL ) && !editable )
+    else if ( !editable )
     {
-        delete m_text;
-        m_text = NULL;
+        wxDELETE(m_text);
     }
 
     int currentX, currentY;

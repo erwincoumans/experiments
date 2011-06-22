@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: textctrl.cpp 60394 2009-04-26 18:41:02Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ public:
         : m_count(count)
     {
         wxASSERT_MSG( m_count == -1 || m_count == -2,
-                      _T("wrong initial m_updatesCount value") );
+                      wxT("wrong initial m_updatesCount value") );
 
         if (m_count != -2)
             m_count = 0;
@@ -424,22 +424,24 @@ bool wxTextCtrl::MSWCreateText(const wxString& value,
         }
 #endif
 
+#if wxUSE_INKEDIT
         if (!IsInkEdit())
+#endif // wxUSE_INKEDIT
         {
             if ( m_verRichEdit == 2 )
             {
                 if ( wxRichEditModule::Load(wxRichEditModule::Version_41) )
                 {
                     // yes, class name for version 4.1 really is 5.0
-                    windowClass = _T("RICHEDIT50W");
+                    windowClass = wxT("RICHEDIT50W");
                 }
                 else if ( wxRichEditModule::Load(wxRichEditModule::Version_2or3) )
                 {
-                    windowClass = _T("RichEdit20")
+                    windowClass = wxT("RichEdit20")
 #if wxUSE_UNICODE
-                                _T("W");
+                                wxT("W");
 #else // ANSI
-                                _T("A");
+                                wxT("A");
 #endif // Unicode/ANSI
                 }
                 else // failed to load msftedit.dll and riched20.dll
@@ -452,7 +454,7 @@ bool wxTextCtrl::MSWCreateText(const wxString& value,
             {
                 if ( wxRichEditModule::Load(wxRichEditModule::Version_1) )
                 {
-                    windowClass = _T("RICHEDIT");
+                    windowClass = wxT("RICHEDIT");
                 }
                 else // failed to load any richedit control DLL
                 {
@@ -542,7 +544,20 @@ bool wxTextCtrl::MSWCreateText(const wxString& value,
 
         ::SendMessage(GetHwnd(), EM_SETEVENTMASK, 0, mask);
     }
+    else
 #endif // wxUSE_RICHEDIT
+    if ( HasFlag(wxTE_MULTILINE) && HasFlag(wxTE_READONLY) )
+    {
+        // non-rich read-only multiline controls have grey background by
+        // default under MSW but this is not always appropriate, so forcefully
+        // reset the background colour to normal default
+        //
+        // this is not ideal but, after a long discussion on wx-dev (see
+        // http://thread.gmane.org/gmane.comp.lib.wxwidgets.devel/116360/) it
+        // was finally deemed to be the best behaviour by default (and ideally
+        // we'd have a way to change this, see #11521)
+        SetBackgroundColour(GetClassDefaultAttributes().colBg);
+    }
 
 #ifndef __WXWINCE__
     // Without this, if we pass the size in the constructor and then don't change it,
@@ -567,16 +582,16 @@ void wxTextCtrl::AdoptAttributesFromHWND()
 #if wxUSE_RICHEDIT
     wxString classname = wxGetWindowClass(GetHWND());
 
-    if ( classname.IsSameAs(_T("EDIT"), false /* no case */) )
+    if ( classname.IsSameAs(wxT("EDIT"), false /* no case */) )
     {
         m_verRichEdit = 0;
     }
     else // rich edit?
     {
         wxChar c;
-        if ( wxSscanf(classname, _T("RichEdit%d0%c"), &m_verRichEdit, &c) != 2 )
+        if ( wxSscanf(classname, wxT("RichEdit%d0%c"), &m_verRichEdit, &c) != 2 )
         {
-            wxLogDebug(_T("Unknown edit control '%s'."), classname.c_str());
+            wxLogDebug(wxT("Unknown edit control '%s'."), classname.c_str());
 
             m_verRichEdit = 0;
         }
@@ -841,8 +856,8 @@ wxString wxTextCtrl::GetRange(long from, long to) const
                     // style - convert it to something reasonable
                     for ( ; *p; p++ )
                     {
-                        if ( *p == _T('\r') )
-                            *p = _T('\n');
+                        if ( *p == wxT('\r') )
+                            *p = wxT('\n');
                     }
                 }
             }
@@ -1016,16 +1031,12 @@ wxTextCtrl::StreamIn(const wxString& value,
     // It's okay for EN_UPDATE to not be sent if the selection is empty and
     // the text is empty, otherwise warn the programmer about it.
     wxASSERT_MSG( ucf.GotUpdate() || ( !HasSelection() && value.empty() ),
-                  _T("EM_STREAMIN didn't send EN_UPDATE?") );
+                  wxT("EM_STREAMIN didn't send EN_UPDATE?") );
 
     if ( eds.dwError )
     {
-        wxLogLastError(_T("EM_STREAMIN"));
+        wxLogLastError(wxT("EM_STREAMIN"));
     }
-
-#if !wxUSE_WCHAR_T
-    free(wchBuf);
-#endif // !wxUSE_WCHAR_T
 
     return true;
 }
@@ -1039,13 +1050,8 @@ wxTextCtrl::StreamOut(wxFontEncoding encoding, bool selectionOnly) const
 
     const int len = GetWindowTextLength(GetHwnd());
 
-#if wxUSE_WCHAR_T
     wxWCharBuffer wchBuf(len);
     wchar_t *wpc = wchBuf.data();
-#else
-    wchar_t *wchBuf = (wchar_t *)malloc((len + 1)*sizeof(wchar_t));
-    wchar_t *wpc = wchBuf;
-#endif
 
     wxStreamOutData data;
     data.wpc = wpc;
@@ -1066,7 +1072,7 @@ wxTextCtrl::StreamOut(wxFontEncoding encoding, bool selectionOnly) const
 
     if ( eds.dwError )
     {
-        wxLogLastError(_T("EM_STREAMOUT"));
+        wxLogLastError(wxT("EM_STREAMOUT"));
     }
     else // streamed out ok
     {
@@ -1084,10 +1090,6 @@ wxTextCtrl::StreamOut(wxFontEncoding encoding, bool selectionOnly) const
             conv.WC2MB(wxStringBuffer(out, lenNeeded), wchBuf, lenNeeded);
         }
     }
-
-#if !wxUSE_WCHAR_T
-    free(wchBuf);
-#endif // !wxUSE_WCHAR_T
 
     return out;
 }
@@ -1191,9 +1193,7 @@ void wxTextCtrl::AppendText(const wxString& text)
     // don't do this if we're frozen, saves some time
     if ( !IsFrozen() && IsMultiLine() && GetRichVersion() > 1 )
     {
-        // setting the caret to the end and showing it simply doesn't work for
-        // RichEdit 2.0 -- force it to still do what we want
-        ::SendMessage(GetHwnd(), EM_LINESCROLL, 0, GetNumberOfLines());
+        ::SendMessage(GetHwnd(), WM_VSCROLL, SB_BOTTOM, NULL);
     }
 #endif // wxUSE_RICHEDIT
 }
@@ -1619,24 +1619,24 @@ wxString wxTextCtrl::GetLineText(long lineNo) const
         {
             // remove the '\r' returned by the rich edit control, the user code
             // should never see it
-            if ( buf[len - 2] == _T('\r') && buf[len - 1] == _T('\n') )
+            if ( buf[len - 2] == wxT('\r') && buf[len - 1] == wxT('\n') )
             {
                 // richedit 1.0 uses "\r\n" as line terminator, so remove "\r"
                 // here and "\n" below
-                buf[len - 2] = _T('\n');
+                buf[len - 2] = wxT('\n');
                 len--;
             }
-            else if ( buf[len - 1] == _T('\r') )
+            else if ( buf[len - 1] == wxT('\r') )
             {
                 // richedit 2.0+ uses only "\r", replace it with "\n"
-                buf[len - 1] = _T('\n');
+                buf[len - 1] = wxT('\n');
             }
         }
 #endif // wxUSE_RICHEDIT
 
         // remove the '\n' at the end, if any (this is how this function is
         // supposed to work according to the docs)
-        if ( buf[len - 1] == _T('\n') )
+        if ( buf[len - 1] == wxT('\n') )
         {
             len--;
         }
@@ -1757,7 +1757,7 @@ bool wxTextCtrl::MSWShouldPreProcessMessage(WXMSG* msg)
             switch ( ctrl + shift )
             {
                 default:
-                    wxFAIL_MSG( _T("how many modifiers have we got?") );
+                    wxFAIL_MSG( wxT("how many modifiers have we got?") );
                     // fall through
 
                 case 0:
@@ -1926,6 +1926,21 @@ WXLRESULT wxTextCtrl::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lPara
                 }
             }
             break;
+
+#if wxUSE_MENUS
+        case WM_SETCURSOR:
+            // rich text controls seem to have a bug and don't change the
+            // cursor to the standard arrow one from the I-beam cursor usually
+            // used by them even when a popup menu is shown (this works fine
+            // for plain EDIT controls though), so explicitly work around this
+            if ( IsRich() )
+            {
+                extern wxMenu *wxCurrentPopupMenu;
+                if ( wxCurrentPopupMenu &&
+                        wxCurrentPopupMenu->GetInvokingWindow() == this )
+                    ::SetCursor(GetHcursorOf(*wxSTANDARD_CURSOR));
+            }
+#endif // wxUSE_MENUS
     }
 
     return lRc;
@@ -1949,7 +1964,7 @@ bool wxTextCtrl::SendUpdateEvent()
             return false;
 
         default:
-            wxFAIL_MSG( _T("unexpected wxTextCtrl::m_updatesCount value") );
+            wxFAIL_MSG( wxT("unexpected wxTextCtrl::m_updatesCount value") );
             // fall through
 
         case -1:
@@ -2180,23 +2195,6 @@ void wxTextCtrl::OnSetFocus(wxFocusEvent& event)
     event.Skip();
 }
 
-// ----------------------------------------------------------------------------
-// Default colors for MSW text control
-//
-// Set default background color to the native white instead of
-// the default wxSYS_COLOUR_BTNFACE (is triggered with wxNullColour).
-// ----------------------------------------------------------------------------
-
-wxVisualAttributes wxTextCtrl::GetDefaultAttributes() const
-{
-    wxVisualAttributes attrs;
-    attrs.font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-    attrs.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-    attrs.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW); //white
-
-    return attrs;
-}
-
 // the rest of the file only deals with the rich edit controls
 #if wxUSE_RICHEDIT
 
@@ -2360,6 +2358,26 @@ bool wxTextCtrl::SetForegroundColour(const wxColour& colour)
     return true;
 }
 
+bool wxTextCtrl::SetFont(const wxFont& font)
+{
+    if ( !wxTextCtrlBase::SetFont(font) )
+        return false;
+
+    if ( IsRich() )
+    {
+        // Using WM_SETFONT doesn't work reliably with rich edit controls: as
+        // an example, if we set a fixed width font for a richedit 4.1 control,
+        // it's used for the ASCII characters but inserting any non-ASCII ones
+        // switches the font to a proportional one, whether it's done
+        // programmatically or not. So just use EM_SETCHARFORMAT for this too.
+        wxTextAttr attr;
+        attr.SetFont(font);
+        SetDefaultStyle(attr);
+    }
+
+    return true;
+}
+
 // ----------------------------------------------------------------------------
 // styling support for rich edit controls
 // ----------------------------------------------------------------------------
@@ -2490,7 +2508,7 @@ bool wxTextCtrl::SetStyle(long start, long end, const wxTextAttr& style)
                             SCF_SELECTION, (LPARAM)&cf) != 0;
     if ( !ok )
     {
-        wxLogDebug(_T("SendMessage(EM_SETCHARFORMAT, SCF_SELECTION) failed"));
+        wxLogDebug(wxT("SendMessage(EM_SETCHARFORMAT, SCF_SELECTION) failed"));
     }
 
     // now do the paragraph formatting
@@ -2575,7 +2593,7 @@ bool wxTextCtrl::SetStyle(long start, long end, const wxTextAttr& style)
                                 0, (LPARAM) &pf) != 0;
         if ( !ok )
         {
-            wxLogDebug(_T("SendMessage(EM_SETPARAFORMAT, 0) failed"));
+            wxLogDebug(wxT("SendMessage(EM_SETPARAFORMAT, 0) failed"));
         }
     }
 
@@ -2794,11 +2812,11 @@ bool wxRichEditModule::Load(Version version)
         return true;
     }
 
-    static const wxChar *dllnames[] =
+    static const wxChar *const dllnames[] =
     {
-        _T("riched32"),
-        _T("riched20"),
-        _T("msftedit"),
+        wxT("riched32"),
+        wxT("riched20"),
+        wxT("msftedit"),
     };
 
     wxCOMPILE_TIME_ASSERT( WXSIZEOF(dllnames) == Version_Max,

@@ -57,19 +57,14 @@ void wxStaticText::SetLabel(const wxString& label)
     m_labelOrig = label;
 
     // middle/end ellipsization is handled by the OS:
-    if ( HasFlag(wxST_ELLIPSIZE_END) || HasFlag(wxST_ELLIPSIZE_MIDDLE) 
+    if ( HasFlag(wxST_ELLIPSIZE_END) || HasFlag(wxST_ELLIPSIZE_MIDDLE)
 #if wxOSX_USE_COCOA // Cocoa has all three modes
-         || HasFlag(wxST_ELLIPSIZE_START) 
+         || HasFlag(wxST_ELLIPSIZE_START)
 #endif
     )
     {
-        // remove markup
-        wxString str(label);
-        if (HasFlag(wxST_MARKUP))
-            str = RemoveMarkup(label);
-
-        // and leave ellipsization to the OS
-        DoSetLabel(str);
+        // leave ellipsization to the OS
+        DoSetLabel(GetLabelWithoutMarkup());
     }
     else // not supported natively
     {
@@ -107,7 +102,6 @@ bool wxStaticText::SetFont(const wxFont& font)
 
 void wxStaticText::DoSetLabel(const wxString& label)
 {
-    m_labelOrig = label;
     m_label = RemoveMnemonics(label);
     m_peer->SetLabel(m_label , GetFont().GetEncoding() );
 }

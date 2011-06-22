@@ -4,9 +4,9 @@
 // Author:      Dave Webster
 // Modified by:
 // Created:     13.05.02
-// RCS-ID:      $Id: popupwin.cpp 35650 2005-09-23 12:56:45Z MR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 Dave Webster <dwebster@bhmi.com>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================

@@ -3,7 +3,7 @@
 // Purpose:     common classes for persistence support
 // Author:      Vadim Zeitlin
 // Created:     2009-01-18
-// RCS-ID:      $Id: persist.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2009 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,6 +237,16 @@ inline bool wxPersistentRegisterAndRestore(T *obj)
 
     return wxPersistenceManager::Get().RegisterAndRestore(obj, pers);
 
+}
+
+// A helper function which also sets the name for the (wxWindow-derived) object
+// before registering and restoring it.
+template <typename T>
+inline bool wxPersistentRegisterAndRestore(T *obj, const wxString& name)
+{
+    obj->SetName(name);
+
+    return wxPersistentRegisterAndRestore(obj);
 }
 
 #endif // _WX_PERSIST_H_

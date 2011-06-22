@@ -1,9 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        include/wx/private/stattext.h
+// Name:        wx/private/stattext.h
 // Purpose:     Internal declarations for dlgcmn.cpp and stattextcmn.cpp
 // Author:      Francesco Montorsi
 // Created:     2007-01-07 (extracted from dlgcmn.cpp)
-// RCS-ID:      $Id: stattext.h 49869 2007-11-12 19:41:38Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vadim Zeitlin
 //              (c) 2007 wxWidgets team
 // Licence:     wxWindows licence
@@ -13,61 +13,6 @@
 #define _WX_PRIVATE_STATTEXT_H_
 
 #include "wx/window.h"
-
-#if wxUSE_STATTEXT
-
-// ----------------------------------------------------------------------------
-// wxTextWrapper
-// ----------------------------------------------------------------------------
-
-// this class is used to wrap the text on word boundary: wrapping is done by
-// calling OnStartLine() and OnOutputLine() functions
-class wxTextWrapper
-{
-public:
-    wxTextWrapper() { m_eol = false; }
-
-    // win is used for getting the font, text is the text to wrap, width is the
-    // max line width or -1 to disable wrapping
-    void Wrap(wxWindow *win, const wxString& text, int widthMax);
-
-    // we don't need it, but just to avoid compiler warnings
-    virtual ~wxTextWrapper() { }
-
-protected:
-    // line may be empty
-    virtual void OnOutputLine(const wxString& line) = 0;
-
-    // called at the start of every new line (except the very first one)
-    virtual void OnNewLine() { }
-
-private:
-    // call OnOutputLine() and set m_eol to true
-    void DoOutputLine(const wxString& line)
-    {
-        OnOutputLine(line);
-
-        m_eol = true;
-    }
-
-    // this function is a destructive inspector: when it returns true it also
-    // resets the flag to false so calling it again woulnd't return true any
-    // more
-    bool IsStartOfNewLine()
-    {
-        if ( !m_eol )
-            return false;
-
-        m_eol = false;
-
-        return true;
-    }
-
-
-    bool m_eol;
-};
-
-#endif // wxUSE_STATTEXT
 
 enum
 {

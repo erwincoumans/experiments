@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: spinbutt.h 58319 2009-01-23 08:40:26Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -57,11 +57,11 @@ public:
     virtual void SetValue(int val);
 
     // implementation
-    
+
     virtual void TriggerScrollEvent( wxEventType scrollEvent ) ;
 
     // osx specific event handling common for all osx-ports
-    
+
     virtual bool OSXHandleClicked( double timestampsec );
 
 protected:

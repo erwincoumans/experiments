@@ -4,7 +4,7 @@
  * Author:      Vadim Zeitlin
  * Modified by:
  * Created:     2005-04-05 (extracted from wx/chkconf.h)
- * RCS-ID:      $Id: chkconf.h 59756 2009-03-23 09:10:37Z SC $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwidgets.org>
  * Licence:     wxWindows licence
  */
@@ -40,7 +40,7 @@
  * we only use core graphics now on all builds, try to catch attempts
  * to configure the build otherwise and give error messages
  */
- 
+
 #if !wxUSE_GRAPHICS_CONTEXT || ( defined( wxMAC_USE_CORE_GRAPHICS ) && !wxMAC_USE_CORE_GRAPHICS )
 #   error "OS X builds use CoreGraphics in this wx version, you cannot turn back to QuickDraw completely"
 #endif
@@ -48,7 +48,7 @@
 /*
  * using mixins of cocoa functionality
  */
- 
+
 #ifdef __WXOSX_COCOA__
     #define wxOSX_USE_COCOA 1
 #else
@@ -83,7 +83,7 @@
 /*
  * combination flags
  */
- 
+
 #if wxOSX_USE_COCOA || wxOSX_USE_CARBON
     #define wxOSX_USE_COCOA_OR_CARBON 1
 #else

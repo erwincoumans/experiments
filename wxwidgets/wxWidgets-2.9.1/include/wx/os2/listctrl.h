@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Name:        wx/os2/listctrl.h
 // Purpose:     wxListCtrl class
-// Author:      
+// Author:
 // Modified by:
-// Created:     
-// RCS-ID:      $Id: listctrl.h 58757 2009-02-08 11:45:59Z VZ $
+// Created:
+// RCS-ID:      $Id$
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -308,7 +308,7 @@ public:
     // Edit the label
     //
     wxTextCtrl* EditLabel( long         lItem
-                          ,wxClassInfo* pTextControlClass = CLASSINFO(wxTextCtrl)
+                          ,wxClassInfo* pTextControlClass = wxCLASSINFO(wxTextCtrl)
                          );
 
     //
@@ -507,7 +507,7 @@ protected:
 
     //
     // Return the icon for the given item. In report view, OnGetItemImage will
-    // only be called for the first column. See OnGetItemColumnImage for 
+    // only be called for the first column. See OnGetItemColumnImage for
     // details.
     //
     virtual int OnGetItemImage(long lItem) const;

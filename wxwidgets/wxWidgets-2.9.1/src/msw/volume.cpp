@@ -4,7 +4,7 @@
 // Author:      George Policello
 // Modified by:
 // Created:     28 Jan 02
-// RCS-ID:      $Id: volume.cpp 50032 2007-11-17 20:26:41Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2002 George Policello
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -32,6 +32,7 @@
         #include "wx/icon.h"
     #endif
     #include "wx/intl.h"
+    #include "wx/log.h"
     #include "wx/hashmap.h"
     #include "wx/filefn.h"
 #endif // WX_PRECOMP
@@ -40,6 +41,9 @@
 #include "wx/dynlib.h"
 #include "wx/arrimpl.cpp"
 
+// some compilers require including <windows.h> before <shellapi.h> so do it
+// even if this is not necessary with most of them
+#include "wx/msw/wrapwin.h"
 #include <shellapi.h>
 #include <shlobj.h>
 #include "wx/msw/missing.h"
@@ -158,7 +162,7 @@ static unsigned GetBasicFlags(const wxChar* filename)
         // this error is not fatal, so don't show a message to the user about
         // it, otherwise it would appear every time a generic directory picker
         // dialog is used and there is a connected network drive
-        wxLogLastError(_T("SHGetFileInfo"));
+        wxLogLastError(wxT("SHGetFileInfo"));
     }
     else
     {
@@ -395,16 +399,16 @@ wxArrayString wxFSVolumeBase::GetVolumes(int flagsSet, int flagsUnset)
     ::InterlockedExchange(&s_cancelSearch, FALSE);     // reset
 
 #if wxUSE_DYNLIB_CLASS
-    if (!s_mprLib.IsLoaded() && s_mprLib.Load(_T("mpr.dll")))
+    if (!s_mprLib.IsLoaded() && s_mprLib.Load(wxT("mpr.dll")))
     {
 #ifdef UNICODE
-        s_pWNetOpenEnum = (WNetOpenEnumPtr)s_mprLib.GetSymbol(_T("WNetOpenEnumW"));
-        s_pWNetEnumResource = (WNetEnumResourcePtr)s_mprLib.GetSymbol(_T("WNetEnumResourceW"));
+        s_pWNetOpenEnum = (WNetOpenEnumPtr)s_mprLib.GetSymbol(wxT("WNetOpenEnumW"));
+        s_pWNetEnumResource = (WNetEnumResourcePtr)s_mprLib.GetSymbol(wxT("WNetEnumResourceW"));
 #else
-        s_pWNetOpenEnum = (WNetOpenEnumPtr)s_mprLib.GetSymbol(_T("WNetOpenEnumA"));
-        s_pWNetEnumResource = (WNetEnumResourcePtr)s_mprLib.GetSymbol(_T("WNetEnumResourceA"));
+        s_pWNetOpenEnum = (WNetOpenEnumPtr)s_mprLib.GetSymbol(wxT("WNetOpenEnumA"));
+        s_pWNetEnumResource = (WNetEnumResourcePtr)s_mprLib.GetSymbol(wxT("WNetEnumResourceA"));
 #endif
-        s_pWNetCloseEnum = (WNetCloseEnumPtr)s_mprLib.GetSymbol(_T("WNetCloseEnum"));
+        s_pWNetCloseEnum = (WNetCloseEnumPtr)s_mprLib.GetSymbol(wxT("WNetCloseEnum"));
     }
 #endif
 
@@ -578,7 +582,7 @@ void wxFSVolume::InitIcons()
 wxIcon wxFSVolume::GetIcon(wxFSIconType type) const
 {
     wxCHECK_MSG( type >= 0 && (size_t)type < m_icons.GetCount(), wxNullIcon,
-                 _T("wxFSIconType::GetIcon(): invalid icon index") );
+                 wxT("wxFSIconType::GetIcon(): invalid icon index") );
 
     // Load on demand.
     if (m_icons[type].IsNull())
@@ -603,7 +607,7 @@ wxIcon wxFSVolume::GetIcon(wxFSIconType type) const
             break;
 
         case wxFS_VOL_ICO_MAX:
-            wxFAIL_MSG(_T("wxFS_VOL_ICO_MAX is not valid icon type"));
+            wxFAIL_MSG(wxT("wxFS_VOL_ICO_MAX is not valid icon type"));
             break;
         }
 
@@ -611,7 +615,9 @@ wxIcon wxFSVolume::GetIcon(wxFSIconType type) const
         long rc = SHGetFileInfo(m_volName.wx_str(), 0, &fi, sizeof(fi), flags);
         m_icons[type].SetHICON((WXHICON)fi.hIcon);
         if (!rc || !fi.hIcon)
+        {
             wxLogError(_("Cannot load icon from '%s'."), m_volName.c_str());
+        }
     }
 
     return m_icons[type];

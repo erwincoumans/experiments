@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: fontenum.cpp 54962 2008-08-03 17:34:59Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -92,7 +92,7 @@ bool wxFontEnumerator::EnumerateFacenames(wxFontEncoding encoding,
             wxCFStringRef cfName(theName) ;
             fontFamilies.Add(cfName.AsString(wxLocale::GetSystemEncoding()));
         }
-        else if (status == kATSIterationScopeModified) // Make sure the font database hasn’t changed.
+        else if (status == kATSIterationScopeModified) // Make sure the font database hasn't changed.
         {
             // reset the iterator
             status = ATSFontFamilyIteratorReset (kATSFontContextLocal, nil, nil,

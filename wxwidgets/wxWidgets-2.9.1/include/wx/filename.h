@@ -4,7 +4,7 @@
 // Author:      Robert Roebling, Vadim Zeitlin
 // Modified by:
 // Created:     28.12.00
-// RCS-ID:      $Id: filename.h 59870 2009-03-26 16:02:09Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -65,12 +65,20 @@ enum wxPathFormat
     wxPATH_MAX // Not a valid value for specifying path format
 };
 
+// different conventions that may be used with GetHumanReadableSize()
+enum wxSizeConvention
+{
+    wxSIZE_CONV_TRADITIONAL,  // 1024 bytes = 1 KB
+    wxSIZE_CONV_IEC,          // 1024 bytes = 1 KiB
+    wxSIZE_CONV_SI            // 1000 bytes = 1 KB
+};
+
 // the kind of normalization to do with the file name: these values can be
 // or'd together to perform several operations at once
 enum wxPathNormalize
 {
     wxPATH_NORM_ENV_VARS = 0x0001,  // replace env vars with their values
-    wxPATH_NORM_DOTS     = 0x0002,  // squeeze all .. and . and prepend cwd
+    wxPATH_NORM_DOTS     = 0x0002,  // squeeze all .. and .
     wxPATH_NORM_TILDE    = 0x0004,  // Unix only: replace ~ and ~user
     wxPATH_NORM_CASE     = 0x0008,  // if case insensitive => tolower
     wxPATH_NORM_ABSOLUTE = 0x0010,  // make the path absolute
@@ -243,10 +251,10 @@ public:
         // (any of the pointers may be NULL)
     bool SetTimes(const wxDateTime *dtAccess,
                   const wxDateTime *dtMod,
-                  const wxDateTime *dtCreate);
+                  const wxDateTime *dtCreate) const;
 
         // set the access and modification times to the current moment
-    bool Touch();
+    bool Touch() const;
 
         // return the last access, last modification and create times
         // (any of the pointers may be NULL)
@@ -265,7 +273,7 @@ public:
 
 #if defined( __WXOSX_MAC__ ) && wxOSX_USE_CARBON
     bool MacSetTypeAndCreator( wxUint32 type , wxUint32 creator ) ;
-    bool MacGetTypeAndCreator( wxUint32 *type , wxUint32 *creator ) ;
+    bool MacGetTypeAndCreator( wxUint32 *type , wxUint32 *creator ) const;
     // gets the 'common' type and creator for a certain extension
     static bool MacFindDefaultTypeAndCreator( const wxString& ext , wxUint32 *type , wxUint32 *creator ) ;
     // registers application defined extensions and their default type and creator
@@ -281,7 +289,7 @@ public:
     static wxString GetCwd(const wxString& volume = wxEmptyString);
 
         // change the current working directory
-    bool SetCwd();
+    bool SetCwd() const;
     static bool SetCwd( const wxString &cwd );
 
         // get the value of user home (Unix only mainly)
@@ -316,11 +324,11 @@ public:
 #endif // wxUSE_FFILE
 
     // directory creation and removal.
-    bool Mkdir(int perm = wxS_DIR_DEFAULT, int flags = 0);
+    bool Mkdir(int perm = wxS_DIR_DEFAULT, int flags = 0) const;
     static bool Mkdir(const wxString &dir, int perm = wxS_DIR_DEFAULT,
                       int flags = 0);
 
-    bool Rmdir(int flags = 0);
+    bool Rmdir(int flags = 0) const;
     static bool Rmdir(const wxString &dir, int flags = 0);
 
     // operations on the path
@@ -358,7 +366,7 @@ public:
         // the arguments
     bool GetShortcutTarget(const wxString& shortcutPath,
                            wxString& targetFilename,
-                           wxString* arguments = NULL);
+                           wxString* arguments = NULL) const;
 #endif
 
 #ifndef __WXWINCE__
@@ -432,6 +440,11 @@ public:
 
     // is the char a path separator for this format?
     static bool IsPathSeparator(wxChar ch, wxPathFormat format = wxPATH_NATIVE);
+
+    // is this is a DOS path which beings with a windows unique volume name
+    // ('\\?\Volume{guid}\')?
+    static bool IsMSWUniqueVolumeNamePath(const wxString& path,
+                                          wxPathFormat format = wxPATH_NATIVE);
 
     // Dir accessors
     size_t GetDirCount() const { return m_dirs.size(); }
@@ -535,11 +548,15 @@ public:
     static wxULongLong GetSize(const wxString &file);
 
         // returns the size in a human readable form
-    wxString GetHumanReadableSize(const wxString &nullsize = wxGetTranslation(_T("Not available")),
-                                  int precision = 1) const;
-    static wxString GetHumanReadableSize(const wxULongLong &sz,
-                                         const wxString &nullsize = wxGetTranslation(_T("Not available")),
-                                         int precision = 1);
+    wxString
+    GetHumanReadableSize(const wxString& nullsize = _("Not available"),
+                         int precision = 1,
+                         wxSizeConvention conv = wxSIZE_CONV_TRADITIONAL) const;
+    static wxString
+    GetHumanReadableSize(const wxULongLong& sz,
+                         const wxString& nullsize = _("Not available"),
+                         int precision = 1,
+                         wxSizeConvention conv = wxSIZE_CONV_TRADITIONAL);
 #endif // wxUSE_LONGLONG
 
 

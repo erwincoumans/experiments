@@ -5,7 +5,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: app.h 59711 2009-03-21 23:36:37Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,18 +22,23 @@
 #include "wx/cmdargs.h"     // for wxCmdLineArgsArray used by wxApp::argv
 #include "wx/init.h"        // we must declare wxEntry()
 #include "wx/intl.h"        // for wxLayoutDirection
+#include "wx/log.h"         // for wxDISABLE_DEBUG_LOGGING_IN_RELEASE_BUILD()
 
 class WXDLLIMPEXP_FWD_BASE wxAppConsole;
 class WXDLLIMPEXP_FWD_BASE wxAppTraits;
 class WXDLLIMPEXP_FWD_BASE wxCmdLineParser;
 class WXDLLIMPEXP_FWD_BASE wxEventLoopBase;
-class WXDLLIMPEXP_FWD_BASE wxLog;
 class WXDLLIMPEXP_FWD_BASE wxMessageOutput;
 
 #if wxUSE_GUI
     struct WXDLLIMPEXP_FWD_CORE wxVideoMode;
     class WXDLLIMPEXP_FWD_CORE wxWindow;
 #endif
+
+// this macro should be used in any main() or equivalent functions defined in wx
+#define wxDISABLE_DEBUG_SUPPORT() \
+    wxDISABLE_ASSERTS_IN_RELEASE_BUILD(); \
+    wxDISABLE_DEBUG_LOGGING_IN_RELEASE_BUILD()
 
 // ----------------------------------------------------------------------------
 // typedefs
@@ -51,6 +56,15 @@ enum
     wxPRINT_WINDOWS = 1,
     wxPRINT_POSTSCRIPT = 2
 };
+
+// ----------------------------------------------------------------------------
+// global variables
+// ----------------------------------------------------------------------------
+
+// use of this list is strongly deprecated, use wxApp ScheduleForDestruction()
+// and IsScheduledForDestruction()  methods instead of this list directly, it
+// is here for compatibility purposes only
+extern WXDLLIMPEXP_DATA_BASE(wxList) wxPendingDelete;
 
 // ----------------------------------------------------------------------------
 // wxAppConsoleBase: wxApp for non-GUI applications
@@ -127,22 +141,17 @@ public:
     //     be argv[0]
 
         // set/get the application name
-    wxString GetAppName() const
-    {
-        return m_appName.empty() ? m_className : m_appName;
-    }
+    wxString GetAppName() const;
     void SetAppName(const wxString& name) { m_appName = name; }
 
         // set/get the application display name: the display name is the name
         // shown to the user in titles, reports, etc while the app name is
         // used for paths, config, and other places the user doesn't see
         //
-        // so the app name could be myapp while display name could be "My App"
-    wxString GetAppDisplayName() const
-    {
-        return m_appDisplayName.empty() ? GetAppName().Capitalize()
-                                        : m_appDisplayName;
-    }
+        // by default the display name is the same as app name or a capitalized
+        // version of the program if app name was not set neither but it's
+        // usually better to set it explicitly to something nicer
+    wxString GetAppDisplayName() const;
 
     void SetAppDisplayName(const wxString& name) { m_appDisplayName = name; }
 
@@ -317,9 +326,30 @@ public:
     void DeletePendingEvents();
 
 
-    // wxEventLoop redirections
-    // ------------------------
+    // delayed destruction
+    // -------------------
 
+    // If an object may have pending events for it, it shouldn't be deleted
+    // immediately as this would result in a crash when trying to handle these
+    // events: instead, it should be scheduled for destruction and really
+    // destroyed only after processing all pending events.
+    //
+    // Notice that this is only possible if we have a running event loop,
+    // otherwise the object is just deleted directly by ScheduleForDestruction()
+    // and IsScheduledForDestruction() always returns false.
+
+    // schedule the object for destruction in the near future
+    void ScheduleForDestruction(wxObject *object);
+
+    // return true if the object is scheduled for destruction
+    bool IsScheduledForDestruction(wxObject *object) const;
+
+
+    // wxEventLoop-related methods
+    // ---------------------------
+
+    // all these functions are forwarded to the corresponding methods of the
+    // currently active event loop -- and do nothing if there is none
     virtual bool Pending();
     virtual bool Dispatch();
 
@@ -329,7 +359,20 @@ public:
     bool Yield(bool onlyIfNeeded = false);
 
     virtual void WakeUpIdle();
+
+    // this method is called by the active event loop when there are no events
+    // to process
+    //
+    // by default it generates the idle events and if you override it in your
+    // derived class you should call the base class version to ensure that idle
+    // events are still sent out
     virtual bool ProcessIdle();
+
+    // this virtual function is overridden in GUI wxApp to always return true
+    // as GUI applications always have an event loop -- but console ones may
+    // have it or not, so it simply returns true if already have an event loop
+    // running but false otherwise
+    virtual bool UsesEventLoop() const;
 
 
     // debugging support
@@ -356,7 +399,7 @@ public:
                           const wxChar *msg);
 
     // check that the wxBuildOptions object (constructed in the application
-    // itself, usually the one from IMPLEMENT_APP() macro) matches the build
+    // itself, usually the one from wxIMPLEMENT_APP() macro) matches the build
     // options of the library and abort if it doesn't
     static bool CheckBuildOptions(const char *optionsSignature,
                                   const char *componentName);
@@ -392,6 +435,11 @@ public:
 #endif
 
 protected:
+    // delete all objects in wxPendingDelete list
+    //
+    // called from ProcessPendingEvents()
+    void DeletePendingObjects();
+
     // the function which creates the traits object when GetTraits() needs it
     // for the first time
     virtual wxAppTraits *CreateTraits();
@@ -518,6 +566,9 @@ public:
         // Returns true if more idle time is requested.
     virtual bool SendIdleEvents(wxWindow* win, wxIdleEvent& event);
 
+        // override base class version: GUI apps always use an event loop
+    virtual bool UsesEventLoop() const { return true; }
+
 
     // top level window functions
     // --------------------------
@@ -599,9 +650,6 @@ public:
 #endif // WXWIN_COMPATIBILITY_2_6
 
 protected:
-    // delete all objects in wxPendingDelete list
-    void DeletePendingObjects();
-
     // override base class method to use GUI traits
     virtual wxAppTraits *CreateTraits();
 
@@ -680,7 +728,7 @@ protected:
 // object of type wxApp
 //
 // note that instead of using of wxTheApp in application code you should
-// consider using DECLARE_APP() after which you may call wxGetApp() which will
+// consider using wxDECLARE_APP() after which you may call wxGetApp() which will
 // return the object of the correct type (i.e. MyApp and not wxApp)
 //
 // the cast is safe as in GUI build we only use wxApp, not wxAppConsole, and in
@@ -725,34 +773,39 @@ public:
         { wxApp::SetInitializerFunction(fn); }
 };
 
-// the code below defines a IMPLEMENT_WXWIN_MAIN macro which you can use if
+// the code below defines a wxIMPLEMENT_WXWIN_MAIN macro which you can use if
 // your compiler really, really wants main() to be in your main program (e.g.
-// hello.cpp). Now IMPLEMENT_APP should add this code if required.
+// hello.cpp). Now wxIMPLEMENT_APP should add this code if required.
 
-#define IMPLEMENT_WXWIN_MAIN_CONSOLE \
-        int main(int argc, char **argv) { return wxEntry(argc, argv); }
+#define wxIMPLEMENT_WXWIN_MAIN_CONSOLE                                        \
+    int main(int argc, char **argv)                                           \
+    {                                                                         \
+        wxDISABLE_DEBUG_SUPPORT();                                            \
+                                                                              \
+        return wxEntry(argc, argv);                                           \
+    }
 
 // port-specific header could have defined it already in some special way
-#ifndef IMPLEMENT_WXWIN_MAIN
-    #define IMPLEMENT_WXWIN_MAIN IMPLEMENT_WXWIN_MAIN_CONSOLE
-#endif // defined(IMPLEMENT_WXWIN_MAIN)
+#ifndef wxIMPLEMENT_WXWIN_MAIN
+    #define wxIMPLEMENT_WXWIN_MAIN          wxIMPLEMENT_WXWIN_MAIN_CONSOLE
+#endif // defined(wxIMPLEMENT_WXWIN_MAIN)
 
 #ifdef __WXUNIVERSAL__
     #include "wx/univ/theme.h"
 
     #ifdef wxUNIV_DEFAULT_THEME
-        #define IMPLEMENT_WX_THEME_SUPPORT \
+        #define wxIMPLEMENT_WX_THEME_SUPPORT \
             WX_USE_THEME(wxUNIV_DEFAULT_THEME);
     #else
-        #define IMPLEMENT_WX_THEME_SUPPORT
+        #define wxIMPLEMENT_WX_THEME_SUPPORT
     #endif
 #else
-    #define IMPLEMENT_WX_THEME_SUPPORT
+    #define wxIMPLEMENT_WX_THEME_SUPPORT
 #endif
 
 // Use this macro if you want to define your own main() or WinMain() function
 // and call wxEntry() from there.
-#define IMPLEMENT_APP_NO_MAIN(appname)                                      \
+#define wxIMPLEMENT_APP_NO_MAIN(appname)                                    \
     wxAppConsole *wxCreateApp()                                             \
     {                                                                       \
         wxAppConsole::CheckBuildOptions(WX_BUILD_OPTIONS_SIGNATURE,         \
@@ -761,36 +814,54 @@ public:
     }                                                                       \
     wxAppInitializer                                                        \
         wxTheAppInitializer((wxAppInitializerFunction) wxCreateApp);        \
-    DECLARE_APP(appname)                                                    \
-    appname& wxGetApp() { return *static_cast<appname*>(wxApp::GetInstance()); }
+    appname& wxGetApp() { return *static_cast<appname*>(wxApp::GetInstance()); }    \
+    wxDECLARE_APP(appname)
 
-// Same as IMPLEMENT_APP() normally but doesn't include themes support in
+// Same as wxIMPLEMENT_APP() normally but doesn't include themes support in
 // wxUniversal builds
-#define IMPLEMENT_APP_NO_THEMES(appname)    \
-    IMPLEMENT_APP_NO_MAIN(appname)          \
-    IMPLEMENT_WXWIN_MAIN
+#define wxIMPLEMENT_APP_NO_THEMES(appname)  \
+    wxIMPLEMENT_WXWIN_MAIN                  \
+    wxIMPLEMENT_APP_NO_MAIN(appname)
 
 // Use this macro exactly once, the argument is the name of the wxApp-derived
 // class which is the class of your application.
-#define IMPLEMENT_APP(appname)              \
-    IMPLEMENT_APP_NO_THEMES(appname)        \
-    IMPLEMENT_WX_THEME_SUPPORT
+#define wxIMPLEMENT_APP(appname)            \
+    wxIMPLEMENT_WX_THEME_SUPPORT            \
+    wxIMPLEMENT_APP_NO_THEMES(appname)
 
 // Same as IMPLEMENT_APP(), but for console applications.
-#define IMPLEMENT_APP_CONSOLE(appname)      \
-    IMPLEMENT_APP_NO_MAIN(appname)          \
-    IMPLEMENT_WXWIN_MAIN_CONSOLE
+#define wxIMPLEMENT_APP_CONSOLE(appname)    \
+    wxIMPLEMENT_WXWIN_MAIN_CONSOLE          \
+    wxIMPLEMENT_APP_NO_MAIN(appname)
 
 // this macro can be used multiple times and just allows you to use wxGetApp()
 // function
-#define DECLARE_APP(appname) extern appname& wxGetApp();
+#define wxDECLARE_APP(appname)              \
+    extern appname& wxGetApp()
 
 
-// declare the stuff defined by IMPLEMENT_APP() macro, it's not really needed
+// declare the stuff defined by wxIMPLEMENT_APP() macro, it's not really needed
 // anywhere else but at the very least it suppresses icc warnings about
 // defining extern symbols without prior declaration, and it shouldn't do any
 // harm
 extern wxAppConsole *wxCreateApp();
 extern wxAppInitializer wxTheAppInitializer;
+
+// ----------------------------------------------------------------------------
+// Compatibility macro aliases
+// ----------------------------------------------------------------------------
+
+// deprecated variants _not_ requiring a semicolon after them
+// (note that also some wx-prefixed macro do _not_ require a semicolon because
+//  it's not always possible to force the compire to require it)
+
+#define IMPLEMENT_WXWIN_MAIN_CONSOLE            wxIMPLEMENT_WXWIN_MAIN_CONSOLE
+#define IMPLEMENT_WXWIN_MAIN                    wxIMPLEMENT_WXWIN_MAIN
+#define IMPLEMENT_WX_THEME_SUPPORT              wxIMPLEMENT_WX_THEME_SUPPORT
+#define IMPLEMENT_APP_NO_MAIN(app)              wxIMPLEMENT_APP_NO_MAIN(app);
+#define IMPLEMENT_APP_NO_THEMES(app)            wxIMPLEMENT_APP_NO_THEMES(app);
+#define IMPLEMENT_APP(app)                      wxIMPLEMENT_APP(app);
+#define IMPLEMENT_APP_CONSOLE(app)              wxIMPLEMENT_APP_CONSOLE(app);
+#define DECLARE_APP(app)                        wxDECLARE_APP(app);
 
 #endif // _WX_APP_H_BASE_

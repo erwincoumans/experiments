@@ -4,7 +4,7 @@
 // Author:      Andreas Pflug
 // Modified by:
 // Created:     2005-01-19
-// RCS-ID:      $Id: datectrl.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Andreas Pflug <pgadmin@pse-consulting.de>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,6 @@ public:
                       const wxDateTime& upperdate = wxDefaultDateTime);
 
     // extra methods available only in this (generic) implementation
-    bool SetFormat(const wxString& fmt);
     wxCalendarCtrl *GetCalendar() const;
 
 

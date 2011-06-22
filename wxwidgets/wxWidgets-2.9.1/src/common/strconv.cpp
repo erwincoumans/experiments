@@ -5,7 +5,7 @@
 //              Ryan Norton, Fredrik Roubert (UTF7)
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: strconv.cpp 59858 2009-03-25 21:24:02Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Ove Kaaven, Robert Roebling, Vaclav Slavik
 //              (c) 2000-2003 Vadim Zeitlin
 //              (c) 2004 Ryan Norton, Fredrik Roubert
@@ -27,8 +27,6 @@
 #endif
 
 #include "wx/strconv.h"
-
-#if wxUSE_WCHAR_T
 
 #ifndef __WXWINCE__
 #include <errno.h>
@@ -57,7 +55,7 @@
 #endif //def __DARWIN__
 
 
-#define TRACE_STRCONV _T("strconv")
+#define TRACE_STRCONV wxT("strconv")
 
 // WC_UTF16 is defined only if sizeof(wchar_t) == 2, otherwise it's supposed to
 // be 4 bytes
@@ -216,7 +214,7 @@ wxMBConv::ToWChar(wchar_t *dst, size_t dstLen,
     // all the complication come from the fact that this function, for
     // historical reasons, must behave in 2 subtly different ways when it's
     // called with a fixed number of characters and when it's called for the
-    // entire NUL-terminated string: in the former case (srcEnd == NULL) we
+    // entire NUL-terminated string: in the former case (srcEnd != NULL) we
     // must count all characters we convert, NUL or not; but in the latter we
     // do not count the trailing NUL -- but still count all the NULs inside the
     // string
@@ -258,11 +256,13 @@ wxMBConv::ToWChar(wchar_t *dst, size_t dstLen,
         if ( !srcEnd )
         {
             // we convert just one chunk in this case as this is the entire
-            // string anyhow
+            // string anyhow (and we don't count the trailing NUL in this case)
             break;
         }
 
-        // advance the input pointer past the end of this chunk
+        // advance the input pointer past the end of this chunk: notice that we
+        // will always stop before srcEnd because we know that the chunk is
+        // always properly NUL-terminated
         while ( NotAllNULs(src, nulLen) )
         {
             // notice that we must skip over multiple bytes here as we suppose
@@ -272,23 +272,20 @@ wxMBConv::ToWChar(wchar_t *dst, size_t dstLen,
             src += nulLen;
         }
 
-        src += nulLen; // skipping over its terminator as well
-
-        // note that ">=" (and not just "==") is needed here as the terminator
-        // we skipped just above could be inside or just after the buffer
-        // delimited by srcEnd
-        if ( src >= srcEnd )
+        // if the buffer ends before this NUL, we shouldn't count it in our
+        // output so skip the code below
+        if ( src == srcEnd )
             break;
 
-        // if we got here then this wasn't the last chunk in this string and
-        // hence we must count an extra char for L'\0' even when converting a
-        // fixed number of characters
-        if ( srcEnd )
-        {
-            dstWritten++;
-            if ( dst )
-                dst++;
-        }
+        // do count this terminator as it's inside the buffer we convert
+        dstWritten++;
+        if ( dst )
+            dst++;
+
+        src += nulLen; // skip the terminator itself
+
+        if ( src >= srcEnd )
+            break;
     }
 
     return dstWritten;
@@ -324,16 +321,22 @@ wxMBConv::FromWChar(char *dst, size_t dstLen,
     const size_t lenNul = GetMBNulLen();
     for ( const wchar_t * const srcEnd = src + srcLen;
           src < srcEnd;
-          src += wxWcslen(src) + 1 /* skip L'\0' too */ )
+          src++ /* skip L'\0' too */ )
     {
         // try to convert the current chunk
         size_t lenChunk = WC2MB(NULL, src, 0);
-
         if ( lenChunk == wxCONV_FAILED )
             return wxCONV_FAILED;
 
         dstWritten += lenChunk;
-        if ( src+lenChunk < srcEnd || isNulTerminated )
+
+        const wchar_t * const
+            chunkEnd = isNulTerminated ? srcEnd - 1 : src + wxWcslen(src);
+
+        // our return value accounts for the trailing NUL(s), unlike that of
+        // WC2MB(), however don't do it for the last NUL we artificially added
+        // ourselves above
+        if ( chunkEnd < srcEnd )
             dstWritten += lenNul;
 
         if ( dst )
@@ -341,13 +344,42 @@ wxMBConv::FromWChar(char *dst, size_t dstLen,
             if ( dstWritten > dstLen )
                 return wxCONV_FAILED;
 
-            if ( WC2MB(dst, src, lenChunk + lenNul) == wxCONV_FAILED )
+            // if we know that there is enough space in the destination buffer
+            // (because we accounted for lenNul in dstWritten above), we can
+            // convert directly in place -- but otherwise we need another
+            // temporary buffer to ensure that we don't overwrite the output
+            wxCharBuffer dstBuf;
+            char *dstTmp;
+            if ( chunkEnd == srcEnd )
+            {
+                dstBuf = wxCharBuffer(lenChunk + lenNul - 1);
+                dstTmp = dstBuf.data();
+            }
+            else
+            {
+                dstTmp = dst;
+            }
+
+            if ( WC2MB(dstTmp, src, lenChunk + lenNul) == wxCONV_FAILED )
                 return wxCONV_FAILED;
 
+            if ( dstTmp != dst )
+            {
+                // copy everything up to but excluding the terminating NUL(s)
+                // into the real output buffer
+                memcpy(dst, dstTmp, lenChunk);
+
+                // micro-optimization: if dstTmp != dst it means that chunkEnd
+                // == srcEnd and so we're done, no need to update anything below
+                break;
+            }
+
             dst += lenChunk;
-            if ( src+lenChunk < srcEnd || isNulTerminated )
+            if ( chunkEnd < srcEnd )
                 dst += lenNul;
         }
+
+        src = chunkEnd;
     }
 
     return dstWritten;
@@ -490,6 +522,42 @@ wxMBConv::cWC2MB(const wchar_t *inBuff, size_t inLen, size_t *outLen) const
     return wxCharBuffer();
 }
 
+const wxWCharBuffer wxMBConv::cMB2WC(const wxScopedCharBuffer& buf) const
+{
+    const size_t srcLen = buf.length();
+    if ( srcLen )
+    {
+        const size_t dstLen = ToWChar(NULL, 0, buf, srcLen);
+        if ( dstLen != wxCONV_FAILED )
+        {
+            wxWCharBuffer wbuf(dstLen);
+            wbuf.data()[dstLen] = L'\0';
+            if ( ToWChar(wbuf.data(), dstLen, buf, srcLen) != wxCONV_FAILED )
+                return wbuf;
+        }
+    }
+
+    return wxWCharBuffer();
+}
+
+const wxCharBuffer wxMBConv::cWC2MB(const wxScopedWCharBuffer& wbuf) const
+{
+    const size_t srcLen = wbuf.length();
+    if ( srcLen )
+    {
+        const size_t dstLen = FromWChar(NULL, 0, wbuf, srcLen);
+        if ( dstLen != wxCONV_FAILED )
+        {
+            wxCharBuffer buf(dstLen);
+            buf.data()[dstLen] = '\0';
+            if ( FromWChar(buf.data(), dstLen, wbuf, srcLen) != wxCONV_FAILED )
+                return buf;
+        }
+    }
+
+    return wxCharBuffer();
+}
+
 // ----------------------------------------------------------------------------
 // wxMBConvLibc
 // ----------------------------------------------------------------------------
@@ -512,8 +580,8 @@ size_t wxMBConvLibc::WC2MB(char *buf, const wchar_t *psz, size_t n) const
 
 wxConvBrokenFileNames::wxConvBrokenFileNames(const wxString& charset)
 {
-    if ( wxStricmp(charset, _T("UTF-8")) == 0 ||
-         wxStricmp(charset, _T("UTF8")) == 0  )
+    if ( wxStricmp(charset, wxT("UTF-8")) == 0 ||
+         wxStricmp(charset, wxT("UTF8")) == 0  )
         m_conv = new wxMBConvUTF8(wxMBConvUTF8::MAP_INVALID_UTF8_TO_PUA);
     else
         m_conv = new wxCSConv(charset);
@@ -1137,7 +1205,7 @@ wxMBConvStrictUTF8::FromWChar(char *dst, size_t dstLen,
         }
         else
         {
-            wxFAIL_MSG( _T("trying to encode undefined Unicode character") );
+            wxFAIL_MSG( wxT("trying to encode undefined Unicode character") );
             break;
         }
 
@@ -2106,21 +2174,21 @@ wxMBConv_iconv::wxMBConv_iconv(const char *name)
     // check for charset that represents wchar_t:
     if ( ms_wcCharsetName.empty() )
     {
-        wxLogTrace(TRACE_STRCONV, _T("Looking for wide char codeset:"));
+        wxLogTrace(TRACE_STRCONV, wxT("Looking for wide char codeset:"));
 
 #if wxUSE_FONTMAP
-        const wxChar **names = wxFontMapperBase::GetAllEncodingNames(WC_ENC);
+        const wxChar *const *names = wxFontMapperBase::GetAllEncodingNames(WC_ENC);
 #else // !wxUSE_FONTMAP
-        static const wxChar *names_static[] =
+        static const wxChar *const names_static[] =
         {
 #if SIZEOF_WCHAR_T == 4
-            _T("UCS-4"),
+            wxT("UCS-4"),
 #elif SIZEOF_WCHAR_T = 2
-            _T("UCS-2"),
+            wxT("UCS-2"),
 #endif
             NULL
         };
-        const wxChar **names = names_static;
+        const wxChar *const *names = names_static;
 #endif // wxUSE_FONTMAP/!wxUSE_FONTMAP
 
         for ( ; *names && ms_wcCharsetName.empty(); ++names )
@@ -2131,19 +2199,19 @@ wxMBConv_iconv::wxMBConv_iconv(const char *name)
             wxString nameXE(nameCS);
 
 #ifdef WORDS_BIGENDIAN
-                nameXE += _T("BE");
+                nameXE += wxT("BE");
 #else // little endian
-                nameXE += _T("LE");
+                nameXE += wxT("LE");
 #endif
 
-            wxLogTrace(TRACE_STRCONV, _T("  trying charset \"%s\""),
+            wxLogTrace(TRACE_STRCONV, wxT("  trying charset \"%s\""),
                        nameXE.c_str());
 
             m2w = iconv_open(nameXE.ToAscii(), name);
             if ( m2w == ICONV_T_INVALID )
             {
                 // try charset w/o bytesex info (e.g. "UCS4")
-                wxLogTrace(TRACE_STRCONV, _T("  trying charset \"%s\""),
+                wxLogTrace(TRACE_STRCONV, wxT("  trying charset \"%s\""),
                            nameCS.c_str());
                 m2w = iconv_open(nameCS.ToAscii(), name);
 
@@ -2190,8 +2258,8 @@ wxMBConv_iconv::wxMBConv_iconv(const char *name)
                    wxT("iconv wchar_t charset is \"%s\"%s"),
                    ms_wcCharsetName.empty() ? wxString("<none>")
                                             : ms_wcCharsetName,
-                   ms_wcNeedsSwap ? _T(" (needs swap)")
-                                  : _T(""));
+                   ms_wcNeedsSwap ? wxT(" (needs swap)")
+                                  : wxT(""));
     }
     else // we already have ms_wcCharsetName
     {
@@ -2667,7 +2735,7 @@ public:
             switch ( len )
             {
                 default:
-                    wxLogDebug(_T("Unexpected NUL length %d"), len);
+                    wxLogDebug(wxT("Unexpected NUL length %d"), len);
                     self->m_minMBCharWidth = (size_t)-1;
                     break;
 
@@ -2714,7 +2782,7 @@ private:
                     break;
             }
 
-            wxASSERT_MSG( s_isWin98Or2k != -1, _T("should be set above") );
+            wxASSERT_MSG( s_isWin98Or2k != -1, wxT("should be set above") );
         }
 
         return s_isWin98Or2k == 1;
@@ -2908,7 +2976,7 @@ wxCSConv::wxCSConv(wxFontEncoding encoding)
 {
     if ( encoding == wxFONTENCODING_MAX || encoding == wxFONTENCODING_DEFAULT )
     {
-        wxFAIL_MSG( _T("invalid encoding value in wxCSConv ctor") );
+        wxFAIL_MSG( wxT("invalid encoding value in wxCSConv ctor") );
 
         encoding = wxFONTENCODING_SYSTEM;
     }
@@ -2945,10 +3013,9 @@ wxCSConv& wxCSConv::operator=(const wxCSConv& conv)
 void wxCSConv::Clear()
 {
     free(m_name);
-    delete m_convReal;
+    wxDELETE(m_convReal);
 
     m_name = NULL;
-    m_convReal = NULL;
 }
 
 void wxCSConv::SetName(const char *charset)
@@ -3033,7 +3100,7 @@ wxMBConv *wxCSConv::DoCreate() const
                 delete conv;
             }
 
-            const wxChar** names = wxFontMapperBase::GetAllEncodingNames(encoding);
+            const wxChar* const* names = wxFontMapperBase::GetAllEncodingNames(encoding);
             // CS : in case this does not return valid names (eg for MacRoman)
             // encoding got a 'failure' entry in the cache all the same,
             // although it just has to be created using a different method, so
@@ -3056,7 +3123,7 @@ wxMBConv *wxCSConv::DoCreate() const
                     delete conv;
                 }
 
-                gs_nameCache[encoding] = _T(""); // cache the failure
+                gs_nameCache[encoding] = wxT(""); // cache the failure
             }
         }
 #endif // wxUSE_FONTMAP
@@ -3146,31 +3213,12 @@ wxMBConv *wxCSConv::DoCreate() const
 
         delete conv;
     }
+
+    wxLogTrace(TRACE_STRCONV,
+               wxT("encoding \"%s\" is not supported by this system"),
+               (m_name ? wxString(m_name)
+                       : wxFontMapperBase::GetEncodingName(m_encoding)));
 #endif // wxUSE_FONTMAP
-
-    // NB: This is a hack to prevent deadlock. What could otherwise happen
-    //     in Unicode build: wxConvLocal creation ends up being here
-    //     because of some failure and logs the error. But wxLog will try to
-    //     attach a timestamp, for which it will need wxConvLocal (to convert
-    //     time to char* and then wchar_t*), but that fails, tries to log the
-    //     error, but wxLog has an (already locked) critical section that
-    //     guards the static buffer.
-    static bool alreadyLoggingError = false;
-    if (!alreadyLoggingError)
-    {
-        alreadyLoggingError = true;
-        wxLogError(_("Cannot convert from the charset '%s'!"),
-                   m_name ? m_name
-                      :
-#if wxUSE_FONTMAP
-                         (const char*)wxFontMapperBase::GetEncodingDescription(m_encoding).ToAscii()
-#else // !wxUSE_FONTMAP
-                         (const char*)wxString::Format(_("encoding %i"), m_encoding).ToAscii()
-#endif // wxUSE_FONTMAP/!wxUSE_FONTMAP
-              );
-
-        alreadyLoggingError = false;
-    }
 
     return NULL;
 }
@@ -3404,14 +3452,3 @@ WXDLLIMPEXP_DATA_BASE(wxMBConv *) wxConvFileName =
 #else // !__DARWIN__
                                     wxGet_wxConvLibcPtr();
 #endif // __DARWIN__/!__DARWIN__
-
-#else // !wxUSE_WCHAR_T
-
-// FIXME-UTF8: remove this, wxUSE_WCHAR_T is required now
-// stand-ins in absence of wchar_t
-WXDLLIMPEXP_DATA_BASE(wxMBConv) wxConvLibc,
-                                wxConvISO8859_1,
-                                wxConvLocal,
-                                wxConvUTF8;
-
-#endif // wxUSE_WCHAR_T/!wxUSE_WCHAR_T

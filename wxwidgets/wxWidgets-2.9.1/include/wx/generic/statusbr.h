@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: VZ at 05.02.00 to derive from wxStatusBarBase
 // Created:     01/02/97
-// RCS-ID:      $Id: statusbr.h 58786 2009-02-09 00:33:19Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,7 +30,7 @@ public:
     wxStatusBarGeneric() { Init(); }
     wxStatusBarGeneric(wxWindow *parent,
                        wxWindowID winid = wxID_ANY,
-                       long style = wxST_SIZEGRIP,
+                       long style = wxSTB_DEFAULT_STYLE,
                        const wxString& name = wxStatusBarNameStr)
     {
         Init();
@@ -41,31 +41,26 @@ public:
     virtual ~wxStatusBarGeneric();
 
     bool Create(wxWindow *parent, wxWindowID winid = wxID_ANY,
-                long style = wxST_SIZEGRIP,
+                long style = wxSTB_DEFAULT_STYLE,
                 const wxString& name = wxStatusBarNameStr);
 
-    // Create status line
-    virtual void SetFieldsCount(int number = 1,
-                                const int *widths = (const int *) NULL);
-
-    // Set status line text
-    virtual void SetStatusText(const wxString& text, int number = 0);
-
-    // Set status line widths
+    // implement base class methods
     virtual void SetStatusWidths(int n, const int widths_field[]);
-
-    // Get the position and size of the field's internal bounding rectangle
     virtual bool GetFieldRect(int i, wxRect& rect) const;
-
-    // sets the minimal vertical size of the status bar
     virtual void SetMinHeight(int height);
 
     virtual int GetBorderX() const { return m_borderX; }
     virtual int GetBorderY() const { return m_borderY; }
 
 
-protected:      // event handlers
+    // implementation only (not part of wxStatusBar public API):
 
+    int GetFieldFromPoint(const wxPoint& point) const;
+
+protected:
+    virtual void DoUpdateStatusText(int number);
+
+    // event handlers
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);
 
@@ -86,7 +81,7 @@ protected:
     virtual void InitColours();
 
     // true if the status bar shows the size grip: for this it must have
-    // wxST_SIZEGRIP style and the window it is attached to must be resizeable
+    // wxSTB_SIZEGRIP style and the window it is attached to must be resizeable
     // and not maximized
     bool ShowsSizeGrip() const;
 
@@ -104,6 +99,7 @@ protected:
 
     int               m_borderX;
     int               m_borderY;
+
     wxPen             m_mediumShadowPen;
     wxPen             m_hilightPen;
 

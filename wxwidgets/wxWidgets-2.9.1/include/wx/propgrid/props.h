@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2007-03-28
-// RCS-ID:      $Id: props.h 60793 2009-05-29 16:04:22Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_PROPGRID_PROPS_H_
@@ -16,7 +16,7 @@
 
 // -----------------------------------------------------------------------
 
-class wxArrayEditorDialog;
+class wxPGArrayEditorDialog;
 
 #include "wx/propgrid/editors.h"
 
@@ -52,8 +52,6 @@ WX_PG_IMPLEMENT_PROPERTY_CLASS_PLAIN(NAME, T, EDITOR)
 
 // -----------------------------------------------------------------------
 
-#ifndef SWIG
-
 /** @class wxPGInDialogValidator
     @ingroup classes
     Creates and manages a temporary wxTextCtrl for validation purposes.
@@ -80,8 +78,6 @@ public:
 private:
     wxTextCtrl*         m_textCtrl;
 };
-
-#endif  // SWIG
 
 
 // -----------------------------------------------------------------------
@@ -126,10 +122,9 @@ protected:
 
 // -----------------------------------------------------------------------
 
-#ifndef SWIG
 /** Constants used with DoValidation() methods.
 */
-enum
+enum wxPGDoValidationConstants
 {
     /** Instead of modifying the value, show an error message.
     */
@@ -143,7 +138,6 @@ enum
     */
     wxPG_PROPERTY_VALIDATION_WRAP               = 2
 };
-#endif
 
 // -----------------------------------------------------------------------
 
@@ -314,9 +308,6 @@ protected:
 
 // -----------------------------------------------------------------------
 
-// Exclude class from wxPython bindings
-#ifndef SWIG
-
 /** @class wxBoolProperty
     @ingroup classes
     Basic property with boolean value.
@@ -343,8 +334,6 @@ public:
     virtual bool DoSetAttribute( const wxString& name, wxVariant& value );
 };
 
-#endif  // !SWIG
-
 // -----------------------------------------------------------------------
 
 // If set, then selection of choices is static and should not be
@@ -370,7 +359,7 @@ public:
 #ifndef SWIG
     wxEnumProperty( const wxString& label = wxPG_LABEL,
                     const wxString& name = wxPG_LABEL,
-                    const wxChar** labels = NULL,
+                    const wxChar* const* labels = NULL,
                     const long* values = NULL,
                     int value = 0 );
     wxEnumProperty( const wxString& label,
@@ -381,7 +370,7 @@ public:
     // Special constructor for caching choices (used by derived class)
     wxEnumProperty( const wxString& label,
                     const wxString& name,
-                    const wxChar** labels,
+                    const wxChar* const* labels,
                     const long* values,
                     wxPGChoices* choicesCache,
                     int value = 0 );
@@ -468,7 +457,7 @@ public:
 
     wxEditEnumProperty( const wxString& label,
                         const wxString& name,
-                        const wxChar** labels,
+                        const wxChar* const* labels,
                         const long* values,
                         const wxString& value );
     wxEditEnumProperty( const wxString& label = wxPG_LABEL,
@@ -484,7 +473,7 @@ public:
     // Special constructor for caching choices (used by derived class)
     wxEditEnumProperty( const wxString& label,
                         const wxString& name,
-                        const wxChar** labels,
+                        const wxChar* const* labels,
                         const long* values,
                         wxPGChoices* choicesCache,
                         const wxString& value );
@@ -514,7 +503,7 @@ public:
 #ifndef SWIG
     wxFlagsProperty( const wxString& label,
                      const wxString& name,
-                     const wxChar** labels,
+                     const wxChar* const* labels,
                      const long* values = NULL,
                      long value = 0 );
     wxFlagsProperty( const wxString& label,
@@ -534,10 +523,11 @@ public:
     virtual bool StringToValue( wxVariant& variant,
                                 const wxString& text,
                                 int flags ) const;
-    virtual void ChildChanged( wxVariant& thisValue,
-                               int childIndex,
-                               wxVariant& childValue ) const;
+    virtual wxVariant ChildChanged( wxVariant& thisValue,
+                                    int childIndex,
+                                    wxVariant& childValue ) const;
     virtual void RefreshChildren();
+    virtual bool DoSetAttribute( const wxString& name, wxVariant& value );
 
     // GetChoiceSelection needs to overridden since m_choices is
     // used and value is integer, but it is not index.
@@ -683,9 +673,6 @@ protected:
 // -----------------------------------------------------------------------
 
 
-// Exclude class from wxPython bindings
-#ifndef SWIG
-
 /** @class wxDirProperty
     @ingroup classes
     Like wxLongStringProperty, but the button triggers dir selector instead.
@@ -711,8 +698,6 @@ protected:
     wxString    m_dlgMessage;
 };
 
-#endif  // !SWIG
-
 // -----------------------------------------------------------------------
 
 // wxBoolProperty specific flags
@@ -731,7 +716,6 @@ class WXDLLIMPEXP_PROPGRID wxArrayStringProperty : public wxPGProperty
 {
     WX_PG_DECLARE_PROPERTY_CLASS(wxArrayStringProperty)
 public:
-
     wxArrayStringProperty( const wxString& label = wxPG_LABEL,
                            const wxString& name = wxPG_LABEL,
                            const wxArrayString& value = wxArrayString() );
@@ -744,8 +728,12 @@ public:
                                 int argFlags = 0 ) const;
     virtual bool OnEvent( wxPropertyGrid* propgrid,
                           wxWindow* primary, wxEvent& event );
+    virtual bool DoSetAttribute( const wxString& name, wxVariant& value );
 
-    virtual void GenerateValueAsString();
+    // Implement in derived class for custom array-to-string conversion.
+    virtual void ConvertArrayToString(const wxArrayString& arr,
+                                      wxString* pString,
+                                      const wxUniChar& delimiter) const;
 
     // Shows string editor dialog. Value to be edited should be read from
     // value, and if dialog is not cancelled, it should be stored back and true
@@ -757,13 +745,30 @@ public:
                                 wxWindow* primary,
                                 const wxChar* cbt );
 
-#ifndef SWIG
-    // Creates wxArrayEditorDialog for string editing. Called in OnButtonClick.
-    virtual wxArrayEditorDialog* CreateEditorDialog();
-#endif
+    // Creates wxPGArrayEditorDialog for string editing. Called in OnButtonClick.
+    virtual wxPGArrayEditorDialog* CreateEditorDialog();
+
+    enum ConversionFlags
+    {
+        Escape          = 0x01,
+        QuoteStrings    = 0x02
+    };
+
+    /**
+        Generates contents for string dst based on the contents of
+        wxArrayString src.
+    */
+    static void ArrayStringToString( wxString& dst, const wxArrayString& src,
+                                     wxUniChar delimiter, int flags );
 
 protected:
+    // Previously this was to be implemented in derived class for array-to-
+    // string conversion. Now you should implement ConvertValueToString()
+    // instead.
+    virtual void GenerateValueAsString();
+
     wxString        m_display; // Cache for displayed text.
+    wxUniChar       m_delimiter;
 };
 
 // -----------------------------------------------------------------------
@@ -778,9 +783,6 @@ public: \
               const wxString& name = wxPG_LABEL, \
               const wxArrayString& value = wxArrayString() ); \
     ~PROPNAME(); \
-    virtual void GenerateValueAsString(); \
-    virtual bool StringToValue( wxVariant& value, \
-                                const wxString& text, int = 0 ) const; \
     virtual bool OnEvent( wxPropertyGrid* propgrid, \
                           wxWindow* primary, wxEvent& event ); \
     virtual bool OnCustomStringEdit( wxWindow* parent, wxString& value ); \
@@ -802,32 +804,9 @@ PROPNAME::PROPNAME( const wxString& label, \
     : wxArrayStringProperty(label,name,value) \
 { \
     PROPNAME::GenerateValueAsString(); \
+    m_delimiter = DELIMCHAR; \
 } \
 PROPNAME::~PROPNAME() { } \
-void PROPNAME::GenerateValueAsString() \
-{ \
-    wxChar delimChar = DELIMCHAR; \
-    if ( delimChar == wxS('"') ) \
-        wxArrayStringProperty::GenerateValueAsString(); \
-    else \
-        wxPropertyGrid::ArrayStringToString(m_display, \
-                                            m_value.GetArrayString(), \
-                                            0,DELIMCHAR,0); \
-} \
-bool PROPNAME::StringToValue( wxVariant& variant, \
-                              const wxString& text, int ) const \
-{ \
-    wxChar delimChar = DELIMCHAR; \
-    if ( delimChar == wxS('"') ) \
-        return wxArrayStringProperty::StringToValue(variant, text, 0); \
-    \
-    wxArrayString arr; \
-    WX_PG_TOKENIZER1_BEGIN(text,DELIMCHAR) \
-        arr.Add( token ); \
-    WX_PG_TOKENIZER1_END() \
-    variant = arr; \
-    return true; \
-} \
 bool PROPNAME::OnEvent( wxPropertyGrid* propgrid, \
                         wxWindow* primary, wxEvent& event ) \
 { \
@@ -851,21 +830,26 @@ wxValidator* PROPNAME::DoGetValidator () const \
 
 
 // -----------------------------------------------------------------------
-// wxArrayEditorDialog
+// wxPGArrayEditorDialog
 // -----------------------------------------------------------------------
+
+#if wxUSE_EDITABLELISTBOX
+
+class WXDLLIMPEXP_FWD_ADV wxEditableListBox;
+class WXDLLIMPEXP_FWD_CORE wxListEvent;
 
 #define wxAEDIALOG_STYLE \
     (wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxOK | wxCANCEL | wxCENTRE)
 
-class WXDLLIMPEXP_PROPGRID wxArrayEditorDialog : public wxDialog
+class WXDLLIMPEXP_PROPGRID wxPGArrayEditorDialog : public wxDialog
 {
 public:
-    wxArrayEditorDialog();
-    virtual ~wxArrayEditorDialog() { }
+    wxPGArrayEditorDialog();
+    virtual ~wxPGArrayEditorDialog() { }
 
     void Init();
 
-    wxArrayEditorDialog( wxWindow *parent,
+    wxPGArrayEditorDialog( wxWindow *parent,
                          const wxString& message,
                          const wxString& caption,
                          long style = wxAEDIALOG_STYLE,
@@ -878,6 +862,11 @@ public:
                  long style = wxAEDIALOG_STYLE,
                  const wxPoint& pos = wxDefaultPosition,
                  const wxSize& sz = wxDefaultSize );
+
+    void EnableCustomNewAction()
+    {
+        m_hasCustomNewAction = true;
+    }
 
     /** Set value modified by dialog.
     */
@@ -910,37 +899,30 @@ public:
     // Returns true if array was actually modified
     bool IsModified() const { return m_modified; }
 
-    //const wxArrayString& GetStrings() const { return m_array; }
+    // wxEditableListBox utilities
+    int GetSelection() const;
 
     // implementation from now on
-    void OnUpdateClick(wxCommandEvent& event);
     void OnAddClick(wxCommandEvent& event);
     void OnDeleteClick(wxCommandEvent& event);
-    void OnListBoxClick(wxCommandEvent& event);
     void OnUpClick(wxCommandEvent& event);
     void OnDownClick(wxCommandEvent& event);
-    //void OnCustomEditClick(wxCommandEvent& event);
+    void OnEndLabelEdit(wxListEvent& event);
     void OnIdle(wxIdleEvent& event);
 
 protected:
-    wxTextCtrl*     m_edValue;
-    wxListBox*      m_lbStrings;
+    wxEditableListBox*  m_elb;
 
-    wxButton*       m_butAdd;       // Button pointers
-    wxButton*       m_butCustom;    // required for disabling/enabling changing.
-    wxButton*       m_butUpdate;
-    wxButton*       m_butRemove;
-    wxButton*       m_butUp;
-    wxButton*       m_butDown;
+    // These are used for focus repair
+    wxWindow*           m_elbSubPanel;
+    wxWindow*           m_lastFocused;
 
-    //wxArrayString   m_array;
-
-    const wxChar*   m_custBtText;
-    //wxArrayStringPropertyClass*     m_pCallingClass;
+    // A new item, edited by user, is pending at this index.
+    // It will be committed once list ctrl item editing is done.
+    int             m_itemPendingAtIndex;
 
     bool            m_modified;
-
-    unsigned char   m_curFocus;
+    bool            m_hasCustomNewAction;
 
     // These must be overridden - must return true on success.
     virtual wxString ArrayGet( size_t index ) = 0;
@@ -949,18 +931,24 @@ protected:
     virtual bool ArraySet( size_t index, const wxString& str ) = 0;
     virtual void ArrayRemoveAt( int index ) = 0;
     virtual void ArraySwap( size_t first, size_t second ) = 0;
+    virtual bool OnCustomNewAction(wxString* WXUNUSED(resString))
+    {
+        return false;
+    }
 
 private:
-    DECLARE_DYNAMIC_CLASS_NO_COPY(wxArrayEditorDialog)
+    DECLARE_DYNAMIC_CLASS_NO_COPY(wxPGArrayEditorDialog)
     DECLARE_EVENT_TABLE()
 };
+
+#endif // wxUSE_EDITABLELISTBOX
 
 // -----------------------------------------------------------------------
 // wxPGArrayStringEditorDialog
 // -----------------------------------------------------------------------
 
 class WXDLLIMPEXP_PROPGRID
-    wxPGArrayStringEditorDialog : public wxArrayEditorDialog
+    wxPGArrayStringEditorDialog : public wxPGArrayEditorDialog
 {
 public:
     wxPGArrayStringEditorDialog();
@@ -978,13 +966,17 @@ public:
         return m_array;
     }
 
-    void SetCustomButton( const wxChar* custBtText, wxArrayStringProperty* pcc )
+    void SetCustomButton( const wxString& custBtText,
+                          wxArrayStringProperty* pcc )
     {
-        m_custBtText = custBtText;
-        m_pCallingClass = pcc;
+        if ( custBtText.length() )
+        {
+            EnableCustomNewAction();
+            m_pCallingClass = pcc;
+        }
     }
 
-    void OnCustomEditClick(wxCommandEvent& event);
+    virtual bool OnCustomNewAction(wxString* resString);
 
 protected:
     wxArrayString   m_array;

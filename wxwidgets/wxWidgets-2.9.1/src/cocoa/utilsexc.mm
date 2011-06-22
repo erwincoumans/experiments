@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2004-10-05
-// RCS-ID:      $Id: utilsexc.mm 48106 2007-08-15 16:10:19Z DE $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 // Notes:       This code may be useful on platforms other than Darwin.

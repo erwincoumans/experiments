@@ -3,7 +3,7 @@
 // Purpose:     Generic wxHeaderCtrl implementation
 // Author:      Vadim Zeitlin
 // Created:     2008-12-01
-// RCS-ID:      $Id: headerctrlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,9 +136,6 @@ private:
     // constrain the given position to be larger than the start position of the
     // given column plus its minimal width and return the effective width
     int ConstrainByMinWidth(unsigned int col, int& xPhysical);
-
-    // update the current position of the resizing marker
-    void UpdateResizingMarker(int xPhysical);
 
     // update the information displayed while a column is being moved around
     void UpdateReorderingMarker(int xPhysical);

@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2004-09-25
-// RCS-ID:      $Id: advprops.cpp 59837 2009-03-25 10:27:36Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -61,6 +61,8 @@
     #include "wx/msw/private.h"
     #include "wx/msw/dc.h"
 #endif
+
+#include "wx/odcombo.h"
 
 // -----------------------------------------------------------------------
 
@@ -274,11 +276,12 @@ wxPGWindowList wxPGSpinCtrlEditor::CreateControls( wxPropertyGrid* propgrid, wxP
     wnd2->SetRange( INT_MIN, INT_MAX );
     wnd2->SetValue( 0 );
 
+    wxWindow* wnd1 = wxPGTextCtrlEditor::CreateControls(propgrid, property, pos, tcSz).m_primary;
+#if wxUSE_VALIDATORS
     // Let's add validator to make sure only numbers can be entered
     wxTextValidator validator(wxFILTER_NUMERIC, &m_tempString);
-
-    wxTextCtrl* wnd1 = (wxTextCtrl*) wxPGTextCtrlEditor::CreateControls( propgrid, property, pos, tcSz ).m_primary;
     wnd1->SetValidator(validator);
+#endif
 
     return wxPGWindowList(wnd1, wnd2);
 }
@@ -552,40 +555,46 @@ void wxPGDatePickerCtrlEditor::SetValueToUnspecified( wxPGProperty* property,
 #include "wx/fontdlg.h"
 #include "wx/fontenum.h"
 
-static const wxChar* gs_fp_es_family_labels[] = {
+//
+// NB: Do not use wxS here since unlike wxT it doesn't translate to wxChar*
+//
+
+static const wxChar* const gs_fp_es_family_labels[] = {
     wxT("Default"), wxT("Decorative"),
     wxT("Roman"), wxT("Script"),
     wxT("Swiss"), wxT("Modern"),
+    wxT("Teletype"), wxT("Unknown"),
     (const wxChar*) NULL
 };
 
-static long gs_fp_es_family_values[] = {
-    wxDEFAULT, wxDECORATIVE,
-    wxROMAN, wxSCRIPT,
-    wxSWISS, wxMODERN
+static const long gs_fp_es_family_values[] = {
+    wxFONTFAMILY_DEFAULT, wxFONTFAMILY_DECORATIVE,
+    wxFONTFAMILY_ROMAN, wxFONTFAMILY_SCRIPT,
+    wxFONTFAMILY_SWISS, wxFONTFAMILY_MODERN,
+    wxFONTFAMILY_TELETYPE, wxFONTFAMILY_UNKNOWN
 };
 
-static const wxChar* gs_fp_es_style_labels[] = {
+static const wxChar* const gs_fp_es_style_labels[] = {
     wxT("Normal"),
     wxT("Slant"),
     wxT("Italic"),
     (const wxChar*) NULL
 };
 
-static long gs_fp_es_style_values[] = {
+static const long gs_fp_es_style_values[] = {
     wxNORMAL,
     wxSLANT,
     wxITALIC
 };
 
-static const wxChar* gs_fp_es_weight_labels[] = {
+static const wxChar* const gs_fp_es_weight_labels[] = {
     wxT("Normal"),
     wxT("Light"),
     wxT("Bold"),
     (const wxChar*) NULL
 };
 
-static long gs_fp_es_weight_values[] = {
+static const long gs_fp_es_weight_values[] = {
     wxNORMAL,
     wxLIGHT,
     wxBOLD
@@ -622,10 +631,6 @@ wxFontProperty::wxFontProperty( const wxString& label, const wxString& name,
     AddPrivateChild( new wxIntProperty( _("Point Size"),
                      wxS("Point Size"),(long)font.GetPointSize() ) );
 
-    AddPrivateChild( new wxEnumProperty(_("Family"), wxS("PointSize"),
-                     gs_fp_es_family_labels,gs_fp_es_family_values,
-                     font.GetFamily()) );
-
     wxString faceName = font.GetFaceName();
     // If font was not in there, add it now
     if ( faceName.length() &&
@@ -649,6 +654,10 @@ wxFontProperty::wxFontProperty( const wxString& label, const wxString& name,
 
     AddPrivateChild( new wxBoolProperty(_("Underlined"), wxS("Underlined"),
                      font.GetUnderlined()) );
+
+    AddPrivateChild( new wxEnumProperty(_("Family"), wxS("PointSize"),
+                     gs_fp_es_family_labels,gs_fp_es_family_values,
+                     font.GetFamily()) );
 }
 
 wxFontProperty::~wxFontProperty() { }
@@ -660,8 +669,7 @@ void wxFontProperty::OnSetValue()
 
     if ( !font.Ok() )
     {
-        font = wxFont(10,wxSWISS,wxNORMAL,wxNORMAL);
-        m_value << font;
+        m_value << *wxNORMAL_FONT;
     }
 }
 
@@ -681,7 +689,10 @@ bool wxFontProperty::OnEvent( wxPropertyGrid* propgrid, wxWindow* WXUNUSED(prima
 
         wxFontData data;
         wxFont font;
-        font << useValue;
+
+        if ( useValue.GetType() == wxS("wxFont") )
+            font << useValue;
+
         data.SetInitialFont( font );
         data.SetColour(*wxBLACK);
 
@@ -705,31 +716,25 @@ void wxFontProperty::RefreshChildren()
     wxFont font;
     font << m_value;
     Item(0)->SetValue( (long)font.GetPointSize() );
-    Item(1)->SetValue( (long)font.GetFamily() );
-    Item(2)->SetValueFromString( font.GetFaceName(), wxPG_FULL_VALUE );
-    Item(3)->SetValue( (long)font.GetStyle() );
-    Item(4)->SetValue( (long)font.GetWeight() );
-    Item(5)->SetValue( font.GetUnderlined() );
+    Item(1)->SetValueFromString( font.GetFaceName(), wxPG_FULL_VALUE );
+    Item(2)->SetValue( (long)font.GetStyle() );
+    Item(3)->SetValue( (long)font.GetWeight() );
+    Item(4)->SetValue( font.GetUnderlined() );
+    Item(5)->SetValue( (long)font.GetFamily() );
 }
 
-void wxFontProperty::ChildChanged( wxVariant& thisValue, int ind, wxVariant& childValue ) const
+wxVariant wxFontProperty::ChildChanged( wxVariant& thisValue,
+                                        int ind,
+                                        wxVariant& childValue ) const
 {
     wxFont font;
     font << thisValue;
 
     if ( ind == 0 )
     {
-        font.SetPointSize( wxPGVariantToInt(childValue) );
+        font.SetPointSize( childValue.GetLong() );
     }
     else if ( ind == 1 )
-    {
-        int fam = childValue.GetLong();
-        if ( fam < wxDEFAULT ||
-             fam > wxTELETYPE )
-             fam = wxDEFAULT;
-        font.SetFamily( fam );
-    }
-    else if ( ind == 2 )
     {
         wxString faceName;
         int faceIndex = childValue.GetLong();
@@ -739,7 +744,7 @@ void wxFontProperty::ChildChanged( wxVariant& thisValue, int ind, wxVariant& chi
 
         font.SetFaceName( faceName );
     }
-    else if ( ind == 3 )
+    else if ( ind == 2 )
     {
         int st = childValue.GetLong();
         if ( st != wxFONTSTYLE_NORMAL &&
@@ -748,7 +753,7 @@ void wxFontProperty::ChildChanged( wxVariant& thisValue, int ind, wxVariant& chi
              st = wxFONTWEIGHT_NORMAL;
         font.SetStyle( st );
     }
-    else if ( ind == 4 )
+    else if ( ind == 3 )
     {
         int wt = childValue.GetLong();
         if ( wt != wxFONTWEIGHT_NORMAL &&
@@ -757,12 +762,22 @@ void wxFontProperty::ChildChanged( wxVariant& thisValue, int ind, wxVariant& chi
              wt = wxFONTWEIGHT_NORMAL;
         font.SetWeight( wt );
     }
-    else if ( ind == 5 )
+    else if ( ind == 4 )
     {
         font.SetUnderlined( childValue.GetBool() );
     }
+    else if ( ind == 5 )
+    {
+        int fam = childValue.GetLong();
+        if ( fam < wxDEFAULT ||
+             fam > wxTELETYPE )
+             fam = wxDEFAULT;
+        font.SetFamily( fam );
+    }
 
-    thisValue << font;
+    wxVariant newVariant;
+    newVariant << font;
+    return newVariant;
 }
 
 /*
@@ -819,7 +834,7 @@ void wxFontProperty::OnCustomPaint(wxDC& dc,
 #include "wx/colordlg.h"
 
 //#define wx_cp_es_syscolours_len 25
-static const wxChar* gs_cp_es_syscolour_labels[] = {
+static const wxChar* const gs_cp_es_syscolour_labels[] = {
     wxT("AppWorkspace"),
     wxT("ActiveBorder"),
     wxT("ActiveCaption"),
@@ -848,7 +863,7 @@ static const wxChar* gs_cp_es_syscolour_labels[] = {
     (const wxChar*) NULL
 };
 
-static long gs_cp_es_syscolour_values[] = {
+static const long gs_cp_es_syscolour_values[] = {
     wxSYS_COLOUR_APPWORKSPACE,
     wxSYS_COLOUR_ACTIVEBORDER,
     wxSYS_COLOUR_ACTIVECAPTION,
@@ -922,7 +937,7 @@ wxSystemColourProperty::wxSystemColourProperty( const wxString& label, const wxS
 
 
 wxSystemColourProperty::wxSystemColourProperty( const wxString& label, const wxString& name,
-    const wxChar** labels, const long* values, wxPGChoices* choicesCache,
+    const wxChar* const* labels, const long* values, wxPGChoices* choicesCache,
     const wxColourPropertyValue& value )
     : wxEnumProperty( label, name, labels, values, choicesCache )
 {
@@ -934,7 +949,7 @@ wxSystemColourProperty::wxSystemColourProperty( const wxString& label, const wxS
 
 
 wxSystemColourProperty::wxSystemColourProperty( const wxString& label, const wxString& name,
-    const wxChar** labels, const long* values, wxPGChoices* choicesCache,
+    const wxChar* const* labels, const long* values, wxPGChoices* choicesCache,
     const wxColour& value )
     : wxEnumProperty( label, name, labels, values, choicesCache )
 {
@@ -1027,7 +1042,10 @@ wxVariant wxSystemColourProperty::DoTranslateVal( wxColourPropertyValue& v ) con
 int wxSystemColourProperty::ColToInd( const wxColour& colour ) const
 {
     size_t i;
-    size_t i_max = m_choices.GetCount() - 1;
+    size_t i_max = m_choices.GetCount();
+
+    if ( !(m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
+        i_max -= 1;
 
     for ( i=0; i<i_max; i++ )
     {
@@ -1085,7 +1103,8 @@ void wxSystemColourProperty::OnSetValue()
             return;
         }
 
-        if ( cpv.m_type < wxPG_COLOUR_WEB_BASE )
+        if ( cpv.m_type < wxPG_COLOUR_WEB_BASE ||
+             (m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
         {
             ind = GetIndexForValue(cpv.m_type);
         }
@@ -1109,7 +1128,8 @@ void wxSystemColourProperty::OnSetValue()
 
         ind = ColToInd(col);
 
-        if ( ind == wxNOT_FOUND )
+        if ( ind == wxNOT_FOUND &&
+             !(m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
             ind = GetCustomColourIndex();
     }
 
@@ -1148,7 +1168,8 @@ wxString wxSystemColourProperty::ValueToString( wxVariant& value,
 
         // If custom colour was selected, use invalid index, so that
         // ColourToString() will return properly formatted colour text.
-        if ( index == GetCustomColourIndex() )
+        if ( index == GetCustomColourIndex() &&
+             !(m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
             index = wxNOT_FOUND;
     }
     else
@@ -1233,12 +1254,37 @@ bool wxSystemColourProperty::IntToValue( wxVariant& variant, int number, int WXU
 }
 
 // Need to do some extra event handling.
-bool wxSystemColourProperty::OnEvent( wxPropertyGrid* propgrid, wxWindow* WXUNUSED(primary), wxEvent& event )
+bool wxSystemColourProperty::OnEvent( wxPropertyGrid* propgrid,
+                                      wxWindow* WXUNUSED(primary),
+                                      wxEvent& event )
 {
+    bool askColour = false;
+
     if ( propgrid->IsMainButtonEvent(event) )
     {
         // We need to handle button click in case editor has been
         // switched to one that has wxButton as well.
+        askColour = true;
+    }
+    else if ( event.GetEventType() == wxEVT_COMMAND_COMBOBOX_SELECTED )
+    {
+        // Must override index detection since at this point GetIndex()
+        // will return old value.
+        wxOwnerDrawnComboBox* cb =
+            static_cast<wxOwnerDrawnComboBox*>(propgrid->GetEditorControl());
+
+        if ( cb )
+        {
+            int index = cb->GetSelection();
+
+            if ( index == GetCustomColourIndex() &&
+                    !(m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
+                askColour = true;
+        }
+    }
+
+    if ( askColour && !propgrid->WasValueChangedInEvent() )
+    {
         wxVariant variant;
         if ( QueryColourFromUser(variant) )
             return true;
@@ -1303,8 +1349,10 @@ void wxSystemColourProperty::OnCustomPaint( wxDC& dc, const wxRect& rect,
 {
     wxColour col;
 
-    if ( paintdata.m_choiceItem >= 0 && paintdata.m_choiceItem < (int)m_choices.GetCount() &&
-         paintdata.m_choiceItem != GetCustomColourIndex() )
+    if ( paintdata.m_choiceItem >= 0 &&
+         paintdata.m_choiceItem < (int)m_choices.GetCount() &&
+         (paintdata.m_choiceItem != GetCustomColourIndex() ||
+          m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
     {
         int colInd = m_choices[paintdata.m_choiceItem].GetValue();
         col = GetColour( colInd );
@@ -1353,6 +1401,7 @@ bool wxSystemColourProperty::StringToValue( wxVariant& value, const wxString& te
         colourRGB.clear();
 
     if ( colourRGB.length() == 0 && m_choices.GetCount() &&
+         !(m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) &&
          colourName == m_choices.GetLabel(GetCustomColourIndex()) )
     {
         if ( !(argFlags & wxPG_EDITABLE_VALUE ))
@@ -1422,7 +1471,7 @@ bool wxSystemColourProperty::DoSetAttribute( const wxString& name, wxVariant& va
 {
     if ( name == wxPG_COLOUR_ALLOW_CUSTOM )
     {
-        int ival = wxPGVariantToInt(value);
+        int ival = value.GetLong();
 
         if ( ival && (m_flags & wxPG_PROP_HIDE_CUSTOM_COLOUR) )
         {
@@ -1446,7 +1495,7 @@ bool wxSystemColourProperty::DoSetAttribute( const wxString& name, wxVariant& va
 // wxColourProperty
 // -----------------------------------------------------------------------
 
-static const wxChar* gs_cp_es_normcolour_labels[] = {
+static const wxChar* const gs_cp_es_normcolour_labels[] = {
     wxT("Black"),
     wxT("Maroon"),
     wxT("Navy"),
@@ -1469,7 +1518,7 @@ static const wxChar* gs_cp_es_normcolour_labels[] = {
     (const wxChar*) NULL
 };
 
-static unsigned long gs_cp_es_normcolour_colours[] = {
+static const unsigned long gs_cp_es_normcolour_colours[] = {
     wxPG_COLOUR(0,0,0),
     wxPG_COLOUR(128,0,0),
     wxPG_COLOUR(0,0,128),
@@ -1558,7 +1607,7 @@ wxVariant wxColourProperty::DoTranslateVal( wxColourPropertyValue& v ) const
 #define NUM_CURSORS 28
 
 //#define wx_cp_es_syscursors_len 28
-static const wxChar* gs_cp_es_syscursors_labels[NUM_CURSORS+1] = {
+static const wxChar* const gs_cp_es_syscursors_labels[NUM_CURSORS+1] = {
     wxT("Default"),
     wxT("Arrow"),
     wxT("Right Arrow"),
@@ -1590,7 +1639,7 @@ static const wxChar* gs_cp_es_syscursors_labels[NUM_CURSORS+1] = {
     (const wxChar*) NULL
 };
 
-static long gs_cp_es_syscursors_values[NUM_CURSORS] = {
+static const long gs_cp_es_syscursors_values[NUM_CURSORS] = {
     wxCURSOR_NONE,
     wxCURSOR_ARROW,
     wxCURSOR_RIGHT_ARROW,
@@ -1772,16 +1821,8 @@ void wxImageFileProperty::OnSetValue()
     wxFileProperty::OnSetValue();
 
     // Delete old image
-    if ( m_pImage )
-    {
-        delete m_pImage;
-        m_pImage = NULL;
-    }
-    if ( m_pBitmap )
-    {
-        delete m_pBitmap;
-        m_pBitmap = NULL;
-    }
+    wxDELETE(m_pImage);
+    wxDELETE(m_pBitmap);
 
     wxFileName filename = GetFileName();
 
@@ -1810,8 +1851,7 @@ void wxImageFileProperty::OnCustomPaint( wxDC& dc,
         {
             m_pImage->Rescale( rect.width, rect.height );
             m_pBitmap = new wxBitmap( *m_pImage );
-            delete m_pImage;
-            m_pImage = NULL;
+            wxDELETE(m_pImage);
         }
 
         dc.DrawBitmap( *m_pBitmap, rect.x, rect.y, false );

@@ -2,7 +2,7 @@
 // Name:        src/gtk/dialog.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: dialog.cpp 58634 2009-02-03 12:01:46Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -111,16 +111,11 @@ int wxDialog::ShowModal()
     if ( win )
         win->GTKReleaseMouseAndNotify();
 
-    // use the apps top level window as parent if none given unless explicitly
-    // forbidden
-    if ( !GetParent() && !(GetWindowStyleFlag() & wxDIALOG_NO_PARENT) )
+    wxWindow * const parent = GetParentForModalDialog();
+    if ( parent )
     {
-        wxWindow * const parent = GetParentForModalDialog();
-        if ( parent && parent != this )
-        {
-            gtk_window_set_transient_for( GTK_WINDOW(m_widget),
-                                          GTK_WINDOW(parent->m_widget) );
-        }
+        gtk_window_set_transient_for( GTK_WINDOW(m_widget),
+                                      GTK_WINDOW(parent->m_widget) );
     }
 
     wxBusyCursorSuspender cs; // temporarily suppress the busy cursor

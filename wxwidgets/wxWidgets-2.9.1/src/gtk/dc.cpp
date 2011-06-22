@@ -2,7 +2,7 @@
 // Name:        dc.cpp
 // Purpose:
 // Author:      Robert Roebling
-// RCS-ID:      $Id: dc.cpp 50848 2007-12-20 06:07:40Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -18,7 +18,7 @@
 
 IMPLEMENT_ABSTRACT_CLASS(wxGTKDCImpl, wxDCImpl)
 
-wxGTKDCImpl::wxGTKDCImpl( wxDC *owner ) 
+wxGTKDCImpl::wxGTKDCImpl( wxDC *owner )
    : wxDCImpl( owner )
 {
     m_ok = FALSE;

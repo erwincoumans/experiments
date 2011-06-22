@@ -2,7 +2,7 @@
 // Name:        src/html/htmlfilt.cpp
 // Purpose:     wxHtmlFilter - input filter for translating into HTML format
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlfilt.cpp 58343 2009-01-23 22:19:46Z RR $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
     //     tag if we used Content-Type header).
 #if wxUSE_UNICODE
     int charsetPos;
-    if ((charsetPos = file.GetMimeType().Find(_T("; charset="))) != wxNOT_FOUND)
+    if ((charsetPos = file.GetMimeType().Find(wxT("; charset="))) != wxNOT_FOUND)
     {
         wxString charset = file.GetMimeType().Mid(charsetPos + 10);
         wxCSConv conv(charset);
@@ -158,7 +158,7 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
         s->Read( buf.data(), size );
         *(buf.data() + size) = 0;
         wxString tmpdoc( buf, wxConvISO8859_1);
-        
+
         wxString charset = wxHtmlParser::ExtractCharsetInformation(tmpdoc);
         if (charset.empty())
             doc = tmpdoc;
@@ -175,7 +175,7 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
     {
         wxString hdr;
         wxString mime = file.GetMimeType();
-        hdr.Printf(_T("<meta http-equiv=\"Content-Type\" content=\"%s\">"), mime.c_str());
+        hdr.Printf(wxT("<meta http-equiv=\"Content-Type\" content=\"%s\">"), mime.c_str());
         return hdr+doc;
     }
 #endif

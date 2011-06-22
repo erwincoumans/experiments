@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxTextBuffer class
 // Created:     14.11.01
 // Author:      Morten Hanssen, Vadim Zeitlin
-// RCS-ID:      $Id: textbuf.cpp 50958 2007-12-31 08:58:05Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998-2001 wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -89,26 +89,26 @@ wxString wxTextBuffer::Translate(const wxString& text, wxTextFileType type)
     {
         wxChar ch = *i;
         switch ( ch ) {
-            case _T('\n'):
+            case wxT('\n'):
                 // Dos/Unix line termination
                 result += eol;
                 chLast = 0;
                 break;
 
-            case _T('\r'):
-                if ( chLast == _T('\r') ) {
+            case wxT('\r'):
+                if ( chLast == wxT('\r') ) {
                     // Mac empty line
                     result += eol;
                 }
                 else {
                     // just remember it: we don't know whether it is just "\r"
                     // or "\r\n" yet
-                    chLast = _T('\r');
+                    chLast = wxT('\r');
                 }
                 break;
 
             default:
-                if ( chLast == _T('\r') ) {
+                if ( chLast == wxT('\r') ) {
                     // Mac line termination
                     result += eol;
 
@@ -226,7 +226,7 @@ wxTextFileType wxTextBuffer::GuessType() const
             case wxTextFileType_Unix: nUnix++; break;   \
             case wxTextFileType_Dos:  nDos++;  break;   \
             case wxTextFileType_Mac:  nMac++;  break;   \
-            default: wxFAIL_MSG(_T("unknown line terminator")); \
+            default: wxFAIL_MSG(wxT("unknown line terminator")); \
         }
 
     size_t n;

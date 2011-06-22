@@ -4,14 +4,14 @@
 // Author:      Stefan Csomor, Dan "Bud" Keith (composite combobox)
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: combobox.cpp 60961 2009-06-10 05:03:27Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wxprec.h"
 
-#if wxUSE_COMBOBOX
+#if wxUSE_COMBOBOX && wxOSX_USE_CARBON
 
 #include "wx/combobox.h"
 
@@ -59,10 +59,6 @@ public:
         m_cb = cb;
     }
 
-    void ForwardEnableTextChangedEvents(bool enable)
-    {
-        EnableTextChangedEvents(enable);
-    }
 protected:
     void OnChar( wxKeyEvent& event )
     {
@@ -150,7 +146,7 @@ protected:
 
         event.Skip();
     }
-    
+
 private:
     wxComboBox *m_cb;
 
@@ -234,17 +230,8 @@ wxComboBox::~wxComboBox()
     // delete the controls now, don't leave them alive even though they would
     // still be eventually deleted by our parent - but it will be too late, the
     // user code expects them to be gone now
-    if (m_text != NULL)
-    {
-        delete m_text;
-        m_text = NULL;
-    }
-
-    if (m_choice != NULL)
-    {
-        delete m_choice;
-        m_choice = NULL;
-    }
+    wxDELETE(m_text);
+    wxDELETE(m_choice);
 }
 
 // ----------------------------------------------------------------------------
@@ -292,7 +279,7 @@ void wxComboBox::DoMoveWindow(int x, int y, int width, int height)
         m_text->SetSize(TEXTFOCUSBORDER, TEXTFOCUSBORDER, wText, -1);
         wxSize tSize = m_text->GetSize();
         wxSize cSize = m_choice->GetSize();
-        
+
         int yOffset = ( tSize.y + 2 * TEXTFOCUSBORDER - cSize.y ) / 2;
 
         // put it at an inset of 1 to have outer area shadows drawn as well
@@ -402,7 +389,7 @@ bool wxComboBox::Create(wxWindow *parent,
 }
 
 void wxComboBox::EnableTextChangedEvents(bool enable)
-{ 
+{
     if ( m_text )
         m_text->ForwardEnableTextChangedEvents(enable);
 }
@@ -475,10 +462,9 @@ void wxComboBox::SetEditable(bool editable)
     {
         m_text = new wxComboBoxText( this );
     }
-    else if ( ( m_text != NULL ) && !editable )
+    else if ( !editable )
     {
-        delete m_text;
-        m_text = NULL;
+        wxDELETE(m_text);
     }
 
     int currentX, currentY;
@@ -686,4 +672,12 @@ bool wxComboBox::OSXHandleClicked( double WXUNUSED(timestampsec) )
     return true ;
 }
 
-#endif // wxUSE_COMBOBOX
+wxTextWidgetImpl* wxComboBox::GetTextPeer() const
+{
+    if (m_text)
+        return m_text->GetTextPeer();
+    
+    return NULL;
+}
+
+#endif // wxUSE_COMBOBOX && wxOSX_USE_CARBON

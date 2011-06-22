@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     29.12.99
-// RCS-ID:      $Id: calctrlg.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,14 +125,14 @@ public:
 
     virtual wxCalendarDateAttr *GetAttr(size_t day) const
     {
-        wxCHECK_MSG( day > 0 && day < 32, NULL, _T("invalid day") );
+        wxCHECK_MSG( day > 0 && day < 32, NULL, wxT("invalid day") );
 
         return m_attrs[day - 1];
     }
 
     virtual void SetAttr(size_t day, wxCalendarDateAttr *attr)
     {
-        wxCHECK_RET( day > 0 && day < 32, _T("invalid day") );
+        wxCHECK_RET( day > 0 && day < 32, wxT("invalid day") );
 
         delete m_attrs[day - 1];
         m_attrs[day - 1] = attr;

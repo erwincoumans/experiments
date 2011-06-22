@@ -2,7 +2,7 @@
 // Name:        src/gtk/app.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: app.cpp 59711 2009-03-21 23:36:37Z VZ $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,6 +33,10 @@
     #include <hildon-widgets/hildon-program.h>
 #endif // wxUSE_LIBHILDON
 
+#if wxUSE_LIBHILDON2
+    #include <hildon/hildon.h>
+#endif // wxUSE_LIBHILDON2
+
 #include <gdk/gdkx.h>
 
 //-----------------------------------------------------------------------------
@@ -56,9 +60,9 @@ wx_emission_hook(GSignalInvocationHint*, guint, const GValue*, gpointer data)
     wxApp* app = wxTheApp;
     if (app != NULL)
         app->WakeUpIdle();
-    gulong* hook_id = (gulong*)data;
+    bool* hook_installed = (bool*)data;
     // record that hook is not installed
-    *hook_id = 0;
+    *hook_installed = false;
     // remove hook
     return false;
 }
@@ -69,28 +73,30 @@ static void wx_add_idle_hooks()
 {
     // "event" hook
     {
-        static gulong hook_id = 0;
-        if (hook_id == 0)
+        static bool hook_installed;
+        if (!hook_installed)
         {
-            static guint sig_id = 0;
+            static guint sig_id;
             if (sig_id == 0)
                 sig_id = g_signal_lookup("event", GTK_TYPE_WIDGET);
-            hook_id = g_signal_add_emission_hook(
-                sig_id, 0, wx_emission_hook, &hook_id, NULL);
+            hook_installed = true;
+            g_signal_add_emission_hook(
+                sig_id, 0, wx_emission_hook, &hook_installed, NULL);
         }
     }
     // "size_allocate" hook
     // Needed to match the behavior of the old idle system,
     // but probably not necessary.
     {
-        static gulong hook_id = 0;
-        if (hook_id == 0)
+        static bool hook_installed;
+        if (!hook_installed)
         {
-            static guint sig_id = 0;
+            static guint sig_id;
             if (sig_id == 0)
                 sig_id = g_signal_lookup("size_allocate", GTK_TYPE_WIDGET);
-            hook_id = g_signal_add_emission_hook(
-                sig_id, 0, wx_emission_hook, &hook_id, NULL);
+            hook_installed = true;
+            g_signal_add_emission_hook(
+                sig_id, 0, wx_emission_hook, &hook_installed, NULL);
         }
     }
 }
@@ -110,7 +116,7 @@ bool wxApp::DoIdle()
         // Needed if an idle event handler runs a new event loop,
         // for example by showing a dialog.
 #if wxUSE_THREADS
-        wxMutexLocker lock(*m_idleMutex);
+        wxMutexLocker lock(m_idleMutex);
 #endif
         id_save = m_idleSourceId;
         m_idleSourceId = 0;
@@ -127,12 +133,14 @@ bool wxApp::DoIdle()
     gdk_threads_enter();
     bool needMore;
     do {
+        ProcessPendingEvents();
+
         needMore = ProcessIdle();
     } while (needMore && gtk_events_pending() == 0);
     gdk_threads_leave();
 
 #if wxUSE_THREADS
-    wxMutexLocker lock(*m_idleMutex);
+    wxMutexLocker lock(m_idleMutex);
 #endif
     // if a new idle source was added during ProcessIdle
     if (m_idleSourceId != 0)
@@ -144,7 +152,8 @@ bool wxApp::DoIdle()
 
     // Pending events can be added asynchronously,
     // need to keep idle source if any have appeared
-    needMore = needMore || HasPendingEvents();
+    if (HasPendingEvents())
+        needMore = true;
 
     // if more idle processing requested
     if (needMore)
@@ -183,10 +192,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxApp,wxEvtHandler)
 wxApp::wxApp()
 {
     m_isInAssert = false;
-
-#if wxUSE_THREADS
-    m_idleMutex = NULL;
-#endif
     m_idleSourceId = 0;
 }
 
@@ -261,31 +266,15 @@ bool wxApp::OnInitGui()
         }
     }
 
-#if wxUSE_LIBHILDON
-    m_hildonProgram = hildon_program_get_instance();
-    if ( !m_hildonProgram )
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
+    if ( !GetHildonProgram() )
     {
         wxLogError(_("Unable to initialize Hildon program"));
         return false;
     }
-#endif // wxUSE_LIBHILDON
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2
 
     return true;
-}
-
-GdkVisual *wxApp::GetGdkVisual()
-{
-    GdkVisual *visual = NULL;
-
-    XVisualInfo *xvi = (XVisualInfo *)GetXVisualInfo();
-    if ( xvi )
-        visual = gdkx_visual_get( xvi->visualid );
-    else
-        visual = gdk_drawable_get_visual( wxGetRootWindow()->window );
-
-    wxASSERT( visual );
-
-    return visual;
 }
 
 // use unusual names for the parameters to avoid conflict with wxApp::arg[cv]
@@ -309,9 +298,9 @@ bool wxApp::Initialize(int& argc_, wxChar **argv_)
 
     // (1) this variable exists for the sole purpose of specifying the encoding
     //     of the filenames for GTK+ programs, so use it if it is set
-    wxString encName(wxGetenv(_T("G_FILENAME_ENCODING")));
-    encName = encName.BeforeFirst(_T(','));
-    if (encName.CmpNoCase(_T("@locale")) == 0)
+    wxString encName(wxGetenv(wxT("G_FILENAME_ENCODING")));
+    encName = encName.BeforeFirst(wxT(','));
+    if (encName.CmpNoCase(wxT("@locale")) == 0)
         encName.clear();
     encName.MakeUpper();
 #if wxUSE_INTL
@@ -321,13 +310,13 @@ bool wxApp::Initialize(int& argc_, wxChar **argv_)
         //     filenames in this locale too
         encName = wxLocale::GetSystemEncodingName().Upper();
         // (3) finally use UTF-8 by default
-        if (encName.empty() || encName == _T("US-ASCII"))
-            encName = _T("UTF-8");
-        wxSetEnv(_T("G_FILENAME_ENCODING"), encName);
+        if (encName.empty() || encName == wxT("US-ASCII"))
+            encName = wxT("UTF-8");
+        wxSetEnv(wxT("G_FILENAME_ENCODING"), encName);
     }
 #else
     if (encName.empty())
-        encName = _T("UTF-8");
+        encName = wxT("UTF-8");
 
     // if wxUSE_INTL==0 it probably indicates that only "C" locale is supported
     // by the program anyhow so prevent GTK+ from calling setlocale(LC_ALL, "")
@@ -436,15 +425,10 @@ bool wxApp::Initialize(int& argc_, wxChar **argv_)
     // we can not enter threads before gtk_init is done
     gdk_threads_enter();
 
-    wxSetDetectableAutoRepeat( true );
-
 #if wxUSE_INTL
     wxFont::SetDefaultEncoding(wxLocale::GetSystemEncoding());
 #endif
 
-#if wxUSE_THREADS
-    m_idleMutex = new wxMutex;
-#endif
     // make sure GtkWidget type is loaded, idle hooks need it
     g_type_class_ref(GTK_TYPE_WIDGET);
     WakeUpIdle();
@@ -463,20 +447,12 @@ void wxApp::CleanUp()
     gdk_threads_leave();
 
     wxAppBase::CleanUp();
-
-    // delete this mutex as late as possible as it's used from WakeUpIdle(), in
-    // particular do it after calling the base class CleanUp() which can result
-    // in it being called
-#if wxUSE_THREADS
-    delete m_idleMutex;
-    m_idleMutex = NULL;
-#endif
 }
 
 void wxApp::WakeUpIdle()
 {
 #if wxUSE_THREADS
-    wxMutexLocker lock(*m_idleMutex);
+    wxMutexLocker lock(m_idleMutex);
 #endif
     if (m_idleSourceId == 0)
         m_idleSourceId = g_idle_add_full(G_PRIORITY_LOW, wxapp_idle_callback, NULL, NULL);
@@ -487,7 +463,7 @@ void wxApp::WakeUpIdle()
 bool wxApp::EventsPending()
 {
 #if wxUSE_THREADS
-    wxMutexLocker lock(*m_idleMutex);
+    wxMutexLocker lock(m_idleMutex);
 #endif
     if (m_idleSourceId != 0)
     {
@@ -533,3 +509,12 @@ void wxGUIAppTraits::MutexGuiLeave()
     gdk_threads_leave();
 }
 #endif // wxUSE_THREADS
+
+#if wxUSE_LIBHILDON || wxUSE_LIBHILDON2
+// Maemo-specific method: get the main program object
+HildonProgram *wxApp::GetHildonProgram()
+{ 
+    return hildon_program_get_instance(); 
+}
+    
+#endif // wxUSE_LIBHILDON || wxUSE_LIBHILDON2

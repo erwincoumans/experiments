@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     14.08.2003
-// RCS-ID:      $Id: recguard.h 29243 2004-09-21 18:15:59Z ABX $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ public:
 
     ~wxRecursionGuard()
     {
-        wxASSERT_MSG( m_flag > 0, _T("unbalanced wxRecursionGuards!?") );
+        wxASSERT_MSG( m_flag > 0, wxT("unbalanced wxRecursionGuards!?") );
 
         m_flag--;
     }

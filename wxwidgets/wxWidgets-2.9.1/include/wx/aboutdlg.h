@@ -3,7 +3,7 @@
 // Purpose:     declaration of wxAboutDialog class
 // Author:      Vadim Zeitlin
 // Created:     2006-10-07
-// RCS-ID:      $Id: aboutdlg.h 57245 2008-12-11 12:14:14Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,10 +36,20 @@ public:
     wxString GetName() const
         { return m_name.empty() ? wxTheApp->GetAppDisplayName() : m_name; }
 
-    // version of the program, in free format (but without "version" word)
-    void SetVersion(const wxString& version) { m_version = version; }
+    // version should contain program version without "version" word (e.g.,
+    // "1.2" or "RC2") while longVersion may contain the full version including
+    // "version" word (e.g., "Version 1.2" or "Release Candidate 2")
+    //
+    // if longVersion is empty, it is automatically constructed from version
+    //
+    // generic and gtk native: use short version only, as a suffix to the
+    // program name msw and osx native: use long version
+    void SetVersion(const wxString& version,
+                    const wxString& longVersion = wxString());
+
     bool HasVersion() const { return !m_version.empty(); }
     const wxString& GetVersion() const { return m_version; }
+    const wxString& GetLongVersion() const { return m_longVersion; }
 
     // brief, but possibly multiline, description of the program
     void SetDescription(const wxString& desc) { m_description = desc; }
@@ -135,6 +145,7 @@ public:
 private:
     wxString m_name,
              m_version,
+             m_longVersion,
              m_description,
              m_copyright,
              m_licence;
@@ -151,7 +162,7 @@ private:
 };
 
 // functions to show the about dialog box
-WXDLLIMPEXP_ADV void wxAboutBox(const wxAboutDialogInfo& info);
+WXDLLIMPEXP_ADV void wxAboutBox(const wxAboutDialogInfo& info, wxWindow* parent = NULL);
 
 #endif // wxUSE_ABOUTDLG
 

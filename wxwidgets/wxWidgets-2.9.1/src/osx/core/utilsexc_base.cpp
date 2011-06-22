@@ -4,7 +4,7 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2005-06-21
-// RCS-ID:      $Id: utilsexc_base.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 // Notes:       Source was originally in utilsexc_cf.cpp,1.6 then moved
@@ -64,14 +64,14 @@ extern bool WXDLLEXPORT wxIsDebuggerRunning()
 
 // have a fast version for mac code that returns the version as a return value
 
-long UMAGetSystemVersion() 
-{ 
+long UMAGetSystemVersion()
+{
     static SInt32 sUMASystemVersion = 0 ;
     if ( sUMASystemVersion == 0 )
     {
         verify_noerr(Gestalt(gestaltSystemVersion, &sUMASystemVersion));
     }
-    return sUMASystemVersion ; 
+    return sUMASystemVersion ;
 }
 
 // our OS version is the same in non GUI and GUI cases
@@ -95,13 +95,11 @@ wxString wxGetOsDescription()
 {
     struct utsname name;
     uname(&name);
-    return wxString::Format(_T("Mac OS X (%s %s %s)"),
+    return wxString::Format(wxT("Mac OS X (%s %s %s)"),
             wxString::FromAscii(name.sysname).c_str(),
             wxString::FromAscii(name.release).c_str(),
             wxString::FromAscii(name.machine).c_str());
 }
-
-#endif // wxOSX_USE_COCOA_OR_CARBON
 
 //===========================================================================
 //  IMPLEMENTATION
@@ -193,8 +191,8 @@ bool wxMacLaunch(char **argv)
     // Loop through command line arguments to the bundle,
     // turn them into CFURLs and then put them in cfaFiles
     // For use to launch services call
-        for( ; *argv != NULL ; ++argv)
-        {
+    for( ; *argv != NULL ; ++argv)
+    {
         // Check for '<' as this will ring true for
         // CFURLCreateWithString but is generally not considered
         // typical on mac but is usually passed here from wxExecute
@@ -246,12 +244,12 @@ bool wxMacLaunch(char **argv)
 
         // Add the valid CFURL to the argument array and then
         // release it as the CFArray adds a ref count to it
-            CFArrayAppendValue(
-                cfaFiles,
-                cfurlCurrentFile
-                            );
-            CFRelease(cfurlCurrentFile); // array has retained it
-        }
+        CFArrayAppendValue(
+            cfaFiles,
+            cfurlCurrentFile
+                        );
+        CFRelease(cfurlCurrentFile); // array has retained it
+    }
 
     // Create a LSLaunchURLSpec for use with LSOpenFromURLSpec
     // Note that there are several flag options (launchFlags) such
@@ -286,3 +284,4 @@ bool wxMacLaunch(char **argv)
     return true ;
 }
 
+#endif // wxOSX_USE_COCOA_OR_CARBON

@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin, Vaclav Slavik
 // Modified by:
 // Created:     06.08.01
-// RCS-ID:      $Id: toplevel.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 //                       Vaclav Slavik <vaclav@wxwidgets.org>
 // Licence:     wxWindows licence
@@ -32,6 +32,39 @@ class WXDLLIMPEXP_FWD_CORE wxTopLevelWindowBase;
 // constants
 // ----------------------------------------------------------------------------
 
+/*
+    Summary of the bits used (some of them are defined in wx/frame.g and
+    wx/dialog.h and not here):
+
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  \_ wxCENTRE
+      |  |  |  |  |  |  |  |  |  |  |  |  |  |  \____ wxFRAME_NO_TASKBAR
+      |  |  |  |  |  |  |  |  |  |  |  |  |  \_______ wxFRAME_TOOL_WINDOW
+      |  |  |  |  |  |  |  |  |  |  |  |  \__________ wxFRAME_FLOAT_ON_PARENT
+      |  |  |  |  |  |  |  |  |  |  |  \_____________ wxFRAME_SHAPED
+      |  |  |  |  |  |  |  |  |  |  \________________
+      |  |  |  |  |  |  |  |  |  \___________________ wxRESIZE_BORDER
+      |  |  |  |  |  |  |  |  \______________________ wxTINY_CAPTION_VERT
+      |  |  |  |  |  |  |  \_________________________ wxDIALOG_NO_PARENT
+      |  |  |  |  |  |  \____________________________ wxMAXIMIZE_BOX
+      |  |  |  |  |  \_______________________________ wxMINIMIZE_BOX
+      |  |  |  |  \__________________________________ wxSYSTEM_MENU
+      |  |  |  \_____________________________________ wxCLOSE_BOX
+      |  |  \________________________________________ wxMAXIMIZE
+      |  \___________________________________________ wxMINIMIZE
+      \______________________________________________ wxSTAY_ON_TOP
+
+
+    Notice that the 8 lower bits overlap with wxCENTRE and the button selection
+    bits (wxYES, wxOK wxNO, wxCANCEL, wxAPPLY, wxCLOSE and wxNO_DEFAULT) which
+    can be combined with the dialog style for several standard dialogs and
+    hence shouldn't overlap with any styles which can be used for the dialogs.
+    Additionally, wxCENTRE can be used with frames also.
+ */
+
 // style common to both wxFrame and wxDialog
 #define wxSTAY_ON_TOP           0x8000
 #define wxICONIZE               0x4000
@@ -42,9 +75,16 @@ class WXDLLIMPEXP_FWD_CORE wxTopLevelWindowBase;
 #define wxSYSTEM_MENU           0x0800
 #define wxMINIMIZE_BOX          0x0400
 #define wxMAXIMIZE_BOX          0x0200
-#define wxTINY_CAPTION_HORIZ    0x0100
-#define wxTINY_CAPTION_VERT     0x0080
+
+#define wxTINY_CAPTION          0x0080  // clashes with wxNO_DEFAULT
 #define wxRESIZE_BORDER         0x0040
+
+#if WXWIN_COMPATIBILITY_2_8
+    // HORIZ and VERT styles are equivalent anyhow so don't use different names
+    // for them
+    #define wxTINY_CAPTION_HORIZ    wxTINY_CAPTION
+    #define wxTINY_CAPTION_VERT     wxTINY_CAPTION
+#endif
 
 #if WXWIN_COMPATIBILITY_2_6
 
@@ -160,6 +200,12 @@ public:
 
     // maximize the window to cover entire screen
     virtual bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL) = 0;
+    
+    // shows the window, but doesn't activate it. If the base code is being run,
+    // it means the port doesn't implement this method yet and so alert the user.
+    virtual void ShowWithoutActivating() { 
+        wxFAIL_MSG("ShowWithoutActivating not implemented on this platform.");
+    }
 
     // return true if the frame is in fullscreen mode
     virtual bool IsFullScreen() const = 0;
@@ -170,7 +216,7 @@ public:
     virtual wxString GetTitle() const = 0;
 
     // enable/disable close button [x]
-    virtual bool EnableCloseButton(bool WXUNUSED(enable) ) { return false; } 
+    virtual bool EnableCloseButton(bool WXUNUSED(enable) ) { return false; }
 
     // Set the shape of the window to the given region.
     // Returns true if the platform supports this feature (and the
@@ -250,6 +296,9 @@ public:
     // a different API for SetSizeHints
     virtual void SetMinSize(const wxSize& minSize);
     virtual void SetMaxSize(const wxSize& maxSize);
+    
+    virtual void OSXSetModified(bool modified) { m_modified = modified; }
+    virtual bool OSXIsModified() const { return m_modified; }
 
 protected:
     // the frame client to screen translation should take account of the
@@ -298,6 +347,8 @@ protected:
 
     // a temporary override of m_winDefault, use the latter if NULL
     wxWindowRef m_winTmpDefault;
+    
+    bool m_modified;
 
     wxDECLARE_NO_COPY_CLASS(wxTopLevelWindowBase);
     DECLARE_EVENT_TABLE()
@@ -344,28 +395,25 @@ protected:
 #ifdef __WXUNIVERSAL__
     #include "wx/univ/toplevel.h"
 #else // !__WXUNIVERSAL__
-    #ifdef wxTopLevelWindowNative
-        class WXDLLIMPEXP_CORE wxTopLevelWindow : public wxTopLevelWindowNative
+    class WXDLLIMPEXP_CORE wxTopLevelWindow : public wxTopLevelWindowNative
+    {
+    public:
+        // construction
+        wxTopLevelWindow() { }
+        wxTopLevelWindow(wxWindow *parent,
+                   wxWindowID winid,
+                   const wxString& title,
+                   const wxPoint& pos = wxDefaultPosition,
+                   const wxSize& size = wxDefaultSize,
+                   long style = wxDEFAULT_FRAME_STYLE,
+                   const wxString& name = wxFrameNameStr)
+            : wxTopLevelWindowNative(parent, winid, title,
+                                     pos, size, style, name)
         {
-        public:
-            // construction
-            wxTopLevelWindow() { Init(); }
-            wxTopLevelWindow(wxWindow *parent,
-                       wxWindowID winid,
-                       const wxString& title,
-                       const wxPoint& pos = wxDefaultPosition,
-                       const wxSize& size = wxDefaultSize,
-                       long style = wxDEFAULT_FRAME_STYLE,
-                       const wxString& name = wxFrameNameStr)
-            {
-                Init();
-                Create(parent, winid, title, pos, size, style, name);
-            }
+        }
 
-            DECLARE_DYNAMIC_CLASS_NO_COPY(wxTopLevelWindow)
-        };
-    #endif // wxTopLevelWindowNative
+        DECLARE_DYNAMIC_CLASS_NO_COPY(wxTopLevelWindow)
+    };
 #endif // __WXUNIVERSAL__/!__WXUNIVERSAL__
-
 
 #endif // _WX_TOPLEVEL_BASE_H_

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:
-// RCS-ID:      $Id: graphcmn.cpp 58917 2009-02-15 16:52:05Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -18,7 +18,7 @@
 
 #if wxUSE_GRAPHICS_CONTEXT
 
-#include "wx/private/graphics.h"
+#include "wx/graphics.h"
 
 #ifndef WX_PRECOMP
     #include "wx/icon.h"
@@ -28,11 +28,7 @@
     #include "wx/log.h"
 #endif
 
-//-----------------------------------------------------------------------------
-// constants
-//-----------------------------------------------------------------------------
-
-static const double RAD2DEG = 180.0 / M_PI;
+#include "wx/private/graphics.h"
 
 //-----------------------------------------------------------------------------
 // Local functions
@@ -480,7 +476,6 @@ void wxGraphicsPathData::AddArcToPoint( wxDouble x1, wxDouble y1 , wxDouble x2, 
     wxDouble dist = r / sin(alpha/2) * cos(alpha/2);
     // calculate tangential points
     wxPoint2DDouble t1 = dist*v1 + p1;
-    wxPoint2DDouble t2 = dist*v2 + p1;
 
     wxPoint2DDouble nv1 = v1;
     nv1.SetVectorAngle(v1.GetVectorAngle()-90);
@@ -495,13 +490,48 @@ void wxGraphicsPathData::AddArcToPoint( wxDouble x1, wxDouble y1 , wxDouble x2, 
 }
 
 //-----------------------------------------------------------------------------
+// wxGraphicsGradientStops
+//-----------------------------------------------------------------------------
+
+void wxGraphicsGradientStops::Add(const wxGraphicsGradientStop& stop)
+{
+    for ( wxVector<wxGraphicsGradientStop>::iterator it = m_stops.begin();
+          it != m_stops.end();
+          ++it )
+    {
+        if ( stop.GetPosition() < it->GetPosition() )
+        {
+            if ( it != m_stops.begin() )
+            {
+                m_stops.insert(it, stop);
+            }
+            else // we shouldn't be inserting it at the beginning
+            {
+                wxFAIL_MSG( "invalid gradient stop position < 0" );
+            }
+
+            return;
+        }
+    }
+
+    if ( stop.GetPosition() == 1. )
+    {
+        m_stops.insert(m_stops.end() - 1, stop);
+    }
+    else
+    {
+        wxFAIL_MSG( "invalid gradient stop position > 1" );
+    }
+}
+
+//-----------------------------------------------------------------------------
 // wxGraphicsContext Convenience Methods
 //-----------------------------------------------------------------------------
 
 IMPLEMENT_ABSTRACT_CLASS(wxGraphicsContext, wxObject)
 
 
-wxGraphicsContext::wxGraphicsContext(wxGraphicsRenderer* renderer) : 
+wxGraphicsContext::wxGraphicsContext(wxGraphicsRenderer* renderer) :
     wxGraphicsObject(renderer),
       m_antialias(wxANTIALIAS_DEFAULT),
       m_composition(wxCOMPOSITION_OVER)
@@ -565,7 +595,7 @@ void wxGraphicsContext::SetPen( const wxGraphicsPen& pen )
 
 void wxGraphicsContext::SetPen( const wxPen& pen )
 {
-    if ( !pen.Ok() || pen.GetStyle() == wxTRANSPARENT )
+    if ( !pen.Ok() || pen.GetStyle() == wxPENSTYLE_TRANSPARENT )
         SetPen( wxNullGraphicsPen );
     else
         SetPen( CreatePen( pen ) );
@@ -579,7 +609,7 @@ void wxGraphicsContext::SetBrush( const wxGraphicsBrush& brush )
 
 void wxGraphicsContext::SetBrush( const wxBrush& brush )
 {
-    if ( !brush.Ok() || brush.GetStyle() == wxTRANSPARENT )
+    if ( !brush.Ok() || brush.GetStyle() == wxBRUSHSTYLE_TRANSPARENT )
         SetBrush( wxNullGraphicsBrush );
     else
         SetBrush( CreateBrush( brush ) );
@@ -758,19 +788,55 @@ wxGraphicsBrush wxGraphicsContext::CreateBrush(const wxBrush& brush ) const
     return GetRenderer()->CreateBrush(brush);
 }
 
-// sets the brush to a linear gradient, starting at (x1,y1) with color c1 to (x2,y2) with color c2
-wxGraphicsBrush wxGraphicsContext::CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
-                                                   const wxColour&c1, const wxColour&c2) const
+wxGraphicsBrush
+wxGraphicsContext::CreateLinearGradientBrush(
+    wxDouble x1, wxDouble y1,
+    wxDouble x2, wxDouble y2,
+    const wxColour& c1, const wxColour& c2) const
 {
-    return GetRenderer()->CreateLinearGradientBrush(x1,y1,x2,y2,c1,c2);
+    return GetRenderer()->CreateLinearGradientBrush
+                          (
+                            x1, y1,
+                            x2, y2,
+                            wxGraphicsGradientStops(c1,c2)
+                          );
 }
 
-// sets the brush to a radial gradient originating at (xo,yc) with color oColor and ends on a circle around (xc,yc)
-// with radius r and color cColor
-wxGraphicsBrush wxGraphicsContext::CreateRadialGradientBrush( wxDouble xo, wxDouble yo, wxDouble xc, wxDouble yc, wxDouble radius,
-                                                   const wxColour &oColor, const wxColour &cColor) const
+wxGraphicsBrush
+wxGraphicsContext::CreateLinearGradientBrush(
+    wxDouble x1, wxDouble y1,
+    wxDouble x2, wxDouble y2,
+    const wxGraphicsGradientStops& gradientStops) const
 {
-    return GetRenderer()->CreateRadialGradientBrush(xo,yo,xc,yc,radius,oColor,cColor);
+    return GetRenderer()->CreateLinearGradientBrush(x1,y1,x2,y2, gradientStops);
+}
+
+wxGraphicsBrush
+wxGraphicsContext::CreateRadialGradientBrush(
+        wxDouble xo, wxDouble yo,
+        wxDouble xc, wxDouble yc, wxDouble radius,
+        const wxColour &oColor, const wxColour &cColor) const
+{
+    return GetRenderer()->CreateRadialGradientBrush
+                          (
+                            xo, yo,
+                            xc, yc, radius,
+                            wxGraphicsGradientStops(oColor, cColor)
+                          );
+}
+
+wxGraphicsBrush
+wxGraphicsContext::CreateRadialGradientBrush(
+        wxDouble xo, wxDouble yo,
+        wxDouble xc, wxDouble yc, wxDouble radius,
+        const wxGraphicsGradientStops& gradientStops) const
+{
+    return GetRenderer()->CreateRadialGradientBrush
+                          (
+                            xo, yo,
+                            xc, yc, radius,
+                            gradientStops
+                          );
 }
 
 // sets the font
@@ -781,20 +847,12 @@ wxGraphicsFont wxGraphicsContext::CreateFont( const wxFont &font , const wxColou
 
 wxGraphicsBitmap wxGraphicsContext::CreateBitmap( const wxBitmap& bmp ) const
 {
-#ifndef __WXGTK20__
     return GetRenderer()->CreateBitmap(bmp);
-#else
-    return wxNullGraphicsBitmap;
-#endif
 }
 
 wxGraphicsBitmap wxGraphicsContext::CreateSubBitmap( const wxGraphicsBitmap &bmp, wxDouble x, wxDouble y, wxDouble w, wxDouble h   ) const
 {
-#ifndef __WXGTK20__
     return GetRenderer()->CreateSubBitmap(bmp,x,y,w,h);
-#else
-    return wxNullGraphicsBitmap;
-#endif
 }
 
 /* static */ wxGraphicsContext* wxGraphicsContext::Create( const wxWindowDC& dc)
@@ -812,7 +870,15 @@ wxGraphicsBitmap wxGraphicsContext::CreateSubBitmap( const wxGraphicsBitmap &bmp
 {
     return wxGraphicsRenderer::GetDefaultRenderer()->CreateContext(dc);
 }
+
+#ifdef __WXMSW__
+/* static */ wxGraphicsContext* wxGraphicsContext::Create( const wxEnhMetaFileDC& dc)
+{
+    return wxGraphicsRenderer::GetDefaultRenderer()->CreateContext(dc);
+}
 #endif
+
+#endif // wxUSE_PRINTING_ARCHITECTURE
 
 wxGraphicsContext* wxGraphicsContext::CreateFromNative( void * context )
 {

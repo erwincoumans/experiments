@@ -3,7 +3,7 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// RCS-ID:      $Id: paletteg.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -82,8 +82,8 @@ int wxPalette::GetColoursCount() const
 {
     if (m_refData)
         return M_PALETTEDATA->m_count;
-    
-    return 0;    
+
+    return 0;
 }
 
 bool wxPalette::Create(int n,

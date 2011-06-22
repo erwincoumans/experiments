@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     18/03/2002
-// RCS-ID:      $Id: artprov.cpp 59930 2009-03-29 21:23:59Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ void wxArtProviderCache::Clear()
 wxArtProviderCache::ConstructHashID(const wxArtID& id,
                                     const wxArtClient& client)
 {
-    return id + _T('-') + client;
+    return id + wxT('-') + client;
 }
 
 
@@ -117,8 +117,8 @@ wxArtProviderCache::ConstructHashID(const wxArtID& id,
                                     const wxArtClient& client,
                                     const wxSize& size)
 {
-    return ConstructHashID(id, client) + _T('-') +
-            wxString::Format(_T("%d-%d"), size.x, size.y);
+    return ConstructHashID(id, client) + wxT('-') +
+            wxString::Format(wxT("%d-%d"), size.x, size.y);
 }
 
 // ============================================================================
@@ -168,8 +168,8 @@ wxArtProvider::~wxArtProvider()
 
 /*static*/ bool wxArtProvider::Pop()
 {
-    wxCHECK_MSG( sm_providers, false, _T("no wxArtProvider exists") );
-    wxCHECK_MSG( !sm_providers->empty(), false, _T("wxArtProviders stack is empty") );
+    wxCHECK_MSG( sm_providers, false, wxT("no wxArtProvider exists") );
+    wxCHECK_MSG( !sm_providers->empty(), false, wxT("wxArtProviders stack is empty") );
 
     delete sm_providers->GetFirst()->GetData();
     sm_cache->Clear();
@@ -178,7 +178,7 @@ wxArtProvider::~wxArtProvider()
 
 /*static*/ bool wxArtProvider::Remove(wxArtProvider *provider)
 {
-    wxCHECK_MSG( sm_providers, false, _T("no wxArtProvider exists") );
+    wxCHECK_MSG( sm_providers, false, wxT("no wxArtProvider exists") );
 
     if ( sm_providers->DeleteObject(provider) )
     {
@@ -204,11 +204,8 @@ wxArtProvider::~wxArtProvider()
         while ( !sm_providers->empty() )
             delete *sm_providers->begin();
 
-        delete sm_providers;
-        sm_providers = NULL;
-
-        delete sm_cache;
-        sm_cache = NULL;
+        wxDELETE(sm_providers);
+        wxDELETE(sm_cache);
     }
 }
 
@@ -221,9 +218,9 @@ wxArtProvider::~wxArtProvider()
                                              const wxSize& size)
 {
     // safety-check against writing client,id,size instead of id,client,size:
-    wxASSERT_MSG( client.Last() == _T('C'), _T("invalid 'client' parameter") );
+    wxASSERT_MSG( client.Last() == wxT('C'), wxT("invalid 'client' parameter") );
 
-    wxCHECK_MSG( sm_providers, wxNullBitmap, _T("no wxArtProvider exists") );
+    wxCHECK_MSG( sm_providers, wxNullBitmap, wxT("no wxArtProvider exists") );
 
     wxString hashId = wxArtProviderCache::ConstructHashID(id, client, size);
 
@@ -238,6 +235,7 @@ wxArtProvider::~wxArtProvider()
                 break;
         }
 
+        wxSize sizeNeeded = size;
         if ( !bmp.Ok() )
         {
             // no bitmap created -- as a fallback, try if we can find desired
@@ -245,28 +243,31 @@ wxArtProvider::~wxArtProvider()
             wxIconBundle iconBundle = DoGetIconBundle(id, client);
             if ( iconBundle.IsOk() )
             {
-                wxSize sz(size != wxDefaultSize
-                            ? size
-                            : GetNativeSizeHint(client));
-                wxIcon icon(iconBundle.GetIcon(sz));
+                if ( sizeNeeded == wxDefaultSize )
+                    sizeNeeded = GetNativeSizeHint(client);
+
+                wxIcon icon(iconBundle.GetIcon(sizeNeeded));
                 if ( icon.IsOk() )
+                {
+                    // this icon may be not of the correct size, it will be
+                    // rescaled below in such case
                     bmp.CopyFromIcon(icon);
+                }
             }
         }
 
-        if ( bmp.IsOk() )
-        {
-            // if we didn't get the correct size, resize the bitmap
+        // if we didn't get the correct size, resize the bitmap
 #if wxUSE_IMAGE && (!defined(__WXMSW__) || wxUSE_WXDIB)
-            if ( size != wxDefaultSize &&
-                 (bmp.GetWidth() != size.x || bmp.GetHeight() != size.y) )
+        if ( bmp.IsOk() && sizeNeeded != wxDefaultSize )
+        {
+            if ( bmp.GetSize() != sizeNeeded )
             {
                 wxImage img = bmp.ConvertToImage();
-                img.Rescale(size.x, size.y);
+                img.Rescale(sizeNeeded.x, sizeNeeded.y);
                 bmp = wxBitmap(img);
             }
-#endif
         }
+#endif // wxUSE_IMAGE
 
         sm_cache->PutBitmap(hashId, bmp);
     }
@@ -294,9 +295,9 @@ wxIconBundle wxArtProvider::GetIconBundle(const wxArtID& id, const wxArtClient& 
 wxIconBundle wxArtProvider::DoGetIconBundle(const wxArtID& id, const wxArtClient& client)
 {
     // safety-check against writing client,id,size instead of id,client,size:
-    wxASSERT_MSG( client.Last() == _T('C'), _T("invalid 'client' parameter") );
+    wxASSERT_MSG( client.Last() == wxT('C'), wxT("invalid 'client' parameter") );
 
-    wxCHECK_MSG( sm_providers, wxNullIconBundle, _T("no wxArtProvider exists") );
+    wxCHECK_MSG( sm_providers, wxNullIconBundle, wxT("no wxArtProvider exists") );
 
     wxString hashId = wxArtProviderCache::ConstructHashID(id, client);
 
@@ -332,33 +333,26 @@ wxIconBundle wxArtProvider::DoGetIconBundle(const wxArtID& id, const wxArtClient
 }
 
 /* static */
-wxIcon wxArtProvider::GetMessageBoxIcon(int flags)
+wxArtID wxArtProvider::GetMessageBoxIconId(int flags)
 {
-    wxIcon icon;
     switch ( flags & wxICON_MASK )
     {
         default:
-            wxFAIL_MSG(_T("incorrect message box icon flags"));
+            wxFAIL_MSG(wxT("incorrect message box icon flags"));
             // fall through
 
         case wxICON_ERROR:
-            icon = wxArtProvider::GetIcon(wxART_ERROR, wxART_MESSAGE_BOX);
-            break;
+            return wxART_ERROR;
 
         case wxICON_INFORMATION:
-            icon = wxArtProvider::GetIcon(wxART_INFORMATION, wxART_MESSAGE_BOX);
-            break;
+            return wxART_INFORMATION;
 
         case wxICON_WARNING:
-            icon = wxArtProvider::GetIcon(wxART_WARNING, wxART_MESSAGE_BOX);
-            break;
+            return wxART_WARNING;
 
         case wxICON_QUESTION:
-            icon = wxArtProvider::GetIcon(wxART_QUESTION, wxART_MESSAGE_BOX);
-            break;
+            return wxART_QUESTION;
     }
-
-    return icon;
 }
 
 /*static*/ wxSize wxArtProvider::GetSizeHint(const wxArtClient& client,

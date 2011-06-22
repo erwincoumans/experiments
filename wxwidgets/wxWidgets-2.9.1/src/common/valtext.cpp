@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Francesco Montorsi
 // Created:     04/01/98
-// RCS-ID:      $Id: valtext.cpp 59725 2009-03-22 12:53:48Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ wxTextEntry *wxTextValidator::GetTextEntry()
 #endif
 
     wxFAIL_MSG(
-        _T("wxTextValidator can only be used with wxTextCtrl or wxComboBox")
+        wxT("wxTextValidator can only be used with wxTextCtrl or wxComboBox")
     );
 
     return NULL;
@@ -201,17 +201,38 @@ bool wxTextValidator::TransferFromWindow()
     return true;
 }
 
+// IRIX mipsPro refuses to compile wxStringCheck<func>() if func is inline so
+// let's work around this by using this non-template function instead of
+// wxStringCheck(). And while this might be fractionally less efficient because
+// the function call won't be inlined like this, we don't care enough about
+// this to add extra #ifs for non-IRIX case.
+namespace
+{
+
+bool CheckString(bool (*func)(const wxUniChar&), const wxString& str)
+{
+    for ( wxString::const_iterator i = str.begin(); i != str.end(); ++i )
+    {
+        if ( !func(*i) )
+            return false;
+    }
+
+    return true;
+}
+
+} // anonymous namespace
+
 wxString wxTextValidator::IsValid(const wxString& val) const
 {
     // wxFILTER_EMPTY is checked for in wxTextValidator::Validate
 
     if ( HasFlag(wxFILTER_ASCII) && !val.IsAscii() )
         return _("'%s' should only contain ASCII characters.");
-    if ( HasFlag(wxFILTER_ALPHA) && !wxStringCheck<wxIsalpha>(val) )
+    if ( HasFlag(wxFILTER_ALPHA) && !CheckString(wxIsalpha, val) )
         return _("'%s' should only contain alphabetic characters.");
-    if ( HasFlag(wxFILTER_ALPHANUMERIC) && !wxStringCheck<wxIsalnum>(val) )
+    if ( HasFlag(wxFILTER_ALPHANUMERIC) && !CheckString(wxIsalnum, val) )
         return _("'%s' should only contain alphabetic or numeric characters.");
-    if ( HasFlag(wxFILTER_DIGITS) && !wxStringCheck<wxIsdigit>(val) )
+    if ( HasFlag(wxFILTER_DIGITS) && !CheckString(wxIsdigit, val) )
         return _("'%s' should only contain digits.");
     if ( HasFlag(wxFILTER_NUMERIC) && !wxIsNumeric(val) )
         return _("'%s' should be numeric.");

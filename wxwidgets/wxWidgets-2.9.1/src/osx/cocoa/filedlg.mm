@@ -52,6 +52,11 @@ wxFileDialog::wxFileDialog(
 {
 }
 
+bool wxFileDialog::SupportsExtraControl() const
+{
+    return true;
+}
+
 NSArray* GetTypesFromFilter( const wxString filter )
 {
     NSMutableArray* types = nil;
@@ -116,6 +121,10 @@ NSArray* GetTypesFromFilter( const wxString filter )
                 if (extension.length() && (extension.GetChar(0) == '.'))
                     extension = extension.Mid( 1 );
 
+                // Remove leading '*', this is for handling *.*
+                if (extension.length() && (extension.GetChar(0) == '*'))
+                    extension = extension.Mid( 1 );
+
                 if ( extension.IsEmpty() )
                 {
                     if ( types != nil )
@@ -140,12 +149,92 @@ NSArray* GetTypesFromFilter( const wxString filter )
     return types;
 }
 
+void wxFileDialog::ShowWindowModal()
+{
+    wxCFStringRef cf( m_message );
+    wxCFStringRef dir( m_dir );
+    wxCFStringRef file( m_fileName );
+
+    wxNonOwnedWindow* parentWindow = NULL;
+    
+    m_modality = wxDIALOG_MODALITY_WINDOW_MODAL;
+
+    if (GetParent())
+        parentWindow = dynamic_cast<wxNonOwnedWindow*>(wxGetTopLevelParent(GetParent()));
+
+    wxASSERT_MSG(parentWindow, "Window modal display requires parent.");
+    
+    if (HasFlag(wxFD_SAVE))
+    {
+        NSSavePanel* sPanel = [NSSavePanel savePanel];
+
+        SetupExtraControls(sPanel);
+
+        // makes things more convenient:
+        [sPanel setCanCreateDirectories:YES];
+        [sPanel setMessage:cf.AsNSString()];
+        // if we should be able to descend into pacakges we must somehow
+        // be able to pass this in
+        [sPanel setTreatsFilePackagesAsDirectories:NO];
+        [sPanel setCanSelectHiddenExtension:YES];
+        
+        NSWindow* nativeParent = parentWindow->GetWXWindow();
+        ModalDialogDelegate* sheetDelegate = [[ModalDialogDelegate alloc] init];
+        [sheetDelegate setImplementation: this];
+        [sPanel beginSheetForDirectory:dir.AsNSString() file:file.AsNSString()
+            modalForWindow: nativeParent modalDelegate: sheetDelegate
+            didEndSelector: @selector(sheetDidEnd:returnCode:contextInfo:)
+            contextInfo: nil];
+    }
+    else 
+    {
+        NSArray* types = GetTypesFromFilter( m_wildCard ) ;
+        NSOpenPanel* oPanel = [NSOpenPanel openPanel];
+        
+        SetupExtraControls(oPanel);
+
+        [oPanel setTreatsFilePackagesAsDirectories:NO];
+        [oPanel setCanChooseDirectories:NO];
+        [oPanel setResolvesAliases:YES];
+        [oPanel setCanChooseFiles:YES];
+        [oPanel setMessage:cf.AsNSString()];
+    
+        NSWindow* nativeParent = parentWindow->GetWXWindow();
+        ModalDialogDelegate* sheetDelegate = [[ModalDialogDelegate alloc] init];
+        [sheetDelegate setImplementation: this];
+        [oPanel beginSheetForDirectory:dir.AsNSString() file:file.AsNSString()
+            types: types modalForWindow: nativeParent
+            modalDelegate: sheetDelegate
+            didEndSelector: @selector(sheetDidEnd:returnCode:contextInfo:)
+            contextInfo: nil];
+    }
+}
+
+void wxFileDialog::SetupExtraControls(WXWindow nativeWindow)
+{
+    NSSavePanel* panel = (NSSavePanel*) nativeWindow;
+    
+    wxNonOwnedWindow::Create( GetParent(), nativeWindow );
+    
+    if (HasExtraControlCreator())
+    {
+        CreateExtraControl();
+        wxWindow* control = GetExtraControl();
+        if ( control )
+        {
+            NSView* accView = control->GetHandle();
+            [accView removeFromSuperview];
+            [panel setAccessoryView:accView];
+        }
+        else
+        {
+            [panel setAccessoryView:nil];
+        }
+    }
+}
+
 int wxFileDialog::ShowModal()
 {
-    int result = wxID_CANCEL;
-
-    NSSavePanel *panel = nil;
-
     wxCFStringRef cf( m_message );
 
     wxCFStringRef dir( m_dir );
@@ -153,11 +242,14 @@ int wxFileDialog::ShowModal()
 
     m_path = wxEmptyString;
     m_fileNames.Clear();
-    
+    m_paths.Clear();
+    // since we don't support retrieving the matching filter
+    m_filterIndex = -1;
+
     wxNonOwnedWindow* parentWindow = NULL;
     int returnCode = -1;
-    
-    if (GetParent()) 
+
+    if (GetParent())
     {
         parentWindow = dynamic_cast<wxNonOwnedWindow*>(wxGetTopLevelParent(GetParent()));
     }
@@ -165,6 +257,9 @@ int wxFileDialog::ShowModal()
     if (HasFlag(wxFD_SAVE))
     {
         NSSavePanel* sPanel = [NSSavePanel savePanel];
+
+        SetupExtraControls(sPanel);
+
         // makes things more convenient:
         [sPanel setCanCreateDirectories:YES];
         [sPanel setMessage:cf.AsNSString()];
@@ -177,67 +272,56 @@ int wxFileDialog::ShowModal()
         {
         }
 
-/*
-        if (parentWindow)
-        {
-            NSWindow* nativeParent = parentWindow->GetWXWindow();
-            ModalDialogDelegate* sheetDelegate = [[ModalDialogDelegate alloc] init]; 
-            [sPanel beginSheetForDirectory:dir.AsNSString() file:file.AsNSString() 
-                modalForWindow: nativeParent modalDelegate: sheetDelegate 
-                didEndSelector: @selector(sheetDidEnd:returnCode:contextInfo:) 
-                contextInfo: nil];
-            [sheetDelegate waitForSheetToFinish];
-            returnCode = [sheetDelegate code];
-            [sheetDelegate release];
-        }
-        else
-*/
-        {
-            returnCode = [sPanel runModalForDirectory:dir.AsNSString() file:file.AsNSString() ];
-        }
-        
-        if (returnCode == NSOKButton )
-        {
-            panel = sPanel;
-            result = wxID_OK;
+        returnCode = [sPanel runModalForDirectory:dir.AsNSString() file:file.AsNSString() ];
+        ModalFinishedCallback(sPanel, returnCode);
 
-            wxCFStringRef filename( [[sPanel filename] retain] );
-
-            m_path = filename.AsString();
-            m_fileName = wxFileNameFromPath(m_path);
-            m_dir = wxPathOnly( m_path );
-        }
+        [sPanel setAccessoryView:nil];
     }
     else
     {
         NSArray* types = GetTypesFromFilter( m_wildCard ) ;
         NSOpenPanel* oPanel = [NSOpenPanel openPanel];
+        
+        SetupExtraControls(oPanel);
+                
         [oPanel setTreatsFilePackagesAsDirectories:NO];
         [oPanel setCanChooseDirectories:NO];
         [oPanel setResolvesAliases:YES];
         [oPanel setCanChooseFiles:YES];
         [oPanel setMessage:cf.AsNSString()];
 
-/*
-        if (parentWindow)
-        {
-            NSWindow* nativeParent = parentWindow->GetWXWindow();
-            ModalDialogDelegate* sheetDelegate = [[ModalDialogDelegate alloc] init]; 
-            [oPanel beginSheetForDirectory:dir.AsNSString() file:file.AsNSString() 
-                types: types modalForWindow: nativeParent 
-                modalDelegate: sheetDelegate 
-                didEndSelector: @selector(sheetDidEnd:returnCode:contextInfo:) 
-                contextInfo: nil];
-            [sheetDelegate waitForSheetToFinish];
-            returnCode = [sheetDelegate code];
-            [sheetDelegate release];
-        }
-        else
-*/
-        {
-            returnCode = [oPanel runModalForDirectory:dir.AsNSString() 
+        returnCode = [oPanel runModalForDirectory:dir.AsNSString()
                         file:file.AsNSString() types:types];
+
+        ModalFinishedCallback(oPanel, returnCode);
+        
+        [oPanel setAccessoryView:nil];
+        
+        if ( types != nil )
+            [types release];
+    }
+
+    return GetReturnCode();
+}
+
+void wxFileDialog::ModalFinishedCallback(void* panel, int returnCode)
+{
+    int result = wxID_CANCEL;
+    if (HasFlag(wxFD_SAVE))
+    {
+        if (returnCode == NSOKButton )
+        {
+            NSSavePanel* sPanel = (NSSavePanel*)panel;
+            result = wxID_OK;
+
+            m_path = wxCFStringRef::AsString([sPanel filename]);
+            m_fileName = wxFileNameFromPath(m_path);
+            m_dir = wxPathOnly( m_path );
         }
+    }
+    else
+    {
+        NSOpenPanel* oPanel = (NSOpenPanel*)panel;
         if (returnCode == NSOKButton )
         {
             panel = oPanel;
@@ -245,8 +329,7 @@ int wxFileDialog::ShowModal()
             NSArray* filenames = [oPanel filenames];
             for ( size_t i = 0 ; i < [filenames count] ; ++ i )
             {
-                wxCFStringRef filename( [(NSString*) [filenames objectAtIndex:i] retain] );
-                wxString fnstr = filename.AsString();
+                wxString fnstr = wxCFStringRef::AsString([filenames objectAtIndex:i]);
                 m_paths.Add( fnstr );
                 m_fileNames.Add( wxFileNameFromPath(fnstr) );
                 if ( i == 0 )
@@ -257,11 +340,13 @@ int wxFileDialog::ShowModal()
                 }
             }
         }
-        if ( types != nil )
-            [types release];
     }
-
-    return result;
+    SetReturnCode(result);
+    
+    if (GetModality() == wxDIALOG_MODALITY_WINDOW_MODAL)
+        SendWindowModalDialogEvent ( wxEVT_WINDOW_MODAL_DIALOG_CLOSED  );
+    
+    [(NSSavePanel*) panel setAccessoryView:nil];
 }
 
 #endif // wxUSE_FILEDLG

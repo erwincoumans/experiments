@@ -4,7 +4,7 @@
 // Author:      David Elliott, Ryan Norton (wxMacExecute)
 // Modified by: Stefan Csomor (added necessary wxT for unicode builds)
 // Created:     2004-11-04
-// RCS-ID:      $Id: utilsexc_cf.cpp 61734 2009-08-22 17:40:08Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Elliott, Ryan Norton
 // Licence:     wxWindows licence
 // Notes:       This code comes from src/osx/carbon/utilsexc.cpp,1.11
@@ -110,7 +110,7 @@ int wxGUIAppTraits::AddProcessCallback(wxEndProcessData *proc_data, int fd)
 // put it in because it's already compiled for wxCocoa and wxMac GUI lib.
 #if wxUSE_STDPATHS
 static wxStandardPathsCF gs_stdPaths;
-wxStandardPathsBase& wxGUIAppTraits::GetStandardPaths()
+wxStandardPaths& wxGUIAppTraits::GetStandardPaths()
 {
     return gs_stdPaths;
 }

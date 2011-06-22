@@ -4,9 +4,9 @@
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden, Vaclav Slavik and Julian Smart
-// RCS-ID:      $Id: helpdlg.cpp 50075 2007-11-19 09:12:47Z JS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Harm van der Heijden, Vaclav Slavik and Julian Smart
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h"

@@ -2,7 +2,7 @@
 // Name:        src/gtk/dcscreen.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: dcscreen.cpp 50348 2007-11-30 13:48:22Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,10 +27,10 @@
 
 IMPLEMENT_ABSTRACT_CLASS(wxScreenDCImpl, wxWindowDCImpl)
 
-wxScreenDCImpl::wxScreenDCImpl( wxScreenDC *owner ) 
+wxScreenDCImpl::wxScreenDCImpl( wxScreenDC *owner )
   : wxWindowDCImpl( owner )
-{ 
-    Init(); 
+{
+    Init();
 }
 
 void wxScreenDCImpl::Init()

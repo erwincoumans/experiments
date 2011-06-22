@@ -2,7 +2,7 @@
 // Name:        wx/gtk/bitmap.h
 // Purpose:
 // Author:      Robert Roebling
-// RCS-ID:      $Id: bitmap.h 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,10 +17,11 @@ class WXDLLIMPEXP_FWD_CORE wxPixelDataBase;
 // wxMask
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxMask: public wxObject
+class WXDLLIMPEXP_CORE wxMask: public wxMaskBase
 {
 public:
     wxMask();
+    wxMask(const wxMask& mask);
     wxMask( const wxBitmap& bitmap, const wxColour& colour );
 #if wxUSE_PALETTE
     wxMask( const wxBitmap& bitmap, int paletteIndex );
@@ -28,18 +29,15 @@ public:
     wxMask( const wxBitmap& bitmap );
     virtual ~wxMask();
 
-    bool Create( const wxBitmap& bitmap, const wxColour& colour );
-#if wxUSE_PALETTE
-    bool Create( const wxBitmap& bitmap, int paletteIndex );
-#endif // wxUSE_PALETTE
-    bool Create( const wxBitmap& bitmap );
-
     // implementation
     GdkBitmap   *m_bitmap;
-
     GdkBitmap *GetBitmap() const;
 
-private:
+protected:
+    virtual void FreeData();
+    virtual bool InitFromColour(const wxBitmap& bitmap, const wxColour& colour);
+    virtual bool InitFromMonoBitmap(const wxBitmap& bitmap);
+
     DECLARE_DYNAMIC_CLASS(wxMask)
 };
 
@@ -51,9 +49,9 @@ class WXDLLIMPEXP_CORE wxBitmap: public wxBitmapBase
 {
 public:
     wxBitmap() { }
-    wxBitmap( int width, int height, int depth = wxBITMAP_SCREEN_DEPTH ) 
+    wxBitmap( int width, int height, int depth = wxBITMAP_SCREEN_DEPTH )
         { Create(width, height, depth); }
-    wxBitmap( const wxSize& sz, int depth = wxBITMAP_SCREEN_DEPTH ) 
+    wxBitmap( const wxSize& sz, int depth = wxBITMAP_SCREEN_DEPTH )
         { Create(sz, depth); }
     wxBitmap( const char bits[], int width, int height, int depth = 1 );
     wxBitmap( const char* const* bits );
@@ -107,8 +105,7 @@ public:
     void SetHeight( int height );
     void SetWidth( int width );
     void SetDepth( int depth );
-    void SetPixmap( GdkPixmap *pixmap );
-    void SetPixbuf(GdkPixbuf* pixbuf, int depth = 0);
+    void SetPixbuf(GdkPixbuf* pixbuf);
 
     GdkPixmap *GetPixmap() const;
     bool HasPixmap() const;
@@ -130,6 +127,7 @@ protected:
     virtual wxGDIRefData* CloneGDIRefData(const wxGDIRefData* data) const;
 
 private:
+    void SetPixmap(GdkPixmap* pixmap);
 #if wxUSE_IMAGE
     // to be called from CreateFromImage only!
     bool CreateFromImageAsPixmap(const wxImage& image, int depth);
@@ -147,7 +145,6 @@ public:
     // (wxBitmap may keep same bitmap e.g. as both pixmap and pixbuf):
     void PurgeOtherRepresentations(Representation keep);
 
-private:
     DECLARE_DYNAMIC_CLASS(wxBitmap)
 };
 

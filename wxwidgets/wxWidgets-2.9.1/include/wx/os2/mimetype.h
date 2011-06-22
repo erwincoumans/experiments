@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     01.21.99
-// RCS-ID:      $Id: mimetype.h 35650 2005-09-23 12:56:45Z MR $
+// RCS-ID:      $Id$
 // Copyright:   adopted from msw port -- (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -95,12 +95,6 @@ public:
     wxFileType *GetFileTypeFromMimeType(const wxString& mimeType);
 
     size_t EnumAllFileTypes(wxArrayString& mimetypes);
-
-    // these are NOPs under OS/2
-    bool ReadMailcap(const wxString& WXUNUSED(filename), bool WXUNUSED(fallback) = true)
-        { return true; }
-    bool ReadMimeTypes(const wxString& WXUNUSED(filename))
-        { return true; }
 
     void AddFallback(const wxFileTypeInfo& ft) { m_fallbacks.Add(ft); }
 

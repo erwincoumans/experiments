@@ -3,7 +3,7 @@
 // Purpose:     wxGTK event loop implementation
 // Author:      Vadim Zeitlin
 // Created:     2008-12-27
-// RCS-ID:      $Id: evtloop.h 59541 2009-03-14 23:59:21Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -30,11 +30,15 @@ public:
     virtual void WakeUp();
     virtual bool YieldFor(long eventsToProcess);
 
+#if wxUSE_EVENTLOOP_SOURCE
+    virtual wxEventLoopSource *
+      AddSourceForFD(int fd, wxEventLoopSourceHandler *handler, int flags);
+#endif // wxUSE_EVENTLOOP_SOURCE
+
     void StoreGdkEventForLaterProcessing(GdkEvent* ev)
         { m_arrGdkEvents.Add(ev); }
-    
-protected:
 
+private:
     // the exit code of this event loop
     int m_exitcode;
 

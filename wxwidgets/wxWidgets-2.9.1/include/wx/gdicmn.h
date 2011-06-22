@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: gdicmn.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -160,12 +160,12 @@ enum wxStockCursor
 
 /* Useful macro for creating icons portably, for example:
 
-    wxIcon *icon = new wxICON(mondrian);
+    wxIcon *icon = new wxICON(sample);
 
   expands into:
 
-    wxIcon *icon = new wxIcon("mondrian");      // On wxMSW
-    wxIcon *icon = new wxIcon(mondrian_xpm);    // On wxGTK
+    wxIcon *icon = new wxIcon("sample");      // On wxMSW
+    wxIcon *icon = new wxIcon(sample_xpm);    // On wxGTK
  */
 
 #ifdef __WXMSW__
@@ -255,10 +255,12 @@ public:
         { if ( sz.x < x ) x = sz.x; if ( sz.y < y ) y = sz.y; }
 
     void IncBy(int dx, int dy) { x += dx; y += dy; }
+    void IncBy(const wxPoint& pt);
     void IncBy(const wxSize& sz) { IncBy(sz.x, sz.y); }
     void IncBy(int d) { IncBy(d, d); }
 
     void DecBy(int dx, int dy) { IncBy(-dx, -dy); }
+    void DecBy(const wxPoint& pt);
     void DecBy(const wxSize& sz) { DecBy(sz.x, sz.y); }
     void DecBy(int d) { DecBy(d, d); }
 
@@ -395,6 +397,16 @@ public:
 
     wxRealPoint() : x(0.0), y(0.0) { }
     wxRealPoint(double xx, double yy) : x(xx), y(yy) { }
+    wxRealPoint(const wxPoint& pt);
+
+    // no copy ctor or assignment operator - the defaults are ok
+
+    //assignment operators
+    wxRealPoint& operator+=(const wxRealPoint& p) { x += p.x; y += p.y; return *this; }
+    wxRealPoint& operator-=(const wxRealPoint& p) { x -= p.x; y -= p.y; return *this; }
+
+    wxRealPoint& operator+=(const wxSize& s) { x += s.GetWidth(); y += s.GetHeight(); return *this; }
+    wxRealPoint& operator-=(const wxSize& s) { x -= s.GetWidth(); y -= s.GetHeight(); return *this; }
 };
 
 
@@ -403,12 +415,10 @@ inline bool operator==(const wxRealPoint& p1, const wxRealPoint& p2)
     return wxIsSameDouble(p1.x, p2.x) && wxIsSameDouble(p1.y, p2.y);
 }
 
-
 inline bool operator!=(const wxRealPoint& p1, const wxRealPoint& p2)
 {
     return !(p1 == p2);
 }
-
 
 inline wxRealPoint operator+(const wxRealPoint& p1, const wxRealPoint& p2)
 {
@@ -419,6 +429,77 @@ inline wxRealPoint operator+(const wxRealPoint& p1, const wxRealPoint& p2)
 inline wxRealPoint operator-(const wxRealPoint& p1, const wxRealPoint& p2)
 {
     return wxRealPoint(p1.x - p2.x, p1.y - p2.y);
+}
+
+
+inline wxRealPoint operator/(const wxRealPoint& s, int i)
+{
+    return wxRealPoint(s.x / i, s.y / i);
+}
+
+inline wxRealPoint operator*(const wxRealPoint& s, int i)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator*(int i, const wxRealPoint& s)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator/(const wxRealPoint& s, unsigned int i)
+{
+    return wxRealPoint(s.x / i, s.y / i);
+}
+
+inline wxRealPoint operator*(const wxRealPoint& s, unsigned int i)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator*(unsigned int i, const wxRealPoint& s)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator/(const wxRealPoint& s, long i)
+{
+    return wxRealPoint(s.x / i, s.y / i);
+}
+
+inline wxRealPoint operator*(const wxRealPoint& s, long i)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator*(long i, const wxRealPoint& s)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator/(const wxRealPoint& s, unsigned long i)
+{
+    return wxRealPoint(s.x / i, s.y / i);
+}
+
+inline wxRealPoint operator*(const wxRealPoint& s, unsigned long i)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator*(unsigned long i, const wxRealPoint& s)
+{
+    return wxRealPoint(s.x * i, s.y * i);
+}
+
+inline wxRealPoint operator*(const wxRealPoint& s, double i)
+{
+    return wxRealPoint(int(s.x * i), int(s.y * i));
+}
+
+inline wxRealPoint operator*(double i, const wxRealPoint& s)
+{
+    return wxRealPoint(int(s.x * i), int(s.y * i));
 }
 
 
@@ -433,6 +514,7 @@ public:
 
     wxPoint() : x(0), y(0) { }
     wxPoint(int xx, int yy) : x(xx), y(yy) { }
+    wxPoint(const wxRealPoint& pt) : x(int(pt.x)), y(int(pt.y)) { }
 
     // no copy ctor or assignment operator - the defaults are ok
 
@@ -491,6 +573,76 @@ inline wxPoint operator-(const wxSize& s, const wxPoint& p)
 inline wxPoint operator-(const wxPoint& p)
 {
     return wxPoint(-p.x, -p.y);
+}
+
+inline wxPoint operator/(const wxPoint& s, int i)
+{
+    return wxPoint(s.x / i, s.y / i);
+}
+
+inline wxPoint operator*(const wxPoint& s, int i)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator*(int i, const wxPoint& s)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator/(const wxPoint& s, unsigned int i)
+{
+    return wxPoint(s.x / i, s.y / i);
+}
+
+inline wxPoint operator*(const wxPoint& s, unsigned int i)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator*(unsigned int i, const wxPoint& s)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator/(const wxPoint& s, long i)
+{
+    return wxPoint(s.x / i, s.y / i);
+}
+
+inline wxPoint operator*(const wxPoint& s, long i)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator*(long i, const wxPoint& s)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator/(const wxPoint& s, unsigned long i)
+{
+    return wxPoint(s.x / i, s.y / i);
+}
+
+inline wxPoint operator*(const wxPoint& s, unsigned long i)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator*(unsigned long i, const wxPoint& s)
+{
+    return wxPoint(s.x * i, s.y * i);
+}
+
+inline wxPoint operator*(const wxPoint& s, double i)
+{
+    return wxPoint(int(s.x * i), int(s.y * i));
+}
+
+inline wxPoint operator*(double i, const wxPoint& s)
+{
+    return wxPoint(int(s.x * i), int(s.y * i));
 }
 
 WX_DECLARE_LIST_WITH_DECL(wxPoint, wxPointList, class WXDLLIMPEXP_CORE);
@@ -677,6 +829,11 @@ inline bool wxRect::Inside(const wxRect& rect) const { return Contains(rect); }
 #endif // WXWIN_COMPATIBILITY_2_6
 
 
+// define functions which couldn't be defined above because of declarations
+// order
+inline void wxSize::IncBy(const wxPoint& pt) { IncBy(pt.x, pt.y); }
+inline void wxSize::DecBy(const wxPoint& pt) { DecBy(pt.x, pt.y); }
+
 // ---------------------------------------------------------------------------
 // Management of pens, brushes and fonts
 // ---------------------------------------------------------------------------
@@ -760,6 +917,7 @@ public:
         BRUSH_BLUE,
         BRUSH_CYAN,
         BRUSH_GREEN,
+        BRUSH_YELLOW,
         BRUSH_GREY,
         BRUSH_LIGHTGREY,
         BRUSH_MEDIUMGREY,
@@ -770,6 +928,7 @@ public:
         COLOUR_BLUE,
         COLOUR_CYAN,
         COLOUR_GREEN,
+        COLOUR_YELLOW,
         COLOUR_LIGHTGREY,
         COLOUR_RED,
         COLOUR_WHITE,
@@ -785,6 +944,7 @@ public:
         PEN_BLUE,
         PEN_CYAN,
         PEN_GREEN,
+        PEN_YELLOW,
         PEN_GREY,
         PEN_LIGHTGREY,
         PEN_MEDIUMGREY,
@@ -825,6 +985,7 @@ protected:
 #define wxBLUE_PEN          wxStockGDI::GetPen(wxStockGDI::PEN_BLUE)
 #define wxCYAN_PEN          wxStockGDI::GetPen(wxStockGDI::PEN_CYAN)
 #define wxGREEN_PEN         wxStockGDI::GetPen(wxStockGDI::PEN_GREEN)
+#define wxYELLOW_PEN        wxStockGDI::GetPen(wxStockGDI::PEN_YELLOW)
 #define wxGREY_PEN          wxStockGDI::GetPen(wxStockGDI::PEN_GREY)
 #define wxLIGHT_GREY_PEN    wxStockGDI::GetPen(wxStockGDI::PEN_LIGHTGREY)
 #define wxMEDIUM_GREY_PEN   wxStockGDI::GetPen(wxStockGDI::PEN_MEDIUMGREY)
@@ -836,6 +997,7 @@ protected:
 #define wxBLUE_BRUSH         wxStockGDI::GetBrush(wxStockGDI::BRUSH_BLUE)
 #define wxCYAN_BRUSH         wxStockGDI::GetBrush(wxStockGDI::BRUSH_CYAN)
 #define wxGREEN_BRUSH        wxStockGDI::GetBrush(wxStockGDI::BRUSH_GREEN)
+#define wxYELLOW_BRUSH       wxStockGDI::GetBrush(wxStockGDI::BRUSH_YELLOW)
 #define wxGREY_BRUSH         wxStockGDI::GetBrush(wxStockGDI::BRUSH_GREY)
 #define wxLIGHT_GREY_BRUSH   wxStockGDI::GetBrush(wxStockGDI::BRUSH_LIGHTGREY)
 #define wxMEDIUM_GREY_BRUSH  wxStockGDI::GetBrush(wxStockGDI::BRUSH_MEDIUMGREY)
@@ -847,6 +1009,7 @@ protected:
 #define wxBLUE        wxStockGDI::GetColour(wxStockGDI::COLOUR_BLUE)
 #define wxCYAN        wxStockGDI::GetColour(wxStockGDI::COLOUR_CYAN)
 #define wxGREEN       wxStockGDI::GetColour(wxStockGDI::COLOUR_GREEN)
+#define wxYELLOW      wxStockGDI::GetColour(wxStockGDI::COLOUR_YELLOW)
 #define wxLIGHT_GREY  wxStockGDI::GetColour(wxStockGDI::COLOUR_LIGHTGREY)
 #define wxRED         wxStockGDI::GetColour(wxStockGDI::COLOUR_RED)
 #define wxWHITE       wxStockGDI::GetColour(wxStockGDI::COLOUR_WHITE)

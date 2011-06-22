@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: textctrl.cpp 50329 2007-11-29 17:00:58Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -718,7 +718,7 @@ void wxTextCtrl::MarkDirty()
         ::WinSendMsg(GetHwnd(), MLM_SETCHANGED, MPFROMLONG(TRUE), 0);
     else
         // EM controls do not have a SETCHANGED, what can we do??
-        wxFAIL_MSG( _T("not implemented") );
+        wxFAIL_MSG( wxT("not implemented") );
 }
 
 //

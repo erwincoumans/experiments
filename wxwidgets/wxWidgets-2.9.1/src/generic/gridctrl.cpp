@@ -4,7 +4,7 @@
 // Author:      Paul Gammans, Roger Gammans
 // Modified by:
 // Created:     11/04/2001
-// RCS-ID:      $Id: gridctrl.cpp 59280 2009-03-02 20:09:10Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) The Computer Surgery (paul@compsurg.co.uk)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,7 +24,7 @@
     #include "wx/textctrl.h"
     #include "wx/dc.h"
     #include "wx/combobox.h"
-	#include "wx/settings.h"
+    #include "wx/settings.h"
     #include "wx/log.h"
     #include "wx/checkbox.h"
 #endif // WX_PRECOMP
@@ -145,9 +145,9 @@ void wxGridCellDateTimeRenderer::Draw(wxGrid& grid,
     SetTextColoursAndFont(grid, attr, dc, isSelected);
 
     // draw the text right aligned by default
-    int hAlign, vAlign;
-    attr.GetAlignment(&hAlign, &vAlign);
-    hAlign = wxRIGHT;
+    int hAlign = wxALIGN_RIGHT,
+        vAlign = wxALIGN_INVALID;
+    attr.GetNonDefaultAlignment(&hAlign, &vAlign);
 
     wxRect rect = rectCell;
     rect.Inflate(-1);
@@ -172,7 +172,7 @@ void wxGridCellDateTimeRenderer::SetParameters(const wxString& params)
 #endif // wxUSE_DATETIME
 
 // ----------------------------------------------------------------------------
-// wxGridCellChoiceNumberRenderer
+// wxGridCellEnumRenderer
 // ----------------------------------------------------------------------------
 // Renders a number as a textual equivalent.
 // eg data in cell is 0,1,2 ... n the cell could be rendered as "John","Fred"..."Bob"
@@ -198,7 +198,7 @@ wxString wxGridCellEnumRenderer::GetString(const wxGrid& grid, int row, int col)
     if ( table->CanGetValueAs(row, col, wxGRID_VALUE_NUMBER) )
     {
         int choiceno = table->GetValueAsLong(row, col);
-        text.Printf(_T("%s"), m_choices[ choiceno ].c_str() );
+        text.Printf(wxT("%s"), m_choices[ choiceno ].c_str() );
     }
     else
     {
@@ -222,9 +222,9 @@ void wxGridCellEnumRenderer::Draw(wxGrid& grid,
     SetTextColoursAndFont(grid, attr, dc, isSelected);
 
     // draw the text right aligned by default
-    int hAlign, vAlign;
-    attr.GetAlignment(&hAlign, &vAlign);
-    hAlign = wxRIGHT;
+    int hAlign = wxALIGN_RIGHT,
+        vAlign = wxALIGN_INVALID;
+    attr.GetNonDefaultAlignment(&hAlign, &vAlign);
 
     wxRect rect = rectCell;
     rect.Inflate(-1);
@@ -250,7 +250,7 @@ void wxGridCellEnumRenderer::SetParameters(const wxString& params)
 
     m_choices.Empty();
 
-    wxStringTokenizer tk(params, _T(','));
+    wxStringTokenizer tk(params, wxT(','));
     while ( tk.HasMoreTokens() )
     {
         m_choices.Add(tk.GetNextToken());
@@ -305,7 +305,7 @@ wxGridCellAutoWrapStringRenderer::GetTextLines(wxGrid& grid,
     wxCoord max_x = rect.GetWidth();
 
     dc.SetFont(attr.GetFont());
-    wxStringTokenizer tk(data , _T(" \n\t\r"));
+    wxStringTokenizer tk(data , wxT(" \n\t\r"));
     wxString thisline = wxEmptyString;
 
     while ( tk.HasMoreTokens() )
@@ -315,7 +315,7 @@ wxGridCellAutoWrapStringRenderer::GetTextLines(wxGrid& grid,
         //       space at the end of the line. But it
         //       is invisible , simplifies the size calculation
         //       and ensures tokens are separated in the display
-        tok += _T(" ");
+        tok += wxT(" ");
 
         dc.GetTextExtent(tok, &x, &y);
         if ( curr_x + x > max_x)
@@ -425,7 +425,7 @@ wxSize wxGridCellStringRenderer::DoGetBestSize(const wxGridCellAttr& attr,
 {
     wxCoord x = 0, y = 0, max_x = 0;
     dc.SetFont(attr.GetFont());
-    wxStringTokenizer tk(text, _T('\n'));
+    wxStringTokenizer tk(text, wxT('\n'));
     while ( tk.HasMoreTokens() )
     {
         dc.GetTextExtent(tk.GetNextToken(), &x, &y);
@@ -554,7 +554,7 @@ wxString wxGridCellNumberRenderer::GetString(const wxGrid& grid, int row, int co
     wxString text;
     if ( table->CanGetValueAs(row, col, wxGRID_VALUE_NUMBER) )
     {
-        text.Printf(_T("%ld"), table->GetValueAsLong(row, col));
+        text.Printf(wxT("%ld"), table->GetValueAsLong(row, col));
     }
     else
     {
@@ -576,9 +576,9 @@ void wxGridCellNumberRenderer::Draw(wxGrid& grid,
     SetTextColoursAndFont(grid, attr, dc, isSelected);
 
     // draw the text right aligned by default
-    int hAlign, vAlign;
-    attr.GetAlignment(&hAlign, &vAlign);
-    hAlign = wxALIGN_RIGHT;
+    int hAlign = wxALIGN_RIGHT,
+        vAlign = wxALIGN_INVALID;
+    attr.GetNonDefaultAlignment(&hAlign, &vAlign);
 
     wxRect rect = rectCell;
     rect.Inflate(-1);
@@ -641,21 +641,21 @@ wxString wxGridCellFloatRenderer::GetString(const wxGrid& grid, int row, int col
                 if ( m_precision == -1 )
                 {
                     // default width/precision
-                    m_format = _T("%f");
+                    m_format = wxT("%f");
                 }
                 else
                 {
-                    m_format.Printf(_T("%%.%df"), m_precision);
+                    m_format.Printf(wxT("%%.%df"), m_precision);
                 }
             }
             else if ( m_precision == -1 )
             {
                 // default precision
-                m_format.Printf(_T("%%%d.f"), m_width);
+                m_format.Printf(wxT("%%%d.f"), m_width);
             }
             else
             {
-                m_format.Printf(_T("%%%d.%df"), m_width, m_precision);
+                m_format.Printf(wxT("%%%d.%df"), m_width, m_precision);
             }
         }
 
@@ -679,9 +679,9 @@ void wxGridCellFloatRenderer::Draw(wxGrid& grid,
     SetTextColoursAndFont(grid, attr, dc, isSelected);
 
     // draw the text right aligned by default
-    int hAlign, vAlign;
-    attr.GetAlignment(&hAlign, &vAlign);
-    hAlign = wxALIGN_RIGHT;
+    int hAlign = wxALIGN_RIGHT,
+        vAlign = wxALIGN_INVALID;
+    attr.GetNonDefaultAlignment(&hAlign, &vAlign);
 
     wxRect rect = rectCell;
     rect.Inflate(-1);
@@ -707,7 +707,7 @@ void wxGridCellFloatRenderer::SetParameters(const wxString& params)
     }
     else
     {
-        wxString tmp = params.BeforeFirst(_T(','));
+        wxString tmp = params.BeforeFirst(wxT(','));
         if ( !tmp.empty() )
         {
             long width;
@@ -717,11 +717,11 @@ void wxGridCellFloatRenderer::SetParameters(const wxString& params)
             }
             else
             {
-                wxLogDebug(_T("Invalid wxGridCellFloatRenderer width parameter string '%s ignored"), params.c_str());
+                wxLogDebug(wxT("Invalid wxGridCellFloatRenderer width parameter string '%s ignored"), params.c_str());
             }
         }
 
-        tmp = params.AfterFirst(_T(','));
+        tmp = params.AfterFirst(wxT(','));
         if ( !tmp.empty() )
         {
             long precision;
@@ -731,7 +731,7 @@ void wxGridCellFloatRenderer::SetParameters(const wxString& params)
             }
             else
             {
-                wxLogDebug(_T("Invalid wxGridCellFloatRenderer precision parameter string '%s ignored"), params.c_str());
+                wxLogDebug(wxT("Invalid wxGridCellFloatRenderer precision parameter string '%s ignored"), params.c_str());
             }
         }
     }

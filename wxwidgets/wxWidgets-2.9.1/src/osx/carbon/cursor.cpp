@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: cursor.cpp 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -233,12 +233,12 @@ wxCursorRefData::wxCursorRefData()
 
 wxCursorRefData::wxCursorRefData(const wxCursorRefData& cursor)
 {
-    // FIXME: need to copy the cursor
     m_hCursor = NULL;
 
 #if wxOSX_USE_COCOA
-    wxUnusedVar(cursor);
+    m_hCursor = (WX_NSCursor) wxMacCocoaRetain(cursor.m_hCursor);
 #elif wxOSX_USE_CARBON
+    // FIXME: need to copy the cursor
     m_disposeHandle = false;
     m_releaseHandle = false;
     m_isColorCursor = cursor.m_isColorCursor;
@@ -281,11 +281,6 @@ wxCursor::wxCursor( const wxImage &image )
 #endif
 }
 
-wxCursor::wxCursor(const char* const* bits)
-{
-    (void) CreateFromXpm(bits);
-}
-
 wxGDIRefData *wxCursor::CreateGDIRefData() const
 {
     return new wxCursorRefData;
@@ -294,20 +289,6 @@ wxGDIRefData *wxCursor::CreateGDIRefData() const
 wxGDIRefData *wxCursor::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxCursorRefData(*static_cast<const wxCursorRefData *>(data));
-}
-
-bool wxCursor::CreateFromXpm(const char* const* bits)
-{
-#if wxUSE_IMAGE
-    wxCHECK_MSG( bits != NULL, false, wxT("invalid cursor data") );
-    wxXPMDecoder decoder;
-    wxImage img = decoder.ReadData(bits);
-    wxCHECK_MSG( img.Ok(), false, wxT("invalid cursor data") );
-    CreateFromImage( img ) ;
-    return true;
-#else
-    return false;
-#endif
 }
 
 WXHCURSOR wxCursor::GetHCURSOR() const
@@ -654,7 +635,7 @@ void wxCursor::InitFromStock(wxStockCursor cursor_type)
     case wxCURSOR_CLOSED_HAND:
         M_CURSORDATA->m_themeCursor = kThemeClosedHandCursor;
         break;
-        
+
     case wxCURSOR_CHAR:
     case wxCURSOR_ARROW:
     case wxCURSOR_LEFT_BUTTON:

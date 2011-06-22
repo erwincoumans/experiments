@@ -2,7 +2,7 @@
 // Name:        imagtiff.h
 // Purpose:     wxImage TIFF handler
 // Author:      Robert Roebling
-// RCS-ID:      $Id: imagtiff.h 52834 2008-03-26 15:06:00Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,10 +21,10 @@
 #include "wx/image.h"
 
 // defines for wxImage::SetOption
-#define wxIMAGE_OPTION_BITSPERSAMPLE               wxString(_T("BitsPerSample"))
-#define wxIMAGE_OPTION_SAMPLESPERPIXEL             wxString(_T("SamplesPerPixel"))
-#define wxIMAGE_OPTION_COMPRESSION                 wxString(_T("Compression"))
-#define wxIMAGE_OPTION_IMAGEDESCRIPTOR             wxString(_T("ImageDescriptor"))
+#define wxIMAGE_OPTION_BITSPERSAMPLE               wxString(wxT("BitsPerSample"))
+#define wxIMAGE_OPTION_SAMPLESPERPIXEL             wxString(wxT("SamplesPerPixel"))
+#define wxIMAGE_OPTION_COMPRESSION                 wxString(wxT("Compression"))
+#define wxIMAGE_OPTION_IMAGEDESCRIPTOR             wxString(wxT("ImageDescriptor"))
 
 class WXDLLIMPEXP_CORE wxTIFFHandler: public wxImageHandler
 {
@@ -34,8 +34,9 @@ public:
 #if wxUSE_STREAMS
     virtual bool LoadFile( wxImage *image, wxInputStream& stream, bool verbose=true, int index=-1 );
     virtual bool SaveFile( wxImage *image, wxOutputStream& stream, bool verbose=true );
-    virtual int GetImageCount( wxInputStream& stream );
+
 protected:
+    virtual int DoGetImageCount( wxInputStream& stream );
     virtual bool DoCanRead( wxInputStream& stream );
 #endif
 

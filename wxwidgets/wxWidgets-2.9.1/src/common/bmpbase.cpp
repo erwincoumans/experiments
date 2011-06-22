@@ -3,7 +3,7 @@
 // Purpose:     wxBitmapBase
 // Author:      VaclavSlavik
 // Created:     2001/04/11
-// RCS-ID:      $Id: bmpbase.cpp 52821 2008-03-25 21:19:27Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2001, Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -135,6 +135,16 @@ public:
     void OnExit() { wxBitmap::CleanUpHandlers(); }
 };
 
+wxBitmap wxBitmapBase::ConvertToDisabled(unsigned char brightness) const
+{
+    wxBitmap bmp;
+#if wxUSE_IMAGE
+    wxImage image = ConvertToImage();
+    bmp = wxBitmap(image.ConvertToDisabled(brightness));
+#endif
+    return bmp;
+}
+
 IMPLEMENT_DYNAMIC_CLASS(wxBitmapBaseModule, wxModule)
 
 #endif // wxUSE_BITMAP_BASE
@@ -155,7 +165,7 @@ wxBitmap::wxBitmap(const char* const* bits)
 
     *this = wxBitmap(image);
 #else
-    wxFAIL_MSG(_T("creating bitmaps from XPMs not supported"));
+    wxFAIL_MSG(wxT("creating bitmaps from XPMs not supported"));
 #endif // wxUSE_IMAGE && wxUSE_XPM
 }
 #endif // !(defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXX11__))

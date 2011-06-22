@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     08.06.03 (extracted from src/generic/listctrl.cpp)
-// RCS-ID:      $Id: selstore.h 58757 2009-02-08 11:45:59Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2000-2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ public:
     void Clear() { m_itemsSel.Clear(); m_count = 0; m_defaultState = false; }
 
     // must be called when a new item is inserted/added
-    void OnItemAdd(unsigned WXUNUSED(item)) { wxFAIL_MSG( _T("TODO") ); }
+    void OnItemAdd(unsigned WXUNUSED(item)) { wxFAIL_MSG( wxT("TODO") ); }
 
     // must be called when an item is deleted
     void OnItemDelete(unsigned item);

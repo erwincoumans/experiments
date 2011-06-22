@@ -4,9 +4,9 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     2007-04-14
-// RCS-ID:      $Id: editors.h 61018 2009-06-12 14:01:51Z JMS $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_PROPGRID_EDITORS_H_
@@ -30,7 +30,6 @@ public:
     wxWindow*   m_primary;
     wxWindow*   m_secondary;
 
-#ifndef SWIG
     wxPGWindowList( wxWindow* a )
     {
         m_primary = a;
@@ -41,7 +40,6 @@ public:
         m_primary = a;
         m_secondary = b;
     };
-#endif
 };
 
 // -----------------------------------------------------------------------
@@ -153,7 +151,6 @@ public:
     virtual bool OnEvent( wxPropertyGrid* propgrid, wxPGProperty* property,
         wxWindow* wnd_primary, wxEvent& event ) const = 0;
 
-#if !defined(SWIG) || defined(CREATE_VCW)
     /** Returns value from control, via parameter 'variant'.
         Usually ends up calling property's StringToValue or IntToValue.
         Returns true if value was different.
@@ -161,11 +158,36 @@ public:
     virtual bool GetValueFromControl( wxVariant& variant,
                                       wxPGProperty* property,
                                       wxWindow* ctrl ) const;
-#endif
 
-    /** Sets value in control to unspecified. */
+    /**
+        Sets new appearance for the control. Default implementation
+        sets foreground colour, background colour, font, plus text
+        for wxTextCtrl and wxComboCtrl.
+
+        @param appearance
+            New appearance to be applied.
+
+        @param oldAppearance
+            Previously applied appearance. Used to detect which
+            control attributes need to be changed (e.g. so we only
+            change background colour if really needed).
+
+        @param unspecified
+            @true if the new appearance represents an unspecified
+            property value.
+    */
+    virtual void SetControlAppearance( wxPropertyGrid* pg,
+                                       wxPGProperty* property,
+                                       wxWindow* ctrl,
+                                       const wxPGCell& appearance,
+                                       const wxPGCell& oldAppearance,
+                                       bool unspecified ) const;
+
+    /**
+        Sets value in control to unspecified.
+    */
     virtual void SetValueToUnspecified( wxPGProperty* property,
-                                        wxWindow* ctrl ) const = 0;
+                                        wxWindow* ctrl ) const;
 
     /** Sets control's value specifically from string. */
     virtual void SetControlStringValue( wxPGProperty* property,
@@ -239,8 +261,6 @@ public:
     virtual bool GetValueFromControl( wxVariant& variant,
                                       wxPGProperty* property,
                                       wxWindow* ctrl ) const;
-    virtual void SetValueToUnspecified( wxPGProperty* property,
-                                        wxWindow* ctrl ) const;
 
     virtual wxString GetName() const;
 
@@ -339,9 +359,6 @@ public:
 };
 
 
-// Exclude classes from being able to be derived from in wxPython bindings
-#ifndef SWIG
-
 class WXDLLIMPEXP_PROPGRID wxPGChoiceAndButtonEditor : public wxPGChoiceEditor
 {
 public:
@@ -372,8 +389,6 @@ public:
 
     DECLARE_DYNAMIC_CLASS(wxPGTextCtrlAndButtonEditor)
 };
-
-#endif  // !SWIG
 
 
 #if wxPG_INCLUDE_CHECKBOX

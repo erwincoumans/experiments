@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: button.cpp 45348 2007-04-09 11:18:54Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -248,7 +248,7 @@ void wxButton::SetTmpDefault()
 {
     wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
 
-    wxCHECK_RET( tlw, _T("button without top level window?") );
+    wxCHECK_RET( tlw, wxT("button without top level window?") );
 
     wxWindow*                       pWinOldDefault = tlw->GetDefaultItem();
 
@@ -261,7 +261,7 @@ void wxButton::UnsetTmpDefault()
 {
     wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
 
-    wxCHECK_RET( tlw, _T("button without top level window?") );
+    wxCHECK_RET( tlw, wxT("button without top level window?") );
 
     tlw->SetTmpDefaultItem(NULL);
 

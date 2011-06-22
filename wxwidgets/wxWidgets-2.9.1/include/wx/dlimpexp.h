@@ -4,7 +4,7 @@
  * Author:      Vadim Zeitlin
  * Modified by:
  * Created:     16.10.2003 (extracted from wx/defs.h)
- * RCS-ID:      $Id: dlimpexp.h 56651 2008-11-02 22:16:14Z FM $
+ * RCS-ID:      $Id$
  * Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
  * Licence:     wxWindows licence
  */
@@ -86,6 +86,7 @@
 #    define WXMAKINGDLL_XML
 #    define WXMAKINGDLL_XRC
 #    define WXMAKINGDLL_AUI
+#    define WXMAKINGDLL_RIBBON
 #    define WXMAKINGDLL_PROPGRID
 #    define WXMAKINGDLL_RICHTEXT
 #    define WXMAKINGDLL_MEDIA
@@ -214,6 +215,14 @@
 #    define WXDLLIMPEXP_AUI WXIMPORT
 #else /* not making nor using DLL */
 #    define WXDLLIMPEXP_AUI
+#endif
+
+#ifdef WXMAKINGDLL_RIBBON
+#    define WXDLLIMPEXP_RIBBON WXEXPORT
+#elif defined(WXUSINGDLL)
+#    define WXDLLIMPEXP_RIBBON WXIMPORT
+#else /* not making nor using DLL */
+#    define WXDLLIMPEXP_RIBBON
 #endif
 
 #ifdef WXMAKINGDLL_PROPGRID

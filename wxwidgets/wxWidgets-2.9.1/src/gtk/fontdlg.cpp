@@ -2,7 +2,7 @@
 // Name:        src/gtk/fontdlg.cpp
 // Purpose:     wxFontDialog
 // Author:      Robert Roebling
-// Id:          $Id: fontdlg.cpp 57182 2008-12-08 10:36:46Z RR $
+// Id:          $Id$
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxFontDialog, wxDialog)
 
 bool wxFontDialog::DoCreate(wxWindow *parent)
 {
-    parent = GetParentForModalDialog(parent);
+    parent = GetParentForModalDialog(parent, 0);
 
     if (!PreCreation( parent, wxDefaultPosition, wxDefaultSize ) ||
         !CreateBase( parent, -1, wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE,
@@ -129,7 +129,7 @@ bool wxFontDialog::DoCreate(wxWindow *parent)
         else
         {
             // this is not supposed to happen!
-            wxFAIL_MSG(_T("font is ok but no native font info?"));
+            wxFAIL_MSG(wxT("font is ok but no native font info?"));
         }
     }
 

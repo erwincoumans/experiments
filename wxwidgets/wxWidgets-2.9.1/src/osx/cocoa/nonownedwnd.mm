@@ -13,6 +13,7 @@
 #ifndef WX_PRECOMP
     #include "wx/nonownedwnd.h"
     #include "wx/frame.h"
+    #include "wx/app.h"
 #endif
 
 #include "wx/osx/private.h"
@@ -23,18 +24,18 @@ NSRect wxToNSRect( NSView* parent, const wxRect& r )
     int y = r.y;
     int x = r.x ;
     if ( parent == NULL || ![ parent isFlipped ] )
-        y = frame.size.height - ( r.y + r.height );
+        y = (int)(frame.size.height - ( r.y + r.height ));
     return NSMakeRect(x, y, r.width , r.height);
 }
 
 wxRect wxFromNSRect( NSView* parent, const NSRect& rect )
 {
     NSRect frame = parent ? [parent bounds] : [[NSScreen mainScreen] frame];
-    int y = rect.origin.y;
-    int x = rect.origin.x;
+    int y = (int)rect.origin.y;
+    int x = (int)rect.origin.x;
     if ( parent == NULL || ![ parent isFlipped ] )
-        y = frame.size.height - (rect.origin.y + rect.size.height);
-    return wxRect( x, y, rect.size.width, rect.size.height );
+        y = (int)(frame.size.height - (rect.origin.y + rect.size.height));
+    return wxRect( x, y, (int)rect.size.width, (int)rect.size.height );
 }
 
 NSPoint wxToNSPoint( NSView* parent, const wxPoint& p )
@@ -43,23 +44,23 @@ NSPoint wxToNSPoint( NSView* parent, const wxPoint& p )
     int x = p.x ;
     int y = p.y;
     if ( parent == NULL || ![ parent isFlipped ] )
-        y = frame.size.height - ( p.y );
+        y = (int)(frame.size.height - ( p.y ));
     return NSMakePoint(x, y);
 }
 
 wxPoint wxFromNSPoint( NSView* parent, const NSPoint& p )
 {
     NSRect frame = parent ? [parent bounds] : [[NSScreen mainScreen] frame];
-    int x = p.x;
-    int y = p.y;
+    int x = (int)p.x;
+    int y = (int)p.y;
     if ( parent == NULL || ![ parent isFlipped ] )
-        y = frame.size.height - ( p.y );
+        y = (int)(frame.size.height - ( p.y ));
     return wxPoint( x, y);
 }
 
 bool shouldHandleSelector(SEL selector)
 {
-    if (selector == @selector(noop:) 
+    if (selector == @selector(noop:)
             || selector == @selector(complete:)
             || selector == @selector(deleteBackward:)
             || selector == @selector(deleteForward:)
@@ -72,42 +73,93 @@ bool shouldHandleSelector(SEL selector)
             || selector == @selector(scrollToBeginningOfDocument:)
             || selector == @selector(scrollToEndOfDocument:))
         return false;
-        
+
     return true;
 
 }
 
 //
-// wx native implementation classes
+// wx category for NSWindow (our own and wrapped instances)
 //
 
-typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector);
+@interface NSWindow (wxNSWindowSupport)
+
+- (wxNonOwnedWindowCocoaImpl*) WX_implementation;
+
+- (bool) WX_filterSendEvent:(NSEvent *) event;
+
+@end
+
+@implementation NSWindow (wxNSWindowSupport)
+
+- (wxNonOwnedWindowCocoaImpl*) WX_implementation
+{
+    return (wxNonOwnedWindowCocoaImpl*) wxNonOwnedWindowImpl::FindFromWXWindow( self );
+}
+
+// TODO in cocoa everything during a drag is sent to the NSWindow the mouse down occured, 
+// this does not conform to the wx behaviour if the window is not captured, so try to resend
+// or capture all wx mouse event handling at the tlw as we did for carbon
+
+- (bool) WX_filterSendEvent:(NSEvent *) event
+{
+    bool handled = false;
+    if ( ([event type] >= NSLeftMouseDown) && ([event type] <= NSMouseExited) )
+    {
+        wxWindow* cw = wxWindow::GetCapture();
+        if ( cw != NULL )
+        {
+            ((wxWidgetCocoaImpl*)cw->GetPeer())->DoHandleMouseEvent( event);
+            handled = true;
+        }
+    }
+    return handled;
+}
+@end
+
+//
+// wx native implementation 
+//
 
 @interface wxNSWindow : NSWindow
 {
-    wxNonOwnedWindowCocoaImpl* impl;
 }
 
-- (void)setImplementation: (wxNonOwnedWindowCocoaImpl *) theImplementation;
-- (wxNonOwnedWindowCocoaImpl*) implementation;
+- (void) sendEvent:(NSEvent *)event;
+- (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen *)screen;
 - (void)noResponderFor: (SEL) selector;
 @end
 
 @implementation wxNSWindow
 
-- (void)setImplementation: (wxNonOwnedWindowCocoaImpl *) theImplementation
+- (void)sendEvent:(NSEvent *) event
 {
-    impl = theImplementation;
+    if ( ![self WX_filterSendEvent: event] )
+    {
+        WXEVENTREF formerEvent = wxTheApp == NULL ? NULL : wxTheApp->MacGetCurrentEvent();
+        WXEVENTHANDLERCALLREF formerHandler = wxTheApp == NULL ? NULL : wxTheApp->MacGetCurrentEventHandlerCallRef();
+
+        if (wxTheApp)
+            wxTheApp->MacSetCurrentEvent(event, NULL);
+
+        [super sendEvent: event];
+
+        if (wxTheApp)
+            wxTheApp->MacSetCurrentEvent(formerEvent , formerHandler);
+    }
 }
 
-- (wxNonOwnedWindowCocoaImpl*) implementation
+// The default implementation always moves the window back onto the screen,
+// even when the programmer explicitly wants to hide it.
+- (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen *)screen
 {
-    return impl;
+    wxUnusedVar(screen);
+    return frameRect;
 }
 
 - (void)doCommandBySelector:(SEL)selector
 {
-    if (shouldHandleSelector(selector) && 
+    if (shouldHandleSelector(selector) &&
         !(selector == @selector(cancel:) || selector == @selector(cancelOperation:)) )
         [super doCommandBySelector:selector];
 }
@@ -119,39 +171,32 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
     if (selector != @selector(keyDown:) && selector != @selector(keyUp:))
     {
         [super noResponderFor:selector];
-//        wxOSX_NoResponderHandlerPtr superimpl = (wxOSX_NoResponderHandlerPtr) [[self superclass] instanceMethodForSelector:@selector(noResponderFor:)];
-//        superimpl(self, @selector(noResponderFor:), selector);
     }
 }
 
-@end
-
-@interface wxNSPanel : NSPanel
-
-{
-    wxNonOwnedWindowCocoaImpl* impl;
-}
-
-- (void)setImplementation: (wxNonOwnedWindowCocoaImpl *) theImplementation;
-- (wxNonOwnedWindowCocoaImpl*) implementation;
-- (void)noResponderFor: (SEL) selector;
-@end
-
-@implementation wxNSPanel 
-
-- (void)setImplementation: (wxNonOwnedWindowCocoaImpl *) theImplementation
-{
-    impl = theImplementation;
-}
-
+// We need this for borderless windows, i.e. shaped windows or windows without  
+// a title bar. For more info, see:
+// http://lists.apple.com/archives/cocoa-dev/2008/May/msg02091.html
 - (BOOL)canBecomeKeyWindow
 {
     return YES;
 }
 
-- (wxNonOwnedWindowCocoaImpl*) implementation
+@end
+
+@interface wxNSPanel : NSPanel
 {
-    return impl;
+}
+
+- (void)noResponderFor: (SEL) selector;
+- (void)sendEvent:(NSEvent *)event;
+@end
+
+@implementation wxNSPanel
+
+- (BOOL)canBecomeKeyWindow
+{
+    return YES;
 }
 
 - (void)doCommandBySelector:(SEL)selector
@@ -166,9 +211,13 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
     if (selector != @selector(keyDown:) && selector != @selector(keyUp:))
     {
         [super noResponderFor:selector];
-//        wxOSX_NoResponderHandlerPtr superimpl = (wxOSX_NoResponderHandlerPtr) [[self superclass] instanceMethodForSelector:@selector(noResponderFor:)];
-//        superimpl(self, @selector(noResponderFor:), selector);
     }
+}
+
+- (void)sendEvent:(NSEvent *) event
+{
+    if ( ![self WX_filterSendEvent: event] )
+        [super sendEvent: event];
 }
 
 @end
@@ -178,7 +227,7 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 // controller
 //
 
-@interface wxNonOwnedWindowController : NSObject
+@interface wxNonOwnedWindowController : NSObject wxOSX_10_6_AND_LATER(<NSWindowDelegate>)
 {
 }
 
@@ -188,6 +237,7 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 - (void)windowDidBecomeKey:(NSNotification *)notification;
 - (void)windowDidMove:(NSNotification *)notification;
 - (BOOL)windowShouldClose:(id)window;
+- (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame;
 
 @end
 
@@ -201,8 +251,7 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 
 - (BOOL)windowShouldClose:(id)nwindow
 {
-    wxNSWindow* window = (wxNSWindow*) nwindow;
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    wxNonOwnedWindowCocoaImpl* windowimpl = [(NSWindow*) nwindow WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
@@ -212,15 +261,15 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
     return NO;
 }
 
-- (NSSize)windowWillResize:(NSWindow *)win
+- (NSSize)windowWillResize:(NSWindow *)window
                     toSize:(NSSize)proposedFrameSize
 {
-    NSRect frame = [win frame];
+    NSRect frame = [window frame];
     wxRect wxframe = wxFromNSRect( NULL, frame );
-    wxframe.SetWidth( proposedFrameSize.width );
-    wxframe.SetHeight( proposedFrameSize.height );
-    wxNSWindow* window = (wxNSWindow*) win;
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    wxframe.SetWidth( (int)proposedFrameSize.width );
+    wxframe.SetHeight( (int)proposedFrameSize.height );
+
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
@@ -237,8 +286,8 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 
 - (void)windowDidResize:(NSNotification *)notification
 {
-    wxNSWindow* window = (wxNSWindow*) [notification object];
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    NSWindow* window = (NSWindow*) [notification object];
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
@@ -250,7 +299,7 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 - (void)windowDidMove:(NSNotification *)notification
 {
     wxNSWindow* window = (wxNSWindow*) [notification object];
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
@@ -261,8 +310,8 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    wxNSWindow* window = (wxNSWindow*) [notification object];
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    NSWindow* window = (NSWindow*) [notification object];
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
@@ -273,16 +322,16 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    wxNSWindow* window = (wxNSWindow*) [notification object];
-    wxNonOwnedWindowCocoaImpl* windowimpl = [window implementation];
+    NSWindow* window = (NSWindow*) [notification object];
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
     if ( windowimpl )
     {
         wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
         if ( wxpeer )
         {
             wxpeer->HandleActivated(0, false);
-            // Needed for popup window since the firstResponder 
-            // (focus in wx) doesn't change when this 
+            // Needed for popup window since the firstResponder
+            // (focus in wx) doesn't change when this
             // TLW becomes inactive.
             wxFocusEvent event( wxEVT_KILL_FOCUS, wxpeer->GetId());
             event.SetEventObject(wxpeer);
@@ -311,56 +360,75 @@ typedef void (*wxOSX_NoResponderHandlerPtr)(NSView* self, SEL _cmd, SEL selector
     return nil;
 }
 
+- (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame
+{
+    wxUnusedVar(newFrame);
+    wxNonOwnedWindowCocoaImpl* windowimpl = [window WX_implementation];
+    if ( windowimpl )
+    {
+        wxNonOwnedWindow* wxpeer = windowimpl->GetWXPeer();
+        wxMaximizeEvent event(wxpeer->GetId());
+        event.SetEventObject(wxpeer);
+        return !wxpeer->HandleWindowEvent(event);
+    }
+    return true;
+}
+
 @end
 
 IMPLEMENT_DYNAMIC_CLASS( wxNonOwnedWindowCocoaImpl , wxNonOwnedWindowImpl )
 
-wxNonOwnedWindowCocoaImpl::wxNonOwnedWindowCocoaImpl( wxNonOwnedWindow* nonownedwnd) : 
+wxNonOwnedWindowCocoaImpl::wxNonOwnedWindowCocoaImpl( wxNonOwnedWindow* nonownedwnd) :
     wxNonOwnedWindowImpl(nonownedwnd)
 {
     m_macWindow = NULL;
     m_macFullScreenData = NULL;
 }
-    
-wxNonOwnedWindowCocoaImpl::wxNonOwnedWindowCocoaImpl() 
+
+wxNonOwnedWindowCocoaImpl::wxNonOwnedWindowCocoaImpl()
 {
     m_macWindow = NULL;
     m_macFullScreenData = NULL;
 }
-    
+
 wxNonOwnedWindowCocoaImpl::~wxNonOwnedWindowCocoaImpl()
 {
-    [m_macWindow setImplementation:nil];
-    [m_macWindow setDelegate:nil];
-    [m_macWindow release];
+    if ( !m_wxPeer->IsNativeWindowWrapper() )
+    {
+        [m_macWindow setDelegate:nil];
+        [m_macWindow release];
+    }
 }
 
-void wxNonOwnedWindowCocoaImpl::Destroy()
+void wxNonOwnedWindowCocoaImpl::WillBeDestroyed()
 {
-    wxPendingDelete.Append( new wxDeferredObjectDeleter( this ) );
+    if ( !m_wxPeer->IsNativeWindowWrapper() )
+    {
+        [m_macWindow setDelegate:nil];
+    }
 }
 
 void wxNonOwnedWindowCocoaImpl::Create( wxWindow* WXUNUSED(parent), const wxPoint& pos, const wxSize& size,
 long style, long extraStyle, const wxString& WXUNUSED(name) )
 {
     static wxNonOwnedWindowController* controller = NULL;
-    
+
     if ( !controller )
         controller =[[wxNonOwnedWindowController alloc] init];
 
 
     int windowstyle = NSBorderlessWindowMask;
-    
-    if ( style & wxFRAME_TOOL_WINDOW || ( style & wxPOPUP_WINDOW ) || 
+
+    if ( style & wxFRAME_TOOL_WINDOW || ( style & wxPOPUP_WINDOW ) ||
             GetWXPeer()->GetExtraStyle() & wxTOPLEVEL_EX_DIALOG )
     {
         m_macWindow = [wxNSPanel alloc];
     }
     else
         m_macWindow = [wxNSWindow alloc];
-    
+
     CGWindowLevel level = kCGNormalWindowLevel;
-    
+
     if ( style & wxFRAME_TOOL_WINDOW )
     {
         windowstyle |= NSUtilityWindowMask;
@@ -437,24 +505,37 @@ long style, long extraStyle, const wxString& WXUNUSED(name) )
 
     if ( ( style & wxSTAY_ON_TOP ) )
         level = kCGUtilityWindowLevel;
-    
+
     NSRect r = wxToNSRect( NULL, wxRect( pos, size) );
-    
-    [m_macWindow setImplementation:this];
-    
+
+    r = [NSWindow contentRectForFrameRect:r styleMask:windowstyle];
+
     [m_macWindow initWithContentRect:r
         styleMask:windowstyle
         backing:NSBackingStoreBuffered
-        defer:NO 
+        defer:NO
         ];
-        
+
     [m_macWindow setLevel:level];
 
     [m_macWindow setDelegate:controller];
-    
+
     [m_macWindow setAcceptsMouseMovedEvents: YES];
+    
+    if ( ( style & wxFRAME_SHAPED) )
+    {
+        [m_macWindow setOpaque:NO];
+        [m_macWindow setAlphaValue:1.0];
+    }
+    
+    if ( !(style & wxFRAME_TOOL_WINDOW) )
+        [m_macWindow setHidesOnDeactivate:NO];
 }
 
+void wxNonOwnedWindowCocoaImpl::Create( wxWindow* WXUNUSED(parent), WXWindow nativeWindow )
+{
+    m_macWindow = nativeWindow;
+}
 
 WXWindow wxNonOwnedWindowCocoaImpl::GetWXWindow() const
 {
@@ -465,27 +546,40 @@ void wxNonOwnedWindowCocoaImpl::Raise()
 {
     [m_macWindow orderWindow:NSWindowAbove relativeTo:0];
 }
-    
+
 void wxNonOwnedWindowCocoaImpl::Lower()
 {
     [m_macWindow orderWindow:NSWindowBelow relativeTo:0];
+}
+
+void wxNonOwnedWindowCocoaImpl::ShowWithoutActivating()
+{
+    [m_macWindow orderFront:nil];
+    [[m_macWindow contentView] setNeedsDisplay: YES];
 }
 
 bool wxNonOwnedWindowCocoaImpl::Show(bool show)
 {
     if ( show )
     {
-        [m_macWindow makeKeyAndOrderFront:nil];
-        [[m_macWindow contentView] setNeedsDisplay:YES];
+        wxNonOwnedWindow* wxpeer = GetWXPeer(); 
+        if (wxpeer && !(wxpeer->GetWindowStyle() & wxFRAME_TOOL_WINDOW)) 
+            [m_macWindow makeKeyAndOrderFront:nil];
+        else 
+            [m_macWindow orderFront:nil]; 
+        [[m_macWindow contentView] setNeedsDisplay: YES];
     }
-    else 
+    else
         [m_macWindow orderOut:nil];
     return true;
 }
-    
-bool wxNonOwnedWindowCocoaImpl::ShowWithEffect(bool show, wxShowEffect WXUNUSED(effect), unsigned WXUNUSED(timeout))
+
+bool wxNonOwnedWindowCocoaImpl::ShowWithEffect(bool show,
+                                               wxShowEffect effect,
+                                               unsigned timeout)
 {
-    return Show(show);
+    return wxWidgetCocoaImpl::
+            ShowViewOrWindowWithEffect(m_wxPeer, show, effect, timeout);
 }
 
 void wxNonOwnedWindowCocoaImpl::Update()
@@ -512,20 +606,41 @@ void wxNonOwnedWindowCocoaImpl::SetExtraStyle( long exStyle )
         int windowStyle = [ m_macWindow styleMask];
         if ( metal && !(windowStyle & NSTexturedBackgroundWindowMask) )
         {
-            wxFAIL_MSG( _T("Metal Style cannot be changed after creation") );
+            wxFAIL_MSG( wxT("Metal Style cannot be changed after creation") );
         }
         else if ( !metal && (windowStyle & NSTexturedBackgroundWindowMask ) )
         {
-            wxFAIL_MSG( _T("Metal Style cannot be changed after creation") );
-        }        
+            wxFAIL_MSG( wxT("Metal Style cannot be changed after creation") );
+        }
     }
 }
-    
-bool wxNonOwnedWindowCocoaImpl::SetBackgroundStyle(wxBackgroundStyle WXUNUSED(style))
+
+void wxNonOwnedWindowCocoaImpl::SetWindowStyleFlag( long style )
 {
+    if (m_macWindow)
+    {
+        CGWindowLevel level = kCGNormalWindowLevel;
+        
+        if (style & wxSTAY_ON_TOP)
+            level = kCGUtilityWindowLevel;
+        else if (( style & wxFRAME_FLOAT_ON_PARENT ) || ( style & wxFRAME_TOOL_WINDOW ))
+            level = kCGFloatingWindowLevel;
+        
+        [m_macWindow setLevel: level];
+    }
+}
+
+bool wxNonOwnedWindowCocoaImpl::SetBackgroundStyle(wxBackgroundStyle style)
+{
+    if ( style == wxBG_STYLE_TRANSPARENT )
+    {
+        [m_macWindow setOpaque:NO];
+        [m_macWindow setBackgroundColor:[NSColor clearColor]];
+    }
+
     return true;
 }
-    
+
 bool wxNonOwnedWindowCocoaImpl::CanSetTransparent()
 {
     return true;
@@ -548,8 +663,8 @@ void wxNonOwnedWindowCocoaImpl::GetPosition( int &x, int &y ) const
 void wxNonOwnedWindowCocoaImpl::GetSize( int &width, int &height ) const
 {
     NSRect rect = [m_macWindow frame];
-    width = rect.size.width;
-    height = rect.size.height;
+    width = (int)rect.size.width;
+    height = (int)rect.size.height;
 }
 
 void wxNonOwnedWindowCocoaImpl::GetContentArea( int& left, int &top, int &width, int &height ) const
@@ -557,32 +672,47 @@ void wxNonOwnedWindowCocoaImpl::GetContentArea( int& left, int &top, int &width,
     NSRect outer = NSMakeRect(100,100,100,100);
     NSRect content = [NSWindow contentRectForFrameRect:outer styleMask:[m_macWindow styleMask] ];
     NSRect rect = [[m_macWindow contentView] frame];
-    left = rect.origin.x;
-    top = rect.origin.y;
-    width = rect.size.width;
-    height = rect.size.height;
-}
-    
-bool wxNonOwnedWindowCocoaImpl::SetShape(const wxRegion& WXUNUSED(region))
-{
-    return false;
+    left = (int)rect.origin.x;
+    top = (int)rect.origin.y;
+    width = (int)rect.size.width;
+    height = (int)rect.size.height;
 }
 
-void wxNonOwnedWindowCocoaImpl::SetTitle( const wxString& title, wxFontEncoding encoding ) 
+bool wxNonOwnedWindowCocoaImpl::SetShape(const wxRegion& WXUNUSED(region))
+{
+    [m_macWindow setOpaque:NO];
+    [m_macWindow setBackgroundColor:[NSColor clearColor]];
+
+    return true;
+}
+
+void wxNonOwnedWindowCocoaImpl::SetTitle( const wxString& title, wxFontEncoding encoding )
 {
     [m_macWindow setTitle:wxCFStringRef( title , encoding ).AsNSString()];
 }
-    
+
 bool wxNonOwnedWindowCocoaImpl::IsMaximized() const
 {
-    return [m_macWindow isZoomed];
+    if (([m_macWindow styleMask] & NSResizableWindowMask) != 0)
+    {
+        return [m_macWindow isZoomed];
+    }
+    else
+    {
+        NSRect rectScreen = [[NSScreen mainScreen] visibleFrame];
+        NSRect rectWindow = [m_macWindow frame];
+        return (rectScreen.origin.x == rectWindow.origin.x &&
+                rectScreen.origin.y == rectWindow.origin.y &&
+                rectScreen.size.width == rectWindow.size.width &&
+                rectScreen.size.height == rectWindow.size.height);
+    }
 }
-    
+
 bool wxNonOwnedWindowCocoaImpl::IsIconized() const
 {
     return [m_macWindow isMiniaturized];
 }
-    
+
 void wxNonOwnedWindowCocoaImpl::Iconize( bool iconize )
 {
     if ( iconize )
@@ -590,12 +720,12 @@ void wxNonOwnedWindowCocoaImpl::Iconize( bool iconize )
     else
         [m_macWindow deminiaturize:nil];
 }
-    
+
 void wxNonOwnedWindowCocoaImpl::Maximize(bool WXUNUSED(maximize))
 {
     [m_macWindow zoom:nil];
 }
-    
+
 
 // http://cocoadevcentral.com/articles/000028.php
 
@@ -609,7 +739,7 @@ bool wxNonOwnedWindowCocoaImpl::IsFullScreen() const
 {
     return m_macFullScreenData != NULL ;
 }
-    
+
 bool wxNonOwnedWindowCocoaImpl::ShowFullScreen(bool show, long WXUNUSED(style))
 {
     if ( show )
@@ -634,12 +764,29 @@ bool wxNonOwnedWindowCocoaImpl::ShowFullScreen(bool show, long WXUNUSED(style))
         delete data ;
         m_macFullScreenData = NULL ;
     }
-    
+
     return true;
 }
 
-void wxNonOwnedWindowCocoaImpl::RequestUserAttention(int WXUNUSED(flags))
+void wxNonOwnedWindowCocoaImpl::RequestUserAttention(int flagsWX)
 {
+    NSRequestUserAttentionType flagsOSX;
+    switch ( flagsWX )
+    {
+        case wxUSER_ATTENTION_INFO:
+            flagsOSX = NSInformationalRequest;
+            break;
+
+        case wxUSER_ATTENTION_ERROR:
+            flagsOSX = NSCriticalRequest;
+            break;
+
+        default:
+            wxFAIL_MSG( "invalid RequestUserAttention() flags" );
+            return;
+    }
+
+    [NSApp requestUserAttention:flagsOSX];
 }
 
 void wxNonOwnedWindowCocoaImpl::ScreenToWindow( int *x, int *y )
@@ -650,7 +797,7 @@ void wxNonOwnedWindowCocoaImpl::ScreenToWindow( int *x, int *y )
     nspt = [[m_macWindow contentView] convertPoint:nspt fromView:nil];
     p = wxFromNSPoint([m_macWindow contentView], nspt);
     if ( x )
-        *x = p.x; 
+        *x = p.x;
     if ( y )
         *y = p.y;
 }
@@ -666,6 +813,28 @@ void wxNonOwnedWindowCocoaImpl::WindowToScreen( int *x, int *y )
         *x = p.x;
     if ( y )
         *y = p.y;
+}
+
+bool wxNonOwnedWindowCocoaImpl::IsActive()
+{
+    return [m_macWindow isKeyWindow];
+}
+
+void wxNonOwnedWindowCocoaImpl::SetModified(bool modified)
+{
+    [m_macWindow setDocumentEdited:modified];
+}
+
+bool wxNonOwnedWindowCocoaImpl::IsModified() const
+{
+    return [m_macWindow isDocumentEdited];
+}
+
+wxNonOwnedWindowImpl* wxNonOwnedWindowImpl::CreateNonOwnedWindow( wxNonOwnedWindow* wxpeer, wxWindow* parent, WXWindow nativeWindow)
+{
+    wxNonOwnedWindowCocoaImpl* now = new wxNonOwnedWindowCocoaImpl( wxpeer );
+    now->Create( parent, nativeWindow );
+    return now;
 }
 
 wxNonOwnedWindowImpl* wxNonOwnedWindowImpl::CreateNonOwnedWindow( wxNonOwnedWindow* wxpeer, wxWindow* parent, const wxPoint& pos, const wxSize& size,

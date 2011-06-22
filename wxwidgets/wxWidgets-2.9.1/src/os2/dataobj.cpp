@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/21/99
-// RCS-ID:      $Id: dataobj.cpp 46254 2007-05-30 22:02:19Z VS $
+// RCS-ID:      $Id$
 // Copyright:   (c) 1999 David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

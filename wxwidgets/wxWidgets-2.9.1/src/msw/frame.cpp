@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: frame.cpp 58478 2009-01-28 09:14:07Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -477,7 +477,7 @@ void wxFrame::AttachMenuBar(wxMenuBar *menubar)
 
             if ( !m_hMenu )
             {
-                wxFAIL_MSG( _T("failed to create menu bar") );
+                wxFAIL_MSG( wxT("failed to create menu bar") );
                 return;
             }
         }
@@ -697,49 +697,23 @@ void wxFrame::PositionToolBar()
                 tx = 0;
         }
 
-        int desiredW = tw;
-        int desiredH = th;
+        int desiredW,
+            desiredH;
 
         if ( toolbar->IsVertical() )
         {
+            desiredW = tw;
             desiredH = height;
         }
         else
         {
             desiredW = width;
+            desiredH = th;
         }
 
-        // use the 'real' MSW position here, don't offset relativly to the
+        // use the 'real' MSW position here, don't offset relatively to the
         // client area origin
-
-        // Optimise such that we don't have to always resize the toolbar
-        // when the frame changes, otherwise we'll get a lot of flicker.
-        bool heightChanging wxDUMMY_INITIALIZE(true);
-        bool widthChanging wxDUMMY_INITIALIZE(true);
-
-        if ( toolbar->IsVertical() )
-        {
-            // It's OK if the current height is greater than what can be shown.
-            heightChanging = (desiredH > th) ;
-            widthChanging = (desiredW != tw) ;
-
-            // The next time around, we may not have to set the size
-            if (heightChanging)
-                desiredH = desiredH + 200;
-        }
-        else
-        {
-            // It's OK if the current width is greater than what can be shown.
-            widthChanging = (desiredW > tw) ;
-            heightChanging = (desiredH != th) ;
-
-            // The next time around, we may not have to set the size
-            if (widthChanging)
-                desiredW = desiredW + 200;
-        }
-
-        if (tx != 0 || ty != 0 || widthChanging || heightChanging)
-            toolbar->SetSize(x, y, desiredW, desiredH, wxSIZE_NO_ADJUSTMENTS);
+        toolbar->SetSize(x, y, desiredW, desiredH, wxSIZE_NO_ADJUSTMENTS);
 
     }
 #endif // !WINCE_WITH_COMMANDBAR
@@ -893,6 +867,12 @@ bool wxFrame::HandleSize(int WXUNUSED(x), int WXUNUSED(y), WXUINT id)
 bool wxFrame::HandleCommand(WXWORD id, WXWORD cmd, WXHWND control)
 {
 #if wxUSE_MENUS
+
+#if defined(WINCE_WITHOUT_COMMANDBAR)
+    if (GetToolBar() && GetToolBar()->FindById(id))
+        return GetToolBar()->MSWCommand(cmd, id);
+#endif
+
     // we only need to handle the menu and accelerator commands from the items
     // of our menu bar, base wxWindow class already handles the rest
     if ( !control && (cmd == 0 /* menu */ || cmd == 1 /* accel */) )
@@ -913,35 +893,32 @@ bool wxFrame::HandleCommand(WXWORD id, WXWORD cmd, WXHWND control)
 
 #if wxUSE_MENUS
 
-bool wxFrame::HandleMenuSelect(WXWORD nItem, WXWORD flags, WXHMENU hMenu)
+bool
+wxFrame::HandleMenuSelect(WXWORD nItem, WXWORD flags, WXHMENU WXUNUSED(hMenu))
 {
-    int item;
-    if ( flags == 0xFFFF && hMenu == 0 )
-    {
-        // menu was removed from screen
-        item = -1;
-    }
-#ifndef __WXMICROWIN__
-    else if ( !(flags & MF_POPUP) && !(flags & MF_SEPARATOR) )
-    {
-        item = nItem;
-    }
-#endif
-    else
-    {
-        // don't give hints for separators (doesn't make sense) nor for the
-        // items opening popup menus (they don't have them anyhow) but do clear
-        // the status line - otherwise, we would be left with the help message
-        // for the previous item which doesn't apply any more
-        DoGiveHelp(wxEmptyString, true);
+    // sign extend to int from unsigned short we get from Windows
+    int item = (signed short)nItem;
 
-        return false;
-    }
+    // WM_MENUSELECT is generated for both normal items and menus, including
+    // the top level menus of the menu bar, which can't be represented using
+    // any valid identifier in wxMenuEvent so use an otherwise unused value for
+    // them
+    if ( flags & (MF_POPUP | MF_SEPARATOR) )
+        item = wxID_NONE;
 
     wxMenuEvent event(wxEVT_MENU_HIGHLIGHT, item);
     event.SetEventObject(this);
 
-    return HandleWindowEvent(event);
+    if ( HandleWindowEvent(event) )
+        return true;
+
+    // by default, i.e. if the event wasn't handled above, clear the status bar
+    // text when an item which can't have any associated help string in wx API
+    // is selected
+    if ( item == wxID_NONE )
+        DoGiveHelp(wxEmptyString, true);
+
+    return false;
 }
 
 bool wxFrame::HandleMenuLoop(const wxEventType& evtType, WXWORD isPopup)

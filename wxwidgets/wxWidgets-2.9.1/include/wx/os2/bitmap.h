@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     11/28/99
-// RCS-ID:      $Id: bitmap.h 59526 2009-03-14 13:57:51Z FM $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -165,7 +165,7 @@ public:
                        );
     virtual bool Create(const wxSize& sz, int depth = wxBITMAP_SCREEN_DEPTH)
         { return Create(sz.GetWidth(), sz.GetHeight(), depth); }
-        
+
     virtual bool Create( const void* pData
                         ,wxBitmapType lType
                         ,int   nWidth

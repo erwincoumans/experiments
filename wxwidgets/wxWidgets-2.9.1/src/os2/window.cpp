@@ -4,7 +4,7 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/12/99
-// RCS-ID:      $Id: window.cpp 58246 2009-01-20 18:33:33Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -352,7 +352,9 @@ wxWindowOS2::~wxWindowOS2()
     if (m_hWnd)
     {
         if(!::WinDestroyWindow(GetHWND()))
+        {
             wxLogLastError(wxT("DestroyWindow"));
+        }
         //
         // remove hWnd <-> wxWindow association
         //
@@ -384,7 +386,7 @@ bool wxWindowOS2::Create( wxWindow*       pParent,
     // static box
     //
     wxASSERT_MSG( !wxDynamicCast(pParent, wxStaticBox),
-                  _T("wxStaticBox can't be used as a window parent!") );
+                  wxT("wxStaticBox can't be used as a window parent!") );
 #endif // wxUSE_STATBOX
 
      // Ensure groupbox backgrounds are painted
@@ -454,7 +456,7 @@ bool wxWindowOS2::Create( wxWindow*       pParent,
 void wxWindowOS2::SetFocus()
 {
     HWND                            hWnd = GetHwnd();
-    wxCHECK_RET( hWnd, _T("can't set focus to invalid window") );
+    wxCHECK_RET( hWnd, wxT("can't set focus to invalid window") );
 
     if (hWnd)
         ::WinSetFocus(HWND_DESKTOP, hWnd);
@@ -1661,12 +1663,12 @@ int wxWindowOS2::GetCharWidth() const
     return(vFontMetrics.lAveCharWidth);
 } // end of wxWindowOS2::GetCharWidth
 
-void wxWindowOS2::GetTextExtent( const wxString& rString,
-                                 int* pX,
-                                 int* pY,
-                                 int* pDescent,
-                                 int* pExternalLeading,
-                                 const wxFont* WXUNUSED(pTheFont) ) const
+void wxWindowOS2::DoGetTextExtent( const wxString& rString,
+                                   int* pX,
+                                   int* pY,
+                                   int* pDescent,
+                                   int* pExternalLeading,
+                                   const wxFont* WXUNUSED(pTheFont) ) const
 {
     POINTL      avPoint[TXTBOX_COUNT];
     POINTL      vPtMin;
@@ -1750,7 +1752,7 @@ void wxWindowOS2::GetTextExtent( const wxString& rString,
             *pExternalLeading = 0;
     }
     ::WinReleasePS(hPS);
-} // end of wxWindow::GetTextExtent
+} // end of wxWindow::DoGetTextExtent
 
 bool wxWindowOS2::IsMouseInWindow() const
 {
@@ -1786,7 +1788,6 @@ bool wxWindowOS2::DoPopupMenu( wxMenu* pMenu, int nX, int nY )
     bool bIsWaiting = true;
     int nHeight;
 
-    pMenu->SetInvokingWindow(this);
     pMenu->UpdateUI();
 
     if ( nX == -1 && nY == -1 )
@@ -1822,7 +1823,6 @@ bool wxWindowOS2::DoPopupMenu( wxMenu* pMenu, int nX, int nY )
         ::WinDispatchMsg(vHabmain, (PQMSG)&vMsg);
     }
 
-    pMenu->SetInvokingWindow(NULL);
     return true;
 } // end of wxWindowOS2::DoPopupMenu
 #endif // wxUSE_MENUS_NATIVE
@@ -2853,7 +2853,7 @@ void wxAssociateWinWithHandle(
     {
         wxString  Newstr(pWin->GetClassInfo()->GetClassName());
         wxString Oldstr(pOldWin->GetClassInfo()->GetClassName());
-        wxLogError( _T("Bug! New window of class %s has same HWND %X as old window of class %s"),
+        wxLogError( wxT("Bug! New window of class %s has same HWND %X as old window of class %s"),
                     Newstr.c_str(),
                     (int)hWnd,
                     Oldstr.c_str()
@@ -2999,7 +2999,7 @@ bool wxWindowOS2::OS2Create( PSZ            zClass,
     {
         vError = ::WinGetLastError(vHabmain);
         sError = wxPMErrorToStr(vError);
-        wxLogError(_T("Error creating frame. Error: %s\n"), sError.c_str());
+        wxLogError(wxT("Error creating frame. Error: %s\n"), sError.c_str());
         return false;
     }
     SetSize( nX
@@ -3038,11 +3038,7 @@ bool wxWindowOS2::HandleDestroy()
     // Delete our drop target if we've got one
     //
 #if wxUSE_DRAG_AND_DROP
-    if (m_dropTarget != NULL)
-    {
-        delete m_dropTarget;
-        m_dropTarget = NULL;
-    }
+    wxDELETE(m_dropTarget);
 #endif // wxUSE_DRAG_AND_DROP
 
     //
@@ -3222,7 +3218,7 @@ bool wxWindowOS2::OS2OnDrawItem( int vId,
                                           ,pMeasureStruct->rclItem.yTop - pMeasureStruct->rclItem.yBottom
                                          );
 
-	wxPMDCImpl *impl = (wxPMDCImpl*) vDc.GetImpl();
+        wxPMDCImpl *impl = (wxPMDCImpl*) vDc.GetImpl();
         impl->SetHDC( hDC, false );
         impl->SetHPS( pMeasureStruct->hps );
         //
@@ -3238,7 +3234,7 @@ bool wxWindowOS2::OS2OnDrawItem( int vId,
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Unable to set current color table (1). Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Unable to set current color table (1). Error: %s\n"), sError.c_str());
         }
         //
         // Set the color table to RGB mode
@@ -3253,7 +3249,7 @@ bool wxWindowOS2::OS2OnDrawItem( int vId,
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Unable to set current color table (2). Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Unable to set current color table (2). Error: %s\n"), sError.c_str());
         }
 
         wxCHECK( pMenuItem->IsKindOf(CLASSINFO(wxMenuItem)), FALSE );

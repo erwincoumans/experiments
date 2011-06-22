@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: odcombo.h 56795 2008-11-16 18:20:21Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -80,6 +80,7 @@ public:
     // required virtuals
     virtual void Init();
     virtual bool Create(wxWindow* parent);
+    virtual void SetFocus();
     virtual wxWindow *GetControl() { return this; }
     virtual void SetStringValue( const wxString& value );
     virtual wxString GetStringValue() const;
@@ -89,6 +90,7 @@ public:
     virtual wxSize GetAdjustedSize( int minWidth, int prefHeight, int maxHeight );
     virtual void PaintComboControl( wxDC& dc, const wxRect& rect );
     virtual void OnComboKeyEvent( wxKeyEvent& event );
+    virtual void OnComboCharEvent( wxKeyEvent& event );
     virtual void OnComboDoubleClick();
     virtual bool LazyCreate();
 
@@ -117,8 +119,8 @@ public:
 
 protected:
 
-    // Called by OnComboDoubleClick and OnComboKeyEvent
-    bool HandleKey( int keycode, bool saturate, wxChar unicode = 0 );
+    // Called by OnComboDoubleClick and OnCombo{Key,Char}Event
+    bool HandleKey( int keycode, bool saturate, wxChar keychar = 0 );
 
     // sends combobox select event from the parent combo control
     void SendComboBoxEvent( int selection );
@@ -164,6 +166,7 @@ protected:
     void OnMouseMove(wxMouseEvent& event);
     void OnMouseWheel(wxMouseEvent& event);
     void OnKey(wxKeyEvent& event);
+    void OnChar(wxKeyEvent& event);
     void OnLeftClick(wxMouseEvent& event);
 
     // Return the widest item width (recalculating it if necessary)

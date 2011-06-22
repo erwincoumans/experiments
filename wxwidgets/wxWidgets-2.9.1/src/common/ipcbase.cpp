@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: ipcbase.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ wxConnectionBase::wxConnectionBase(const wxConnectionBase& copy)
 
 {
   // copy constructor would require ref-counted pointer to buffer
-  wxFAIL_MSG( _T("Copy constructor of wxConnectionBase not implemented") );
+  wxFAIL_MSG( wxT("Copy constructor of wxConnectionBase not implemented") );
 }
 
 

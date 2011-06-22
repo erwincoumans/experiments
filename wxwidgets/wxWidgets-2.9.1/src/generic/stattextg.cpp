@@ -3,7 +3,7 @@
 // Purpose:     wxGenericStaticText
 // Author:      Marcin Wojdyr
 // Created:     2008-06-26
-// RCS-ID:      $Id: stattextg.cpp 56243 2008-10-12 14:12:57Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   Marcin Wojdyr
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -81,14 +81,6 @@ wxSize wxGenericStaticText::DoGetBestClientSize() const
     dc.GetMultiLineTextExtent(GetLabel(), &width, &height);
     return wxSize(width, height);
 }
-
-wxSize wxGenericStaticText::DoGetBestSize() const
-{
-    wxSize ret = DoGetBestClientSize();
-    CacheBestSize(ret);
-    return ret;
-}
-
 
 void wxGenericStaticText::SetLabel(const wxString& label)
 {

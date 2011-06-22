@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        wx/mac/nonownedwnd.h
+// Name:        wx/osx/nonownedwnd.h
 // Purpose:     declares wxNonOwnedWindow class
 // Author:      Stefan Csomor
-// Modified by: 
+// Modified by:
 // Created:     2008-03-24
 // RCS-ID:      $Id: nonownedwnd.h 46993 2007-06-28 08:46:04Z VS $
 // Copyright:   (c) 2008 Stefan Csomor
@@ -15,7 +15,7 @@
 #include "wx/window.h"
 
 #if wxUSE_SYSTEM_OPTIONS
-    #define wxMAC_WINDOW_PLAIN_TRANSITION _T("mac.window-plain-transition")
+    #define wxMAC_WINDOW_PLAIN_TRANSITION wxT("mac.window-plain-transition")
 #endif
 
 //-----------------------------------------------------------------------------
@@ -55,6 +55,8 @@ public:
                 long style = 0,
                 const wxString& name = wxPanelNameStr);
 
+    bool Create(wxWindow *parent, WXWindow nativeWindow);
+    
     virtual ~wxNonOwnedWindow();
 
     virtual wxPoint GetClientAreaOrigin() const;
@@ -65,7 +67,7 @@ public:
     virtual bool CanSetTransparent();
 
     virtual bool SetBackgroundStyle(wxBackgroundStyle style);
-    
+
     virtual void Update();
 
     WXWindow GetWXWindow() const ;
@@ -75,35 +77,38 @@ public:
     // --------------------------
 
     virtual bool DoSetShape(const wxRegion& region);
+    const wxRegion& GetShape() const { return m_shape; }
 
     // activation hooks only necessary for MDI Implementation
     static void MacDelayedDeactivation(long timestamp);
     virtual void MacActivate( long timestamp , bool inIsActivating ) ;
 
+    virtual void SetWindowStyleFlag(long flags);
 
     virtual void Raise();
     virtual void Lower();
     virtual bool Show( bool show = true );
 
-    virtual bool ShowWithEffect(wxShowEffect effect,
-                                unsigned timeout = 0) ;
-
-    virtual bool HideWithEffect(wxShowEffect effect,
-                                unsigned timeout = 0) ;
-
     virtual void SetExtraStyle(long exStyle) ;
 
     virtual bool SetBackgroundColour( const wxColour &colour );
-    
+
     wxNonOwnedWindowImpl* GetNonOwnedPeer() const { return m_nowpeer; }
-    
+
+#if wxOSX_USE_COCOA_OR_IPHONE
+    // override the base class method to return an NSWindow instead of NSView
+    virtual void *OSXGetViewOrWindow() const { return GetWXWindow(); }
+#endif // Cocoa
+
     // osx specific event handling common for all osx-ports
-    
+
     virtual void HandleActivated( double timestampsec, bool didActivate );
     virtual void HandleResized( double timestampsec );
     virtual void HandleMoved( double timestampsec );
     virtual void HandleResizing( double timestampsec, wxRect* rect );
-        
+    
+    virtual bool Destroy();
+    
 protected:
     // common part of all ctors
     void Init();
@@ -113,12 +118,20 @@ protected:
     virtual void DoMoveWindow(int x, int y, int width, int height);
     virtual void DoGetClientSize(int *width, int *height) const;
 
+    virtual bool OSXShowWithEffect(bool show,
+                                   wxShowEffect effect,
+                                   unsigned timeout);
+    
+    virtual void WillBeDestroyed();
+
     wxNonOwnedWindowImpl* m_nowpeer ;
 
 //    wxWindowMac* m_macFocus ;
 
     static wxNonOwnedWindow *s_macDeactivateWindow;
+    
 private :
+    wxRegion m_shape;
 };
 
 // list of all frames and modeless dialogs

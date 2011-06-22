@@ -1,4 +1,4 @@
-/* $Id: tiff-rgb.c 47655 2007-07-22 15:36:51Z VZ $ */
+/* $Id$ */
 
 /*
  * tiff-rgb.c -- create a 24-bit Class R (rgb) TIFF file

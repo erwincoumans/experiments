@@ -3,7 +3,7 @@
 // Purpose:     wxGtkFileCtrl Implementation
 // Author:      Diaa M. Sami
 // Created:     2007-08-10
-// RCS-ID:      $Id: filectrl.cpp 55541 2008-09-11 06:53:02Z JJ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Diaa M. Sami
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,6 +26,7 @@
 #include "wx/gtk/private.h"
 #include "wx/filedlg.h"
 #include "wx/filename.h"
+#include "wx/scopeguard.h"
 #include "wx/tokenzr.h"
 
 //-----------------------------------------------------------------------------
@@ -47,7 +48,7 @@ wxString wxGtkFileChooser::GetPath() const
 
     wxString string;
     if (str.c_str() != NULL)
-        string = wxConvFileName->cMB2WX(str);
+        string = wxString::FromUTF8(str);
     return string;
 }
 
@@ -70,7 +71,7 @@ void wxGtkFileChooser::GetPaths( wxArrayString& paths ) const
         GSList *gpaths = gpathsi;
         while ( gpathsi )
         {
-            wxString file( wxConvFileName->cMB2WX( ( gchar* ) gpathsi->data ) );
+            wxString file(wxString::FromUTF8(static_cast<gchar *>(gpathsi->data)));
             paths.Add( file );
             g_free( gpathsi->data );
             gpathsi = gpathsi->next;
@@ -84,24 +85,21 @@ void wxGtkFileChooser::GetPaths( wxArrayString& paths ) const
 
 bool wxGtkFileChooser::SetPath( const wxString& path )
 {
-    if ( path.empty() ) return true;
+    if ( path.empty() )
+        return true;
 
-    return gtk_file_chooser_set_filename( m_widget,
-                                          wxConvFileName->cWX2MB( path.c_str() ) );
+    return gtk_file_chooser_set_filename( m_widget, path.utf8_str() );
 }
 
 bool wxGtkFileChooser::SetDirectory( const wxString& dir )
 {
-    const gboolean b =
-        gtk_file_chooser_set_current_folder( m_widget,
-                                             wxConvFileName->cWX2MB( dir.c_str() ) );
-    return b != 0;
+    return gtk_file_chooser_set_current_folder( m_widget, dir.utf8_str() ) != 0;
 }
 
 wxString wxGtkFileChooser::GetDirectory() const
 {
     const wxGtkString str( gtk_file_chooser_get_current_folder( m_widget ) );
-    return wxString( str, *wxConvFileName );
+    return wxString::FromUTF8(str);
 }
 
 wxString wxGtkFileChooser::GetFilename() const
@@ -129,6 +127,9 @@ void wxGtkFileChooser::SetWildcard( const wxString& wildCard )
         GSList* ifilters = gtk_file_chooser_list_filters( chooser );
         GSList* filters = ifilters;
 
+        m_ignoreNextFilterEvent = true;
+        wxON_BLOCK_EXIT_SET(m_ignoreNextFilterEvent, false);
+
         while ( ifilters )
         {
             gtk_file_chooser_remove_filter( chooser, GTK_FILE_FILTER( ifilters->data ) );
@@ -146,13 +147,13 @@ void wxGtkFileChooser::SetWildcard( const wxString& wildCard )
                 gtk_file_filter_set_name( filter, wxGTK_CONV_SYS( wildDescriptions[n] ) );
 
                 wxStringTokenizer exttok( wildFilters[n], wxT( ";" ) );
-                
+
                 int n1 = 1;
                 while ( exttok.HasMoreTokens() )
                 {
                     wxString token = exttok.GetNextToken();
                     gtk_file_filter_add_pattern( filter, wxGTK_CONV_SYS( token ) );
-                    
+
                     if (n1 == 1)
                         m_wildcards.Add( token ); // Only add first pattern to list, used later when saving
                     n1++;
@@ -202,6 +203,11 @@ int wxGtkFileChooser::GetFilterIndex() const
     }
     else
         return index;
+}
+
+bool wxGtkFileChooser::HasFilterChoice() const
+{
+    return gtk_file_chooser_get_filter( m_widget ) != NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -260,6 +266,21 @@ extern "C"
     }
 }
 
+extern "C"
+{
+    static void
+    gtkfilechooserwidget_notify_callback( GObject *WXUNUSED( gobject ), GParamSpec *arg1, wxGtkFileCtrl *fileCtrl )
+    {
+        const char *name = g_param_spec_get_name (arg1);
+        if ( strcmp( name, "filter" ) == 0 &&
+             fileCtrl->HasFilterChoice() &&
+             !fileCtrl->GTKShouldIgnoreNextFilterEvent() )
+        {
+            GenerateFilterChangedEvent( fileCtrl, fileCtrl );
+        }
+    }
+}
+
 // wxGtkFileCtrl implementation
 
 IMPLEMENT_DYNAMIC_CLASS( wxGtkFileCtrl, wxControl )
@@ -312,6 +333,10 @@ bool wxGtkFileCtrl::Create( wxWindow *parent,
 
     g_signal_connect ( m_fcWidget, "selection-changed",
                        G_CALLBACK ( gtkfilechooserwidget_selection_changed_callback ),
+                       this );
+
+    g_signal_connect ( m_fcWidget, "notify",
+                       G_CALLBACK ( gtkfilechooserwidget_notify_callback ),
                        this );
 
     m_fc.SetWidget( m_fcWidget );

@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: msgdlg.cpp 55475 2008-09-05 14:39:36Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,30 +40,47 @@ int wxMessageDialog::ShowModal()
 
     const long style = GetMessageDialogStyle();
 
-    wxASSERT_MSG( (style & 0x3F) != wxYES, wxT("this style is not supported on Mac") );
+    wxASSERT_MSG( (style & 0x3F) != wxYES,
+        "this style is not supported on Mac" );
 
     AlertType alertType = kAlertPlainAlert;
-    if (style & wxICON_EXCLAMATION)
-        alertType = kAlertCautionAlert;
-    else if (style & wxICON_HAND)
-        alertType = kAlertStopAlert;
-    else if (style & wxICON_INFORMATION)
-        alertType = kAlertNoteAlert;
-    else if (style & wxICON_QUESTION)
-        alertType = kAlertNoteAlert;
 
+    switch ( GetEffectiveIcon() )
+    {
+        case wxICON_ERROR:
+            alertType = kAlertStopAlert;
+            break;
 
-    // work out what to display
-    // if the extended text is empty then we use the caption as the title
-    // and the message as the text (for backwards compatibility)
-    // but if the extended message is not empty then we use the message as the title
-    // and the extended message as the text because that makes more sense
+        case wxICON_WARNING:
+            alertType = kAlertCautionAlert;
+            break;
 
+        case wxICON_QUESTION:
+        case wxICON_INFORMATION:
+            alertType = kAlertNoteAlert;
+            break;
+    }
+
+    // (the standard alert has two slots [title, text]
+    //  for the three wxStrings [caption, message, extended message])
+    //
+    // if the extended text is empty we use the caption and
+    // the message (for backwards compatibility)
+    //
+    // if the extended text is not empty we ignore the caption
+    // and use the message and the extended message
+    
+    
     wxString msgtitle,msgtext;
     if(m_extendedMessage.IsEmpty())
     {
-        msgtitle = m_caption;
-        msgtext  = m_message;
+        if ( m_caption.IsEmpty() )
+            msgtitle = m_message;
+        else
+        {
+            msgtitle = m_caption;
+            msgtext  = m_message;
+        }
     }
     else
     {
@@ -141,7 +158,7 @@ int wxMessageDialog::ShowModal()
         wxCFStringRef cfCancelString( GetCancelLabel().c_str(), GetFont().GetEncoding() );
 
         wxCFStringRef cfTitle( msgtitle, GetFont().GetEncoding() );
-        wxCFStringRef cfText( msgtext, GetFont().GetEncoding() );
+        wxCFStringRef cfText = msgtext.IsEmpty() ? NULL : wxCFStringRef( msgtext, GetFont().GetEncoding() );
 
         param.movable = true;
         param.flags = 0;
@@ -199,7 +216,9 @@ int wxMessageDialog::ShowModal()
         {
             DialogRef alertRef;
             CreateStandardAlert( alertType, cfTitle, cfText, &param, &alertRef );
+            wxDialog::OSXBeginModalDialog();
             RunStandardAlert( alertRef, NULL, &result );
+            wxDialog::OSXEndModalDialog();
         }
         else
         {
@@ -247,6 +266,8 @@ int wxMessageDialog::ShowModal()
             }
         }
     }
+    
+    SetReturnCode(resultbutton);
 
     return resultbutton;
 }

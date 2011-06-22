@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Modified by:
 // Created:     17/08/98
-// RCS-ID:      $Id: glcanvas.cpp 56644 2008-11-02 02:39:52Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -205,7 +205,7 @@ bool wxGLCanvas::Create(wxWindow *parent,
                         const int *attribList,
                         const wxPalette& WXUNUSED_UNLESS_DEBUG(palette))
 {
-    wxASSERT_MSG( !palette.IsOk(), _T("palettes not supported") );
+    wxASSERT_MSG( !palette.IsOk(), wxT("palettes not supported") );
 
     m_exposed = false;
     m_noExpose = true;
@@ -247,7 +247,7 @@ bool wxGLCanvas::Create(wxWindow *parent,
 
 Window wxGLCanvas::GetXWindow() const
 {
-    GdkWindow *window = m_wxwindow->window;
+    GdkWindow* window = GTKGetDrawingWindow();
     return window ? GDK_WINDOW_XWINDOW(window) : 0;
 }
 

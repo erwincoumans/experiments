@@ -3,7 +3,7 @@
 // Purpose:     wxBitmapComboBox
 // Author:      Jaakko Salli
 // Created:     2008-04-06
-// RCS-ID:      $Id: bmpcbox.h 58225 2009-01-19 13:30:34Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2008 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -120,6 +120,7 @@ protected:
     virtual void DoDeleteOneItem(unsigned int n);
 
     virtual bool OnAddBitmap(const wxBitmap& bitmap);
+    virtual wxSize DoGetBestSize() const;
     void RecreateControl();
 
 private:

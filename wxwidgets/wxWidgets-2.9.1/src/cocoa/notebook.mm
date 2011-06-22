@@ -4,9 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/04/08
-// RCS-ID:      $Id: notebook.mm 55079 2008-08-13 14:56:42Z PC $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2004 David Elliott
-// Licence:   	wxWidgets licence
+// Licence:   	wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

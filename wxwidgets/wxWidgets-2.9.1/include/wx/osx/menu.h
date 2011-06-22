@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     1998-01-01
-// RCS-ID:      $Id: menu.h 58758 2009-02-08 11:49:46Z SC $
+// RCS-ID:      $Id$
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -41,10 +41,6 @@ public:
 
     bool ProcessCommand(wxCommandEvent& event);
 
-    // semi-private accessors
-
-    // get the window which contains this menu
-    wxWindow *GetWindow() const;
     // get the menu handle
     WXHMENU GetHMenu() const ;
 
@@ -58,20 +54,20 @@ public:
     void HandleMenuClosed();
 
     wxMenuImpl* GetPeer() { return m_peer; }
-    
+
     // make sure we can veto
     void SetAllowRearrange( bool allow );
     bool AllowRearrange() const { return m_allowRearrange; }
-    
+
     // if a menu is used purely for internal implementation reasons (eg wxChoice)
     // we don't want native menu events being triggered
     void SetNoEventsMode( bool noEvents );
     bool GetNoEventsMode() const { return m_noEventsMode; }
 protected:
     // hide special menu items like exit, preferences etc
-    // that are expected in the app menu  
+    // that are expected in the app menu
     void DoRearrange() ;
-    
+
     bool DoHandleMenuEvent( wxEvent& evt );
     virtual wxMenuItem* DoAppend(wxMenuItem *item);
     virtual wxMenuItem* DoInsert(size_t pos, wxMenuItem *item);
@@ -92,13 +88,13 @@ private:
 
     // in this menu rearranging of menu items (esp hiding) is allowed
     bool m_allowRearrange;
-    
+
     // don't trigger native events
     bool m_noEventsMode;
-    
+
     // the position of the first item in the current radio group or -1
     int m_startRadioGroup;
-    
+
     wxMenuImpl* m_peer;
 
     DECLARE_DYNAMIC_CLASS(wxMenu)
@@ -137,7 +133,7 @@ public:
     virtual void EnableTop( size_t pos, bool flag );
     virtual void SetMenuLabel( size_t pos, const wxString& label );
     virtual wxString GetMenuLabel( size_t pos ) const;
-    virtual bool Enable( bool enable = TRUE );
+    virtual bool Enable( bool enable = true );
     // for virtual function hiding
     virtual void Enable( int itemid, bool enable )
     {
@@ -155,15 +151,9 @@ public:
         // attach to a frame
     void Attach(wxFrame *frame);
 
-        // clear the invoking window for all menus and submenus
-    void UnsetInvokingWindow() ;
-
-        // set the invoking window for all menus and submenus
-    void SetInvokingWindow( wxFrame* frame ) ;
-
     // if the menubar is modified, the display is not updated automatically,
     // call this function to update it (m_menuBarFrame should be !NULL)
-    void Refresh(bool eraseBackground = TRUE, const wxRect *rect = (const wxRect *) NULL);
+    void Refresh(bool eraseBackground = true, const wxRect *rect = NULL);
 
     static void SetAutoWindowMenu( bool enable ) { s_macAutoWindowMenu = enable ; }
     static bool GetAutoWindowMenu() { return s_macAutoWindowMenu ; }
@@ -178,7 +168,6 @@ public:
 protected:
     // common part of all ctors
     void Init();
-    wxWindow        *m_invokingWindow;
 
     wxArrayString   m_titles;
     static bool     s_macAutoWindowMenu ;
@@ -187,7 +176,7 @@ protected:
 private:
     static wxMenuBar*            s_macInstalledMenuBar ;
     static wxMenuBar*            s_macCommonMenuBar ;
-  
+
     wxMenu* m_rootMenu;
     wxMenu* m_appleMenu;
 

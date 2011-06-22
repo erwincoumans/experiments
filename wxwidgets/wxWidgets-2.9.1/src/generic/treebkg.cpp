@@ -4,7 +4,7 @@
 // Author:      Evgeniy Tarassov, Vadim Zeitlin
 // Modified by:
 // Created:     2005-09-15
-// RCS-ID:      $Id: treebkg.cpp 58718 2009-02-07 18:59:25Z VZ $
+// RCS-ID:      $Id$
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -217,7 +217,7 @@ bool wxTreebook::DoAddSubPage(wxWindow *page, const wxString& text, bool bSelect
     wxTreeItemId lastNodeId = tree->GetLastChild(rootId);
 
     wxCHECK_MSG( lastNodeId.IsOk(), false,
-                        _T("Can't insert sub page when there are no pages") );
+                        wxT("Can't insert sub page when there are no pages") );
 
     // now calculate its position (should we save/update it too?)
     size_t newPos = tree->GetCount() -
@@ -554,16 +554,6 @@ bool wxTreebook::SetPageImage(size_t n, int imageId)
     GetTreeCtrl()->SetItemImage(pageId, imageId);
 
     return true;
-}
-
-wxSize wxTreebook::CalcSizeFromPage(const wxSize& sizePage) const
-{
-    const wxSize sizeTree = GetControllerSize();
-
-    wxSize size = sizePage;
-    size.x += sizeTree.x;
-
-    return size;
 }
 
 int wxTreebook::GetSelection() const
