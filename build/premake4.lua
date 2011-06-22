@@ -27,7 +27,13 @@ solution "0MySolution"
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
-
 	include "../rendering/GLSL_Instancing"
-
 	include "../opencl/basic_initialize"
+
+--	include "../wxwidgets/wxWidgetsGLTest"
+--	include "../wxwidgets/wxWidgets-2.9.0/wxCMake/wxAll"
+	
+	
+	
+	
+	
