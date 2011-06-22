@@ -10,7 +10,8 @@
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
-#include "wxprec.h"
+//#include "wxprec.h"
+#include "wx/wx.h"
 
 #ifdef __BORLANDC__
     #pragma hdrstop

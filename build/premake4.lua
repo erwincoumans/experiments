@@ -24,14 +24,17 @@ solution "0MySolution"
 	location "build"
 	targetdir "bin"
 
---	include "../opencl/opengl_interop"
---	include "../opencl/integration"
---	include "../opencl/primitives/AdlTest"
---	include "../rendering/GLSL_Instancing"
---	include "../opencl/basic_initialize"
+	include "../opencl/opengl_interop"
+	include "../opencl/integration"
+	include "../opencl/primitives/AdlTest"
+	include "../rendering/GLSL_Instancing"
+	include "../opencl/basic_initialize"
 
-	include "../wxwidgets/wxWidgetsGLTest"
-	include "../wxwidgets/wxWidgets-2.9.1/wxCMake/wxAll"
+--	include "../wxwidgets/wxWidgetsGLTest"
+--	include "../wxwidgets/treectrl"
+-- for Visual Studio 2008 you don't need to build wxAll, it is already precompiled
+
+--	include "../wxwidgets/wxWidgets-2.9.1/wxCMake/wxAll"
 	
 	
 	
