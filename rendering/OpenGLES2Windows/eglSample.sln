@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "eglSample", "eglSample.vcxproj", "{F80DA4C6-231A-4CA2-9F40-2D4F41D70B91}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HelloTriangleGLES2", "HelloTriangleGLES2.vcxproj", "{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F80DA4C6-231A-4CA2-9F40-2D4F41D70B91}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F80DA4C6-231A-4CA2-9F40-2D4F41D70B91}.Debug|Win32.Build.0 = Debug|Win32
+		{F80DA4C6-231A-4CA2-9F40-2D4F41D70B91}.Release|Win32.ActiveCfg = Release|Win32
+		{F80DA4C6-231A-4CA2-9F40-2D4F41D70B91}.Release|Win32.Build.0 = Release|Win32
+		{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}.Debug|Win32.ActiveCfg = Debug|Win32
+		{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}.Debug|Win32.Build.0 = Debug|Win32
+		{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}.Release|Win32.ActiveCfg = Release|Win32
+		{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
