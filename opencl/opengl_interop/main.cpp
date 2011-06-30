@@ -916,7 +916,7 @@ void RenderScene(void)
 
 	glFlush();
 	int numInstances = NUM_OBJECTS;
-	int indexCount = sizeof(cube_indices);
+	int indexCount = sizeof(cube_indices)/sizeof(int);
 	int indexOffset = 0;
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
