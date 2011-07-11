@@ -15,26 +15,31 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EGL\egl.h">
+    <ClCompile Include="..\OpenGLES2Windows\esShader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\OpenGLES2Windows\esShapes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\OpenGLES2Windows\esTransform.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\OpenGLES2Windows\esUtil.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\OpenGLES2Windows\esUtil_TGA.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\OpenGLES2Windows\esUtil_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="esUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="esUtil_win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="esUtil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EGL\eglplatform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="hello_triangle.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="libEGL.lib" />
-    <Library Include="libGLESv2.lib" />
   </ItemGroup>
 </Project>

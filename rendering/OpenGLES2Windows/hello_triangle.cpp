@@ -16,6 +16,7 @@
 //    OpenGL ES 2.0 rendering.
 #include <stdlib.h>
 #include "esUtil.h"
+#include <assert.h>
 
 typedef struct
 {
@@ -171,6 +172,9 @@ void Draw ( ESContext *esContext )
 
    glDrawArrays ( GL_TRIANGLES, 0, 3 );
 
+   GLenum err = glGetError();
+   assert(err==GL_NO_ERROR);
+
    eglSwapBuffers ( esContext->eglDisplay, esContext->eglSurface );
 }
 
@@ -183,13 +187,23 @@ int main ( int argc, char *argv[] )
    esInitContext ( &esContext );
    esContext.userData = &userData;
 
-   esCreateWindow ( &esContext, TEXT("Hello Triangle"), 320, 240, ES_WINDOW_RGB );
+ 
+     esCreateWindow ( &esContext, TEXT("Hello Triangle"), 320, 240, ES_WINDOW_RGB );
    
+	GLenum err = glGetError();
+   assert(err==GL_NO_ERROR);
+
    if ( !Init ( &esContext ) )
       return 0;
 
+   err = glGetError();
+   assert(err==GL_NO_ERROR);
+
    esRegisterDrawFunc ( &esContext, Draw );
    
+   	   err = glGetError();
+   assert(err==GL_NO_ERROR);
+
    esMainLoop ( &esContext );
 }
 

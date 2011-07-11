@@ -15,26 +15,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EGL\egl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="esUtil_win.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="esUtil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EGL\eglplatform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="hello_triangle.cpp">
+    <ClCompile Include="Simple_Texture2D.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="libEGL.lib" />
-    <Library Include="libGLESv2.lib" />
   </ItemGroup>
 </Project>

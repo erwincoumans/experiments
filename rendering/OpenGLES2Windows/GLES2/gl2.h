@@ -3,7 +3,7 @@
 
 /* $Revision: 10602 $ on $Date:: 2010-03-04 22:35:34 -0800 #$ */
 
-#include "GLES2/gl2platform.h"
+#include <GLES2/gl2platform.h>
 
 #ifdef __cplusplus
 extern "C" {
