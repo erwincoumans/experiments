@@ -11,23 +11,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\egl_sample_with_headers_fixed\EGL\egl.h" />
-    <ClInclude Include="..\egl_sample_with_headers_fixed\EGL\eglplatform.h" />
-    <ClInclude Include="..\egl_sample_with_headers_fixed\esUtil.h" />
-    <ClInclude Include="..\egl_sample_with_headers_fixed\esUtil_win.h" />
+    <ClInclude Include="EGL\egl.h" />
+    <ClInclude Include="EGL\eglplatform.h" />
+    <ClInclude Include="esUtil.h" />
+    <ClInclude Include="esUtil_win.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esShader.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esShapes.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esTransform.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esUtil.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esUtil_TGA.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\esUtil_win32.c" />
-    <ClCompile Include="..\egl_sample_with_headers_fixed\hello_triangle.cpp" />
+    <ClCompile Include="esShader.c" />
+    <ClCompile Include="esShapes.c" />
+    <ClCompile Include="esTransform.c" />
+    <ClCompile Include="esUtil.c" />
+    <ClCompile Include="esUtil_TGA.c" />
+    <ClCompile Include="esUtil_win32.c" />
+    <ClCompile Include="hello_triangle.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\egl_sample_with_headers_fixed\libEGL.lib" />
-    <Library Include="..\egl_sample_with_headers_fixed\libGLESv2.lib" />
+    <Library Include="libEGL.lib" />
+    <Library Include="libGLESv2.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{277D6AE0-E2B6-4FE1-9426-FA589E7DBF46}</ProjectGuid>
