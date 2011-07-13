@@ -127,7 +127,7 @@ static const char* vertexShader= \
 "		\n"
 "	vec4 axis = vec4(1,1,1,0);\n"
 "	vec4 localcoord = quatRotate3( position.xyz,q);\n"
-"	vec4 vertexPos = ProjectionMatrix * ModelViewMatrix *(instance_position+localcoord);\n"
+"	vec4 vertexPos = ProjectionMatrix  *(instance_position+localcoord);\n"
 "\n"
 "	gl_Position = vertexPos;\n"
 "	\n"
@@ -214,9 +214,8 @@ void	btCreateLookAt(const btVector3& eye, const btVector3& center,const btVector
 {
         btVector3 f = (center - eye).normalized();
         btVector3 u = up.normalized();
-				btVector3 s = (f.cross(u)).normalized();
+		btVector3 s = (f.cross(u)).normalized();
         u = s.cross(f);
-
 
         result[0*4+0] = s.x();
         result[1*4+0] = s.y();
@@ -569,19 +568,19 @@ void updateCamera() {
 	{
 		if (m_glutScreenWidth > m_glutScreenHeight) 
 		{
-			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+		//	glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
 			btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
 		} else 
 		{
-			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+		//	glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
 			btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
 		}
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2], 
+		/*gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2], 
 			m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2], 
 			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
-
+		*/
 		btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,modelviewMatrix);
 	}
 

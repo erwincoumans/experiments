@@ -30,6 +30,8 @@ solution "0MySolution"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
 
+	include "../bullet2"
+
 	include "../physics_effects/base_level"
 	include "../physics_effects/low_level"
 	include "../physics_effects/util"

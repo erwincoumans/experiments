@@ -56,7 +56,7 @@ void WinLoop ( ESContext *esContext );
 //    
 //      TGA loader win32 implementation
 //
-int WinTGALoad ( const char *fileName, char **buffer, int *width, int *height );
+
 
 #ifdef __cplusplus
 }
