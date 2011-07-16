@@ -2,9 +2,9 @@ solution "0MySolution"
 
 	configurations {"Release", "Debug"}
 	configuration "Release"
-		flags { "Optimize", "StaticRuntime", "NoRTTI", "NoExceptions"}
+		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "NoRTTI", "NoExceptions"}
 	configuration "Debug"
-		flags { "Symbols", "StaticRuntime" , "NoRTTI", "NoExceptions"}
+		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"NoRTTI", "NoExceptions"}
 	platforms {"x32", "x64"}
 
 	configuration "x64"		
@@ -24,13 +24,13 @@ solution "0MySolution"
 	location "build"
 	targetdir "bin"
 
+--	if false then
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
 
-	include "../bullet2"
 
 	include "../physics_effects/base_level"
 	include "../physics_effects/low_level"
@@ -42,7 +42,15 @@ solution "0MySolution"
 	include "../physics_effects/sample_api_physics_effects/4_motion_type"
 	include "../physics_effects/sample_api_physics_effects/5_raycast"
 	include "../physics_effects/sample_api_physics_effects/6_joint"
-		
+
+--	end
+
+	include "../bullet2"		
+	include "../dynamics/testbed"
+	include "../dynamics/position_based_dynamics"
+
+
+	include "../dynamics/corotational_fem"
 	
 	
 	

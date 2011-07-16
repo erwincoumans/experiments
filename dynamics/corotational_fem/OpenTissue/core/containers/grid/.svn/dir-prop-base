@@ -1,0 +1,13 @@
+K 15
+bugtraq:message
+V 15
+Issue : %BUGID%
+K 11
+bugtraq:url
+V 58
+http://www.opentissue.org/bugzilla/show_bug.cgi?id=%BUGID%
+K 10
+svn:ignore
+V 11
+Makefile.in
+END

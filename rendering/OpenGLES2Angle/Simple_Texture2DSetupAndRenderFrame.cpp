@@ -189,6 +189,9 @@ bool setupGraphics(int screenWidth, int screenHeight)
       "  gl_FragColor = texture2D( s_texture, v_texCoord );\n"
       "}                                                   \n";
 
+// for wireframe, use white color
+//	  "  gl_FragColor = vec4(1.0,1.0,1.0,1.0);\n"
+
    // Load the shaders and get a linked program object
    programObject = esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
    
@@ -225,7 +228,7 @@ bool setupGraphics(int screenWidth, int screenHeight)
    // Load the texture
    textureId = 0;//CreateSimpleTexture2D ();
 
-   glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
+   glClearColor ( 1.2f, 0.2f, 0.2f, 0.2f );
 
    createWorld();
 
@@ -239,7 +242,8 @@ bool setupGraphics(int screenWidth, int screenHeight)
 void renderFrame() 
 {
 	 
-  
+  glClearColor ( 0.6f, 0.6f, 0.6f, 0.f );
+
    GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f,  // Position 0
                             0.0f,  0.0f,        // TexCoord 0 
                            -0.5f, -0.5f, 0.0f,  // Position 1

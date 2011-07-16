@@ -461,7 +461,10 @@ void GfxObject::render(int positionLoc,int texCoordLoc, int samplerLoc, int mode
 	glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
 
 	glDrawElements(GL_TRIANGLES,m_indices.size(),GL_UNSIGNED_SHORT,&m_indices[0]);
+//	glLineWidth(3.0);
+//	glDrawElements(GL_LINES,m_indices.size(),GL_UNSIGNED_SHORT,&m_indices[0]);
 
+	
 #endif
 
 }

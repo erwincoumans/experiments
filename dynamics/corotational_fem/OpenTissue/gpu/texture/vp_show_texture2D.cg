@@ -1,0 +1,22 @@
+struct appdata
+{
+  float4 position : POSITION;
+  float4 color    : COLOR;
+  float2 texture  : TEXCOORD0;
+};
+
+struct vfconn
+{
+  float4 position : POSITION;
+  float4 color    : COLOR;
+  float2 texture  : TEXCOORD0;
+};
+
+vfconn main(appdata IN)
+{
+  vfconn OUT;
+  OUT.position = IN.position;
+  OUT.texture  = IN.texture;
+  OUT.color    = IN.color;
+  return OUT;
+} // end of main
