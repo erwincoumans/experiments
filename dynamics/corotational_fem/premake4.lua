@@ -9,7 +9,7 @@
 		libdirs {"../../rendering/GlutGlewWindows"}
 
 		links {
---			"bullet2",
+			"gwen",
 			"glut32",
 			"glew32",
 			"opengl32"
@@ -18,11 +18,11 @@
 		includedirs {
 		".",
 		"../../rendering/GlutGlewWindows",
-		"../../bullet2",
+		"../../rendering/Gwen",
 		"../testbed"
 		}
 		
 		files {
-		"application.cpp",
-			"OpenTissue/**.h"
+			"**.cpp",
+			"**.h"
 		}

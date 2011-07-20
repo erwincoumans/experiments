@@ -10,7 +10,9 @@
 		
 	targetdir "../../../build/lib"	
 	includedirs {
-		".",".."
+		".","..",
+		"../../GlutGlewWindows",
+
 	}
 	files {
 		"**.cpp",

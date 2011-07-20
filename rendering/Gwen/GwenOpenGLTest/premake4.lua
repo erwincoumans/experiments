@@ -15,6 +15,7 @@
 	libdirs {"../../GlutGlewWindows"}
 
 	links {
+		"gwen",
 		"glew32",
 		"opengl32"
 	}

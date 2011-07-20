@@ -500,7 +500,7 @@ void Base::DoRender( Gwen::Skin::Base* skin )
 		render->StartClip();
 		
 		//Render myself first
-		Render( skin );
+ 		Render( skin );
 
 		if ( !Children.empty() )
 		{

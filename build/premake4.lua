@@ -1,10 +1,15 @@
 solution "0MySolution"
 
+	-- Multithreaded compiling
+	if _ACTION == "vs2010" or _ACTION=="vs2008" then
+		buildoptions { "/MP"  }
+	end 
+	
 	configurations {"Release", "Debug"}
 	configuration "Release"
-		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "NoRTTI", "NoExceptions"}
+		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "NoRTTI", "NoExceptions", "FloatFast"}
 	configuration "Debug"
-		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"NoRTTI", "NoExceptions"}
+		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"NoRTTI", "NoExceptions","FloatFast"}
 	platforms {"x32", "x64"}
 
 	configuration "x64"		
@@ -54,5 +59,6 @@ solution "0MySolution"
 	
 	
 	
-	
+	include "../rendering/Gwen/Gwen"
+	include "../rendering/Gwen/GwenOpenGLTest"
 	

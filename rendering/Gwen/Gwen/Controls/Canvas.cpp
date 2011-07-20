@@ -33,7 +33,6 @@ void Canvas::RenderCanvas()
 	DoThink();
 
 	Gwen::Renderer::Base* render = m_Skin->GetRender();
-
 	render->Begin();
 
 		RecurseLayout( m_Skin );
@@ -57,7 +56,6 @@ void Canvas::RenderCanvas()
 		render->EndClip();
 
 	render->End();
-
 	ProcessDelayedDeletes();
 
 }

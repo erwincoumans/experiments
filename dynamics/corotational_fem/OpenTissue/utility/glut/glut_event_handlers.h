@@ -55,6 +55,7 @@ namespace OpenTissue
 
       application->setup_model_view_projection();
       application->setup_lights();
+	  application->reshape();
 
       glutPostRedisplay();
     }
@@ -65,6 +66,14 @@ namespace OpenTissue
       glutPostRedisplay();
     }
 
+	void toggleIdle()
+	{
+		  application->idle() = !application->idle();
+        if(application->idle())
+          glutIdleFunc( &idle  );
+        else
+          glutIdleFunc(0);
+	}
     void key( unsigned char k, int /*x*/, int /*y*/ )
     {
       switch (k)
@@ -76,11 +85,7 @@ namespace OpenTissue
         exit(k);
         break;
       case ' ':
-        application->idle() = !application->idle();
-        if(application->idle())
-          glutIdleFunc( &idle  );
-        else
-          glutIdleFunc(0);
+	      toggleIdle();
         //break;  // [micky] No, (some) applications actually want to be notified about this one!!!
       default:
         application->action(k);

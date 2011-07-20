@@ -1,5 +1,5 @@
 
-#include "Gwen/Renderers/OpenGL_DebugFont.h"
+#include "OpenGL_DebugFont.h"
 #include "Gwen/Utility.h"
 #include "Gwen/Font.h"
 #include "Gwen/Texture.h"
@@ -8,6 +8,96 @@
 #include "GL/glew.h"
 
 #include "FontData.h"
+
+	//saved OpenGL settings
+					GLfloat             m_PrevLineWidth;
+					GLint               m_PrevTexEnv;
+					GLint               m_PrevPolygonMode[2];
+					GLint               m_MaxClipPlanes;
+					GLint               m_PrevTexture;
+					GLint               m_PrevArrayBufferARB;
+					GLint               m_PrevElementArrayBufferARB;
+					GLboolean           m_PrevVertexProgramARB;
+					GLboolean           m_PrevFragmentProgramARB;
+					GLuint              m_PrevProgramObjectARB;
+					GLboolean           m_PrevTexture3D;
+					GLboolean           m_PrevActiveTexture1D[32];
+					GLboolean           m_PrevActiveTexture2D[32];
+					GLboolean           m_PrevActiveTexture3D[32];
+					GLint               m_PrevActiveTextureARB;
+					bool                m_SupportTexRect;
+					GLboolean           m_PrevTexRectARB;
+					GLint               m_PrevBlendEquation;
+					GLint               m_PrevBlendEquationRGB;
+					GLint               m_PrevBlendEquationAlpha;
+					GLint               m_PrevBlendSrcRGB;
+					GLint               m_PrevBlendDstRGB;
+					GLint               m_PrevBlendSrcAlpha;
+					GLint               m_PrevBlendDstAlpha;
+					GLint               m_ViewportInit[4];
+					GLfloat             m_ProjMatrixInit[16];
+
+
+				void	restoreOpenGLState()
+			{
+				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, m_PrevTexEnv);
+				glLineWidth(m_PrevLineWidth);
+				glMatrixMode(GL_PROJECTION);
+				glPopMatrix();
+				glMatrixMode(GL_MODELVIEW);
+				glPopMatrix();
+				glMatrixMode(GL_TEXTURE);
+				glPopMatrix();
+				glPopClientAttrib();
+				glPopAttrib();
+
+			}
+
+			void	saveOpenGLState(int screenWidth, int screenHeight)
+			{
+				glPushAttrib(GL_ALL_ATTRIB_BITS);
+				glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+
+				glMatrixMode(GL_TEXTURE);
+				glPushMatrix();
+				glLoadIdentity();
+				glMatrixMode(GL_MODELVIEW);
+				glPushMatrix();
+				glLoadIdentity();
+				glMatrixMode(GL_PROJECTION);
+				glPushMatrix();
+				GLint Vp[4];
+				glGetIntegerv(GL_VIEWPORT, Vp);
+				if (screenWidth>0 && screenHeight>0)
+				{
+					Vp[0] = 0;
+					Vp[1] = 0;
+					Vp[2] = screenWidth-1;
+					Vp[3] = screenHeight-1;
+					glViewport(Vp[0], Vp[1], Vp[2], Vp[3]);
+				}
+				glLoadIdentity();
+				glOrtho(Vp[0], Vp[0]+Vp[2], Vp[1]+Vp[3], Vp[1], -1, 1);
+				glGetIntegerv(GL_VIEWPORT, m_ViewportInit);
+				glGetFloatv(GL_PROJECTION_MATRIX, m_ProjMatrixInit);
+
+				glGetFloatv(GL_LINE_WIDTH, &m_PrevLineWidth);
+			 //   glDisable(GL_POLYGON_STIPPLE);
+				glLineWidth(1);
+
+				glDisable(GL_LINE_SMOOTH);
+			//    glDisable(GL_LINE_STIPPLE);
+				glDisable(GL_CULL_FACE);
+				glDisable(GL_DEPTH_TEST);
+				glDisable(GL_LIGHTING);
+				glEnable(GL_BLEND);
+
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &m_PrevTexEnv);
+				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glDisable(GL_TEXTURE_2D);
+
+			}
 
 
 namespace Gwen
@@ -64,6 +154,10 @@ namespace Gwen
 			FreeTexture( m_pFontTexture );
 			delete m_pFontTexture;
 		}
+
+		
+
+
 
 		void OpenGL_DebugFont::Begin()
 		{

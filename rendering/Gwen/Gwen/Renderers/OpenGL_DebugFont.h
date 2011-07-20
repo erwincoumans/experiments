@@ -10,6 +10,10 @@
 #include "Gwen/Gwen.h"
 #include "Gwen/Renderers/OpenGL.h"
 
+void	restoreOpenGLState();
+void	saveOpenGLState(int screenWidth, int screenHeight);
+
+
 namespace Gwen 
 {
 	namespace Renderer 
@@ -26,6 +30,7 @@ namespace Gwen
 					unsigned char r, g, b, a;
 				};
 
+					
 					static const int	MaxVerts = 1024;
 
 				OpenGL_DebugFont();

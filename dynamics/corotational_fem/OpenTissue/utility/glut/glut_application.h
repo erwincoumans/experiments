@@ -68,8 +68,8 @@ namespace OpenTissue
         , m_aspect(1.0)
         , m_z_near(0.1)
         , m_z_far(700.0)
-        , m_width(1024)
-        , m_height(768)
+        , m_width(640)
+        , m_height(480)
         , m_main_window()
         , m_idle_on(false)
       {}
@@ -85,6 +85,9 @@ namespace OpenTissue
       virtual void special_action(int choice)=0;
 
       virtual void reshape(){};
+
+	  ///range 0..1
+	  void	scaleYoungModulus(float scaling);
       
       virtual void init_right_click_menu(int main_menu, void menu(int entry))=0;
       
