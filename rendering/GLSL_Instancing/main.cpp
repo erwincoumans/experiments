@@ -127,7 +127,7 @@ static const char* vertexShader= \
 "		\n"
 "	vec4 axis = vec4(1,1,1,0);\n"
 "	vec4 localcoord = quatRotate3( position.xyz,q);\n"
-"	vec4 vertexPos = ProjectionMatrix  *(instance_position+localcoord);\n"
+"	vec4 vertexPos = ProjectionMatrix *ModelViewMatrix *(instance_position+localcoord);\n"
 "\n"
 "	gl_Position = vertexPos;\n"
 "	\n"
