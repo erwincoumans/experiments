@@ -9,7 +9,6 @@
 //
 #include <OpenTissue/configuration.h>
 
-#include <OpenTissue/core/math/math_random.h>
 #include <OpenTissue/core/math/math_constants.h>
 #include <OpenTissue/core/math/math_functions.h>
 #include <OpenTissue/core/math/math_value_traits.h>
@@ -343,32 +342,8 @@ namespace OpenTissue
       return is_zero(v,value_traits::zero()); 
     }
 
-    template <typename T1,typename T2, typename T3>
-    inline void random(Vector3<T1> & v, T2 const & lower, T3 const & upper)
-    {
-      Random<T1> value((T1)(lower),(T1)(upper));
-      v(0) = value();
-      v(1) = value();
-      v(2) = value();
-    }
 
-    template <typename T>
-    inline void random(Vector3<T> & v, Vector3<T> const & lower, Vector3<T> const & upper)
-    {
-      typedef typename Vector3<T>::value_traits   value_traits;
-      random(v,value_traits::zero(),value_traits::one());   
-      v(0) = (upper(0)-lower(0))*v(0) + lower(0);
-      v(1) = (upper(1)-lower(0))*v(1) + lower(1);
-      v(2) = (upper(2)-lower(2))*v(2) + lower(2);
-    }
 
-    template <typename T>
-    inline void random(Vector3<T> & v) 
-    {    
-      typedef typename Vector3<T>::value_traits   value_traits;
-
-      random(v,value_traits::zero(),value_traits::one());   
-    }
 
     template <typename T>
     inline Vector3<T> cross( Vector3<T> const & a, Vector3<T> const & b )

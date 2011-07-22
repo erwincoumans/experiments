@@ -219,14 +219,6 @@ namespace OpenTissue
 
 
     template<typename T>
-    inline void random(Matrix3x3<T> & m )
-    {
-      random(m.row(0));
-      random(m.row(1));
-      random(m.row(2));
-    }
-
-    template<typename T>
     inline Matrix3x3<T> operator*( Matrix3x3<T> const & m, T const &s )
     {
       return Matrix3x3<T>(m.row(0)*s, m.row(1)*s, m.row(2)*s);

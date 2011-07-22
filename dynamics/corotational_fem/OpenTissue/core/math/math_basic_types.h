@@ -14,7 +14,6 @@
 #include <OpenTissue/core/math/math_quaternion.h>
 #include <OpenTissue/core/math/math_dual_quaternion.h>
 #include <OpenTissue/core/math/math_coordsys.h>
-#include <OpenTissue/core/math/math_rotation.h>
 #include <OpenTissue/core/math/math_value_traits.h>
 
 namespace OpenTissue

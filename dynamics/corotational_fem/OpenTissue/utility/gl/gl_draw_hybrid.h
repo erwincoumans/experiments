@@ -11,7 +11,6 @@
 
 #include <OpenTissue/utility/gl/gl.h>
 #include <OpenTissue/utility/gl/gl_draw_aabb.h>
-#include <OpenTissue/utility/gl/gl_draw_obb.h>
 #include <OpenTissue/utility/gl/gl_draw_sphere.h>
 #include <OpenTissue/utility/gl/gl_draw_prism.h>
 #include <OpenTissue/utility/gl/gl_draw_cylinder.h>
@@ -36,9 +35,6 @@ namespace OpenTissue
       {
       case hybrid_type::selection_aabb:
         DrawAABB( hybrid.m_aabb, wireframe);
-        break;
-      case hybrid_type::selection_obb:
-        DrawOBB( hybrid.m_obb, wireframe );
         break;
       case hybrid_type::selection_sphere:
         DrawSphere( hybrid.m_sphere, wireframe );

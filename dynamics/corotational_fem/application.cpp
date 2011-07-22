@@ -46,6 +46,8 @@ void Application::initialize()
 	}
 }
 
+
+
 ///range 0..1
 void	Application::scaleYoungModulus(float scaling)
 {

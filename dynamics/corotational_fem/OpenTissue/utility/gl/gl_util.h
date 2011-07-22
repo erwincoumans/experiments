@@ -26,7 +26,6 @@
 #include <OpenTissue/utility/gl/gl_draw_capsule.h>
 #include <OpenTissue/utility/gl/gl_draw_cylinder.h>
 #include <OpenTissue/utility/gl/gl_draw_ellipsoid.h>
-#include <OpenTissue/utility/gl/gl_draw_obb.h>
 #include <OpenTissue/utility/gl/gl_draw_plane.h>
 #include <OpenTissue/utility/gl/gl_draw_prism.h>
 #include <OpenTissue/utility/gl/gl_draw_sphere.h>
@@ -42,7 +41,6 @@
 #include <OpenTissue/utility/gl/gl_draw_hybrid.h>
 #include <OpenTissue/utility/gl/gl_draw_mesh.h>
 #include <OpenTissue/utility/gl/gl_draw_torus.h>
-#include <OpenTissue/utility/gl/gl_draw_joint_limits.h>
 
 #include <OpenTissue/utility/gl/gl_screen2object.h>
 #include <OpenTissue/utility/gl/gl_picking.h>

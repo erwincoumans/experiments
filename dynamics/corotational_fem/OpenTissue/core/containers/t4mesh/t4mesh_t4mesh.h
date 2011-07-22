@@ -12,7 +12,6 @@
 #include <OpenTissue/core/containers/t4mesh/t4mesh_t4node.h>
 #include <OpenTissue/core/containers/t4mesh/t4mesh_t4tetrahedron.h>
 #include <OpenTissue/core/containers/t4mesh/t4mesh_core_access.h>
-#include <OpenTissue/utility/utility_index_iterator.h>
 #include <OpenTissue/core/math/math_constants.h>
 
 #include <vector>
@@ -101,16 +100,6 @@ namespace OpenTissue
           *this = cpy;
         }
 
-        T4Mesh & operator=(T4Mesh const & rhs) 
-        {
-          this->m_nodes = rhs.m_nodes;
-          this->m_tetrahedra = rhs.m_tetrahedra;
-          for(node_iterator n = this->node_begin();n!=this->node_end();++n)
-            t4mesh_core_access::set_owner( (*n) , this );
-          for(tetrahedron_iterator t = this->tetrahedron_begin();t!=this->tetrahedron_end();++t)
-            t4mesh_core_access::set_owner( (*t) , this );
-          return (*this);
-        }
 
 
       public:
@@ -136,23 +125,6 @@ namespace OpenTissue
           node_type & nd = m_nodes.back();
           t4mesh_core_access::set_index( nd, this->m_nodes.size()-1 );
           t4mesh_core_access::set_owner( nd, this );
-          //return node_iterator(m_nodes, nd.idx());
-        }
-
-        /**
-        * Add New Node.
-        * This method do not watch against creating multiple nodes with same coordinates.
-        *
-        * @param coord    The new coordinate of the node
-        *
-        * @return          An iterator to the newly created node.
-        */
-        template<typename vector3_type>
-        void	insert(vector3_type const & coord)
-        {
-          node_iterator node = insert();
-          node->m_coord =  coord ;
-          //return node;
         }
 
         /**
@@ -248,75 +220,6 @@ namespace OpenTissue
         }
 
       protected:
-
-
-        /**
-        * Create new nodal connections for the specified Tetrahedron.
-        */
-        void link(
-          index_type& tetIndex
-          , index_type nodeIndexI
-          , index_type nodeIndexJ
-          , index_type nodeIndexK
-          , index_type nodeIndexM
-          )
-        {
-
-          t4mesh_core_access::tetrahedra_push_back( m_nodex[nodeIndexI],tetIndex );
-          t4mesh_core_access::tetrahedra_push_back( m_nodex[nodeIndexJ],tetIndex );
-          t4mesh_core_access::tetrahedra_push_back( m_nodex[nodeIndexK],tetIndex );
-          t4mesh_core_access::tetrahedra_push_back( m_nodex[nodeIndexM],tetIndex );
-
-          t4mesh_core_access::set_node0( m_tetrahedra[tetIndex],nodeIndexI );
-          t4mesh_core_access::set_node0( m_tetrahedra[tetIndex],nodeIndexJ );
-          t4mesh_core_access::set_node0( m_tetrahedra[tetIndex],nodeIndexK );
-          t4mesh_core_access::set_node0( m_tetrahedra[tetIndex],nodeIndexM );
-        }
-
-        /**
-        * Swap any internal data and nodal connections between
-        * the two specified Tetrahedra.
-        *
-        * This metod is intended for internal usage only.
-        */
-        void swap(index_type& Aidx,index_type& Bidx)
-        {
-          if(Aidx==Bidx)
-            throw std::invalid_argument("T4Mesh::swap(A,B): A and B were the same");
-
-		  node_type* A = &m_tetrahedra[Aidx];
-		node_type* B = &m_tetrahedra[Bidx];
-
-          node_iterator Ai   = A->i();
-          node_iterator Aj   = A->j();
-          node_iterator Ak   = A->k();
-          node_iterator Am   = A->m();
-
-          node_iterator Bi   = B->i();
-          node_iterator Bj   = B->j();
-          node_iterator Bk   = B->k();
-          node_iterator Bm   = B->m();
-
-          //--- Remove all connections to nodes, that is i,j,k, and
-          //--- m are set to -1 on both tetrahedra.
-          unlink(A);
-          unlink(B);
-          //--- Swap any internal data stored in the tetrahedra,
-          //--- notice that this is done using the trait class.
-          tetrahedron_traits * TA = &(*A);
-          tetrahedron_traits tmp;
-          tetrahedron_traits * TB = &(*B);
-          tmp = (*TA);
-          (*TA) = (*TB);
-          (*TB) = tmp;
-          //--- Just to be on the safe side we reestablish tetrahedron
-          //--- indices...
-          t4mesh_core_access::set_index(*A, Aidx);
-          t4mesh_core_access::set_index(*B, Bidx);
-          //--- Finally we set up the nodal connections again
-          link(A,Bi,Bj,Bk,Bm);
-          link(B,Ai,Aj,Ak,Am);
-        }
 
       protected:
 

@@ -10,7 +10,6 @@
 #include <OpenTissue/configuration.h>
 
 #include <OpenTissue/core/math/math_constants.h>
-#include <OpenTissue/core/math/math_random.h>
 
 #include <cmath>   //--- for floor and sqrt
 
@@ -130,35 +129,6 @@ namespace OpenTissue
       return true;//--- possible prime or a base-2 pseudoprime
     }
 
-
-    /**
-    * Prime Test.
-    * This method tests if the specified integer is a prime.
-    *
-    * The algorithm requires O(s*beta) arithmetic
-    * operations and O(s*beta*beta*beta) bit operations,
-    * where beta is the number of bits in n.
-    *
-    * @param  n  The number to test.
-    * @param  s  The number of random tests.
-    * @return    If n was prime then the return value is
-    *            true otherwise it is false.
-    */
-    inline bool miller_rabin(int n,int s)
-    {
-      using std::floor;
-
-      static Random<double> random;
-
-      int ndec = n-2;
-      for(int j=s;j>0;--j)
-      {
-        int a = static_cast<int>(  floor( random()*ndec )  ) + 1;//--- random(1,n-1)
-        if(detail::withness(a,n))
-          return false;//--- n was composite.
-      }
-      return true;//--- n is almost surely prime.
-    }
 
     /**
     * Closest Prime Search.

@@ -11,8 +11,6 @@
 
 #include <OpenTissue/dynamics/fem/fem_mesh.h>
 #include <OpenTissue/dynamics/fem/fem_init.h>
-#include <OpenTissue/dynamics/fem/fem_update_original_coord.h>
-#include <OpenTissue/dynamics/fem/fem_export_k.h>
 #include <OpenTissue/dynamics/fem/fem_simulate.h>
 
 //OPENTISSUE_DYNAMICS_FEM_FEM_H

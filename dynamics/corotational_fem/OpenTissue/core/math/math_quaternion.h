@@ -227,38 +227,6 @@ namespace OpenTissue
 
     public:
 
-      void random(value_type const & min_value, value_type const & max_value)
-      {
-        Random<value_type> value(min_value,max_value);
-        m_v(0) = value();
-        m_v(1) = value();
-        m_v(2) = value();
-        m_s = value();
-      }
-
-      void random()    {      random(value_traits::zero(),value_traits::one());    }
-
-      /**
-      * A rotation around an arbitrary axis.
-      * This method constructs a unit Quaternion which represents the specified rotation.
-      *
-      * @param rad           The rotation angle in radians around the axe.
-      * @param axe           The axe of rotation.
-      */
-      void Ru(value_type const & rad,vector3_type const & axe)
-      {
-        using std::cos;
-        using std::sin;
-
-        value_type teta = rad/value_traits::two();
-
-        value_type cteta = (value_type)( cos(teta) );
-        value_type steta = (value_type)( sin(teta) );
-        m_s = cteta;
-
-        m_v = unit(axe) * steta;
-      }
-
       /**
       * Assigns the quaternion to the identity rotation.
       * This is a commonly used constant. It corresponds to the identity matrix.

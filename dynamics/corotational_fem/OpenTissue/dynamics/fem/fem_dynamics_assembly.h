@@ -55,9 +55,6 @@ namespace OpenTissue
         typedef typename fem_mesh::matrix3x3_type                matrix3x3_type;
         typedef typename fem_mesh::node_type::matrix_iterator    matrix_iterator;
 
-//        node_iterator begin = mesh.node_begin();
-  //      node_iterator end   = mesh.node_end();
-    //    for (node_iterator n_i = begin ; n_i != end; ++n_i)
 		for (int n = 0;n<mesh.m_nodes.size();n++)
 		{
 			fem_mesh::node_type* n_i = &mesh.m_nodes[n];

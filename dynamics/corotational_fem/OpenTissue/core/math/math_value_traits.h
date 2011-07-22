@@ -29,7 +29,6 @@ namespace OpenTissue
       static T three()     { return detail::three<T>();     }
       static T four()      { return detail::four<T>();      }
       static T eight()     { return detail::eight<T>();     }
-      static T infinity()  { return detail::infinity<T>();  }
       static T half()      { return detail::half<T>();      }
       static T pi()        { return detail::pi<T>();        }
       static T pi_2()      { return detail::pi_half<T>();   }

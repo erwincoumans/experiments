@@ -94,63 +94,7 @@ namespace OpenTissue
       mesh_type       * owner()       { return m_owner; }
       mesh_type const * owner() const { return m_owner; }
 
-#ifdef TODO_ERWIN
-      node_iterator node(index_type local_idx)       
-      {
-        return m_owner->node( this->local2global( local_idx) );       
-      }
 
-      const_node_iterator node(index_type local_idx) const 
-      {
-        return m_owner->const_node( this->local2global( local_idx ) ); 
-      }
-
-      index_type local2global(index_type local_idx) const
-      {
-        assert(0<=local_idx);
-        assert(local_idx<=3);
-        return m_nodes[local_idx];
-      }
-
-      index_type global2local(index_type global_idx) const
-      {
-        if(global_idx==m_nodes[0])
-          return 0;
-        if(global_idx==m_nodes[1])
-          return 1;
-        if(global_idx==m_nodes[2])
-          return 2;
-        if(global_idx==m_nodes[3])
-          return 3;
-        return mesh_type::undefined();
-      }
-#endif //TODO_ERWIN
-
-/*
-      bool has_face(node_iterator a,node_iterator b,node_iterator c) const
-      {
-        index_type i = m_nodes[0];
-        index_type j = m_nodes[1];
-        index_type k = m_nodes[2];
-        index_type m = m_nodes[3];
-        if(
-          (  i == a->idx()   &&   j == b->idx()  &&   m == c->idx() )||
-          (  j == a->idx()   &&   k == b->idx()  &&   m == c->idx() )||
-          (  k == a->idx()   &&   i == b->idx()  &&   m == c->idx() )||
-          (  i == a->idx()   &&   k == b->idx()  &&   j == c->idx() )||
-          (  i == b->idx()   &&   j == c->idx()  &&   m == a->idx() )||
-          (  j == b->idx()   &&   k == c->idx()  &&   m == a->idx() )||
-          (  k == b->idx()   &&   i == c->idx()  &&   m == a->idx() )||
-          (  i == b->idx()   &&   k == c->idx()  &&   j == a->idx() )||
-          (  i == c->idx()   &&   j == a->idx()  &&   m == b->idx() )||
-          (  j == c->idx()   &&   k == a->idx()  &&   m == b->idx() )||
-          (  k == c->idx()   &&   i == a->idx()  &&   m == b->idx() )||
-          (  i == c->idx()   &&   k == a->idx()  &&   j == b->idx() )
-          )
-          return true;
-        return false;
-      }
-*/
 
     };
 
