@@ -4,9 +4,14 @@
 	targetdir "../../build/lib"	
 	includedirs {
 		".",
-		"../../bullet2",
+		"../../bullet2"
+	}
+	configuration {"Windows"}
+	includedirs {
 		"../../rendering/GlutGlewWindows"
 	}
+	configuration{}
+
 	files {
 		"**.cpp",
 		"**.h"
