@@ -10,7 +10,7 @@
 #include <OpenTissue/configuration.h>
 
 #include <OpenTissue/utility/gl/gl_util.h>
-#include <OpenTissue/gpu/texture/texture_texture2D.h>
+#include <OpenTissue/gpu/texture/texture_texture2d.h>
 
 namespace OpenTissue
 {

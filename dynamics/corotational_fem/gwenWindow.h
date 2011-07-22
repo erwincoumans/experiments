@@ -7,7 +7,10 @@
 #include "Gwen/Controls/Button.h"
 #include "Gwen/Skins/Simple.h"
 #include "Gwen/Renderers/OpenGL_DebugFont.h"
+
+#ifdef _WIN32
 #include "Gwen/Input/Windows.h"
+#endif
 
 extern Gwen::Renderer::OpenGL_DebugFont * pRenderer;
 extern Gwen::Skin::Simple skin;
