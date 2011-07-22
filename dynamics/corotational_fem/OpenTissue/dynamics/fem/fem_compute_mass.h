@@ -149,23 +149,21 @@ namespace OpenTissue
 
         for (int n=0;n<mesh.m_nodes.size();n++)
         {
-			fem_mesh::node_type* N = &mesh.m_nodes[n];
 
-			if(N->m_fixed)
-            N->m_mass = std::numeric_limits<real_type>::max();
+			if(mesh.m_nodes[n].m_fixed)
+            mesh.m_nodes[n].m_mass = std::numeric_limits<real_type>::max();
           else
-            N->m_mass = 0;
+            mesh.m_nodes[n].m_mass = 0;
         }
 
         for (int t=0;t<mesh.m_tetrahedra.size();t++)
         {
-			fem_mesh::tetrahedron_type* T = &mesh.m_tetrahedra[t];
 
-          real_type amount = T->m_density * T->m_V *.25;
-          T->i()->m_mass += amount;
-          T->j()->m_mass += amount;
-          T->k()->m_mass += amount;
-          T->m()->m_mass += amount;
+          real_type amount = mesh.m_tetrahedra[t].m_density * mesh.m_tetrahedra[t].m_V *.25;
+          mesh.m_tetrahedra[t].i()->m_mass += amount;
+          mesh.m_tetrahedra[t].j()->m_mass += amount;
+          mesh.m_tetrahedra[t].k()->m_mass += amount;
+          mesh.m_tetrahedra[t].m()->m_mass += amount;
         }
       }
 

@@ -9,6 +9,10 @@
 //
 #include <OpenTissue/configuration.h>
 
+#define n_i (&mesh.m_nodes[n])
+#define n_j (&mesh.m_nodes[j])
+
+
 namespace OpenTissue
 {
   namespace fem
@@ -44,7 +48,6 @@ namespace OpenTissue
         //---  p = r
         for(int n=0;n<mesh.m_nodes.size();n++)
         {
-			fem_mesh::node_type* n_i = &mesh.m_nodes[n];
 
 			if(n_i->m_fixed)
             continue;
@@ -57,7 +60,6 @@ namespace OpenTissue
           {
             unsigned int     j    = A->first;
             matrix3x3_type & A_ij = A->second;
-            fem_mesh::node_type* n_j  = &mesh.m_nodes[j];
             vector3_type &   v_j  = n_j->m_velocity;
 
             n_i->m_residual -= A_ij * v_j;
@@ -76,7 +78,6 @@ namespace OpenTissue
 
           for(int n=0;n<mesh.m_nodes.size();n++)
           {
-			  fem_mesh::node_type* n_i = &mesh.m_nodes[n];
             if(n_i->m_fixed)
               continue;
 
@@ -88,7 +89,6 @@ namespace OpenTissue
             {
 
               unsigned int     j    = A->first;
-			  fem_mesh::node_type* n_j  = &mesh.m_nodes[j];
               matrix3x3_type & A_ij = A->second;
 
               n_i->m_update += A_ij * n_j->m_prev;
@@ -109,7 +109,6 @@ namespace OpenTissue
 
           for(int n=0;n<mesh.m_nodes.size();n++)
           {
-			  fem_mesh::node_type* n_i = &mesh.m_nodes[n];
             if(n_i->m_fixed)
               continue;
             n_i->m_velocity +=  n_i->m_prev     * d3;
@@ -126,7 +125,6 @@ namespace OpenTissue
           //--- p = r + d4 * p
 		  for(int n=0;n<mesh.m_nodes.size();n++)
           {
-			  fem_mesh::node_type* n_i = &mesh.m_nodes[n];
 
 		    if(n_i->m_fixed)
               continue;

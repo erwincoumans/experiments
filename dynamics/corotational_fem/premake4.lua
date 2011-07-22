@@ -21,7 +21,7 @@
 		
                 configuration {"not Windows", "not MaxOSX"}
 		links {
-                "GL", "GLU", "glut"
+                "GL", "GLU", "glut","GLEW"
                 }
 
                 configuration {"Windows"}

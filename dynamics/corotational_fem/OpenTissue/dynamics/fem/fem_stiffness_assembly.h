@@ -9,6 +9,9 @@
 //
 #include <OpenTissue/configuration.h>
 
+#define p_i (&T->m_owner->m_nodes[T->m_nodes[i]])
+#define p_j (&T->m_owner->m_nodes[T->m_nodes[j]])
+
 namespace OpenTissue
 {
   namespace fem
@@ -179,12 +182,10 @@ namespace OpenTissue
           matrix3x3_type & Re = T->m_Re;
           for (int i = 0; i < 4; ++i)
           {
-			  tetrahedron_type::node_type* p_i = &T->m_owner->m_nodes[T->m_nodes[i]];
             vector3_type f;
             f.clear();
             for (int j = 0; j < 4; ++j)
             {
-				tetrahedron_type::node_type*    p_j = &T->m_owner->m_nodes[T->m_nodes[j]];
               matrix3x3_type & Ke_ij = T->m_Ke[i][j];
               vector3_type   & x0_j  = p_j->m_model_coord;
 

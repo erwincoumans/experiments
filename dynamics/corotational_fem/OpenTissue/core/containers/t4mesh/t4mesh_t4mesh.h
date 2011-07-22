@@ -162,38 +162,6 @@ namespace OpenTissue
           //return tetrahedron_iterator(m_tetrahedra, t.idx());
         }
 
-        /**
-        * Find tetrahedron with the given nodes
-        *
-        * @param i           The global index of i'th node
-        * @param j           The global index of j'th node
-        * @param k           The global index of k'th node
-        * @param m           The global index of m'th node
-        *
-        * @return        A iterator to the tetrahedron if it exist
-        *                or end position otherwise.
-        */
-        index_type find(
-          index_type i,
-          index_type j,
-          index_type k,
-          index_type m
-          ) const
-        {
-
-
-			for (int t=0;t<m_tetrahedra.size();t++)
-			{
-				if (m_tetrahedra[t].node_idx(0) == i &&
-					m_tetrahedra[t].node_idx(1) == j &&
-					m_tetrahedra[t].node_idx(2) == k &&
-					m_tetrahedra[t].node_idx(3) == m)
-				{
-	              return tit->idx();
-				}
-			}
-			return m_tetrahedra.size();
-        }
 
         /**
         * Erase Tetrahedron at specified Position.

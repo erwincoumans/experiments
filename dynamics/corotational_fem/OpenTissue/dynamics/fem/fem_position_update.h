@@ -27,10 +27,9 @@ namespace OpenTissue
       {
         for (int n=0;n<mesh.m_nodes.size();n++)
         {
-			fem_mesh::node_type* N = &mesh.m_nodes[n];
-          if(N->m_fixed)
+          if(mesh.m_nodes[n].m_fixed)
             continue;
-          N->m_coord += dt * N->m_velocity;
+          mesh.m_nodes[n].m_coord += dt * mesh.m_nodes[n].m_velocity;
         }
       }
 

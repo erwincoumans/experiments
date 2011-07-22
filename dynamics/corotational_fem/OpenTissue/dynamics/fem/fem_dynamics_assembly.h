@@ -9,6 +9,10 @@
 //
 #include <OpenTissue/configuration.h>
 
+#define n_i (&mesh.m_nodes[n])
+#define n_j (&mesh.m_nodes[j])
+
+
 namespace OpenTissue
 {
   namespace fem
@@ -57,7 +61,6 @@ namespace OpenTissue
 
 		for (int n = 0;n<mesh.m_nodes.size();n++)
 		{
-			fem_mesh::node_type* n_i = &mesh.m_nodes[n];
 
           unsigned int i     =  n_i->idx();
           vector3_type & b_i =  n_i->m_b;
@@ -71,7 +74,6 @@ namespace OpenTissue
           {
             unsigned int     j    = K->first;
             matrix3x3_type & K_ij = K->second;
-            fem_mesh::node_type* n_j  = &mesh.m_nodes[j];
             vector3_type &   x_j  = n_j->m_coord;
             matrix3x3_type & A_ij = n_i->A(j);
 

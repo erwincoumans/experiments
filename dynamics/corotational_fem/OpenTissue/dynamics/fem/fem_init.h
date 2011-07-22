@@ -73,8 +73,7 @@ namespace OpenTissue
       detail::compute_mass(mesh);
 	  for (int t=0;t<mesh.m_tetrahedra.size();t++)
 	  {
-		  fem_mesh::tetrahedron_type* tet = &mesh.m_tetrahedra[t];
-	      detail::initialize_plastic_single(tet,c_yield,c_creep,c_max);
+	      detail::initialize_plastic_single(&mesh.m_tetrahedra[t],c_yield,c_creep,c_max);
 	  }
     }
 

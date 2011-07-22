@@ -10,12 +10,12 @@
 
 #ifdef _WIN32
 #include "Gwen/Input/Windows.h"
+extern Gwen::Input::Windows GwenInput;
 #endif
 
 extern Gwen::Renderer::OpenGL_DebugFont * pRenderer;
 extern Gwen::Skin::Simple skin;
 extern Gwen::Controls::Canvas* pCanvas;
-extern Gwen::Input::Windows GwenInput;
 	
 
 class Application;
