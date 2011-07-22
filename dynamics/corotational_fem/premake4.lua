@@ -6,22 +6,37 @@
 		kind "ConsoleApp"
 		targetdir "../../bin"
 
-		libdirs {"../../rendering/GlutGlewWindows"}
-
 		links {
 			"gwen",
+		}
+
+		
+
+		includedirs {
+		".",
+		"../../rendering/Gwen",
+		"../testbed"
+		}
+
+		
+                configuration {"not Windows", "not MaxOSX"}
+		links {
+                "GL", "GLU", "glut"
+                }
+
+                configuration {"Windows"}
+		libdirs {"../../rendering/GlutGlewWindows"}
+		includedirs {
+		"../../rendering/GlutGlewWindows",
+		}
+		links {
 			"glut32",
 			"glew32",
 			"opengl32"
 		}
-		
-		includedirs {
-		".",
-		"../../rendering/GlutGlewWindows",
-		"../../rendering/Gwen",
-		"../testbed"
-		}
-		
+
+		configuration {}
+
 		files {
 			"**.cpp",
 			"**.h"

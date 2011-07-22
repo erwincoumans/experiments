@@ -10,8 +10,8 @@
 #include <OpenTissue/configuration.h>
 
 #include <OpenTissue/utility/gl/gl.h>
-#include <OpenTissue/gpu/texture/texture_texture2D.h>
-#include <OpenTissue/gpu/texture/texture_texture3D.h>
+#include <OpenTissue/gpu/texture/texture_texture2d.h>
+#include <OpenTissue/gpu/texture/texture_texture3d.h>
 #include <OpenTissue/utility/gl/gl_render_buffer.h>
 
 #include <iostream>
