@@ -23,10 +23,7 @@
 Gwen::Renderer::OpenGL_DebugFont * pRenderer =0;
 Gwen::Skin::Simple skin;
 Gwen::Controls::Canvas* pCanvas =0;
-#ifdef _WIN32
-Gwen::Input::Windows GwenInput;
-#else
-#endif
+
 
 
 namespace OpenTissue

@@ -8,10 +8,7 @@
 #include "Gwen/Skins/Simple.h"
 #include "Gwen/Renderers/OpenGL_DebugFont.h"
 
-#ifdef _WIN32
-#include "Gwen/Input/Windows.h"
-extern Gwen::Input::Windows GwenInput;
-#endif
+
 
 extern Gwen::Renderer::OpenGL_DebugFont * pRenderer;
 extern Gwen::Skin::Simple skin;
