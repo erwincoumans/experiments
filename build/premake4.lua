@@ -51,15 +51,15 @@ solution "0MySolution"
 --	end
 
 	include "../bullet2"		
---	include "../dynamics/testbed"
---	include "../dynamics/position_based_dynamics"
+	include "../dynamics/testbed"
+	include "../dynamics/position_based_dynamics"
 
 	include "../jpeglib"
 	
---	include "../dynamics/corotational_fem"
+	include "../dynamics/corotational_fem"
 	
 	
 	
---	include "../rendering/Gwen/Gwen"
---	include "../rendering/Gwen/GwenOpenGLTest"
+	include "../rendering/Gwen/Gwen"
+	include "../rendering/Gwen/GwenOpenGLTest"
 	
