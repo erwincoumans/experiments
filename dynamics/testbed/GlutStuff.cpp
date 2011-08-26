@@ -112,7 +112,6 @@ CGLSetParameter(cgl_context, kCGLCPSwapInterval, &swap_interval);
 
 
 	
-    glutMainLoop();
     return 0;
 }
 

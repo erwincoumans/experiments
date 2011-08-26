@@ -94,7 +94,7 @@ protected:
 	bool m_idle;
 	int m_lastKey;
 
-	void showProfileInfo(int& xOffset,int& yStart, int yIncr);
+	virtual float  showProfileInfo(int& xOffset,int& yStart, int yIncr);
 	void renderscene(int pass);
 
 	GL_ShapeDrawer*	m_shapeDrawer;

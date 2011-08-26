@@ -64,6 +64,20 @@ struct MyHander   :public Gwen::Event::Handler
 		m_app->m_stiffness_warp_on  = checked;
 	}
 
+	void	OnCheckChangedCollideGroundplane (Gwen::Controls::Base* pControl)
+	{
+		Gwen::Controls::CheckBox* labeled = (Gwen::Controls::CheckBox* )pControl;
+		bool checked = labeled->IsChecked();
+		m_app->m_collideGroundPlane = checked;
+	}
+	void	OnCheckChangedFixNodes (Gwen::Controls::Base* pControl)
+	{
+		Gwen::Controls::CheckBox* labeled = (Gwen::Controls::CheckBox* )pControl;
+		bool checked = labeled->IsChecked();
+		m_app->m_fixNodes = checked;
+	}
+
+
 
 };
 
@@ -87,29 +101,50 @@ public:
 
 		MyHander* handler= new MyHander(app);
 
-		{
+		Gwen::Controls::HorizontalSlider* pSlider;
+
 			Gwen::Controls::GroupBox* pGroup = new Gwen::Controls::GroupBox( this );
 			pGroup->SetPos(5, 5);
 			pGroup->SetSize(170, 45);
 //			pGroup->Dock( Gwen::Pos::Fill );
 			pGroup->SetText( "Young modulus" );
 
-			Gwen::Controls::HorizontalSlider* pSlider = new Gwen::Controls::HorizontalSlider( pGroup );
+			pSlider = new Gwen::Controls::HorizontalSlider( pGroup );
 			pSlider->SetPos( 5, 10 );
 			pSlider->SetSize( 130, 20 );
-			pSlider->SetRange( 0, 100 );
+			pSlider->SetRange( 0, 1000 );
 			pSlider->SetValue( 25 );
 			pSlider->onValueChanged.Add( handler, &MyHander::SliderMoved);
-		}
 
 		Gwen::Controls::CheckBoxWithLabel* labeled = new Gwen::Controls::CheckBoxWithLabel( this );
-		labeled->SetPos( 10, 55);
+		int yPos=55;
+		{
+		labeled->SetPos( 10, yPos);
 		labeled->Checkbox()->SetChecked(true);
-		labeled->Label()->SetText( "Stifness warping" );
-//		labeled->Checkbox()->onChecked.Add( handler, &MyHander::OnCheckedStiffnessWarping );
-//		labeled->Checkbox()->onUnChecked.Add( handler, &MyHander::OnUncheckedStiffnessWarping );
+		labeled->Label()->SetText( "Stiffness warping" );
 		labeled->Checkbox()->onCheckChanged.Add( handler, &MyHander::OnCheckChangedStiffnessWarping );
-//		Gwen::Align::PlaceBelow( labeled, check, 10 );
+		Gwen::Align::PlaceBelow( labeled,pGroup, 0 );
+		yPos+=20;
+		}
+
+		{
+		Gwen::Controls::CheckBoxWithLabel* labeled2 = new Gwen::Controls::CheckBoxWithLabel( this );
+		labeled2->SetPos( 10, yPos);
+		labeled2->Checkbox()->SetChecked(true);
+		labeled2->Label()->SetText( "Collide groundplane" );
+		labeled2->Checkbox()->onCheckChanged.Add( handler, &MyHander::OnCheckChangedCollideGroundplane );
+		yPos+=20;
+		}
+
+		{
+		Gwen::Controls::CheckBoxWithLabel* labeled3 = new Gwen::Controls::CheckBoxWithLabel( this );
+		labeled3->SetPos( 10, yPos);
+		labeled3->Checkbox()->SetChecked(app->m_fixNodes);
+		labeled3->Label()->SetText( "Fix bar" );
+		labeled3->Checkbox()->onCheckChanged.Add( handler, &MyHander::OnCheckChangedFixNodes );
+		yPos+=20;
+		}
+
 
 
 		if (0)
@@ -134,7 +169,7 @@ public:
 		Gwen::Controls::Button* pButton = new Gwen::Controls::Button( this );
 		pButton->onPress.Add(handler,&MyHander::onButtonA);
 
-		pButton->SetBounds( 5, 110, 170, 45);
+		pButton->SetBounds( 5, yPos, 170, 45);
 		pButton->SetText( "Toggle simulation" );
 
 

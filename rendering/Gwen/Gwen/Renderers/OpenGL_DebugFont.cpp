@@ -36,6 +36,10 @@
 					GLint               m_PrevBlendDstAlpha;
 					GLint               m_ViewportInit[4];
 					GLfloat             m_ProjMatrixInit[16];
+					GLboolean			m_texGenS;
+					GLboolean			m_texGenT;
+					GLboolean			m_texGenR;
+
 
 
 				void	restoreOpenGLState()
@@ -50,6 +54,22 @@
 				glPopMatrix();
 				glPopClientAttrib();
 				glPopAttrib();
+				if (m_texGenS)
+					glEnable(GL_TEXTURE_GEN_S);
+				else
+					glDisable(GL_TEXTURE_GEN_S);
+
+				if (m_texGenT)
+					glEnable(GL_TEXTURE_GEN_T);
+				else
+					glDisable(GL_TEXTURE_GEN_T);
+
+				if (m_texGenR)
+					glEnable(GL_TEXTURE_GEN_R);
+				else
+					glDisable(GL_TEXTURE_GEN_R);
+
+
 
 			}
 
@@ -84,6 +104,14 @@
 				glGetFloatv(GL_LINE_WIDTH, &m_PrevLineWidth);
 			 //   glDisable(GL_POLYGON_STIPPLE);
 				glLineWidth(1);
+
+				glGetBooleanv(GL_TEXTURE_GEN_S,&m_texGenS);
+				glGetBooleanv(GL_TEXTURE_GEN_T,&m_texGenT);
+				glGetBooleanv(GL_TEXTURE_GEN_R,&m_texGenR);
+
+				glDisable(GL_TEXTURE_GEN_S);
+				glDisable(GL_TEXTURE_GEN_T);
+				glDisable(GL_TEXTURE_GEN_R);
 
 				glDisable(GL_LINE_SMOOTH);
 			//    glDisable(GL_LINE_STIPPLE);
@@ -278,6 +306,7 @@ namespace Gwen
 
 		void OpenGL_DebugFont::RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString& text )
 		{
+			
 			float fSize = pFont->size * Scale();
 
 			if ( !text.length() )

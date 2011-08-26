@@ -9,7 +9,7 @@
 //
 #include <OpenTissue/configuration.h>
 
-#include <OpenTissue/dynamics/fem/fem_mesh.h>
+//#include <OpenTissue/dynamics/fem/fem_mesh.h>
 #include <OpenTissue/dynamics/fem/fem_init.h>
 #include <OpenTissue/dynamics/fem/fem_simulate.h>
 

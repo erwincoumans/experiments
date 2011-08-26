@@ -23,6 +23,7 @@ subject to the following restrictions:
 #include "BulletCollision/NarrowPhaseCollision/btGjkEpa2.h"
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btIDebugDraw.h"
+#include "gwenWindow.h"
 
 #include "BunnyMesh.h"
 #include "TorusMesh.h"
@@ -37,8 +38,6 @@ subject to the following restrictions:
 #include "GlutStuff.h"
 
 extern float eye[3];
-extern int glutScreenWidth;
-extern int glutScreenHeight;
 
 static bool sDemoMode = false;
 
@@ -1346,6 +1345,7 @@ void	SoftDemo::clientResetScene()
 	demofncs[current_demo](this);
 }
 
+static bool numSteps = 0;
 
 void SoftDemo::clientMoveAndDisplay()
 {
@@ -1377,18 +1377,18 @@ void SoftDemo::clientMoveAndDisplay()
 		}
 		
 
-//#define FIXED_STEP
-#ifdef FIXED_STEP
-		m_dynamicsWorld->stepSimulation(dt=1.0f/60.f,0);
+		if (m_idle)
+		{
+			m_dynamicsWorld->stepSimulation(dt=1.0f/60.f,0);
+		} else
+		{
+			//during idle mode, just run 1 simulation step maximum, otherwise 4 at max
+			int maxSimSubSteps = m_idle ? 1 : 4;
+		
+			//	dt = 1.0/420.f;
 
-#else
-		//during idle mode, just run 1 simulation step maximum, otherwise 4 at max
-		int maxSimSubSteps = m_idle ? 1 : 4;
-		//if (m_idle)
-		//	dt = 1.0/420.f;
-
-		int numSimSteps;
-		numSimSteps = m_dynamicsWorld->stepSimulation(dt);
+			numSteps= m_dynamicsWorld->stepSimulation(dt);
+		}
 		//numSimSteps = m_dynamicsWorld->stepSimulation(dt,10,1./240.f);
 
 #ifdef VERBOSE_TIMESTEPPING_CONSOLEOUTPUT
@@ -1407,22 +1407,23 @@ void SoftDemo::clientMoveAndDisplay()
 		}
 #endif //VERBOSE_TIMESTEPPING_CONSOLEOUTPUT
 
-#endif		
 
 		if(m_drag)
 		{
 			m_node->m_v*=0;
 		}
-
-		m_softBodyWorldInfo.m_sparsesdf.GarbageCollect();
-
+		{
+			if (!m_idle)
+				BT_PROFILE("renderme");
+//			m_softBodyWorldInfo.m_sparsesdf.GarbageCollect();
+		}
 		//optional but useful: debug drawing
 
 	}
 
-#ifdef USE_QUICKPROF 
-	btProfiler::beginBlock("render"); 
-#endif //USE_QUICKPROF 
+
+
+
 
 	renderme(); 
 
@@ -1452,11 +1453,18 @@ void SoftDemo::clientMoveAndDisplay()
 
 void	SoftDemo::renderme()
 {
+	if (!m_idle)
+	{
+		BT_PROFILE("renderme");
+	}
+
 	btIDebugDraw*	idraw=m_dynamicsWorld->getDebugDrawer();
 
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
-	m_dynamicsWorld->debugDrawWorld();
+	{
+		if (!m_idle)
+			BT_PROFILE("debugDrawWorld");
+//		m_dynamicsWorld->debugDrawWorld();
+	}
 
 	btSoftRigidDynamicsWorld* softWorld = (btSoftRigidDynamicsWorld*)m_dynamicsWorld;
 	for (  int i=0;i<softWorld->getSoftBodyArray().size();i++)
@@ -1625,7 +1633,17 @@ void	SoftDemo::renderme()
 		glEnable(GL_LIGHTING);
 	}
 
+
+	
 	DemoApplication::renderme();
+
+
+	if (pCanvas)
+	{
+		saveOpenGLState(m_glutScreenWidth,m_glutScreenHeight);
+		pCanvas->RenderCanvas();
+		restoreOpenGLState();
+	}
 
 }
 
@@ -1673,6 +1691,17 @@ void	SoftDemo::keyboardCallback(unsigned char key, int x, int y)
 //
 void	SoftDemo::mouseMotionFunc(int x,int y)
 {
+
+	
+	bool handled = false;
+
+	if (pCanvas)
+	{
+		handled = pCanvas->InputMouseMoved(x,y,m_lastmousepos[0],m_lastmousepos[1]);
+		
+	}
+
+
 	if(m_node&&(m_results.fraction<1.f))
 	{
 		if(!m_drag)
@@ -1684,21 +1713,78 @@ void	SoftDemo::mouseMotionFunc(int x,int y)
 			}
 #undef SQ
 		}
-		if(m_drag)
-		{
-			m_lastmousepos[0]	=	x;
-			m_lastmousepos[1]	=	y;		
-		}
+		
+		
+		
 	}
 	else
 	{
 		DemoApplication::mouseMotionFunc(x,y);
 	}
+
+	m_lastmousepos[0]	=	x;
+	m_lastmousepos[1]	=	y;
 }
+
+void SoftDemo::reshape(int w, int h)
+{
+	DemoApplication::reshape(w,h);
+	if (pCanvas)
+	{
+		pCanvas->SetSize(w,h);
+	}
+	
+}
+#define USE_ARRAYS 1
+
+float SoftDemo::showProfileInfo(int& xOffset,int& yStart, int yIncr)
+{
+	static double time_since_reset = 0.f;
+	
+	{
+		if (!m_idle)
+			BT_PROFILE("DemoApplication::showProfileInfo");
+		time_since_reset = DemoApplication::showProfileInfo(xOffset,yStart,yIncr);
+	}
+
+#ifndef BT_NO_PROFILE
+
+	
+	{
+		if (!m_idle)
+			BT_PROFILE("processProfileData GUI");
+		//if (!m_idle && numSteps>0 )
+			processProfileData(m_profileIterator,m_idle);
+	}
+
+	
+#endif//BT_NO_PROFILE
+	return time_since_reset;
+
+}
+
+
+
 
 //
 void	SoftDemo::mouseFunc(int button, int state, int x, int y)
 {
+	if (pCanvas)
+	{
+		
+		bool handled = pCanvas->InputMouseButton(button,!state);
+		if (handled)
+		{
+			m_lastmousepos[0]	=	x;
+			m_lastmousepos[1]	=	y;
+			
+			if (!state)
+				return;
+		}
+
+		
+	}
+
 	if(button==0)
 	{
 		switch(state)

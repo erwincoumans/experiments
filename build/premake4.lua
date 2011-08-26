@@ -21,6 +21,11 @@ solution "0MySolution"
 	configuration {"x32", "debug"}
 		targetsuffix "_debug"
 
+	configuration{}	
+--disable exception handling 
+		defines { "_HAS_EXCEPTIONS=0" }
+
+
 
 	dofile ("findOpenCL.lua")
 	dofile ("findDirectX11.lua")
@@ -57,6 +62,7 @@ solution "0MySolution"
 	include "../jpeglib"
 	
 	include "../dynamics/corotational_fem"
+	--include "../dynamics/nncg_test"
 	
 	
 	

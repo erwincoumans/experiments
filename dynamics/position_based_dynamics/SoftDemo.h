@@ -139,6 +139,10 @@ public:
 	void	keyboardCallback(unsigned char key, int x, int y);
 	void	mouseFunc(int button, int state, int x, int y);
 	void	mouseMotionFunc(int x,int y);
+	void	reshape(int w, int h);
+
+	float showProfileInfo(int& xOffset,int& yStart, int yIncr);
+
 
 };
 

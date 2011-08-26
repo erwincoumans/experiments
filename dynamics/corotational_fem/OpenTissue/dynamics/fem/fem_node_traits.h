@@ -32,6 +32,9 @@ namespace OpenTissue
 
       public:
 
+	  NodeTraits(int i,int j)
+	  {
+	  }
         matrix_container m_K_row;      ///< Currently stored in a map container, key correspond to column and mapped value to 3-by-3 sub block.
         matrix_container m_A_row;
         vector3_type     m_f0;
@@ -53,19 +56,25 @@ namespace OpenTissue
 
       public:
 
-        matrix_iterator Kbegin() { return m_K_row.begin(); }
+        matrix_iterator Kbegin() 
+		{ 
+			return m_K_row.begin(); 
+		}
         matrix_iterator Kend()   { return m_K_row.end();   }
         matrix_iterator Abegin() { return m_A_row.begin(); }
         matrix_iterator Aend()   { return m_A_row.end();   }
 
-        matrix3x3_type & K(int const & column_idx) { return m_K_row[column_idx]; }
+        matrix3x3_type & K(int const & column_idx) { 
+			return m_K_row[column_idx]; 
+		}
         matrix3x3_type & A(int const & column_idx) { return m_A_row[column_idx]; }
 
       public:
 
         NodeTraits()
           : m_fixed(false)
-        {}
+        {
+		}
 
       };
 

@@ -17,6 +17,7 @@ subject to the following restrictions:
 #include "GlutStuff.h"
 #include "GLDebugDrawer.h"
 #include "btBulletDynamicsCommon.h"
+#include "gwenWindow.h"
 
 GLDebugDrawer	gDebugDrawer;
 
@@ -31,6 +32,8 @@ int main(int argc,char** argv)
 
 	glutmain(argc, argv,1024,768,"Bullet Physics Demo. http://bulletphysics.com",softDemo);
 
+	setupGUI(1024,768);
+	glutMainLoop();
 	delete softDemo;
 	return 0;
 

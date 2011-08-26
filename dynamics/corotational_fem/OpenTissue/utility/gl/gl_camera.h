@@ -94,6 +94,12 @@ namespace OpenTissue
       */
       void init(vector3_type const & position_, vector3_type const & target_, vector3_type const & up_)
       {
+		if (target_==position_)
+		{
+			return;
+		}
+
+
         m_position = position_;
         m_target = target_;
         m_up = up_;

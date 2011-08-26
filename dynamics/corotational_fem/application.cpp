@@ -11,6 +11,7 @@
 
 #include "application.h"
 #include "gwenWindow.h"
+#include <OpenTissue/core/containers/t4mesh/util/t4mesh_block_generator.h>
 
 
 OpenTissue::glut::instance_pointer init_glut_application(int argc, char **argv)
@@ -22,38 +23,60 @@ OpenTissue::glut::instance_pointer init_glut_application(int argc, char **argv)
 
 void Application::initialize()
 {
-	m_young = 500000;
-	m_poisson = 0.33;
-	m_density = 1000;
+	static bool once=true;
+	if (once)
+	{
+		once=false;
+#define ALUM 1
+#ifdef ALUM
+		m_young = 100000;//47863;//100000;
+		m_poisson = 0.33;//33;
+	//m_poisson = 0.48;
+	m_density = 1054.00;//1000;
 
 	//--- infinite m_c_yield plasticity settings means that plasticity is turned off
-	m_c_yield = .04;  //--- should be less than maximum expected elastic strain in order to see effect (works as a minimum).
-	m_c_creep = .20;  //--- controls how fast the plasticity effect occurs (it is a rate-like control).
-	m_c_max = 0.2;    //--- This is maximum allowed plasticity strain (works as a maximum).
+	m_c_yield = 0.03;//.04;  //--- should be less than maximum expected elastic strain in order to see effect (works as a minimum).
+	m_c_creep = 0.20;//.20;  //--- controls how fast the plasticity effect occurs (it is a rate-like control).
+	m_c_max = 1e30f;//0.2;    //--- This is maximum allowed plasticity strain (works as a maximum).
+
+#else
+		m_young = 100000;//47863;//100000;
+		m_poisson = 0.1820;//33;
+	//m_poisson = 0.48;
+	m_density = 1054.00;//1000;
+
+	//--- infinite m_c_yield plasticity settings means that plasticity is turned off
+	m_c_yield = 0.0670;//.04;  //--- should be less than maximum expected elastic strain in order to see effect (works as a minimum).
+	m_c_creep = 0.9950;//.20;  //--- controls how fast the plasticity effect occurs (it is a rate-like control).
+	m_c_max = 0.1890;//0.2;    //--- This is maximum allowed plasticity strain (works as a maximum).
+#endif
+
+	}
 
 	{
 		world_point_container point_wrapper(&m_mesh1);
 		OpenTissue::t4mesh::generate_blocks(10,3,3,0.1,0.1,0.1,m_mesh1);
+		
 		for (int n=0;n<m_mesh1.m_nodes.size();n++)
 		{
+			m_mesh1.m_nodes[n].m_coord(1)+=0.1f;
+
 			m_mesh1.m_nodes[n].m_model_coord = m_mesh1.m_nodes[n].m_coord;
-			if (m_mesh1.m_nodes[n].m_model_coord(0) < 0.01)
-			{
-				m_mesh1.m_nodes[n].m_fixed = true;
-			}
+
 		}
 		OpenTissue::fem::init(m_mesh1,m_young,m_poisson,m_density,m_c_yield,m_c_creep,m_c_max);
+
+		
+
 	}
 }
-
-
 
 ///range 0..1
 void	Application::scaleYoungModulus(float scaling)
 {
 	if (scaling<10)
 		scaling=10;
-		m_young = 70000*scaling;
+		m_young = 10000*scaling;
 		OpenTissue::fem::init(m_mesh1,m_young,m_poisson,m_density,m_c_yield,m_c_creep,m_c_max);
 }
 
@@ -100,10 +123,15 @@ void Application::mouse_move(double cur_x,double cur_y)
 
 void Application::do_display()
 {
+	
+	OpenTissue::math::Vector3<float> p(0,0,0);
+	OpenTissue::math::Quaternion <float>Q(0,0,0,1);
+//	OpenTissue::gl::DrawFrame(p,Q);
 	OpenTissue::gl::ColorPicker(0.5,0,0);
 
 	OpenTissue::gl::ColorPicker(0.5,0,0);
-	OpenTissue::gl::DrawPointsT4Mesh(original_point_container(&m_mesh1),m_mesh1,0.95,true);
+	//OpenTissue::gl::DrawPointsT4Mesh(original_point_container(&m_mesh1),m_mesh1,0.95,true);
+
 
 	OpenTissue::gl::ColorPicker(0,0.5,0);
 	OpenTissue::gl::DrawPointsT4Mesh(world_point_container(&m_mesh1),m_mesh1,0.95,false);
@@ -188,6 +216,8 @@ void Application::do_init()
 
 	}
 
+	
+
 	this->camera().move(95);
 		OpenTissue::glut::toggleIdle();
 
@@ -196,13 +226,66 @@ void Application::do_init()
 void Application::do_run()
 {
 
+	double damp=2.f;
+double dt = 0.001;
+
 	// Calculate external forces acting on the model.
 	// The external forces are stored in each vertex and consists of a downward gravity.
 	// If a vertex is being dragged by the user, its velocity vector is added as an external force.
+
 	for (int n=0;n<m_mesh1.m_nodes.size();n++)
 	{
-		m_mesh1.m_nodes[n].m_f_external = vector3_type(0.0, -(m_mesh1.m_nodes[n].m_mass * m_gravity), 0.0);
+
+		if (m_fixNodes)
+		{
+			if (m_mesh1.m_nodes[n].m_model_coord(0) < 0.01)
+			{
+				m_mesh1.m_nodes[n].m_fixed = true;
+			}
+		} else
+		{
+			if (m_mesh1.m_nodes[n].m_model_coord(0) < 0.01)
+			{
+				m_mesh1.m_nodes[n].m_fixed = false;
+			}
+		}
+
+		if (m_collideGroundPlane && m_mesh1.m_nodes[n].m_coord(1)<0.f)
+		{
+			float depth = -m_mesh1.m_nodes[n].m_coord(1);
+			if (depth>0.1)
+				depth=0.1;
+
+//#define USE_FORCE
+//#ifdef USE_FORCE
+//			m_mesh1.m_nodes[n].m_f_external = vector3_type(0.0, depth*100000, 0.0);
+//#else
+			//m_mesh1.m_nodes[n].m_coord(1) += 0.95*depth;
+			
+			m_mesh1.m_nodes[n].m_f_external = vector3_type(0.0, depth*10000, 0.0);
+//			float dt = 1./60.f;
+			
+			if (m_mesh1.m_nodes[n].m_velocity(1) < 0.f)
+			{
+				m_mesh1.m_nodes[n].m_velocity(1)=0.f;
+			}
+
+				m_mesh1.m_nodes[n].m_velocity(0)=0.f;
+				m_mesh1.m_nodes[n].m_velocity(2)=0.f;
+
+			//	m_mesh1.m_nodes[n].m_f_external(1) -= 0.01f*m_mesh1.m_nodes[n].m_velocity(1)/dt;///dt;// depth*100;
+
+			
+
+//#endif
+		} else
+		{
+			//normal gravity
+			m_mesh1.m_nodes[n].m_f_external = vector3_type(0.0, -(m_mesh1.m_nodes[n].m_mass * m_gravity), 0.0);
+		}
 	}
+
+
 	/*for (int n=0;n<m_mesh2.m_nodes.size();n++)
 	{
 		m_mesh2.m_nodes[n].m_f_external = vector3_type(0.0, -(m_mesh2.m_nodes[n].m_mass * m_gravity), 0.0);
@@ -210,7 +293,8 @@ void Application::do_run()
 	*/
 
 
-	OpenTissue::fem::simulate(m_mesh1,0.01,m_stiffness_warp_on,1.0,20,20);
+	//OpenTissue::fem::simulate(m_mesh1,0.01,m_stiffness_warp_on,1.0,20,20);
+	OpenTissue::fem::simulate(m_mesh1,dt,m_stiffness_warp_on,damp);//,0.1,20,20);//,1.0,20,20);
 //	OpenTissue::fem::simulate(m_mesh2,0.01,m_stiffness_warp_on); 
 }
 

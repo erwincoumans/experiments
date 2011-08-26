@@ -1054,7 +1054,7 @@ void DemoApplication::displayProfileString(int xOffset,int yStart,char* message)
 }
 
 
-void DemoApplication::showProfileInfo(int& xOffset,int& yStart, int yIncr)
+float DemoApplication::showProfileInfo(int& xOffset,int& yStart, int yIncr)
 {
 #ifndef BT_NO_PROFILE
 
@@ -1121,7 +1121,7 @@ void DemoApplication::showProfileInfo(int& xOffset,int& yStart, int yIncr)
 	}
 #endif//BT_NO_PROFILE
 
-
+	return time_since_reset;
 
 
 }

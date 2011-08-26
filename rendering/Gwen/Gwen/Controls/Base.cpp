@@ -190,6 +190,26 @@ void Base::InvalidateChildren( bool bRecursive )
 	}
 }
 
+void Base::Position( int pos, int xpadding, int ypadding )
+{
+	int w = GetParent()->Width();
+	int h = GetParent()->Height();
+	const Padding& padding = GetParent()->GetPadding();
+
+	int x = X();
+	int y = Y();
+
+	if ( pos & Pos::Left ) x = padding.left + xpadding;
+	if ( pos & Pos::Right ) x = w - Width() - padding.right - xpadding;
+	if ( pos & Pos::CenterH ) x = padding.left + xpadding + (w - Width() - padding.left - padding.right) * 0.5;
+
+	if ( pos & Pos::Top ) y = padding.top + ypadding;
+	if ( pos & Pos::Bottom ) y = h - Height() - padding.bottom - ypadding;
+	if ( pos & Pos::CenterV ) y = padding.top + ypadding + (h - Height() - padding.bottom - padding.top) * 0.5;
+
+	SetPos( x, y );
+}
+
 
 void Base::SendToBack()
 {

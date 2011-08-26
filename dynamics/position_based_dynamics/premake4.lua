@@ -9,14 +9,18 @@
   		includedirs {
                 ".",
                 "../../bullet2",
-                "../testbed"
+                "../testbed",
+                	"../../rendering/Gwen",
                 }
 		
 
 		links { "testbed",
 			"bullet2",
+			"gwen"
 		}
 		
+
+	
 		configuration { "Windows" }
  		links { "glut32","glew32","opengl32" }
 		includedirs{	"../../rendering/GlutGlewWindows"	}

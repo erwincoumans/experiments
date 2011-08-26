@@ -11,6 +11,8 @@
 
 #include <OpenTissue/configuration.h>
 
+#include <MyFemMesh.h>
+//#include <OpenTissue/dynamics/fem/fem_mesh.h>
 
 #include <OpenTissue/utility/glut/glut_perspective_view_application.h>
 
@@ -21,7 +23,6 @@
 #include <OpenTissue/core/math/math_basic_types.h>
 #include <OpenTissue/dynamics/fem/fem.h>
 
-#include <OpenTissue/core/containers/t4mesh/util/t4mesh_block_generator.h>
 
 
 class Application : public OpenTissue::glut::PerspectiveViewApplication
@@ -88,12 +89,16 @@ public:
 
 protected:
 
-  bool b[256];          ///< Boolean array used to keep track of the user actions/selections.
-
-	mesh_type		m_mesh1;
 //	mesh_type		m_mesh2;
 public:
+	mesh_type		m_mesh1;
+
 	bool			m_stiffness_warp_on;   ///< Boolean value indicating whether stiffness warping is turned on or off.
+
+	bool			m_collideGroundPlane;
+
+	bool			m_fixNodes;
+
 	real_type		m_gravity;
 
 	real_type		m_young;// = 500000;
@@ -112,6 +117,8 @@ public:
 
   Application()
     : m_stiffness_warp_on(true)
+	,m_collideGroundPlane(true)
+	,m_fixNodes(false)
     , m_gravity(29.81) 
   {
 	  initialize();

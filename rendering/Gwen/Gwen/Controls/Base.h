@@ -137,10 +137,13 @@ namespace Gwen
 				virtual bool IsActive() { return false;}
 			
 
+				virtual void AddChild( Controls::Base* pChild );
+
+				virtual void RemoveChild( Controls::Base* pParent );
 		protected:
 
-				virtual void AddChild( Controls::Base* pChild );
-				virtual void RemoveChild( Controls::Base* pParent );
+				
+				
 				virtual void OnChildAdded( Controls::Base* pChild );
 				virtual void OnChildRemoved( Controls::Base* pChild );
 
@@ -231,7 +234,13 @@ namespace Gwen
 
 			public:	
 
-				virtual void SetHidden( bool hidden ) { if ( m_bHidden == hidden ) return; m_bHidden = hidden; Invalidate(); }
+				virtual void SetHidden( bool hidden ) 
+				{ 
+					if ( m_bHidden == hidden ) 
+						return; 
+					m_bHidden = hidden; 
+					Invalidate(); 
+				}
 				virtual bool Hidden() const; // Returns true only if this control is hidden
 				virtual bool Visible() const; // Returns false if this control or its parents are hidden
 				virtual void Hide(){ SetHidden( true ); }
@@ -410,6 +419,8 @@ namespace Gwen
 				void Invalidate();
 				void InvalidateParent(){ if ( m_Parent ){ m_Parent->Invalidate(); } }
 				void InvalidateChildren( bool bRecursive = false );
+				void Position( int pos, int xpadding = 0, int ypadding = 0 );
+
 
 			protected:
 
