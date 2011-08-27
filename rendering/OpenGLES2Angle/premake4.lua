@@ -1,6 +1,6 @@
 	project "GLES2_Simple_Texture2D_Angle"
 		
-	kind "ConsoleApp"
+	kind "WindowedApp"
 		
 	includedirs 
 	{
