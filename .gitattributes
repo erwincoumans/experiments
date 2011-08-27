@@ -5,5 +5,10 @@
 *.filters       eol=crlf
 *.user          eol=crlf
 *.vcxproj       eol=crlf
+*.html          eol=crlf
+*.js          	eol=crlf
+*.py          	eol=crlf
+*.cmd						eol=crlf
+*.nmf						eol=crlf
 *.sh            eol=lf
 *.jpg           -text

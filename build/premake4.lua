@@ -5,11 +5,17 @@ solution "0MySolution"
 		buildoptions { "/MP"  }
 	end 
 	
+	newoption {
+    trigger     = "with-nacl",
+    description = "Enable Native Client build"
+  }
+  
 	configurations {"Release", "Debug"}
 	configuration "Release"
-		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "NoRTTI", "NoExceptions", "FloatFast"}
+		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "FloatFast"}
 	configuration "Debug"
-		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"NoRTTI", "NoExceptions","FloatFast"}
+		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
+		
 	platforms {"x32", "x64"}
 
 	configuration "x64"		
@@ -21,20 +27,29 @@ solution "0MySolution"
 	configuration {"x32", "debug"}
 		targetsuffix "_debug"
 
-	configuration{}	
---disable exception handling 
-		defines { "_HAS_EXCEPTIONS=0" }
+	configuration{}
 
+if not _OPTIONS["with-nacl"] then
+		flags { "NoRTTI", "NoExceptions"}
+		defines { "_HAS_EXCEPTIONS=0" }
+		targetdir "../bin"
+else
+	targetdir "../bin_html"
+end
 
 
 	dofile ("findOpenCL.lua")
 	dofile ("findDirectX11.lua")
 	
 	language "C++"
-	location "build"
-	targetdir "bin"
+	
+	location("./" .. _ACTION)
+	
 
---	if false then
+	include "../bullet2"	
+	
+if not _OPTIONS["with-nacl"] then
+
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
@@ -53,9 +68,6 @@ solution "0MySolution"
 	include "../physics_effects/sample_api_physics_effects/5_raycast"
 	include "../physics_effects/sample_api_physics_effects/6_joint"
 
---	end
-
-	include "../bullet2"		
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 
@@ -63,9 +75,12 @@ solution "0MySolution"
 	
 	include "../dynamics/corotational_fem"
 	--include "../dynamics/nncg_test"
-	
-	
-	
+
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"
-	
+
+end
+
+if _OPTIONS["with-nacl"] then
+	include "../rendering/NativeClient"	
+end	
