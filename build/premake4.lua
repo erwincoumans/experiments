@@ -45,10 +45,11 @@ end
 	
 	location("./" .. _ACTION)
 	
+if false then
 
 	include "../bullet2"	
 	
-if not _OPTIONS["with-nacl"] then
+--not _OPTIONS["with-nacl"] then
 
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
@@ -78,8 +79,10 @@ if not _OPTIONS["with-nacl"] then
 
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"
-
+	
 end
+
+	include "../rendering/OpenGLES2Angle"
 
 if _OPTIONS["with-nacl"] then
 	include "../rendering/NativeClient"	
