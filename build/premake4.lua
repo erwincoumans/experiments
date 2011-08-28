@@ -44,10 +44,13 @@ end
 	language "C++"
 	
 	location("./" .. _ACTION)
+
+	include "../bullet2"	
+	include "../jpeglib"
+
 	
 if false then
 
-	include "../bullet2"	
 	
 --not _OPTIONS["with-nacl"] then
 
@@ -72,7 +75,6 @@ if false then
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 
-	include "../jpeglib"
 	
 	include "../dynamics/corotational_fem"
 	--include "../dynamics/nncg_test"
@@ -86,4 +88,5 @@ end
 
 if _OPTIONS["with-nacl"] then
 	include "../rendering/NativeClient"	
+
 end	
