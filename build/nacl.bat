@@ -1,8 +1,8 @@
-
 rem make sure that the NACL_SDK_ROOT environment variable is set
+set NACL_ENABLE_PPAPI_DEV=1
 
-./premake4 --with-nacl gmake
-cd gmake
+premake4 --with-nacl gmake
+cd nacl
 
 set AR=%NACL_SDK_ROOT%\toolchain\win_x86\bin\nacl-ar.exe
 set CC=%NACL_SDK_ROOT%\toolchain\win_x86\bin\nacl-gcc.exe
@@ -14,4 +14,6 @@ make
 set config=release64
 make
 
-pause
+cd ..
+
+

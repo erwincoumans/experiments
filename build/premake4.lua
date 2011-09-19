@@ -33,8 +33,13 @@ if not _OPTIONS["with-nacl"] then
 		flags { "NoRTTI", "NoExceptions"}
 		defines { "_HAS_EXCEPTIONS=0" }
 		targetdir "../bin"
+	  location("./" .. _ACTION)
+
 else
-	targetdir "../bin_html"
+--	targetdir "../bin_html"
+	targetdir "nacl/nginx-1.1.2/html"
+	
+	location("./nacl")
 end
 
 
@@ -43,16 +48,14 @@ end
 	
 	language "C++"
 	
-	location("./" .. _ACTION)
 
 	include "../bullet2"	
 	include "../jpeglib"
 
 	
-if false then
 
 	
---not _OPTIONS["with-nacl"] then
+if not _OPTIONS["with-nacl"] then
 
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
@@ -81,12 +84,9 @@ if false then
 
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"
-	
-end
 
 	include "../rendering/OpenGLES2Angle"
 
-if _OPTIONS["with-nacl"] then
+else
 	include "../rendering/NativeClient"	
-
-end	
+end

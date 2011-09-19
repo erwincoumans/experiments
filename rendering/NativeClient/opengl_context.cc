@@ -7,13 +7,6 @@
 #include <pthread.h>
 #include "ppapi/gles2/gl2ext_ppapi.h"
 
-namespace {
-// This is called by the brower when the 3D context has been flushed to the
-// browser window.
-void FlushCallback(void* data, int32_t result) {
-  static_cast<tumbler::OpenGLContext*>(data)->set_flush_pending(false);
-}
-}  // namespace
 
 namespace tumbler {
 
@@ -60,13 +53,13 @@ void OpenGLContext::InvalidateContext(pp::Instance* instance) {
   glSetCurrentContextPPAPI(0);
 }
 
-void OpenGLContext::FlushContext() {
+void OpenGLContext::FlushContext(PP_CompletionCallback_Func func, void* data) {
   if (flush_pending()) {
     // A flush is pending so do nothing; just drop this flush on the floor.
     return;
   }
   set_flush_pending(true);
-  surface_.SwapBuffers(pp::CompletionCallback(&FlushCallback, this));
+  surface_.SwapBuffers(pp::CompletionCallback(func, data));
 }
 }  // namespace tumbler
 

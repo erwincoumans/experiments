@@ -7,8 +7,39 @@
 
 #include <GLES2/gl2.h>
 #include <vector>
+#ifdef __native_client__
 #include "opengl_context.h"
 #include "opengl_context_ptrs.h"
+#endif //__native_client__
+
+#include "LinearMath/btAlignedObjectArray.h"
+#include "LinearMath/btTransform.h"
+class btCollisionObject;
+
+struct GfxVertex
+{
+	btVector3 m_position;
+	btVector3 m_normal;
+	float	m_uv[2];
+};
+
+struct GfxObject
+{
+	struct BasicTexture*	m_texture;
+	
+	btAlignedObjectArray<unsigned short int>	m_indices;
+	btAlignedObjectArray<GfxVertex>	m_vertices;
+	
+	btCollisionObject* m_colObj;
+	btTransform m_worldTransform;
+	
+	GfxObject(GLuint vboId,btCollisionObject* colObj);
+//	btVector3 m_scaling;
+	
+	void render(int positionLoc, int normalLoc, int textureLoc,int samplerLoc,int modelMatrix);
+	
+};
+
 
 namespace tumbler {
 
@@ -16,7 +47,11 @@ namespace tumbler {
 // frame that it occupies in a browser window.
 class Cube {
  public:
-  explicit Cube(SharedOpenGLContext opengl_context);
+#ifdef __native_client__
+	 explicit Cube(SharedOpenGLContext opengl_context);
+#else
+	 Cube();
+#endif//__native_client__
   ~Cube();
 
   // Called once when a new RenderContext is first bound to the view.  The
@@ -34,6 +69,8 @@ class Cube {
   // visible portion of the context is flushed to the browser after this
   // method returns.
   void Draw();
+
+  void FlushCallback();
 
   // Accessor for width and height.  To change these, call Resize.
   const int width() const {
@@ -76,7 +113,10 @@ class Cube {
   // Assumes that |model_view| is a 4x4 matrix.
   void ComputeModelViewTransform(GLfloat* model_view);
 
+#ifdef __native_client__
   SharedOpenGLContext opengl_context_;
+#endif //__native_client__
+
   int width_;
   int height_;
   GLuint shader_program_object_;  // The compiled shaders.

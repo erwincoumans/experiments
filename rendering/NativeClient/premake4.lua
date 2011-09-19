@@ -4,13 +4,16 @@
 	
 	
 	 includedirs { "."	}
+	 includedirs { "../../bullet2"	}
+
 	--libdirs {}
 
 	links {
 		"ppapi_gles2",
 		"ppapi",
 		"ppapi_cpp",
-		"ppruntime"
+		"ppruntime",
+		"bullet2"
 	}
 	
 	
@@ -21,5 +24,8 @@
         "shader_util.cc",
         "transforms.cc",
         "tumbler.cc",
-        "tumbler_module.cc"
+        "tumbler_module.cc",
+        "btTransformUtil.cpp",
+				"btTransformUtil.h"
+
 	}

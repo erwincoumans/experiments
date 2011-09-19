@@ -17,6 +17,17 @@
 #include "ppapi/cpp/var.h"
 
 namespace {
+// This is called by the brower when the 3D context has been flushed to the
+// browser window.
+void MyFlushCallback(void* data, int32_t result) 
+{
+  static_cast<tumbler::Tumbler*>(data)->FlushCallback();
+}
+
+}  // namespace
+
+
+namespace {
 const size_t kQuaternionElementCount = 4;
 const char* const kArrayStartCharacter = "[";
 const char* const kArrayEndCharacter = "]";
@@ -71,6 +82,13 @@ Tumbler::~Tumbler() {
   delete cube_;
 }
 
+void Tumbler::FlushCallback()
+{
+	opengl_context_->set_flush_pending(false);
+	//and do the render
+	DrawSelf();
+}
+
 bool Tumbler::Init(uint32_t /* argc */,
                    const char* /* argn */[],
                    const char* /* argv */[]) {
@@ -114,7 +132,8 @@ void Tumbler::DrawSelf() {
     return;
   opengl_context_->MakeContextCurrent(this);
   cube_->Draw();
-  opengl_context_->FlushContext();
+  int i=0;
+  opengl_context_->FlushContext(MyFlushCallback, this);
 }
 
 void Tumbler::SetCameraOrientation(

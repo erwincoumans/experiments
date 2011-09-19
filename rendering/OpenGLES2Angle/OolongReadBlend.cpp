@@ -24,6 +24,9 @@
 #else
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
+
+//#define USE_JPEG
+#ifdef USE_JPEG
 #define XMD_H
 #ifdef  __cplusplus
 extern "C" {
@@ -96,7 +99,7 @@ boolean fill_input_buffer (j_decompress_ptr cinfo)
 	// DO NOTHING
 	return 1;
 }
-
+#endif //USE_JPEG
 #endif//__APPLE__
 
 #include "OolongReadBlend.h"
@@ -271,6 +274,7 @@ struct BasicTexture
 		}			
 
 #else
+#ifdef USE_JPEG
 		unsigned char **rowPtr=0;
 
 		// allocate and initialize JPEG decompression object
@@ -366,6 +370,17 @@ struct BasicTexture
 		// Release JPEG decompression object
 		// This is an important step since it will release a good deal of memory.
 		jpeg_destroy_decompress(&cinfo);
+#else
+	m_width  = 2;
+	m_height = 2;
+	m_output = new unsigned char[m_width*4 * m_height];
+	for (int i=0;i<m_width*4 * m_height;i++)
+	{
+		m_output[i] = 255;
+	}
+	m_output[0] = 0;
+
+#endif //USE_JPEG
 #endif
 		
 	}
@@ -457,7 +472,12 @@ void GfxObject::render(int positionLoc,int texCoordLoc, int samplerLoc, int mode
 
  
 	static float mat1[16];
-	m_colObj->getWorldTransform().getOpenGLMatrix(mat1);
+	btTransform tr;
+	tr.setIdentity();
+	if (m_colObj)
+		tr = m_colObj->getWorldTransform();
+	tr.getOpenGLMatrix(mat1);
+
 	glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
 
 	glDrawElements(GL_TRIANGLES,m_indices.size(),GL_UNSIGNED_SHORT,&m_indices[0]);
@@ -478,6 +498,7 @@ OolongBulletBlendReader::OolongBulletBlendReader(class btDynamicsWorld* destinat
 	m_cameraTrans.setIdentity();
 }
 	
+
 OolongBulletBlendReader::~OolongBulletBlendReader()
 {
 	for (int i=0;i<m_graphicsObjects.size();i++)

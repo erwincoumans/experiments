@@ -37,6 +37,9 @@ class Tumbler : public pp::Instance {
   // Bind and publish the module's methods to JavaScript.
   void InitializeMethods(ScriptingBridge* bridge);
 
+  void FlushCallback();
+
+
   // Set the camera orientation to the quaternion in |args[0]|.  |args| must
   // have length at least 1; the first element is expeted to be an Array
   // object containing 4 floating point number elements (the quaternion).

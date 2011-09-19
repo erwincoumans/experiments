@@ -48,7 +48,7 @@ class OpenGLContext : public pp::Graphics3DClient_Dev {
   bool MakeContextCurrent(pp::Instance* instance);
 
   /// Flush the contents of this context to the browser's 3D device.
-  void FlushContext();
+  void FlushContext(PP_CompletionCallback_Func func, void* data);
 
   /// Make the underlying 3D device invalid, so that any subsequent rendering
   /// commands will have no effect.  The next call to MakeContextCurrent() will

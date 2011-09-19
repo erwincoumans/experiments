@@ -33,6 +33,7 @@ void	btCreateFrustum(
 		frustum[3*4+3] = float(0);
 
 }
+#include <string.h>
 
 void	btCreateLookAt(const btVector3& eye, const btVector3& center,const btVector3& up, float result[16])
 {
@@ -41,18 +42,23 @@ void	btCreateLookAt(const btVector3& eye, const btVector3& center,const btVector
 		btVector3 s = (f.cross(u)).normalized();
         u = s.cross(f);
 
-        result[0*4+0] = s.x();
+		result[0*4+0] = s.x();
         result[1*4+0] = s.y();
         result[2*4+0] = s.z();
-        result[0*4+1] = u.x();
-        result[1*4+1] = u.y();
-        result[2*4+1] = u.z();
-        result[0*4+2] =-f.x();
-        result[1*4+2] =-f.y();
-        result[2*4+2] =-f.z();
-
 		result[3*4+0] = -s.dot(eye);
+
+		result[0*4+1] = u.x();
+		result[1*4+1] = u.y();
+        result[2*4+1] = u.z();
 		result[3*4+1] = -u.dot(eye);
+
+		result[0*4+2] =-f.x();
+        result[1*4+2] =-f.y();
+		result[2*4+2] =-f.z();
 		result[3*4+2] = f.dot(eye);
+
+		result[0*4+3] = 0.f;
+		result[1*4+3] = 0.f;
+		result[2*4+3] = 0.f;
 		result[3*4+3] = 1.f;
 }
