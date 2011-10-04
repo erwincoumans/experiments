@@ -425,7 +425,7 @@ void InitCL()
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//GPU;
+	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//CPU;
 	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 

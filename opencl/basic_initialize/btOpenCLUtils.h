@@ -65,14 +65,21 @@ struct btOpenCLDeviceInfo
 
 };
 
+struct btOpenCLPlatformInfo
+{
+	char m_platformVendor[BT_MAX_STRING_LENGTH];
+	char m_platformName[BT_MAX_STRING_LENGTH];
+	char m_platformVersion[BT_MAX_STRING_LENGTH];
+};
 
 class btOpenCLUtils
 {
 public:
-	// CL Context optionally takes a GL context. This is a generic type because we don't really want this code
-	// to have to understand GL types.
-	// It is a HGLRC in _WIN32 or a GLXContext otherwise.
+
+	/// CL Context optionally takes a GL context. This is a generic type because we don't really want this code
+	/// to have to understand GL types. It is a HGLRC in _WIN32 or a GLXContext otherwise.
 	static cl_context 	createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx = 0, void* pGLDC = 0);
+	
 	static int getNumDevices(cl_context cxMainContext);
 	static cl_device_id getDevice(cl_context cxMainContext, int nr);
 	static void getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info);
@@ -80,6 +87,13 @@ public:
 
 	static cl_kernel compileCLKernelFromString( cl_context clContext,const char* kernelSource, const char* kernelName, const char* additionalMacros = "" );
 
+	//the following optional APIs provide access using specific platform information
+	static int getNumPlatforms(cl_int* pErrNum=0);
+	///get the nr'th platform, where nr is in the range [0..getNumPlatforms)
+	static cl_platform_id getPlatform(int nr, cl_int* pErrNum=0);
+	static void getPlatformInfo(cl_platform_id platform, btOpenCLPlatformInfo& platformInfo);
+	static const char* getSdkVendorName();
+	static cl_context 	createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx = 0, void* pGLDC = 0);
 };
 
 

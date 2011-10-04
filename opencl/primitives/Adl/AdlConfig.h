@@ -2,7 +2,7 @@
 		2011 Takahiro Harada
 */
 
-#define ADL_ENABLE_CL
+//#define ADL_ENABLE_CL
 //#define ADL_ENABLE_DX11
 
 //#define ADL_CL_FORCE_UNCACHE_KERNEL

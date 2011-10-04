@@ -58,7 +58,7 @@ cl_kernel g_interopKernel;
 ////for Adl
 #include <Adl/Adl.h>
 
-DeviceCL* g_deviceCL=0;
+adl::DeviceCL* g_deviceCL=0;
 
 
 
@@ -1056,12 +1056,11 @@ int main(int argc, char* argv[])
 
 	InitCL();
 	
-	AdlAllocate();
 
 #define CUSTOM_CL_INITIALIZATION
 #ifdef CUSTOM_CL_INITIALIZATION
-	g_deviceCL = new DeviceCL();
-	g_deviceCL->m_deviceIdx = 0;
+	g_deviceCL = new adl::DeviceCL();
+	g_deviceCL->m_deviceIdx = g_device;
 	g_deviceCL->m_context = g_cxMainContext;
 	g_deviceCL->m_commandQueue = g_cqCommandQue;
 
@@ -1072,8 +1071,8 @@ int main(int argc, char* argv[])
 #endif
 
 	int size = NUM_OBJECTS;
-	Buffer<btVector3> linvelBuf( g_deviceCL, size );
-	Buffer<btVector3> angvelBuf( g_deviceCL, size );
+	adl::Buffer<btVector3> linvelBuf( g_deviceCL, size );
+	adl::Buffer<btVector3> angvelBuf( g_deviceCL, size );
 	
 	gLinVelMem = (cl_mem)linvelBuf.m_ptr;
 	gAngVelMem = (cl_mem)angvelBuf.m_ptr;
@@ -1090,7 +1089,7 @@ int main(int argc, char* argv[])
 	linvelBuf.write(linVelHost,NUM_OBJECTS);
 	angvelBuf.write(angVelHost,NUM_OBJECTS);
 
-	DeviceUtils::waitForCompletion( g_deviceCL );
+	adl::DeviceUtils::waitForCompletion( g_deviceCL );
 	
 	InitShaders();
 	
