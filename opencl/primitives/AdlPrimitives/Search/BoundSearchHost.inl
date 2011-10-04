@@ -1,18 +1,6 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
 
 template<>
 class BoundSearch<TYPE_HOST> : public BoundSearchBase
@@ -22,20 +10,22 @@ class BoundSearch<TYPE_HOST> : public BoundSearchBase
 
 		struct Data
 		{
-
+			const Device* m_device;
 		};
 
 		static
-		Data* allocate(const Device* deviceData)
+		Data* allocate(const Device* deviceData, int maxSize = 0)
 		{
 			ADLASSERT( deviceData->m_type == TYPE_HOST );
-			return 0;
+			Data* data = new Data;
+			data->m_device = deviceData;
+			return data;
 		}
 
 		static
 		void deallocate(Data* data)
 		{
-
+			delete data;
 		}
 
 		static
@@ -82,6 +72,18 @@ class BoundSearch<TYPE_HOST> : public BoundSearchBase
 						}
 					}
 				}
+			}
+			else if( option == COUNT )
+			{
+				HostBuffer<u32> lower( data->m_device, nDst );
+				HostBuffer<u32> upper( data->m_device, nDst );
+
+				for(u32 i=0; i<nDst; i++) { lower[i] = upper[i] = 0; }
+
+				execute( data, rawSrc, nSrc, lower, nDst, BOUND_LOWER );
+				execute( data, rawSrc, nSrc, upper, nDst, BOUND_UPPER );
+
+				for(u32 i=0; i<nDst; i++) { dst[i] = upper[i] - lower[i]; }
 			}
 			else
 			{

@@ -1,29 +1,11 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
-
 
 #define PATH "..\\..\\AdlPrimitives\\Sort\\RadixSort32Kernels"
 #define KERNEL0 "StreamCountKernel"
 #define KERNEL1 "PrefixScanKernel"
 #define KERNEL2 "SortAndScatterKernel"
-
-
-#include <AdlPrimitives/Sort/RadixSort32KernelsDX11.h>
-#include <AdlPrimitives/Sort/RadixSort32KernelsCL.h>
-
 
 //	todo. Shader compiler (2010JuneSDK) doesn't allow me to place Barriers in SortAndScatterKernel... 
 //	So it only works on a GPU with 64 wide SIMD. 
@@ -34,19 +16,18 @@ typename RadixSort32<TYPE>::Data* RadixSort32<TYPE>::allocate( const Device* dev
 	ADLASSERT( TYPE == device->m_type );
 
 	const char* src[] = 
-#if defined(ADL_LOAD_KERNEL_FROM_STRING)
-	{radixSort32KernelsCL , radixSort32KernelsDX11 };
-//	ADLASSERT(0);
-#else
+#if defined(ADL_LOAD_KERNEL_FROM_FILE)
 	{0,0};
+#else
+	{fillKernelsCL, fillKernelsDX11};
 #endif
-
+	
 	Data* data = new Data;
 	data->m_device = device;
 	data->m_maxSize = maxSize;
-	data->m_streamCountKernel = KernelManager::query( device, PATH, KERNEL0, 0, src[TYPE] );
-	data->m_prefixScanKernel = KernelManager::query( device, PATH, KERNEL1, 0, src[TYPE] );
-	data->m_sortAndScatterKernel = KernelManager::query( device, PATH, KERNEL2, 0, src[TYPE] );
+	data->m_streamCountKernel = device->getKernel( PATH, KERNEL0, 0, src[TYPE] );
+	data->m_prefixScanKernel = device->getKernel( PATH, KERNEL1, 0, src[TYPE] );
+	data->m_sortAndScatterKernel = device->getKernel( PATH, KERNEL2, 0, src[TYPE] );
 
 	data->m_workBuffer0 = new Buffer<u32>( device, maxSize );
 	data->m_workBuffer1 = new Buffer<u32>( device , NUM_WGS*(1<<BITS_PER_PASS) );
@@ -75,9 +56,9 @@ void RadixSort32<TYPE>::deallocate( Data* data )
 template<DeviceType TYPE>
 void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& inout, int n, int sortBits /* = 32 */ )
 {
-	ADLASSERT( n%256 == 0 );
+	ADLASSERT( n%DATA_ALIGNMENT == 0 );
 	ADLASSERT( n <= data->m_maxSize );
-	ADLASSERT( ELEMENTS_PER_WORK_ITEM == 4 );
+//	ADLASSERT( ELEMENTS_PER_WORK_ITEM == 4 );
 	ADLASSERT( BITS_PER_PASS == 4 );
 	ADLASSERT( WG_SIZE == 64 );
 	ADLASSERT( (sortBits&0x3) == 0 );
@@ -86,14 +67,21 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& inout, int n, int sortB
 	Buffer<u32>* dst = data->m_workBuffer0;
 	Buffer<u32>* histogramBuffer = data->m_workBuffer1;
 
-	const int nWGs = NUM_WGS;
+	int nWGs = NUM_WGS;
 	ConstData cdata;
 	{
 		int nBlocks = (n+ELEMENTS_PER_WORK_ITEM*WG_SIZE-1)/(ELEMENTS_PER_WORK_ITEM*WG_SIZE);
+
 		cdata.m_n = n;
-		cdata.m_nWGs = nWGs;
+		cdata.m_nWGs = NUM_WGS;
 		cdata.m_startBit = 0;
 		cdata.m_nBlocksPerWG = (nBlocks + cdata.m_nWGs - 1)/cdata.m_nWGs;
+
+		if( nBlocks < NUM_WGS )
+		{
+			cdata.m_nBlocksPerWG = 1;
+			nWGs = nBlocks;
+		}
 	}
 
 	for(int ib=0; ib<sortBits; ib+=4)
@@ -104,7 +92,7 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& inout, int n, int sortB
 			Launcher launcher( data->m_device, data->m_streamCountKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(Launcher::BufferInfo) );
 			launcher.setConst( *data->m_constBuffer[ib/4], cdata );
-			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
+			launcher.launch1D( NUM_WGS*WG_SIZE, WG_SIZE );
 		}
 		{//	prefix scan group histogram
 			BufferInfo bInfo[] = { BufferInfo( histogramBuffer ) };
@@ -132,9 +120,9 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& inout, int n, int sortB
 template<DeviceType TYPE>
 void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& in, Buffer<u32>& out, int n, int sortBits /* = 32 */ )
 {
-	ADLASSERT( n%256 == 0 );
+	ADLASSERT( n%DATA_ALIGNMENT == 0 );
 	ADLASSERT( n <= data->m_maxSize );
-	ADLASSERT( ELEMENTS_PER_WORK_ITEM == 4 );
+//	ADLASSERT( ELEMENTS_PER_WORK_ITEM == 4 );
 	ADLASSERT( BITS_PER_PASS == 4 );
 	ADLASSERT( WG_SIZE == 64 );
 	ADLASSERT( (sortBits&0x3) == 0 );
@@ -143,14 +131,19 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& in, Buffer<u32>& out, i
 	Buffer<u32>* dst = data->m_workBuffer0;
 	Buffer<u32>* histogramBuffer = data->m_workBuffer1;
 
-	const int nWGs = NUM_WGS;
+	int nWGs = NUM_WGS;
 	ConstData cdata;
 	{
 		int nBlocks = (n+ELEMENTS_PER_WORK_ITEM*WG_SIZE-1)/(ELEMENTS_PER_WORK_ITEM*WG_SIZE);
 		cdata.m_n = n;
-		cdata.m_nWGs = nWGs;
+		cdata.m_nWGs = NUM_WGS;
 		cdata.m_startBit = 0;
 		cdata.m_nBlocksPerWG = (nBlocks + cdata.m_nWGs - 1)/cdata.m_nWGs;
+		if( nBlocks < NUM_WGS )
+		{
+			cdata.m_nBlocksPerWG = 1;
+			nWGs = nBlocks;
+		}
 	}
 
 	if( sortBits == 4 ) dst = &out;
@@ -168,7 +161,7 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& in, Buffer<u32>& out, i
 			Launcher launcher( data->m_device, data->m_streamCountKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(Launcher::BufferInfo) );
 			launcher.setConst( *data->m_constBuffer[ib/4], cdata );
-			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
+			launcher.launch1D( NUM_WGS*WG_SIZE, WG_SIZE );
 		}
 		{//	prefix scan group histogram
 			BufferInfo bInfo[] = { BufferInfo( histogramBuffer ) };
@@ -185,11 +178,6 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<u32>& in, Buffer<u32>& out, i
 			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
 		}
 		swap2( src, dst );
-	}
-
-	if( src != &out )
-	{
-		Copy<TYPE>::execute( data->m_copyData, (Buffer<float>&)out, (Buffer<float>&)*src, n );
 	}
 }
 

@@ -55,7 +55,6 @@ void launchOverheadBenchmark()
 {
 	printf("LaunchOverheadBenchmark\n");
 
-	AdlAllocate();
 
 	Device* ddcl;
 #if defined(ADL_ENABLE_DX11)
@@ -73,14 +72,14 @@ void launchOverheadBenchmark()
 		printf("CL\n");
 		copyTest<TYPE_CL>( ddcl );
 	}
-#if defined(ADL_ENABLE_DX11)
+#ifdef ADL_ENABLE_DX11
 	{
 		printf("DX11\n");
 		copyTest<TYPE_DX11>( dddx );
 	}
 #endif
 
-	AdlDeallocate();
+
 }
 
 

@@ -26,7 +26,6 @@ subject to the following restrictions:
 #include <AdlPrimitives/Copy/CopyKernelsDX11.h>
 
 
-
 template<DeviceType TYPE>
 typename Copy<TYPE>::Data* Copy<TYPE>::allocate( const Device* device )
 {
@@ -43,11 +42,11 @@ typename Copy<TYPE>::Data* Copy<TYPE>::allocate( const Device* device )
 
 	Data* data = new Data;
 	data->m_device = device;
-	data->m_copy1F4Kernel = KernelManager::query( device, PATH, KERNEL0, 0, src[TYPE] );
-	data->m_copy2F4Kernel = KernelManager::query( device, PATH, KERNEL1, 0, src[TYPE] );
-	data->m_copy4F4Kernel = KernelManager::query( device, PATH, KERNEL2, 0, src[TYPE] );
-	data->m_copyF1Kernel = KernelManager::query( device, PATH, KERNEL3, 0, src[TYPE] );
-	data->m_copyF2Kernel = KernelManager::query( device, PATH, KERNEL4, 0, src[TYPE] );
+	data->m_copy1F4Kernel = device->getKernel( PATH, KERNEL0, 0, src[TYPE] );
+	data->m_copy2F4Kernel = device->getKernel( PATH, KERNEL1, 0, src[TYPE] );
+	data->m_copy4F4Kernel = device->getKernel( PATH, KERNEL2, 0, src[TYPE] );
+	data->m_copyF1Kernel = device->getKernel( PATH, KERNEL3, 0, src[TYPE] );
+	data->m_copyF2Kernel = device->getKernel( PATH, KERNEL4, 0, src[TYPE] );
 	data->m_constBuffer = new Buffer<int4>( device, 1, BufferBase::BUFFER_CONST );
 
 	return data;

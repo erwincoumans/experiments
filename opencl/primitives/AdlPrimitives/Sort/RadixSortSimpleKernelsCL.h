@@ -146,5 +146,4 @@ static const char* radixSortSimpleKernelsCL= \
 "	sortDataOut[dst[2]] = datas[2];\n"
 "	sortDataOut[dst[3]] = datas[3];\n"
 "}\n"
-"\n"
 ;

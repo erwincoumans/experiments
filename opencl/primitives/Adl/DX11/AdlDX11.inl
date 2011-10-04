@@ -1,18 +1,6 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
 
 #include <windows.h>
 #include <d3d11.h>
@@ -23,6 +11,8 @@ subject to the following restrictions:
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"DXGI.lib")
 
+namespace adl
+{
 
 #define u32 unsigned int
 
@@ -32,7 +22,7 @@ struct DeviceDX11 : public Device
 
 
 	__inline
-	DeviceDX11() : Device( TYPE_DX11 ){}
+	DeviceDX11() : Device( TYPE_DX11 ), m_kernelManager(0){}
 	__inline
 	void* getContext() const { return m_context; }
 	__inline
@@ -50,7 +40,7 @@ struct DeviceDX11 : public Device
 
 	template<typename T>
 	__inline
-	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems, int offsetNElems = 0);
+	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems);
 
 	template<typename T>
 	__inline
@@ -70,10 +60,15 @@ struct DeviceDX11 : public Device
 	static
 	int getNDevices();
 
+	__inline
+	Kernel* getKernel(const char* fileName, const char* funcName, const char* option = NULL, const char* src = NULL, bool cacheKernel = true )const;
+
 
 	ID3D11DeviceContext* m_context;
 	ID3D11Device* m_device;
 	IDXGISwapChain* m_swapChain;
+
+	KernelManager* m_kernelManager;
 };
 
 template<typename T>
@@ -161,15 +156,19 @@ typedef HRESULT (WINAPI * LPD3D11CREATEDEVICE)( IDXGIAdapter*, D3D_DRIVER_TYPE, 
 		SAFE_RELEASE( deviceData->m_context );
 		SAFE_RELEASE( deviceData->m_device );
 
-		adlDebugPrintf("DX11 GPU is not present\n");
+		debugPrintf("DX11 GPU is not present\n");
 		ADLASSERT( 0 );
 	}
+
+	m_kernelManager = new KernelManager;
 }
 
 void DeviceDX11::release()
 {
 	SAFE_RELEASE( m_context );
 	SAFE_RELEASE( m_device );
+
+	if( m_kernelManager ) delete m_kernelManager;
 }
 
 template<typename T>
@@ -349,15 +348,41 @@ void DeviceDX11::deallocate(Buffer<T>* buf)
 }
 
 template<typename T>
-void DeviceDX11::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems, int offsetNElems)
+void DeviceDX11::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems)
 {
-	if( dst.m_device->m_type == TYPE_DX11 || src.m_device->m_type == TYPE_HOST )
+	if( dst->m_device->m_type == TYPE_DX11 || src->m_device->m_type == TYPE_DX11 )
 	{
-		copy( dst, src.m_ptr, nElems, offsetNElems );
+		DeviceDX11* deviceData = this;
+		BufferDX11<T>* dDst = (BufferDX11<T>*)dst;
+		BufferDX11<T>* dSrc = (BufferDX11<T>*)src;
+
+		D3D11_MAPPED_SUBRESOURCE MappedVelResource = {0};
+
+		D3D11_BOX destRegion;
+		destRegion.left = 0*sizeof(T);
+		destRegion.front = 0;
+		destRegion.top = 0;
+		destRegion.bottom = 1;
+		destRegion.back = 1;
+		destRegion.right = (0+nElems)*sizeof(T);
+
+		deviceData->m_context->CopySubresourceRegion(
+				dDst->getBuffer(),
+				0, 0, 0, 0,
+				dSrc->getBuffer(),
+				0,
+				&destRegion );
+
 	}
-	else if( src.m_device->m_type == TYPE_DX11 || dst.m_device->m_type == TYPE_HOST )
+	else if( src->m_device->m_type == TYPE_HOST )
 	{
-		copy( dst->m_ptr, src, nElems, offsetNElems );
+		ADLASSERT( dst->getType() == TYPE_DX11 );
+		dst->write( src->m_ptr, nElems );
+	}
+	else if( dst->m_device->m_type == TYPE_HOST )
+	{
+		ADLASSERT( src->getType() == TYPE_DX11 );
+		src->read( dst->m_ptr, nElems );
 	}
 	else
 	{
@@ -390,8 +415,7 @@ void DeviceDX11::copy(T* dst, const Buffer<T>* src, int nElems, int srcOffsetNEl
             0, 0, 0, 0,
 			dSrc->getBuffer(),
             0,
-            &destRegion
-    );
+            &destRegion);
 
     deviceData->m_context->Map(StagingBuffer, 0, D3D11_MAP_READ, 0, &MappedVelResource);
     memcpy(dst, MappedVelResource.pData, nElems*sizeof(T));
@@ -464,6 +488,13 @@ void DeviceDX11::getDeviceName( char nameOut[128] ) const
 	wcstombs_s( &i, nameOut, 128, adapterDesc.Description, 128 );
 }
 
+Kernel* DeviceDX11::getKernel(const char* fileName, const char* funcName, const char* option, const char* src, bool cacheKernel ) const
+{
+	return m_kernelManager->query( this, fileName, funcName, option, src, cacheKernel );
+}
+
 #undef u32
 
 #undef SAFE_RELEASE
+
+};

@@ -1,18 +1,9 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
+
+namespace adl
+{
 
 #define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p)=NULL; } }
 
@@ -122,7 +113,8 @@ HRESULT FindDXSDKShaderFileCch( __in_ecount(cchDest) CHAR* strDestPath,
 
 
 template<>
-void KernelBuilder<TYPE_DX11>::setFromFile( const Device* deviceData, const char* fileName, const char* option, bool addExtension )
+void KernelBuilder<TYPE_DX11>::setFromFile( const Device* deviceData, const char* fileName, const char* option, bool addExtension,
+	bool cacheKernel)
 {
 	char fileNameWithExtension[256];
 
@@ -133,7 +125,7 @@ void KernelBuilder<TYPE_DX11>::setFromFile( const Device* deviceData, const char
 
 	m_deviceData = deviceData;
 
-	int nameLength = strlen(fileNameWithExtension)+1;
+	int nameLength = (int)strlen(fileNameWithExtension)+1;
 #ifdef UNICODE
 	WCHAR* wfileNameWithExtension = new WCHAR[nameLength];
 #else
@@ -220,7 +212,7 @@ void KernelBuilder<TYPE_DX11>::createKernel( const char* funcName, Kernel& kerne
 
 	if ( FAILED(hr) )
 	{
-		adlDebugPrintf("%s", (char*)pErrorBlob->GetBufferPointer());
+		debugPrintf("%s", (char*)pErrorBlob->GetBufferPointer());
 	}
 	ADLASSERT( hr == S_OK );
 
@@ -340,3 +332,4 @@ void LauncherDX11::launch2D( Launcher* launcher, int numThreadsX, int numThreads
 
 #undef SAFE_RELEASE
 
+};

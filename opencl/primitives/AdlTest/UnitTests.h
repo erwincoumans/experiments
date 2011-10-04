@@ -1,19 +1,3 @@
-/*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
-*/
-//Author Takahiro Harada
-
 #include <AdlPrimitives/Scan/PrefixScan.h>
 #include <AdlPrimitives/Sort/RadixSort.h>
 #include <AdlPrimitives/Sort/RadixSort32.h>
@@ -21,14 +5,16 @@ subject to the following restrictions:
 #include <AdlPrimitives/Fill/Fill.h>
 #include <AdlPrimitives/Copy/Copy.h>
 
+using namespace adl;
 
 #define NUM_TESTS 10
 
 int g_nPassed = 0;
 int g_nFailed = 0;
+bool g_testFailed = 0;
 
-
-#define TEST_INIT bool g_testFailed = 0;
+//#define TEST_INIT bool g_testFailed = 0;
+#define TEST_INIT g_testFailed = 0;
 #define TEST_ASSERT(x) if( !(x) ){g_testFailed = 1;}
 //#define TEST_ASSERT(x) if( !(x) ){g_testFailed = 1;ADLASSERT(x);}
 #define TEST_REPORT(testName) printf("[%s] %s\n",(g_testFailed)?"X":"O", testName); if(g_testFailed) g_nFailed++; else g_nPassed++;
@@ -65,7 +51,10 @@ void memCpyTest( Device* deviceData )
 void kernelTest( Device* deviceData )
 {
 	TEST_INIT;
-	Kernel* kernel = KernelManager::query( deviceData, ".\\Kernel", "VectorAddKernel" );
+
+	KernelManager* manager = new KernelManager();
+
+	Kernel* kernel = manager->query(deviceData, ".\\Kernel", "VectorAddKernel" );
 
 	{
 		int size = 1024;
@@ -633,8 +622,7 @@ void runAllTest()
 	g_nPassed = 0;
 	g_nFailed = 0;
 
-	AdlAllocate();
-
+	
 	Device* ddcl;
 	Device* ddhost;
 #if defined(ADL_ENABLE_DX11)
@@ -656,13 +644,13 @@ void runAllTest()
 		char name[128];
 		ddcl->getDeviceName( name );
 		printf("CL: %s\n", name);
-#if defined(ADL_ENABLE_DX11)
+#ifdef ADL_ENABLE_DX11
 		dddx->getDeviceName( name );
 		printf("DX11: %s\n", name);
 #endif
 	}
 
-//	RUN_GPU_TEMPLATE( radixSort32Test );
+	//RUN_GPU_TEMPLATE( radixSort32Test );
 
 	{
 		RUN_GPU_TEMPLATE( CopyF1Test );
@@ -673,7 +661,7 @@ void runAllTest()
 //		fillTest<TYPE_CL>( ddcl, ddhost );
 
 
-		RUN_GPU_TEMPLATE( radixSort32Test );
+	//	RUN_GPU_TEMPLATE( radixSort32Test );
 
 		RUN_GPU_TEMPLATE( boundSearchTest );
 
@@ -684,9 +672,11 @@ void runAllTest()
 		RUN_ALL( stopwatchTest );
 		RUN_ALL( memCpyTest );
 //		RUN_GPU( kernelTest );
-		RUN_GPU_TEMPLATE( scanTest );
-		RUN_GPU_TEMPLATE( radixSortStandardTest );
+//		RUN_GPU_TEMPLATE( scanTest );
 		RUN_GPU_TEMPLATE( radixSortSimpleTest );
+
+		RUN_GPU_TEMPLATE( radixSortStandardTest );
+		
 		RUN_GPU_TEMPLATE( boundSearchTest );
 		RUN_GPU_TEMPLATE( Copy1F4Test );
 		RUN_GPU_TEMPLATE( Copy2F4Test );
@@ -702,5 +692,4 @@ void runAllTest()
 	printf("=========\n%d Passed\n%d Failed\n", g_nPassed, g_nFailed);
 
 
-	AdlDeallocate();
 }

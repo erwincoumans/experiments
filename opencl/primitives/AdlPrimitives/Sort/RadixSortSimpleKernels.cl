@@ -145,4 +145,3 @@ void ScatterKernel(__global SortData* sortData,
 	sortDataOut[dst[2]] = datas[2];
 	sortDataOut[dst[3]] = datas[3];
 }
-

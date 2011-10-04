@@ -1,24 +1,14 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
 
 #pragma comment(lib,"OpenCL.lib")
 #include <CL/cl.h>
 #include <CL/cl_ext.h>
 #include <CL/cl_platform.h>
 
+namespace adl
+{
 
 struct DeviceCL : public Device
 {
@@ -26,7 +16,7 @@ struct DeviceCL : public Device
 
 
 	__inline
-	DeviceCL() : Device( TYPE_CL ){}
+	DeviceCL() : Device( TYPE_CL ), m_kernelManager(0){}
 	__inline
 	void* getContext() const { return m_context; }
 	__inline
@@ -44,7 +34,7 @@ struct DeviceCL : public Device
 
 	template<typename T>
 	__inline
-	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems, int offsetNElems = 0);
+	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems);
 
 	template<typename T>
 	__inline
@@ -64,17 +54,21 @@ struct DeviceCL : public Device
 	static
 	int getNDevices();
 
+	__inline
+	Kernel* getKernel(const char* fileName, const char* funcName, const char* option = NULL, const char* src = NULL, bool cacheKernel = true )const;
 
 
 	enum
 	{
-		MAX_NUM_DEVICES = 2,
+		MAX_NUM_DEVICES = 6,
 	};
 	
 	cl_context m_context;
 	cl_command_queue m_commandQueue;
 
 	cl_device_id m_deviceIdx;
+
+	KernelManager* m_kernelManager;
 };
 
 //===
@@ -118,7 +112,7 @@ void DeviceCL::initialize(const Config& cfg)
 				ADLASSERT( status == CL_SUCCESS );
 
 				if( strcmp( buff, "NVIDIA Corporation" )==0 ) nvIdx = i;
-				if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
+				//if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
 				if( strcmp( buff, "Intel Corporation" )==0 ) intelIdx = i;
 			}
 
@@ -127,10 +121,14 @@ void DeviceCL::initialize(const Config& cfg)
 				switch( cfg.m_vendor )
 				{
 				case DeviceUtils::Config::VD_AMD:
+					if( atiIdx == -1 && nvIdx != -1 ) goto USE_NV_GPU;
+USE_AMD_GPU:
 					ADLASSERT(atiIdx != -1 );
 					platform = pIdx[atiIdx];
 					break;
 				case DeviceUtils::Config::VD_NV:
+					if( atiIdx != -1 && nvIdx == -1 ) goto USE_AMD_GPU;
+USE_NV_GPU:
 					ADLASSERT(nvIdx != -1 );
 					platform = pIdx[nvIdx];
 					break;
@@ -163,7 +161,7 @@ void DeviceCL::initialize(const Config& cfg)
 
 //		ADLASSERT( cfg.m_deviceIdx < (int)numDevice );
 
-		adlDebugPrintf("CL: %d %s Devices ", numDevice, (deviceType==CL_DEVICE_TYPE_GPU)? "GPU":"CPU");
+		debugPrintf("CL: %d %s Devices ", numDevice, (deviceType==CL_DEVICE_TYPE_GPU)? "GPU":"CPU");
 
 //		numContextQueuePairsToCreate = min( (int)numDevice, numContextQueuePairsToCreate );
 //		numContextQueuePairsToCreate = ( (int)numDevice < numContextQueuePairsToCreate )? numDevice : numContextQueuePairsToCreate;
@@ -182,7 +180,7 @@ void DeviceCL::initialize(const Config& cfg)
 			status = clGetDeviceInfo( deviceData->m_deviceIdx, CL_DEVICE_NAME, sizeof(buff), &buff, NULL );
 			ADLASSERT( status == CL_SUCCESS );
 
-			adlDebugPrintf("[%s]\n", buff);
+			debugPrintf("[%s]\n", buff);
 
 			deviceData->m_commandQueue = clCreateCommandQueue( deviceData->m_context, deviceData->m_deviceIdx, (enableProfiling)?CL_QUEUE_PROFILING_ENABLE:NULL, NULL );
 
@@ -195,17 +193,20 @@ void DeviceCL::initialize(const Config& cfg)
 			{
 				cl_bool image_support;
 				clGetDeviceInfo(deviceData->m_deviceIdx, CL_DEVICE_IMAGE_SUPPORT, sizeof(image_support), &image_support, NULL);
-				adlDebugPrintf("	CL_DEVICE_IMAGE_SUPPORT : %s\n", image_support?"Yes":"No");
+				debugPrintf("	CL_DEVICE_IMAGE_SUPPORT : %s\n", image_support?"Yes":"No");
 			}
 		}
-
 	}
+
+	m_kernelManager = new KernelManager;
 }
 
 void DeviceCL::release()
 {
 	clReleaseCommandQueue( m_commandQueue );
 	clReleaseContext( m_context );
+
+	if( m_kernelManager ) delete m_kernelManager;
 }
 
 template<typename T>
@@ -216,6 +217,14 @@ void DeviceCL::allocate(Buffer<T>* buf, int nElems, BufferBase::BufferType type)
 	buf->m_ptr = 0;
 
 	if( type == BufferBase::BUFFER_CONST ) return;
+
+#if defined(ADL_CL_DUMP_MEMORY_LOG)
+	char deviceName[256];
+	getDeviceName( deviceName );
+   	printf( "adlCLMemoryLog	%s : %3.2fMB	Allocation: %3.2fKB ", deviceName, m_memoryUsage/1024.f/1024.f, sizeof(T)*nElems/1024.f );
+	fflush( stdout );
+#endif
+
 	cl_int status = 0;
 	if( type == BufferBase::BUFFER_ZERO_COPY )
 		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, sizeof(T)*nElems, 0, &status );
@@ -223,28 +232,46 @@ void DeviceCL::allocate(Buffer<T>* buf, int nElems, BufferBase::BufferType type)
 		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_WRITE_ONLY, sizeof(T)*nElems, 0, &status );
 	else
 		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE, sizeof(T)*nElems, 0, &status );
+
+	m_memoryUsage += buf->m_size*sizeof(T);
+#if defined(ADL_CL_DUMP_MEMORY_LOG)
+	printf( "%s\n", (status==CL_SUCCESS)? "Succeed": "Failed" );
+	fflush( stdout );
+#endif
 	ADLASSERT( status == CL_SUCCESS );
 }
 
 template<typename T>
 void DeviceCL::deallocate(Buffer<T>* buf)
 {
-	if( buf->m_ptr ) clReleaseMemObject( (cl_mem)buf->m_ptr );
+	if( buf->m_ptr )
+	{
+		m_memoryUsage -= buf->m_size*sizeof(T);
+		clReleaseMemObject( (cl_mem)buf->m_ptr );
+	}
 	buf->m_device = 0;
 	buf->m_size = 0;
 	buf->m_ptr = 0;
 }
 
 template<typename T>
-void DeviceCL::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems, int offsetNElems )
+void DeviceCL::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems )
 {
-	if( dst.m_device->m_type == TYPE_CL || src.m_device->m_type == TYPE_HOST )
+	if( dst->m_device->m_type == TYPE_CL || src->m_device->m_type == TYPE_CL )
 	{
-		copy( dst, src.m_ptr, nElems, offsetNElems );
+		cl_int status = 0;
+		status = clEnqueueCopyBuffer( m_commandQueue, (cl_mem)src->m_ptr, (cl_mem)dst->m_ptr, 0, 0, sizeof(T)*nElems, 0, 0, 0 );
+		ADLASSERT( status == CL_SUCCESS );
 	}
-	else if( src.m_device->m_type == TYPE_CL || dst.m_device->m_type == TYPE_HOST )
+	else if( src->m_device->m_type == TYPE_HOST )
 	{
-		copy( dst->m_ptr, src, nElems, offsetNElems );
+		ADLASSERT( dst->getType() == TYPE_CL );
+		dst->write( src->m_ptr, nElems );
+	}
+	else if( dst->m_device->m_type == TYPE_HOST )
+	{
+		ADLASSERT( src->getType() == TYPE_CL );
+		src->read( dst->m_ptr, nElems );
 	}
 	else
 	{
@@ -326,3 +353,10 @@ void DeviceCL::getDeviceName( char nameOut[128] ) const
 	status = clGetDeviceInfo( m_deviceIdx, CL_DEVICE_NAME, sizeof(char)*128, nameOut, NULL );
 	ADLASSERT( status == CL_SUCCESS );
 }
+
+Kernel* DeviceCL::getKernel(const char* fileName, const char* funcName, const char* option, const char* src, bool cacheKernel )const
+{
+	return m_kernelManager->query( this, fileName, funcName, option, src, cacheKernel );
+}
+
+};

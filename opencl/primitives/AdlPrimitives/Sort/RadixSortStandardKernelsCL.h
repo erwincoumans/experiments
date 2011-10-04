@@ -15,6 +15,7 @@ static const char* radixSortStandardKernelsCL= \
 "*/\n"
 "//Author Takahiro Harada\n"
 "\n"
+"\n"
 "#pragma OPENCL EXTENSION cl_amd_printf : enable\n"
 "#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable\n"
 "\n"

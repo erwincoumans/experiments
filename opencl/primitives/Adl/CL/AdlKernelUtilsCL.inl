@@ -1,28 +1,18 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
+
+namespace adl
+{
 
 struct KernelCL : public Kernel
 {
 	cl_kernel& getKernel() { return (cl_kernel&)m_kernel; }
 };
 
-
-
 template<>
-void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* fileName, const char* option, bool addExtension )
+void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* fileName, const char* option, bool addExtension,
+	bool cacheKernel)
 {
 	m_deviceData = deviceData;
 
@@ -81,11 +71,82 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 
 	cl_program& program = (cl_program&)m_ptr;
 	cl_int status = 0;
-	File kernelFile;
-	ADLASSERT( kernelFile.open( fileNameWithExtension ) );
-	const char* source = kernelFile.getSource().c_str();
 
-	setFromSrc( m_deviceData, source, option );
+	bool cacheBinary = cacheKernel;
+#if defined(ADL_CL_FORCE_UNCACHE_KERNEL)
+	cacheBinary = false;
+#endif
+
+	char binaryFileName[256];
+	{
+		char deviceName[256];
+		deviceData->getDeviceName(deviceName);
+		sprintf_s(binaryFileName,"%s.%s.bin",fileName, deviceName );
+	}
+
+	if( cacheBinary )
+	{
+		FILE* file = fopen(binaryFileName, "rb");
+
+		if( file )
+		{
+			fseek( file, 0L, SEEK_END );
+			size_t binarySize = ftell( file );
+			rewind( file );
+			char* binary = new char[binarySize];
+			fread( binary, sizeof(char), binarySize, file );
+			fclose( file );
+
+			const DeviceCL* dd = (const DeviceCL*) deviceData;
+			program = clCreateProgramWithBinary( dd->m_context, 1, &dd->m_deviceIdx, &binarySize, (const unsigned char**)&binary, 0, &status );
+			ADLASSERT( status == CL_SUCCESS );
+			status = clBuildProgram( program, 1, &dd->m_deviceIdx, option, 0, 0 );
+			ADLASSERT( status == CL_SUCCESS );
+
+			if( status != CL_SUCCESS )
+			{
+				char *build_log;
+				size_t ret_val_size;
+				clGetProgramBuildInfo(program, dd->m_deviceIdx, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
+				build_log = new char[ret_val_size+1];
+				clGetProgramBuildInfo(program, dd->m_deviceIdx, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+
+				build_log[ret_val_size] = '\0';
+
+				debugPrintf("%s\n", build_log);
+
+				delete build_log;
+				ADLASSERT(0);
+			}
+		}
+	}
+	if( !m_ptr )
+	{
+		File kernelFile;
+		ADLASSERT( kernelFile.open( fileNameWithExtension ) );
+		const char* source = kernelFile.getSource().c_str();
+		setFromSrc( m_deviceData, source, option );
+
+//		if( cacheBinary )
+		{	//	write to binary
+			size_t binarySize;
+			status = clGetProgramInfo( program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, 0 );
+			ADLASSERT( status == CL_SUCCESS );
+
+			char* binary = new char[binarySize];
+
+			status = clGetProgramInfo( program, CL_PROGRAM_BINARIES, sizeof(char*), &binary, 0 );
+			ADLASSERT( status == CL_SUCCESS );
+
+			{
+				FILE* file = fopen(binaryFileName, "wb");
+				fwrite( binary, sizeof(char), binarySize, file );
+				fclose( file );
+			}
+
+			delete [] binary;
+		}
+	}
 }
 
 template<>
@@ -111,7 +172,7 @@ void KernelBuilder<TYPE_CL>::setFromSrc( const Device* deviceData, const char* s
 
 		build_log[ret_val_size] = '\0';
 
-		adlDebugPrintf("%s\n", build_log);
+		debugPrintf("%s\n", build_log);
 
 		delete build_log;
 		ADLASSERT(0);
@@ -199,4 +260,4 @@ void LauncherCL::launch2D( Launcher* launcher, int numThreadsX, int numThreadsY,
 }
 
 
-
+};

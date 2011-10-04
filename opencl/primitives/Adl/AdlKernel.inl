@@ -1,18 +1,6 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
 
 #ifdef ADL_ENABLE_CL
 	#include <Adl/CL/AdlKernelUtilsCL.inl>
@@ -21,22 +9,26 @@ subject to the following restrictions:
 	#include <Adl/DX11/AdlKernelUtilsDX11.inl>
 #endif
 
+namespace adl
+{
+
 //==========================
 //	KernelManager
 //==========================
-Kernel* KernelManager::query(const Device* dd, const char* fileName, const char* funcName, const char* option, const char* src)
+Kernel* KernelManager::query(const Device* dd, const char* fileName, const char* funcName, const char* option, const char* src,
+	bool cacheKernel)
 {
 	const int charSize = 1024*2;
-	if( s_kManager == NULL )
-	{
-		s_kManager = new KernelManager;
-	}
+	KernelManager* s_kManager = this;
+
 	char fullFineName[charSize];
 	switch( dd->m_type )
 	{
 	case TYPE_CL:
+#if defined(ADL_ENABLE_CL)
 		sprintf_s(fullFineName,charSize,"%s.cl", fileName);
 		break;
+#endif
 #if defined(ADL_ENABLE_DX11)
 	case TYPE_DX11:
 		sprintf_s(fullFineName,charSize,"%s.hlsl", fileName);
@@ -66,16 +58,18 @@ Kernel* KernelManager::query(const Device* dd, const char* fileName, const char*
 
 		switch( dd->m_type )
 		{
+#if defined(ADL_ENABLE_CL)
 		case TYPE_CL:
 			{
 				KernelBuilder<TYPE_CL> builder;
 				if( src )
 					builder.setFromSrc( dd, src, option );
 				else
-					builder.setFromFile( dd, fileName, option, true );
+					builder.setFromFile( dd, fileName, option, true, cacheKernel );
 				builder.createKernel( funcName, *kernelOut );
 			}
 			break;
+#endif
 #if defined(ADL_ENABLE_DX11)
 		case TYPE_DX11:
 			{
@@ -83,7 +77,7 @@ Kernel* KernelManager::query(const Device* dd, const char* fileName, const char*
 				if( src )
 					builder.setFromSrc( dd, src, option );
 				else
-					builder.setFromFile( dd, fileName, option, true );
+					builder.setFromFile( dd, fileName, option, true, cacheKernel );
 				builder.createKernel( funcName, *kernelOut );
 			}
 			break;
@@ -109,9 +103,11 @@ KernelManager::~KernelManager()
 		Kernel* k = iter->second;
 		switch( k->m_type )
 		{
+#if defined(ADL_ENABLE_CL)
 		case TYPE_CL:
 			KernelBuilder<TYPE_CL>::deleteKernel( *k );
 			break;
+#endif
 #if defined(ADL_ENABLE_DX11)
 		case TYPE_DX11:
 			KernelBuilder<TYPE_DX11>::deleteKernel( *k );
@@ -129,25 +125,42 @@ KernelManager::~KernelManager()
 //==========================
 
 #if defined(ADL_ENABLE_DX11)
-#define SELECT_LAUNCHER( type, func ) \
-	switch( type ) \
-	{ \
-	case TYPE_CL: LauncherCL::func; break; \
-	case TYPE_DX11: LauncherDX11::func; break; \
-	default: ADLASSERT(0); break; \
-	};
+	#if defined(ADL_ENABLE_CL)
+	#define SELECT_LAUNCHER( type, func ) \
+		switch( type ) \
+		{ \
+		case TYPE_CL: LauncherCL::func; break; \
+		case TYPE_DX11: LauncherDX11::func; break; \
+		default: ADLASSERT(0); break; \
+		};
+	#else
+	#define SELECT_LAUNCHER( type, func ) \
+		switch( type ) \
+		{ \
+		case TYPE_DX11: LauncherDX11::func; break; \
+		default: ADLASSERT(0); break; \
+		};
+	#endif
 #else
-#define SELECT_LAUNCHER( type, func ) \
-	switch( type ) \
-	{ \
-	case TYPE_CL: LauncherCL::func; break; \
-	default: ADLASSERT(0); break; \
-	};
+	#if defined(ADL_ENABLE_CL)
+	#define SELECT_LAUNCHER( type, func ) \
+		switch( type ) \
+		{ \
+		case TYPE_CL: LauncherCL::func; break; \
+		default: ADLASSERT(0); break; \
+		};
+	#else
+	#define SELECT_LAUNCHER( type, func ) \
+		switch( type ) \
+		{ \
+		default: ADLASSERT(0); break; \
+		};
+	#endif
 #endif
 
 Launcher::Launcher(const Device *dd, char *fileName, char *funcName, char *option)
 {
-	m_kernel = KernelManager::query( dd, fileName, funcName, option );
+	m_kernel = dd->getKernel( fileName, funcName, option );
 	m_deviceData = dd;
 	m_idx = 0;
 	m_idxRw = 0;
@@ -184,3 +197,4 @@ void Launcher::launch2D(  int numThreadsX, int numThreadsY, int localSizeX, int 
 
 #undef SELECT_LAUNCHER
 
+};

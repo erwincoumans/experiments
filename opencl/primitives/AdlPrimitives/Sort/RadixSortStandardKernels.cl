@@ -14,6 +14,7 @@ subject to the following restrictions:
 */
 //Author Takahiro Harada
 
+
 #pragma OPENCL EXTENSION cl_amd_printf : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 

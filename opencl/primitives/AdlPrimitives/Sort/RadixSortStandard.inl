@@ -1,18 +1,6 @@
 /*
-Bullet Continuous Collision Detection and Physics Library
-Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
+		2011 Takahiro Harada
 */
-//Author Takahiro Harada
 
 #define PATH "..\\..\\AdlPrimitives\\Sort\\RadixSortStandardKernels"
 #define KERNEL0 "LocalSortKernel"
@@ -20,7 +8,9 @@ subject to the following restrictions:
 #define KERNEL2 "CopyKernel"
 
 #include <AdlPrimitives/Sort/RadixSortStandardKernelsCL.h>
-#include <AdlPrimitives/Sort/RadixSortStandardKernelsDX11.h>
+//#include <AdlPrimitives/Sort/RadixSortStandardKernelsCL.h>
+
+//RadixSortStandardKernelsDX11.h
 
 template<DeviceType type>
 class RadixSortStandard : public RadixSortBase
@@ -67,26 +57,24 @@ typename RadixSortStandard<type>::Data* RadixSortStandard<type>::allocate(const 
 
 	u32 maxNumGroups = (maxSize+WG_SIZE*NUM_PER_WI-1)/(WG_SIZE*NUM_PER_WI);
 
+	const char* src[] = 
+#if defined(ADL_LOAD_KERNEL_FROM_STRING)
+	{radixSortStandardKernelsCL,0};
+//	ADLASSERT(0);
+#else
+	{0,0};
+#endif	
+
 	Data* data = new Data;
 	data->m_option = option;
 	data->m_deviceData = deviceData;
 
-#ifdef ADL_LOAD_KERNEL_FROM_STRING
-	const char* src[] = {
-		radixSortStandardKernelsCL,
-		radixSortStandardKernelsDX11,
-		0};
-#else
-	const char* src[] = {0,0,0};
-#endif
-	data->m_localSortKernel = KernelManager::query( deviceData, PATH, KERNEL0, 0, src[type]);
-	data->m_scatterKernel = KernelManager::query( deviceData, PATH, KERNEL1, 0, src[type]);
-	data->m_copyKernel = KernelManager::query( deviceData, PATH, KERNEL2, 0, src[type]);
+	data->m_localSortKernel = deviceData->getKernel( PATH, KERNEL0, 0, src[type] );
+	data->m_scatterKernel = deviceData->getKernel( PATH, KERNEL1, 0, src[type] );
+	data->m_copyKernel = deviceData->getKernel( PATH, KERNEL2, 0, src[type] );
 
 	//	is this correct?
 	data->m_scanData = PrefixScan<type>::allocate( deviceData, maxNumGroups*(1<<BITS_PER_PASS) );
-//	data->m_scanData = PrefixScan<type>::allocate( deviceData, maxSize );
-
 
 	data->m_workBuffer0 = new Buffer<u32>( deviceData, maxNumGroups*(1<<BITS_PER_PASS) );
 	data->m_workBuffer1 = new Buffer<u32>( deviceData, maxNumGroups*(1<<BITS_PER_PASS) );
@@ -125,7 +113,7 @@ void RadixSortStandard<type>::execute(void* rawData, Buffer<SortData>& inout, in
 	ADLASSERT( n <= data->m_maxSize );
 	ADLASSERT( NUM_PER_WI == 4 );
 
-	Buffer<SortData>* src = &inout;
+	Buffer<SortData>* src = BufferUtils::map<type, true>( data->m_deviceData, &inout );
 	Buffer<SortData>* dst = data->m_workBuffer3;
 
 	const Device* deviceData = data->m_deviceData;
@@ -181,6 +169,8 @@ void RadixSortStandard<type>::execute(void* rawData, Buffer<SortData>& inout, in
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(Launcher::BufferInfo) );
 		launcher.launch1D( n, WG_SIZE );
 	}
+
+	BufferUtils::unmap<true>( src, &inout );
 }
 
 #undef PATH
