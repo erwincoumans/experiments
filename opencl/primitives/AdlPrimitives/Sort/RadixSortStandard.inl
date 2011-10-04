@@ -8,9 +8,7 @@
 #define KERNEL2 "CopyKernel"
 
 #include <AdlPrimitives/Sort/RadixSortStandardKernelsCL.h>
-//#include <AdlPrimitives/Sort/RadixSortStandardKernelsCL.h>
-
-//RadixSortStandardKernelsDX11.h
+#include <AdlPrimitives/Sort/RadixSortStandardKernelsDX11.h>
 
 template<DeviceType type>
 class RadixSortStandard : public RadixSortBase
@@ -59,7 +57,7 @@ typename RadixSortStandard<type>::Data* RadixSortStandard<type>::allocate(const 
 
 	const char* src[] = 
 #if defined(ADL_LOAD_KERNEL_FROM_STRING)
-	{radixSortStandardKernelsCL,0};
+	{radixSortStandardKernelsCL,radixSortStandardKernelsDX11};
 //	ADLASSERT(0);
 #else
 	{0,0};
