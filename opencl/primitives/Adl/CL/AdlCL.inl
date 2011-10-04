@@ -112,7 +112,7 @@ void DeviceCL::initialize(const Config& cfg)
 				ADLASSERT( status == CL_SUCCESS );
 
 				if( strcmp( buff, "NVIDIA Corporation" )==0 ) nvIdx = i;
-				//if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
+				if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
 				if( strcmp( buff, "Intel Corporation" )==0 ) intelIdx = i;
 			}
 

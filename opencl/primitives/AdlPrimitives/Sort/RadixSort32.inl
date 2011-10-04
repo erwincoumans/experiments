@@ -16,10 +16,10 @@ typename RadixSort32<TYPE>::Data* RadixSort32<TYPE>::allocate( const Device* dev
 	ADLASSERT( TYPE == device->m_type );
 
 	const char* src[] = 
-#if defined(ADL_LOAD_KERNEL_FROM_FILE)
-	{0,0};
-#else
+#if defined(ADL_LOAD_KERNEL_FROM_STRING)
 	{fillKernelsCL, fillKernelsDX11};
+#else
+	{0,0};
 #endif
 	
 	Data* data = new Data;

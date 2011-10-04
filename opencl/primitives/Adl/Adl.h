@@ -71,7 +71,7 @@ class DeviceUtils
 				VD_NV,
 			};
 
-			Config() : m_type(DEVICE_GPU), m_deviceIdx(0), m_vendor(VD_NV){}
+			Config() : m_type(DEVICE_GPU), m_deviceIdx(0), m_vendor(VD_AMD){}
 
 			DeviceType m_type;
 			int m_deviceIdx;
