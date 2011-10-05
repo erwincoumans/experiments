@@ -117,6 +117,7 @@ void Tumbler::DidChangeView(const pp::Rect& position, const pp::Rect& clip) {
   if (opengl_context_ == NULL)
     opengl_context_.reset(new OpenGLContext(this));
   opengl_context_->InvalidateContext(this);
+  opengl_context_->ResizeContext(position.size());
   if (!opengl_context_->MakeContextCurrent(this))
     return;
   if (cube_ == NULL) {
@@ -152,4 +153,3 @@ void Tumbler::SetCameraOrientation(
   DrawSelf();
 }
 }  // namespace tumbler
-
