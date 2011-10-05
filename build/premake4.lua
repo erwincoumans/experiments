@@ -62,6 +62,9 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/primitives/AdlTest"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
+	include "../opencl/gui_initialize"
+	
+	
 
 
 	include "../physics_effects/base_level"
