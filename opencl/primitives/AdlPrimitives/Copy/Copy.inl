@@ -15,7 +15,7 @@ subject to the following restrictions:
 //Author Takahiro Harada
 
 
-#define PATH "..\\..\\AdlPrimitives\\Copy\\CopyKernels"
+#define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Copy\\CopyKernels"
 #define KERNEL0 "Copy1F4Kernel"
 #define KERNEL1 "Copy2F4Kernel"
 #define KERNEL2 "Copy4F4Kernel"

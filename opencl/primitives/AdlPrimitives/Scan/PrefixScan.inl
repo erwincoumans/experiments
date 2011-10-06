@@ -2,7 +2,7 @@
 		2011 Takahiro Harada
 */
 
-#define PATH "..\\..\\AdlPrimitives\\Scan\\PrefixScanKernels"
+#define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Scan\\PrefixScanKernels"
 #define KERNEL0 "LocalScanKernel"
 #define KERNEL1 "TopLevelScanKernel"
 #define KERNEL2 "AddOffsetKernel"

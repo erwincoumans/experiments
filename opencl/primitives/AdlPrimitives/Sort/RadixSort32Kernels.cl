@@ -604,3 +604,258 @@ void SortAndScatterKernel( __global const u32* restrict gSrc, __global const u32
 	}
 }
 
+//	2 scan, 2 exchange
+void sort4Bits1KeyValue(u32 sortData[4], int sortVal[4], int startBit, int lIdx, __local u32* ldsSortData, __local int *ldsSortVal)
+{
+	for(uint ibit=0; ibit<BITS_PER_PASS; ibit+=2)
+	{
+		uint4 b = make_uint4((sortData[0]>>(startBit+ibit)) & 0x3, 
+			(sortData[1]>>(startBit+ibit)) & 0x3, 
+			(sortData[2]>>(startBit+ibit)) & 0x3, 
+			(sortData[3]>>(startBit+ibit)) & 0x3);
+
+		u32 key4;
+		u32 sKeyPacked[4] = { 0, 0, 0, 0 };
+		{
+			sKeyPacked[0] |= 1<<(8*b.x);
+			sKeyPacked[1] |= 1<<(8*b.y);
+			sKeyPacked[2] |= 1<<(8*b.z);
+			sKeyPacked[3] |= 1<<(8*b.w);
+
+			key4 = sKeyPacked[0] + sKeyPacked[1] + sKeyPacked[2] + sKeyPacked[3];
+		}
+
+		u32 rankPacked;
+		u32 sumPacked;
+		{
+			rankPacked = localPrefixSum( key4, lIdx, &sumPacked, ldsSortData, WG_SIZE );
+		}
+
+		GROUP_LDS_BARRIER;
+
+		u32 newOffset[4] = { 0,0,0,0 };
+		{
+			u32 sumScanned = bit8Scan( sumPacked );
+
+			u32 scannedKeys[4];
+			scannedKeys[0] = 1<<(8*b.x);
+			scannedKeys[1] = 1<<(8*b.y);
+			scannedKeys[2] = 1<<(8*b.z);
+			scannedKeys[3] = 1<<(8*b.w);
+			{	//	4 scans at once
+				u32 sum4 = 0;
+				for(int ie=0; ie<4; ie++)
+				{
+					u32 tmp = scannedKeys[ie];
+					scannedKeys[ie] = sum4;
+					sum4 += tmp;
+				}
+			}
+
+			{
+				u32 sumPlusRank = sumScanned + rankPacked;
+				{	u32 ie = b.x;
+					scannedKeys[0] += sumPlusRank;
+					newOffset[0] = unpack4Key( scannedKeys[0], ie );
+				}
+				{	u32 ie = b.y;
+					scannedKeys[1] += sumPlusRank;
+					newOffset[1] = unpack4Key( scannedKeys[1], ie );
+				}
+				{	u32 ie = b.z;
+					scannedKeys[2] += sumPlusRank;
+					newOffset[2] = unpack4Key( scannedKeys[2], ie );
+				}
+				{	u32 ie = b.w;
+					scannedKeys[3] += sumPlusRank;
+					newOffset[3] = unpack4Key( scannedKeys[3], ie );
+				}
+			}
+		}
+
+
+		GROUP_LDS_BARRIER;
+
+		{
+			ldsSortData[newOffset[0]] = sortData[0];
+			ldsSortData[newOffset[1]] = sortData[1];
+			ldsSortData[newOffset[2]] = sortData[2];
+			ldsSortData[newOffset[3]] = sortData[3];
+
+			ldsSortVal[newOffset[0]] = sortVal[0];
+			ldsSortVal[newOffset[1]] = sortVal[1];
+			ldsSortVal[newOffset[2]] = sortVal[2];
+			ldsSortVal[newOffset[3]] = sortVal[3];
+
+			GROUP_LDS_BARRIER;
+
+			u32 dstAddr = 4*lIdx;
+			sortData[0] = ldsSortData[dstAddr+0];
+			sortData[1] = ldsSortData[dstAddr+1];
+			sortData[2] = ldsSortData[dstAddr+2];
+			sortData[3] = ldsSortData[dstAddr+3];
+
+			sortVal[0] = ldsSortVal[dstAddr+0];
+			sortVal[1] = ldsSortVal[dstAddr+1];
+			sortVal[2] = ldsSortVal[dstAddr+2];
+			sortVal[3] = ldsSortVal[dstAddr+3];
+
+			GROUP_LDS_BARRIER;
+		}
+	}
+}
+
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global const int* restrict gSrcVal, __global const u32* rHistogram, __global u32* restrict gDst, __global int* restrict gDstVal, ConstBuffer cb)
+{
+	__local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
+	__local int ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
+	__local u32 localHistogramToCarry[NUM_BUCKET];
+	__local u32 localHistogram[NUM_BUCKET*2];
+
+	u32 gIdx = GET_GLOBAL_IDX;
+	u32 lIdx = GET_LOCAL_IDX;
+	u32 wgIdx = GET_GROUP_IDX;
+	u32 wgSize = GET_GROUP_SIZE;
+
+	const int n = cb.m_n;
+	const int nWGs = cb.m_nWGs;
+	const int startBit = cb.m_startBit;
+	const int nBlocksPerWG = cb.m_nBlocksPerWG;
+
+	if( lIdx < (NUM_BUCKET) )
+	{
+		localHistogramToCarry[lIdx] = rHistogram[lIdx*nWGs + wgIdx];
+	}
+
+	GROUP_LDS_BARRIER;
+
+	const int blockSize = ELEMENTS_PER_WORK_ITEM*WG_SIZE;
+
+	int nBlocks = n/blockSize - nBlocksPerWG*wgIdx;
+
+	int addr = blockSize*nBlocksPerWG*wgIdx + ELEMENTS_PER_WORK_ITEM*lIdx;
+
+	for(int iblock=0; iblock<min(nBlocksPerWG, nBlocks); iblock++, addr+=blockSize)
+	{
+
+		u32 myHistogram = 0;
+
+		u32 sortData[ELEMENTS_PER_WORK_ITEM];
+		int sortVal[ELEMENTS_PER_WORK_ITEM];
+
+		for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+#if defined(CHECK_BOUNDARY)
+		{
+			sortData[i] = ( addr+i < n )? gSrc[ addr+i ] : 0xffffffff;
+			sortVal[i] = ( addr+i < n )? gSrcVal[ addr+i ] : 0xffffffff;
+		}
+#else
+		{
+			sortData[i] = gSrc[ addr+i ];
+			sortVal[i] = gSrcVal[ addr+i ];
+		}
+#endif
+
+		sort4Bits1KeyValue(sortData, sortVal, startBit, lIdx, ldsSortData, ldsSortVal);
+
+		u32 keys[ELEMENTS_PER_WORK_ITEM];
+		for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+			keys[i] = (sortData[i]>>startBit) & 0xf;
+
+		{	//	create histogram
+			u32 setIdx = lIdx/16;
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[lIdx] = 0;
+			}
+			ldsSortData[lIdx] = 0;
+			GROUP_LDS_BARRIER;
+
+			for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+#if defined(CHECK_BOUNDARY)
+				if( addr+i < n )
+#endif
+				AtomInc( SET_HISTOGRAM( setIdx, keys[i] ) );
+			
+			GROUP_LDS_BARRIER;
+			
+			uint hIdx = NUM_BUCKET+lIdx;
+			if( lIdx < NUM_BUCKET )
+			{
+				u32 sum = 0;
+				for(int i=0; i<WG_SIZE/16; i++)
+				{
+					sum += SET_HISTOGRAM( i, lIdx );
+				}
+				myHistogram = sum;
+				localHistogram[hIdx] = sum;
+			}
+			GROUP_LDS_BARRIER;
+
+#if defined(USE_2LEVEL_REDUCE)
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[hIdx] = localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+
+				u32 u0, u1, u2;
+				u0 = localHistogram[hIdx-3];
+				u1 = localHistogram[hIdx-2];
+				u2 = localHistogram[hIdx-1];
+				AtomAdd( localHistogram[hIdx], u0 + u1 + u2 );
+				GROUP_MEM_FENCE;
+				u0 = localHistogram[hIdx-12];
+				u1 = localHistogram[hIdx-8];
+				u2 = localHistogram[hIdx-4];
+				AtomAdd( localHistogram[hIdx], u0 + u1 + u2 );
+				GROUP_MEM_FENCE;
+			}
+#else
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[hIdx] = localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-2];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-4];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-8];
+				GROUP_MEM_FENCE;
+			}
+#endif
+			GROUP_LDS_BARRIER;
+		}
+
+		{
+			for(int ie=0; ie<ELEMENTS_PER_WORK_ITEM; ie++)
+			{
+				int dataIdx = ELEMENTS_PER_WORK_ITEM*lIdx+ie;
+				int binIdx = keys[ie];
+				int groupOffset = localHistogramToCarry[binIdx];
+				int myIdx = dataIdx - localHistogram[NUM_BUCKET+binIdx];
+#if defined(CHECK_BOUNDARY)
+				if( addr+ie < n )
+				{
+					gDst[groupOffset + myIdx ] = sortData[ie];
+					gDstVal[ groupOffset + myIdx ] = sortVal[ie];
+				}
+#else
+				gDst[ groupOffset + myIdx ] = sortData[ie];
+				gDstVal[ groupOffset + myIdx ] = sortVal[ie];		
+#endif
+			}
+		}
+
+		GROUP_LDS_BARRIER;
+
+		if( lIdx < NUM_BUCKET )
+		{
+			localHistogramToCarry[lIdx] += myHistogram;
+		}
+		GROUP_LDS_BARRIER;
+	}
+}

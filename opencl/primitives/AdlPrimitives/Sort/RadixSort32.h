@@ -57,9 +57,11 @@ class RadixSort32 : public RadixSort32Base
 			Kernel* m_streamCountKernel;
 			Kernel* m_prefixScanKernel;
 			Kernel* m_sortAndScatterKernel;
+			Kernel* m_sortAndScatterKeyValueKernel;
 
 			Buffer<u32>* m_workBuffer0;
 			Buffer<u32>* m_workBuffer1;
+			Buffer<u32>* m_workBuffer2;
 			Buffer<ConstData>* m_constBuffer[32/BITS_PER_PASS];
 
 			typename Copy<TYPE>::Data* m_copyData;
@@ -76,6 +78,9 @@ class RadixSort32 : public RadixSort32Base
 
 		static
 		void execute(Data* data, Buffer<u32>& in, Buffer<u32>& out, int n, int sortBits = 32);
+
+		static
+		void execute(Data* data, Buffer<u32>& keysIn, Buffer<u32>& keysOut, Buffer<u32>& valuesIn, Buffer<u32>& valuesOut, int n, int sortBits = 32);
 };
 
 
