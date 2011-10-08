@@ -4,7 +4,11 @@
 	
 	
 	 includedirs { "."	}
-	 includedirs { "../../bullet2"	}
+	 includedirs { 
+	 								"../../bullet2"	, 
+	 										"../../jpeglib",
+	 								"../BlenderSerialize"
+	 						 }
 
 	--libdirs {}
 
@@ -13,11 +17,24 @@
 		"ppapi",
 		"ppapi_cpp",
 		"ppruntime",
-		"bullet2"
+		"bullet2",
+		"jpeglib"
 	}
 	
 	
 	files {
+			"../OpenGLES2Angle/Simple_Texture2DSetupAndRenderFrame.cpp",
+				"../OpenGLES2Angle/BulletBlendReaderNew.cpp",
+					"../BlenderSerialize/bBlenderFile.cpp",
+					"../OpenGLES2Angle/OolongReadBlend.cpp",
+		"../BlenderSerialize/bChunk.cpp",
+		"../BlenderSerialize/bDNA.cpp",
+		"../BlenderSerialize/bFile.cpp",
+		"../BlenderSerialize/bMain.cpp",
+		"../BlenderSerialize/dna249.cpp",
+		"../BlenderSerialize/dna249-64bit.cpp",
+			--"BulletDemo.cpp",
+			--"BulletDemo.h",
 				"cube.cc",
         "opengl_context.cc",
         "scripting_bridge.cc",

@@ -15,7 +15,19 @@
 //    the basics of 2D texturing
 //
 #include <stdlib.h>
-#include "esUtil.h"
+//#include "esUtil.h"
+#include "../NativeClient/shader_util.h"
+
+#ifdef __APPLE__
+#import <OpenGLES/EAGL.h>
+#import <OpenGLES/ES1/gl.h>
+#define	USE_IPHONE_SDK_JPEGLIB
+#else
+#include "GLES2/gl2.h"
+#include "EGL/egl.h"
+
+#endif//__APPLE__
+
 #include <stdio.h>
 #include "LinearMath/btTransform.h"
 #include "btTransformUtil.h"
@@ -45,10 +57,20 @@ btCollisionDispatcher* dispatcher = 0;
 btDbvtBroadphase* broadphase = 0;
 btSequentialImpulseConstraintSolver* solver = 0;
 
+//#define LOAD_FROM_FILE 1
+
+#ifndef LOAD_FROM_FILE
+#include "PhysicsAnimationBakingDemo.h"
+#endif //LOAD_FROM_FILE
 
 void createWorld()
 {
-	FILE* file = fopen("PhysicsAnimationBakingDemo.blend","rb");
+
+#ifdef LOAD_FROM_FILE
+	FILE* file = fopen("PhysicsAnimationBakingDemo2.blend","rb");
+//FILE* file = fopen("p2p2.blend","rb");
+
+	
 	int fileLen=0;
 	char*memoryBuffer =  0;
 
@@ -65,10 +87,35 @@ void createWorld()
 		
 		memoryBuffer = (char*)malloc(fileLen);
 		bytesRead = fread(memoryBuffer,fileLen,1,file);
-		
-	}
 
-	fclose(file);
+		FILE* fileWrite = fopen("PhysicsAnimationBakingDemo.h","w");
+		
+		
+		fprintf(fileWrite,"const char* mydata = {\n");
+		int counter = 0;
+		for (int i=0;i<fileLen;i++)
+		{
+			fprintf(fileWrite,"%d,",memoryBuffer[i]);
+			counter++;
+			if (counter>50)
+			{
+				counter=0;
+				fprintf(fileWrite,"\n");
+			}
+
+		}
+		fprintf(fileWrite,"};\n");
+		fclose(fileWrite);
+
+	}
+		fclose(file);
+#else
+	int fileLen=sizeof(mydata);
+	char*memoryBuffer =  mydata;
+
+#endif //LOAD_FROM_FILE
+
+
 
 	if (memoryBuffer && fileLen)
 	{
@@ -193,7 +240,9 @@ bool setupGraphics(int screenWidth, int screenHeight)
 //	  "  gl_FragColor = vec4(1.0,1.0,1.0,1.0);\n"
 
    // Load the shaders and get a linked program object
-   programObject = esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
+   programObject = shader_util::CreateProgramFromVertexAndFragmentShaders((const char*)vShaderStr, (const char*)fShaderStr);
+	   
+	   //0;//esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
    
    // Get the attribute locations
    positionLoc = glGetAttribLocation ( programObject, "a_position" );
@@ -323,6 +372,8 @@ void renderFrame()
 		}
 		dynWorld->setGravity(btVector3(0,0,-1));//-1,0));
 		dynWorld->stepSimulation(0.016f);
+		dynWorld->stepSimulation(0.016f);
+
 	}
 
 }

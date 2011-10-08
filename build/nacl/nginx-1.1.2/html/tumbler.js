@@ -129,5 +129,5 @@ tumbler.Application.prototype.run = function(opt_contentDivName) {
                          + tumbler.Application.DomIds_.MODULE + '" '
                          + 'src=tumbler.nmf '
                          + 'type="application/x-nacl" '
-                         + 'width="480" height="480" />'
+                         + 'width="640" height="480" />'
 }

@@ -137,6 +137,8 @@ void Tumbler::DrawSelf() {
   opengl_context_->FlushContext(MyFlushCallback, this);
 }
 
+const char* const kTestMessage= "DidChangeView";
+
 void Tumbler::SetCameraOrientation(
     const tumbler::ScriptingBridge& bridge,
     const tumbler::MethodParameter& parameters) {
@@ -151,5 +153,7 @@ void Tumbler::SetCameraOrientation(
   }
   cube_->SetOrientation(orientation);
   DrawSelf();
+  PostMessage(kTestMessage);
+
 }
 }  // namespace tumbler

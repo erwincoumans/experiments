@@ -20,12 +20,13 @@
 #ifdef __APPLE__
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/ES1/gl.h>
+
 #define	USE_IPHONE_SDK_JPEGLIB
 #else
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
 
-//#define USE_JPEG
+#define USE_JPEG
 #ifdef USE_JPEG
 #define XMD_H
 #ifdef  __cplusplus
