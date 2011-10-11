@@ -633,7 +633,7 @@ void radixSortKeyValue32Test( Device* deviceGPU, Device* deviceHost )
 
 	int dx = maxSize/NUM_TESTS;
 
-	for(int iter=0; iter<1; iter++)
+	for(int iter=0; iter<NUM_TESTS; iter++)
 	{
 		int size = min2( 128+dx*iter, maxSize-512 );
 		size = NEXTMULTIPLEOF( size, 512 );
