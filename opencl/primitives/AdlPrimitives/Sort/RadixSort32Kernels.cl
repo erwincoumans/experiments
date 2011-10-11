@@ -239,6 +239,8 @@ void StreamCountKernel( __global u32* gSrc, __global u32* histogramOut, ConstBuf
 			}
 		}
 	}
+
+	GROUP_LDS_BARRIER;
 	
 	if( lIdx < NUM_BUCKET )
 	{

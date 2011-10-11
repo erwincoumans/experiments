@@ -240,6 +240,8 @@ static const char* radixSort32KernelsCL= \
 "			}\n"
 "		}\n"
 "	}\n"
+"\n"
+"	GROUP_LDS_BARRIER;\n"
 "	\n"
 "	if( lIdx < NUM_BUCKET )\n"
 "	{\n"
