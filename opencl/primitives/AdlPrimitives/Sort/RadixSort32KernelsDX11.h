@@ -111,6 +111,8 @@ static const char* radixSort32KernelsDX11= \
 "			}\n"
 "		}\n"
 "	}\n"
+"\n"
+"	GROUP_LDS_BARRIER;\n"
 "	\n"
 "	if( lIdx < NUM_BUCKET )\n"
 "	{\n"

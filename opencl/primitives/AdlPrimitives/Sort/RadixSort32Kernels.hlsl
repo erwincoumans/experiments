@@ -110,6 +110,8 @@ void StreamCountKernel( DEFAULT_ARGS )
 			}
 		}
 	}
+
+	GROUP_LDS_BARRIER;
 	
 	if( lIdx < NUM_BUCKET )
 	{
