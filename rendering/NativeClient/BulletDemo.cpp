@@ -449,6 +449,8 @@ btAlignedObjectArray<GfxObject> s_graphicsObjects;
 
 float projMat[16];
 
+bool simulationPaused = false;
+
 btDiscreteDynamicsWorld* dynWorld = 0;
 btDefaultCollisionConfiguration* collisionConfiguration = 0;
 btCollisionDispatcher* dispatcher = 0;
@@ -773,7 +775,10 @@ bool setupGraphics(int screenWidth, int screenHeight)
 void renderFrame() 
 {
 	 
-	 dynWorld->stepSimulation(1.0/60.f);
+	 if (!simulationPaused)
+	{
+		 dynWorld->stepSimulation(1.0/60.f);
+	}
 	 
   glClearColor ( 0.6f, 0.6f, 0.6f, 0.f );
 	checkGlError("glClearColor");

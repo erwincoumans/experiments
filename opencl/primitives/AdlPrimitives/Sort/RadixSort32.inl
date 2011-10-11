@@ -6,6 +6,10 @@
 #define KERNEL0 "StreamCountKernel"
 #define KERNEL1 "PrefixScanKernel"
 #define KERNEL2 "SortAndScatterKernel"
+#include "AdlPrimitives/Sort/RadixSort32KernelsCL.h"
+#include "AdlPrimitives/Sort/RadixSort32KernelsDX11.h"
+
+
 
 //	todo. Shader compiler (2010JuneSDK) doesn't allow me to place Barriers in SortAndScatterKernel... 
 //	So it only works on a GPU with 64 wide SIMD. 
@@ -17,7 +21,7 @@ typename RadixSort32<TYPE>::Data* RadixSort32<TYPE>::allocate( const Device* dev
 
 	const char* src[] = 
 #if defined(ADL_LOAD_KERNEL_FROM_STRING)
-	{fillKernelsCL, fillKernelsDX11};
+	{radixSort32KernelsCL, radixSort32KernelsDX11};
 #else
 	{0,0};
 #endif

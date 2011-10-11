@@ -8,6 +8,45 @@
   -->
   <head>
     <title>Basic Bullet Physics Example</title>
+    
+  <script type="text/javascript">
+  	
+  	helloWorldModule = null;  // Global application object.
+ 	
+    function updateStatus(opt_message) {
+      if (opt_message)
+	{
+        statusText = opt_message;
+      	var statusField = document.getElementById('statusField');
+      	if (statusField) 
+			{
+        		statusField.innerHTML = statusText;
+      		}
+		}
+    }
+    
+    function pauseSim() {
+	  if (helloWorldModule)
+	      helloWorldModule.postMessage('pauseSim');
+    }
+    
+     // Indicate success when the NaCl module has loaded.
+    function moduleDidLoad() {
+      helloWorldModule = document.getElementById('tumbler');
+      updateStatus('Native Client module loaded');
+    }
+    
+    
+    function $(id) {
+     return document.getElementById(id);
+    }
+
+ 	
+    function receiveMessage(message) {
+    // Print event to console.
+	  console.log(message.data);
+    }
+  </script>
     <script type="text/javascript">
       // Provide the tumbler namespace
       tumbler = {};
@@ -17,6 +56,7 @@
     <script type="text/javascript" src="tumbler.js"></script>
     <script type="text/javascript" src="vector3.js"></script>
     <script type="text/javascript" src="trackball.js"></script>
+    
   </head>
     <body id="bodyId">
     <h1>Basic Bullet Physics Example</h1>
@@ -26,10 +66,20 @@
     <br>
     It has a Blender .blend file embedded and uses jpeg library for the embedded textures.
     </p>
+    
+  <input type="button" value="Pause Simulation" onclick="pauseSim()" />
+  
+  
     <div id="tumbler_view"></div>
+    
     <script type="text/javascript">
       tumbler.application = new tumbler.Application();
       tumbler.application.run('tumbler_view');
+	  tumbmodule = document.getElementById('tumbler_view');
+	  if (tumbmodule)
+     	tumbmodule.addEventListener('load', moduleDidLoad, true);
+
     </script>
+    <div id="statusField">Native Client loading, please wait</div>
   </body>
 </HTML>

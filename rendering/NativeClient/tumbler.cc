@@ -9,12 +9,81 @@
 #include <string>
 #include <vector>
 
+// C headers
+#include <cassert>
+#include <cstdio>
+
+// C++ headers
+#include <sstream>
+#include <string>
+
+
 #include "cube.h"
 #include "opengl_context.h"
 #include "scripting_bridge.h"
 #include "ppapi/cpp/rect.h"
 #include "ppapi/cpp/size.h"
 #include "ppapi/cpp/var.h"
+
+extern bool simulationPaused;
+extern void zoomCamera(int deltaY);
+
+std::string ModifierToString(uint32_t modifier) {
+  std::string s;
+  if (modifier & PP_INPUTEVENT_MODIFIER_SHIFTKEY) {
+    s += "shift ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_CONTROLKEY) {
+    s += "ctrl ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_ALTKEY) {
+    s += "alt ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_METAKEY) {
+    s += "meta ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_ISKEYPAD) {
+    s += "keypad ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_ISAUTOREPEAT) {
+    s += "autorepeat ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_LEFTBUTTONDOWN) {
+    s += "left-button-down ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_MIDDLEBUTTONDOWN) {
+    s += "middle-button-down ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_RIGHTBUTTONDOWN) {
+    s += "right-button-down ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_CAPSLOCKKEY) {
+    s += "caps-lock ";
+  }
+  if (modifier & PP_INPUTEVENT_MODIFIER_NUMLOCKKEY) {
+    s += "num-lock ";
+  }
+  return s;
+}
+
+std::string MouseButtonToString(PP_InputEvent_MouseButton button) {
+  switch (button) {
+    case PP_INPUTEVENT_MOUSEBUTTON_NONE:
+      return "None";
+    case PP_INPUTEVENT_MOUSEBUTTON_LEFT:
+      return "Left";
+    case PP_INPUTEVENT_MOUSEBUTTON_MIDDLE:
+      return "Middle";
+    case PP_INPUTEVENT_MOUSEBUTTON_RIGHT:
+      return "Right";
+    default:
+      std::ostringstream stream;
+      stream << "Unrecognized ("
+             << static_cast<int32_t>(button)
+             << ")";
+      return stream.str();
+  }
+}
 
 namespace {
 // This is called by the brower when the 3D context has been flushed to the
@@ -32,6 +101,10 @@ const size_t kQuaternionElementCount = 4;
 const char* const kArrayStartCharacter = "[";
 const char* const kArrayEndCharacter = "]";
 const char* const kArrayDelimiter = ",";
+
+const char* const kSetCameraOrientationMessage= "SetCameraOrientation";
+const char* const kHandleInputEvent= "HandleInputEvent";
+
 
 // Return the value of parameter named |param_name| from |parameters|.  If
 // |param_name| doesn't exist, then return an empty string.
@@ -73,7 +146,10 @@ namespace tumbler {
 
 Tumbler::Tumbler(PP_Instance instance)
     : pp::Instance(instance),
-      cube_(NULL) {
+      cube_(NULL) 
+{
+	RequestInputEvents(PP_INPUTEVENT_CLASS_MOUSE | PP_INPUTEVENT_CLASS_WHEEL);
+  RequestFilteringInputEvents(PP_INPUTEVENT_CLASS_KEYBOARD);
 }
 
 Tumbler::~Tumbler() {
@@ -105,8 +181,126 @@ void Tumbler::HandleMessage(const pp::Var& message) {
   if (!message.is_string())
     return;
   scripting_bridge_.InvokeMethod(message.AsString());
+  
+  const std::string msg = message.AsString();
+ 	//PostMessage("Handled Javascript message");
+  //PostMessage(message.AsString());
+  
+ 	if (msg=="pauseSim")
+		{
+			simulationPaused = !simulationPaused;
+			if (simulationPaused)
+				{
+			//PostMessage("simulation paused");
+			} else
+			{
+				//PostMessage("simulation running");
+			}
+  
+		}
+  
 }
 
+// Handle an incoming input event by switching on type and dispatching
+  // to the appropriate subtype handler.
+  //
+  // HandleInputEvent operates on the main Pepper thread. In large
+  // real-world applications, you'll want to create a separate thread
+  // that puts events in a queue and handles them independant of the main
+  // thread so as not to slow down the browser. There is an additional
+  // version of this example in the examples directory that demonstrates
+  // this best practice.
+bool Tumbler::HandleInputEvent(const pp::InputEvent& event) {
+    //PostMessage(pp::Var(kHandleInputEvent));
+    switch (event.GetType()) {
+      case PP_INPUTEVENT_TYPE_UNDEFINED:
+        break;
+      case PP_INPUTEVENT_TYPE_MOUSEDOWN:
+        GotMouseEvent(pp::MouseInputEvent(event), "Down");
+        break;
+      case PP_INPUTEVENT_TYPE_MOUSEUP:
+        GotMouseEvent(pp::MouseInputEvent(event), "Up");
+        break;
+      case PP_INPUTEVENT_TYPE_MOUSEMOVE:
+        GotMouseEvent(pp::MouseInputEvent(event), "Move");
+        break;
+      case PP_INPUTEVENT_TYPE_MOUSEENTER:
+        GotMouseEvent(pp::MouseInputEvent(event), "Enter");
+        break;
+      case PP_INPUTEVENT_TYPE_MOUSELEAVE:
+        GotMouseEvent(pp::MouseInputEvent(event), "Leave");
+        break;
+      case PP_INPUTEVENT_TYPE_WHEEL:
+        GotWheelEvent(pp::WheelInputEvent(event));
+        break;
+      case PP_INPUTEVENT_TYPE_RAWKEYDOWN:
+        GotKeyEvent(pp::KeyboardInputEvent(event), "RawKeyDown");
+        break;
+      case PP_INPUTEVENT_TYPE_KEYDOWN:
+        GotKeyEvent(pp::KeyboardInputEvent(event), "Down");
+        break;
+      case PP_INPUTEVENT_TYPE_KEYUP:
+        GotKeyEvent(pp::KeyboardInputEvent(event), "Up");
+        break;
+      case PP_INPUTEVENT_TYPE_CHAR:
+        GotKeyEvent(pp::KeyboardInputEvent(event), "Character");
+        break;
+      case PP_INPUTEVENT_TYPE_CONTEXTMENU:
+        GotKeyEvent(pp::KeyboardInputEvent(event), "Context");
+        break;
+      default:
+        assert(false);
+        return false;
+    }
+    return true;
+  }
+  
+  
+   void Tumbler::GotKeyEvent(const pp::KeyboardInputEvent& key_event, const std::string& kind) 
+   {
+    std::ostringstream stream;
+    stream << pp_instance() << ":"
+           << " Key event:" << kind
+           << " modifier:" << ModifierToString(key_event.GetModifiers())
+           << " key_code:" << key_event.GetKeyCode()
+           << " time:" << key_event.GetTimeStamp()
+           << " text:" << key_event.GetCharacterText().DebugString()
+           << "\n";
+    //PostMessage(stream.str());
+  }
+
+  void Tumbler::GotMouseEvent(const pp::MouseInputEvent& mouse_event, const std::string& kind) 
+  {
+    std::ostringstream stream;
+    stream << pp_instance() << ":"
+           << " Mouse event:" << kind
+           << " modifier:" << ModifierToString(mouse_event.GetModifiers())
+           << " button:" << MouseButtonToString(mouse_event.GetButton())
+           << " x:" << mouse_event.GetPosition().x()
+           << " y:" << mouse_event.GetPosition().y()
+           << " click_count:" << mouse_event.GetClickCount()
+           << " time:" << mouse_event.GetTimeStamp()
+           << "\n";
+    //PostMessage(stream.str());
+
+  }
+
+  void Tumbler::GotWheelEvent(const pp::WheelInputEvent& wheel_event) 
+ 	{
+    std::ostringstream stream;
+    stream << pp_instance() << ": Wheel event."
+           << " modifier:" << ModifierToString(wheel_event.GetModifiers())
+           << " deltax:" << wheel_event.GetDelta().x()
+           << " deltay:" << wheel_event.GetDelta().y()
+           << " wheel_ticks_x:" << wheel_event.GetTicks().x()
+           << " wheel_ticks_y:"<< wheel_event.GetTicks().y()
+           << " scroll_by_page: "
+           << (wheel_event.GetScrollByPage() ? "true" : "false")
+           << "\n";
+    //PostMessage(stream.str());
+    zoomCamera(-wheel_event.GetDelta().y());
+  }
+  
 void Tumbler::DidChangeView(const pp::Rect& position, const pp::Rect& clip) {
   int cube_width = cube_ ? cube_->width() : 0;
   int cube_height = cube_ ? cube_->height() : 0;
@@ -137,7 +331,7 @@ void Tumbler::DrawSelf() {
   opengl_context_->FlushContext(MyFlushCallback, this);
 }
 
-const char* const kTestMessage= "DidChangeView";
+
 
 void Tumbler::SetCameraOrientation(
     const tumbler::ScriptingBridge& bridge,
@@ -153,7 +347,7 @@ void Tumbler::SetCameraOrientation(
   }
   cube_->SetOrientation(orientation);
   DrawSelf();
-  PostMessage(kTestMessage);
+  //PostMessage(kSetCameraOrientationMessage);
 
 }
 }  // namespace tumbler

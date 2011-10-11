@@ -7,12 +7,17 @@
 #include "ppapi/cpp/module.h"
 #include "ppapi/gles2/gl2ext_ppapi.h"
 
+
+
 /// The Module class.  The browser calls the CreateInstance() method to create
 /// an instance of your NaCl module on the web page.  The browser creates a new
 /// instance for each <embed> tag with type="application/x-nacl".
 class TumberModule : public pp::Module {
  public:
-  TumberModule() : pp::Module() {}
+  TumberModule() : pp::Module() 
+  	{
+  		
+  	}
   virtual ~TumberModule() {
     glTerminatePPAPI();
   }

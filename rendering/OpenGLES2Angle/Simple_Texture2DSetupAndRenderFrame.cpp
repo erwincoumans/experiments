@@ -49,6 +49,8 @@ GLint projectionMatrix;
 // Texture handle
 GLuint textureId;
 
+bool simulationPaused = false;
+
 
 OolongBulletBlendReader* reader = 0;
 btDiscreteDynamicsWorld* dynWorld = 0;
@@ -56,6 +58,16 @@ btDefaultCollisionConfiguration* collisionConfiguration = 0;
 btCollisionDispatcher* dispatcher = 0;
 btDbvtBroadphase* broadphase = 0;
 btSequentialImpulseConstraintSolver* solver = 0;
+
+void	zoomCamera(int deltaY)
+{
+	if (reader)
+	{
+		btVector3 fwd = reader->m_cameraTrans.getBasis().getColumn(2);
+		btVector3 curPos = reader->m_cameraTrans.getOrigin();
+		reader->m_cameraTrans.setOrigin(curPos+fwd*0.01f*(float)deltaY);
+	}
+}
 
 //#define LOAD_FROM_FILE 1
 
@@ -371,9 +383,12 @@ void renderFrame()
 			reader->m_graphicsObjects[i].render(positionLoc,texCoordLoc,samplerLoc,modelMatrix);
 		}
 		dynWorld->setGravity(btVector3(0,0,-1));//-1,0));
-		dynWorld->stepSimulation(0.016f);
-		dynWorld->stepSimulation(0.016f);
-
+		
+		if (!simulationPaused)
+		{
+			dynWorld->stepSimulation(0.016f);
+			dynWorld->stepSimulation(0.016f);
+		}
 	}
 
 }

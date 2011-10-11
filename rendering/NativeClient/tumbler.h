@@ -14,7 +14,7 @@
 #include "opengl_context_ptrs.h"
 #include "scripting_bridge.h"
 #include "ppapi/cpp/instance.h"
-
+#include "ppapi/cpp/input_event.h"
 namespace tumbler {
 
 class Tumbler : public pp::Instance {
@@ -33,6 +33,14 @@ class Tumbler : public pp::Instance {
 
   // Called by the browser to handle the postMessage() call in Javascript.
   virtual void HandleMessage(const pp::Var& message);
+
+  /// process keyboard and mouse input
+  virtual bool HandleInputEvent(const pp::InputEvent& event);
+
+  void GotKeyEvent(const pp::KeyboardInputEvent& key_event, const std::string& kind);
+  void GotWheelEvent(const pp::WheelInputEvent& wheel_event);
+  void GotMouseEvent(const pp::MouseInputEvent& mouse_event, const std::string& kind);
+
 
   // Bind and publish the module's methods to JavaScript.
   void InitializeMethods(ScriptingBridge* bridge);

@@ -673,11 +673,11 @@ void runAllTest()
 		RUN_ALL( memCpyTest );
 //		RUN_GPU( kernelTest );
 		RUN_GPU_TEMPLATE( scanTest );
-		RUN_GPU_TEMPLATE( radixSortSimpleTest );
+//		RUN_GPU_TEMPLATE( radixSortSimpleTest );
 
-		RUN_GPU_TEMPLATE( radixSortStandardTest );
+//		RUN_GPU_TEMPLATE( radixSortStandardTest );
 
-//		RUN_GPU_TEMPLATE( radixSort32Test );
+		RUN_GPU_TEMPLATE( radixSort32Test );
 		
 		RUN_GPU_TEMPLATE( boundSearchTest );
 		RUN_GPU_TEMPLATE( Copy1F4Test );
