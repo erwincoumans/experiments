@@ -110,10 +110,10 @@ void TimedSort(
 	DeviceUtils::Config cfg;
 
 	// Allocate device storage
-	DeviceCL* deviceData = new DeviceCL();
+	DeviceDX11* deviceData = new DeviceDX11();
 	deviceData->initialize(cfg);
 
-	RadixSort32<TYPE_CL>::Data* planData = RadixSort32<TYPE_CL>::allocate( deviceData, max_elements);
+	RadixSort32<TYPE_DX11>::Data* planData = RadixSort32<TYPE_DX11>::allocate( deviceData, max_elements);
 
 	{
 		Buffer<unsigned int>	keysInOut(deviceData,max_elements);
@@ -122,7 +122,7 @@ void TimedSort(
 		keysInOut.write(h_keys,num_elements);
 		DeviceUtils::waitForCompletion( deviceData);
 		
-		RadixSort32<TYPE_CL>::execute( planData,keysInOut,num_elements,  32);
+		RadixSort32<TYPE_DX11>::execute( planData,keysInOut,num_elements,  32);
 		DeviceUtils::waitForCompletion( deviceData);
 
 		// Perform the timed number of sorting iterations
@@ -144,7 +144,7 @@ void TimedSort(
 			watch.start();
 			
 			// Call the sorting API routine
-			RadixSort32<TYPE_CL>::execute( planData,keysInOut,num_elements,  32);
+			RadixSort32<TYPE_DX11>::execute( planData,keysInOut,num_elements,  32);
 			DeviceUtils::waitForCompletion( deviceData);
 		
 			watch.stop();
@@ -168,7 +168,7 @@ void TimedSort(
 
 	}
 	// Free allocated memory
-	RadixSort32<TYPE_CL>::deallocate( planData);
+	RadixSort32<TYPE_DX11>::deallocate( planData);
     delete deviceData;
     // Clean up events
 }
@@ -203,9 +203,9 @@ void TimedSort(
 	DeviceUtils::Config cfg;
 
 	// Allocate device storage
-	DeviceCL* deviceData = new DeviceCL();
+	DeviceDX11* deviceData = new DeviceDX11();
 	deviceData->initialize(cfg);
-	RadixSort32<TYPE_CL>::Data* planData = RadixSort32<TYPE_CL>::allocate( deviceData, max_elements);
+	RadixSort32<TYPE_DX11>::Data* planData = RadixSort32<TYPE_DX11>::allocate( deviceData, max_elements);
 	{
 		Buffer<unsigned int>	keysIn(deviceData,max_elements);
 		Buffer<unsigned int>	valuesIn(deviceData,max_elements);
@@ -223,10 +223,10 @@ void TimedSort(
 
 		
 		// Perform a single sorting iteration to allocate memory, prime code caches, etc.
-		//RadixSort<TYPE_CL>::execute( planData, buffer,  num_elements );
+		//RadixSort<TYPE_DX11>::execute( planData, buffer,  num_elements );
 
-		//RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
-		RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+		//RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+		RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
 		DeviceUtils::waitForCompletion( deviceData);
 
 		// Perform the timed number of sorting iterations
@@ -251,7 +251,7 @@ void TimedSort(
 			
 			// Call the sorting API routine
 			
-			RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+			RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
 
 			DeviceUtils::waitForCompletion( deviceData);
 		
@@ -279,7 +279,7 @@ void TimedSort(
 	}
     
 	// Free allocated memory
-	RadixSort32<TYPE_CL>::deallocate( planData);
+	RadixSort32<TYPE_DX11>::deallocate( planData);
     delete deviceData;
     // Clean up events
 	
@@ -641,7 +641,7 @@ int main( int argc, char** argv)
 
 	args.GetCmdLineArgument("i", iterations);
 	args.GetCmdLineArgument("n", num_elements);
-	keys_only = 1;//args.CheckCmdLineFlag("keys-only");
+	keys_only = args.CheckCmdLineFlag("keys-only");
 	g_verbose = args.CheckCmdLineFlag("v");
 
 
