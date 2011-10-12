@@ -205,79 +205,78 @@ void TimedSort(
 	// Allocate device storage
 	DeviceCL* deviceData = new DeviceCL();
 	deviceData->initialize(cfg);
-
 	RadixSort32<TYPE_CL>::Data* planData = RadixSort32<TYPE_CL>::allocate( deviceData, max_elements);
-
-	Buffer<unsigned int>	keysIn(deviceData,max_elements);
-	Buffer<unsigned int>	valuesIn(deviceData,max_elements);
-
-	Buffer<unsigned int>	keysOut(deviceData,max_elements);
-	Buffer<unsigned int>	valuesOut(deviceData,max_elements);
-
-	printf("Key-values, %d iterations, %d elements", iterations, num_elements);
-
-	// Create sorting enactor
-	keysIn.write(h_keys,num_elements);
-	DeviceUtils::waitForCompletion( deviceData);
-	valuesIn.write(h_values,num_elements);
-	DeviceUtils::waitForCompletion( deviceData);
-
-	
-	// Perform a single sorting iteration to allocate memory, prime code caches, etc.
-	//RadixSort<TYPE_CL>::execute( planData, buffer,  num_elements );
-
-	//RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
-	RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
-	DeviceUtils::waitForCompletion( deviceData);
-
-	// Perform the timed number of sorting iterations
-	double elapsed = 0;
-	float duration = 0;
-	StopwatchHost watch;
-	watch.init(deviceData);
-
-	watch.start();
-		
-	for (int i = 0; i < iterations; i++) 
 	{
+		Buffer<unsigned int>	keysIn(deviceData,max_elements);
+		Buffer<unsigned int>	valuesIn(deviceData,max_elements);
 
-		// Move a fresh copy of the problem into device storage
+		Buffer<unsigned int>	keysOut(deviceData,max_elements);
+		Buffer<unsigned int>	valuesOut(deviceData,max_elements);
+
+		printf("Key-values, %d iterations, %d elements", iterations, num_elements);
+
+		// Create sorting enactor
 		keysIn.write(h_keys,num_elements);
+		DeviceUtils::waitForCompletion( deviceData);
 		valuesIn.write(h_values,num_elements);
-
 		DeviceUtils::waitForCompletion( deviceData);
 
-		// Start GPU timing record
-		watch.start();
 		
-		// Call the sorting API routine
-		
+		// Perform a single sorting iteration to allocate memory, prime code caches, etc.
+		//RadixSort<TYPE_CL>::execute( planData, buffer,  num_elements );
+
+		//RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
 		RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+		DeviceUtils::waitForCompletion( deviceData);
+
+		// Perform the timed number of sorting iterations
+		double elapsed = 0;
+		float duration = 0;
+		StopwatchHost watch;
+		watch.init(deviceData);
+
+		watch.start();
+			
+		for (int i = 0; i < iterations; i++) 
+		{
+
+			// Move a fresh copy of the problem into device storage
+			keysIn.write(h_keys,num_elements);
+			valuesIn.write(h_values,num_elements);
+
+			DeviceUtils::waitForCompletion( deviceData);
+
+			// Start GPU timing record
+			watch.start();
+			
+			// Call the sorting API routine
+			
+			RadixSort32<TYPE_CL>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+
+			DeviceUtils::waitForCompletion( deviceData);
+		
+			watch.stop();
+			duration = watch.getMs();
+
+			// End GPU timing record
+			elapsed += (double) duration;
+		}
+
+		// Display timing information
+		double avg_runtime = elapsed / iterations;
+	//	double throughput = ((double) num_elements) / avg_runtime / 1000.0 / 1000.0; 
+	//   printf(", %f GPU ms, %f x10^9 elts/sec\n", 	avg_runtime,	throughput);
+		double throughput = ((double) num_elements) / avg_runtime / 1000.0 ; 
+		printf(", %f GPU ms, %f x10^6 elts/sec\n", 	avg_runtime,	throughput);
+
+		//memset(h_keys,1,num_elements);
+		//memset(h_values,1,num_elements);
+		// Copy out data 
+		keysOut.read(h_keys,num_elements);
+		valuesOut.read(h_values,num_elements);
 
 		DeviceUtils::waitForCompletion( deviceData);
-	
-		watch.stop();
-		duration = watch.getMs();
-
-		// End GPU timing record
-		elapsed += (double) duration;
 	}
-
-	// Display timing information
-	double avg_runtime = elapsed / iterations;
-//	double throughput = ((double) num_elements) / avg_runtime / 1000.0 / 1000.0; 
-//   printf(", %f GPU ms, %f x10^9 elts/sec\n", 	avg_runtime,	throughput);
-	double throughput = ((double) num_elements) / avg_runtime / 1000.0 ; 
-	printf(", %f GPU ms, %f x10^6 elts/sec\n", 	avg_runtime,	throughput);
-
-	//memset(h_keys,1,num_elements);
-	//memset(h_values,1,num_elements);
-    // Copy out data 
-    keysOut.read(h_keys,num_elements);
-	valuesOut.read(h_values,num_elements);
-
-	DeviceUtils::waitForCompletion( deviceData);
-
     
 	// Free allocated memory
 	RadixSort32<TYPE_CL>::deallocate( planData);
@@ -642,7 +641,7 @@ int main( int argc, char** argv)
 
 	args.GetCmdLineArgument("i", iterations);
 	args.GetCmdLineArgument("n", num_elements);
-	keys_only = args.CheckCmdLineFlag("keys-only");
+	keys_only = 1;//args.CheckCmdLineFlag("keys-only");
 	g_verbose = args.CheckCmdLineFlag("v");
 
 
