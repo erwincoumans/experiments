@@ -15,8 +15,11 @@
 //    the basics of 2D texturing
 //
 #include <stdlib.h>
-//#include "esUtil.h"
+#ifdef __native_client__
 #include "../NativeClient/shader_util.h"
+#else
+#include "esUtil.h"
+#endif//
 
 #ifdef __APPLE__
 #import <OpenGLES/EAGL.h>
@@ -240,10 +243,12 @@ bool setupGraphics(int screenWidth, int screenHeight)
 //	  "  gl_FragColor = vec4(1.0,1.0,1.0,1.0);\n"
 
    // Load the shaders and get a linked program object
+#ifdef __native_client__
    programObject = shader_util::CreateProgramFromVertexAndFragmentShaders((const char*)vShaderStr, (const char*)fShaderStr);
-	   
-	   //0;//esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
-   
+#else
+	programObject= esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
+#endif
+
    // Get the attribute locations
    positionLoc = glGetAttribLocation ( programObject, "a_position" );
    texCoordLoc = glGetAttribLocation ( programObject, "a_texCoord" );
