@@ -92,12 +92,14 @@ bool g_verbose;
  * 		Vector of keys to sort 
  * @param[in] 		iterations  
  * 		Number of times to invoke the GPU sorting primitive
+  * @param[in] 		cfg 
+ * 		Config
  */
 template <typename K, DeviceType type>
 void TimedSort(
 	unsigned int num_elements, 
 	K *h_keys,
-	unsigned int iterations)
+	unsigned int iterations, const DeviceUtils::Config& cfg)
 {
 	std::string sType = "No type selected";
 	
@@ -114,9 +116,7 @@ void TimedSort(
 	if (max_elements < 1024*256)
 		max_elements = 1024*256;
 #endif
-
-	DeviceUtils::Config cfg;
-
+	
 	// Allocate device storage
 	Device* deviceData = NULL;
 
@@ -199,13 +199,15 @@ void TimedSort(
  * 		Vector of values to sort 
  * @param[in] 		iterations  
  * 		Number of times to invoke the GPU sorting primitive
+  * @param[in] 		cfg 
+ * 		Config
  */
 template <typename K, typename V, DeviceType type>
 void TimedSort(
 	unsigned int num_elements, 
 	K *h_keys,
 	V *h_values, 
-	unsigned int iterations) 
+	unsigned int iterations, const DeviceUtils::Config& cfg) 
 {
 	std::string sType = "No type selected";
 	
@@ -222,9 +224,7 @@ void TimedSort(
 	if (max_elements < 1024*256)
 		max_elements = 1024*256;
 #endif
-
-	DeviceUtils::Config cfg;
-
+	
 	// Allocate device storage
 	Device* deviceData = NULL;
 
@@ -470,12 +470,14 @@ int CompareResults(T* computed, T* reference, SizeT len, bool verbose = true)
  * 		Number of times to invoke the GPU sorting primitive
  * @param[in] 		num_elements 
  * 		Size in elements of the vector to sort
+ * @param[in] 		cfg 
+ * 		Config
  */
 template<typename K, typename V, DeviceType type>
 void TestSort(
 	unsigned int iterations,
 	int num_elements,
-	bool keys_only)
+	bool keys_only, const DeviceUtils::Config& cfg)
 {
     // Allocate the sorting problem on the host and fill the keys with random bytes
 
@@ -499,9 +501,9 @@ void TestSort(
 
     // Run the timing test 
 	if (keys_only) {
-		TimedSort<K, type>(num_elements, h_keys, iterations);
+		TimedSort<K, type>(num_elements, h_keys, iterations, cfg);
 	} else {
-		TimedSort<K, V, type>(num_elements, h_keys, h_values, iterations);
+		TimedSort<K, V, type>(num_elements, h_keys, h_values, iterations, cfg);
 	}
 
 //	cudaThreadSynchronize();
@@ -665,24 +667,27 @@ int main( int argc, char** argv)
 		Usage();
 		return 0;
 	}
-
 	
-
 	args.GetCmdLineArgument("i", iterations);
 	args.GetCmdLineArgument("n", num_elements);
 	keys_only = args.CheckCmdLineFlag("keys-only");
 	g_verbose = args.CheckCmdLineFlag("v");
 
+	DeviceUtils::Config cfg;
+
+	// Choose AMD or NVidia
+	cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_AMD;
+	//cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_NV;
+
 	TestSort<unsigned int, unsigned int, TYPE_CL>(
 			iterations,
 			num_elements, 
-			keys_only);
+			keys_only, cfg);
 
 	TestSort<unsigned int, unsigned int, TYPE_DX11>(
 			iterations,
 			num_elements, 
-			keys_only);
-			
+			keys_only, cfg);
 }
 
 
