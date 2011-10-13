@@ -60,9 +60,11 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/opengl_interop"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
+	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
 	include "../opencl/gui_initialize"
+	
 	
 	
 

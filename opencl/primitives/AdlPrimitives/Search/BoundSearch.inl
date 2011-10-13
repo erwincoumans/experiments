@@ -2,7 +2,7 @@
 		2011 Takahiro Harada
 */
 
-#define PATH "..\\..\\AdlPrimitives\\Search\\BoundSearchKernels"
+#define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Search\\BoundSearchKernels"
 #define KERNEL0 "SearchSortDataLowerKernel"
 #define KERNEL1 "SearchSortDataUpperKernel"
 #define KERNEL2 "SubtractKernel"

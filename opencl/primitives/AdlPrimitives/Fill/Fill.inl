@@ -2,7 +2,8 @@
 		2011 Takahiro Harada
 */
 
-#define PATH "..\\..\\AdlPrimitives\\Fill\\FillKernels"
+//#define PATH "..\\..\\AdlPrimitives\\Fill\\FillKernels"
+#define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Fill\\FillKernels"
 #define KERNEL0 "FillIntKernel"
 #define KERNEL1 "FillInt2Kernel"
 #define KERNEL2 "FillInt4Kernel"

@@ -15,8 +15,11 @@
 //    the basics of 2D texturing
 //
 #include <stdlib.h>
-//#include "esUtil.h"
+#ifdef __native_client__
 #include "../NativeClient/shader_util.h"
+#else
+#include "esUtil.h"
+#endif//
 
 #ifdef __APPLE__
 #import <OpenGLES/EAGL.h>
@@ -45,6 +48,7 @@ GLint samplerLoc;
 GLint modelMatrix;
 GLint viewMatrix;
 GLint projectionMatrix;
+GLint g_lastError = 0;
 
 // Texture handle
 GLuint textureId;
@@ -252,10 +256,12 @@ bool setupGraphics(int screenWidth, int screenHeight)
 //	  "  gl_FragColor = vec4(1.0,1.0,1.0,1.0);\n"
 
    // Load the shaders and get a linked program object
+#ifdef __native_client__
    programObject = shader_util::CreateProgramFromVertexAndFragmentShaders((const char*)vShaderStr, (const char*)fShaderStr);
-	   
-	   //0;//esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
-   
+#else
+	programObject= esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
+#endif
+
    // Get the attribute locations
    positionLoc = glGetAttribLocation ( programObject, "a_position" );
    texCoordLoc = glGetAttribLocation ( programObject, "a_texCoord" );
@@ -333,6 +339,7 @@ void renderFrame()
    glEnableVertexAttribArray ( positionLoc );
    glEnableVertexAttribArray ( texCoordLoc );
 
+   
 //   // Bind the texture
    glActiveTexture ( GL_TEXTURE0 );
    glBindTexture ( GL_TEXTURE_2D, textureId );
@@ -340,7 +347,7 @@ void renderFrame()
    // Set the sampler texture unit to 0
    glUniform1i ( samplerLoc, 0 );
 
- 
+
    btVector3 m_cameraPosition(0,0,-2);
    btVector3 m_cameraTargetPosition(0,0,0);
    btVector3 m_cameraUp(0,1,0);//1,0);
@@ -376,6 +383,7 @@ void renderFrame()
 	glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
 	glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
+
 	if (reader)
 	{
 		for (int i=0;i<reader->m_graphicsObjects.size();i++)
@@ -391,6 +399,7 @@ void renderFrame()
 		}
 	}
 
+	g_lastError = glGetError();
 }
 
 ///

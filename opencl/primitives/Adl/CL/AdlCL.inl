@@ -111,9 +111,15 @@ void DeviceCL::initialize(const Config& cfg)
 				status = clGetPlatformInfo( pIdx[i], CL_PLATFORM_VENDOR, 512, buff, 0 );
 				ADLASSERT( status == CL_SUCCESS );
 
-				if( strcmp( buff, "NVIDIA Corporation" )==0 ) nvIdx = i;
-				if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
-				if( strcmp( buff, "Intel Corporation" )==0 ) intelIdx = i;
+				//skip the platform if there are no devices available
+				cl_uint numDevice;
+				status = clGetDeviceIDs( pIdx[i], deviceType, 0, NULL, &numDevice );
+				if (numDevice>0)
+				{
+					if( strcmp( buff, "NVIDIA Corporation" )==0 ) nvIdx = i;
+					if( strcmp( buff, "Advanced Micro Devices, Inc." )==0 ) atiIdx = i;
+					if( strcmp( buff, "Intel Corporation" )==0 ) intelIdx = i;
+				}
 			}
 
 			if( deviceType == CL_DEVICE_TYPE_GPU )

@@ -408,7 +408,9 @@ void GfxObject::render(int positionLoc,int texCoordLoc, int samplerLoc, int mode
 	glDepthFunc( GL_LEQUAL );
 	if (m_texture)
 	{
-		glEnable(GL_TEXTURE_2D);
+
+//		glEnable(GL_TEXTURE_2D);
+
 		glActiveTexture ( GL_TEXTURE0 );
 
 		m_texture->initOpenGLTexture();
@@ -422,7 +424,7 @@ void GfxObject::render(int positionLoc,int texCoordLoc, int samplerLoc, int mode
 		
 	} else
 	{
-		glDisable(GL_TEXTURE_2D);
+//		glDisable(GL_TEXTURE_2D);
 	}
 #ifdef USE_OPENGLES_1
 	glPushMatrix();

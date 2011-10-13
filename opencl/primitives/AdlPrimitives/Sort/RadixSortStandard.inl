@@ -2,7 +2,7 @@
 		2011 Takahiro Harada
 */
 
-#define PATH "..\\..\\AdlPrimitives\\Sort\\RadixSortStandardKernels"
+#define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Sort\\RadixSortStandardKernels"
 #define KERNEL0 "LocalSortKernel"
 #define KERNEL1 "ScatterKernel"
 #define KERNEL2 "CopyKernel"

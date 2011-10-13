@@ -5,6 +5,8 @@
 #include <AdlPrimitives/Fill/Fill.h>
 #include <AdlPrimitives/Copy/Copy.h>
 
+#include <time.h>
+
 using namespace adl;
 
 #define NUM_TESTS 10
@@ -606,11 +608,74 @@ void radixSort32Test( Device* deviceGPU, Device* deviceHost )
 	TEST_REPORT( "RadixSort32Test" );
 }
 
+template<DeviceType type>
+void radixSortKeyValue32Test( Device* deviceGPU, Device* deviceHost )
+{
+	TEST_INIT;
+	ADLASSERT( type == deviceGPU->m_type );
 
+	int maxSize = 1024*256;
+	
+	// Host buffers
+	HostBuffer<u32> buf0( deviceHost, maxSize ); // Buffer for keys in host and will be sorted by host.
+	HostBuffer<u32> buf1( deviceHost, maxSize ); // Buffer for keys in host and will be saved by device after sorting in device.  
+	HostBuffer<u32> buf2( deviceHost, maxSize ); // Buffer for values in host. This buffer is paired with buf0.
+	HostBuffer<u32> buf3( deviceHost, maxSize ); // Buffer for values in host and will be saved by device after sorting. It is paired with buf1.
+	
+	// Device buffers
+	Buffer<u32> buf4( deviceGPU, maxSize ); // Buffer for input keys for device.
+	Buffer<u32> buf5( deviceGPU, maxSize ); // Buffer for output keys from device and will be sorted by device. This key data will be saved to buf1 to be compared with a result(buf0) from host.
+	Buffer<u32> buf6( deviceGPU, maxSize ); // Buffer for input values in device.
+	Buffer<u32> buf7( deviceGPU, maxSize ); // Buffer for output values in device.
+
+	RadixSort32<TYPE_HOST>::Data* dataH = RadixSort32<TYPE_HOST>::allocate( deviceHost, maxSize );
+	RadixSort32<type>::Data* dataC = RadixSort32<type>::allocate( deviceGPU, maxSize );
+
+	int dx = maxSize/NUM_TESTS;
+
+	for(int iter=0; iter<NUM_TESTS; iter++)
+	{
+		int size = min2( 128+dx*iter, maxSize-512 );
+		size = NEXTMULTIPLEOF( size, 512 );
+
+		// keys
+		seedRandom((int)time(NULL)/2);
+		for(int i=0; i<size; i++) buf0[i] = getRandom(0u,0xffffffffu);
+		buf4.write( buf0.m_ptr, size );
+		DeviceUtils::waitForCompletion( deviceGPU );
+
+		// values
+		seedRandom((int)time(NULL)/2);
+		for(int i=0; i<size; i++) buf2[i] = getRandom(0u,0xffffffffu);
+		buf6.write( buf2.m_ptr, size );
+		DeviceUtils::waitForCompletion( deviceGPU );
+
+		RadixSort32<TYPE_HOST>::execute( dataH, buf0, buf2, size, 32 );
+		RadixSort32<type>::execute( dataC, buf4, buf5, buf6, buf7, size, 32 );
+		buf5.read( buf1.m_ptr, size );
+		buf7.read( buf3.m_ptr, size );
+
+		DeviceUtils::waitForCompletion( deviceGPU );
+		
+		for(int i=0; i<size; i++) 
+		{
+			// Comparing keys. One is done by Host and the other is done by Device.
+			TEST_ASSERT( buf0[i] == buf1[i] );
+
+			// Comparing values. One is done by Host and the other is done by Device.
+			TEST_ASSERT( buf2[i] == buf3[i] );
+		}
+	}
+
+	RadixSort32<TYPE_HOST>::deallocate( dataH );
+	RadixSort32<type>::deallocate( dataC );
+
+	TEST_REPORT( "RadixSortKeyValue32Test" );
+}
 
 #if defined(ADL_ENABLE_DX11)
 	#define RUN_GPU( func ) func(ddcl); func(dddx);
-	#define RUN_GPU_TEMPLATE( func ) func<TYPE_DX11>( dddx, ddhost ); func<TYPE_CL>( ddcl, ddhost ); 
+	#define RUN_GPU_TEMPLATE( func ) func<TYPE_CL>( ddcl, ddhost ); func<TYPE_DX11>( dddx, ddhost );
 #else
 	#define RUN_GPU( func ) func(ddcl);
 	#define RUN_GPU_TEMPLATE( func ) func<TYPE_CL>( ddcl, ddhost ); 
@@ -650,8 +715,10 @@ void runAllTest()
 #endif
 	}
 
-	//RUN_GPU_TEMPLATE( radixSort32Test );
+	RUN_GPU_TEMPLATE( radixSort32Test );
+	RUN_GPU_TEMPLATE( radixSortKeyValue32Test );
 
+	if (0)
 	{
 		RUN_GPU_TEMPLATE( CopyF1Test );
 		RUN_GPU_TEMPLATE( CopyF2Test );
@@ -673,11 +740,11 @@ void runAllTest()
 		RUN_ALL( memCpyTest );
 //		RUN_GPU( kernelTest );
 		RUN_GPU_TEMPLATE( scanTest );
-//		RUN_GPU_TEMPLATE( radixSortSimpleTest );
+		RUN_GPU_TEMPLATE( radixSortSimpleTest );
 
-//		RUN_GPU_TEMPLATE( radixSortStandardTest );
+		RUN_GPU_TEMPLATE( radixSortStandardTest );
 
-		RUN_GPU_TEMPLATE( radixSort32Test );
+//		RUN_GPU_TEMPLATE( radixSort32Test );
 		
 		RUN_GPU_TEMPLATE( boundSearchTest );
 		RUN_GPU_TEMPLATE( Copy1F4Test );
