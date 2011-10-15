@@ -53,6 +53,7 @@
 #include <math.h> 
 #include <float.h>
 #include <algorithm>
+#include <string>
 
 #define BUFFERSIZE_WORKAROUND
 
@@ -91,29 +92,42 @@ bool g_verbose;
  * 		Vector of keys to sort 
  * @param[in] 		iterations  
  * 		Number of times to invoke the GPU sorting primitive
+  * @param[in] 		cfg 
+ * 		Config
  */
-template <typename K>
+template <typename K, DeviceType type>
 void TimedSort(
 	unsigned int num_elements, 
 	K *h_keys,
-	unsigned int iterations)
+	unsigned int iterations, const DeviceUtils::Config& cfg)
 {
-	printf("Keys-only, %d iterations, %d elements", iterations, num_elements);
+	std::string sType = "No type selected";
+	
+	if (type == TYPE_CL)
+		sType = "OpenCL";
+	else if (type == TYPE_DX11)
+		sType = "DX11";
 
-		int max_elements = num_elements;
+	printf("Keys-only, %s, %d iterations, %d elements\n", sType.c_str(), iterations, num_elements);
+
+	int max_elements = num_elements;
 
 #ifdef BUFFERSIZE_WORKAROUND
 	if (max_elements < 1024*256)
 		max_elements = 1024*256;
 #endif
-
-	DeviceUtils::Config cfg;
-
+	
 	// Allocate device storage
-	DeviceDX11* deviceData = new DeviceDX11();
+	Device* deviceData = NULL;
+
+	if ( type == TYPE_CL )
+		deviceData = new DeviceCL();
+	else if ( type == TYPE_DX11 )
+		deviceData = new DeviceDX11();
+
 	deviceData->initialize(cfg);
 
-	RadixSort32<TYPE_DX11>::Data* planData = RadixSort32<TYPE_DX11>::allocate( deviceData, max_elements);
+	RadixSort32<type>::Data* planData = RadixSort32<type>::allocate( deviceData, max_elements);
 
 	{
 		Buffer<unsigned int>	keysInOut(deviceData,max_elements);
@@ -122,7 +136,7 @@ void TimedSort(
 		keysInOut.write(h_keys,num_elements);
 		DeviceUtils::waitForCompletion( deviceData);
 		
-		RadixSort32<TYPE_DX11>::execute( planData,keysInOut,num_elements,  32);
+		RadixSort32<type>::execute( planData,keysInOut,num_elements,  32);
 		DeviceUtils::waitForCompletion( deviceData);
 
 		// Perform the timed number of sorting iterations
@@ -144,7 +158,7 @@ void TimedSort(
 			watch.start();
 			
 			// Call the sorting API routine
-			RadixSort32<TYPE_DX11>::execute( planData,keysInOut,num_elements,  32);
+			RadixSort32<type>::execute( planData,keysInOut,num_elements,  32);
 			DeviceUtils::waitForCompletion( deviceData);
 		
 			watch.stop();
@@ -168,7 +182,7 @@ void TimedSort(
 
 	}
 	// Free allocated memory
-	RadixSort32<TYPE_DX11>::deallocate( planData);
+	RadixSort32<type>::deallocate( planData);
     delete deviceData;
     // Clean up events
 }
@@ -185,27 +199,42 @@ void TimedSort(
  * 		Vector of values to sort 
  * @param[in] 		iterations  
  * 		Number of times to invoke the GPU sorting primitive
+  * @param[in] 		cfg 
+ * 		Config
  */
-template <typename K, typename V>
+template <typename K, typename V, DeviceType type>
 void TimedSort(
 	unsigned int num_elements, 
 	K *h_keys,
 	V *h_values, 
-	unsigned int iterations) 
+	unsigned int iterations, const DeviceUtils::Config& cfg) 
 {
+	std::string sType = "No type selected";
+	
+	if (type == TYPE_CL)
+		sType = "OpenCL";
+	else if (type == TYPE_DX11)
+		sType = "DX11";
+
+	printf("Key-values, %s, %d iterations, %d elements\n", sType.c_str(), iterations, num_elements);
+
 	int max_elements = num_elements;
 
 #ifdef BUFFERSIZE_WORKAROUND
 	if (max_elements < 1024*256)
 		max_elements = 1024*256;
 #endif
-
-	DeviceUtils::Config cfg;
-
+	
 	// Allocate device storage
-	DeviceDX11* deviceData = new DeviceDX11();
+	Device* deviceData = NULL;
+
+	if ( type == TYPE_CL )
+		deviceData = new DeviceCL();
+	else if ( type == TYPE_DX11 )
+		deviceData = new DeviceDX11();
+
 	deviceData->initialize(cfg);
-	RadixSort32<TYPE_DX11>::Data* planData = RadixSort32<TYPE_DX11>::allocate( deviceData, max_elements);
+	RadixSort32<type>::Data* planData = RadixSort32<type>::allocate( deviceData, max_elements);
 	{
 		Buffer<unsigned int>	keysIn(deviceData,max_elements);
 		Buffer<unsigned int>	valuesIn(deviceData,max_elements);
@@ -213,7 +242,7 @@ void TimedSort(
 		Buffer<unsigned int>	keysOut(deviceData,max_elements);
 		Buffer<unsigned int>	valuesOut(deviceData,max_elements);
 
-		printf("Key-values, %d iterations, %d elements", iterations, num_elements);
+		//printf("Key-values, %d iterations, %d elements", iterations, num_elements);
 
 		// Create sorting enactor
 		keysIn.write(h_keys,num_elements);
@@ -223,10 +252,10 @@ void TimedSort(
 
 		
 		// Perform a single sorting iteration to allocate memory, prime code caches, etc.
-		//RadixSort<TYPE_DX11>::execute( planData, buffer,  num_elements );
+		//RadixSort<type>::execute( planData, buffer,  num_elements );
 
-		//RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
-		RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+		//RadixSort32<type>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+		RadixSort32<type>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
 		DeviceUtils::waitForCompletion( deviceData);
 
 		// Perform the timed number of sorting iterations
@@ -251,7 +280,7 @@ void TimedSort(
 			
 			// Call the sorting API routine
 			
-			RadixSort32<TYPE_DX11>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
+			RadixSort32<type>::execute( planData, keysIn,keysOut, valuesIn,valuesOut, num_elements,  32);
 
 			DeviceUtils::waitForCompletion( deviceData);
 		
@@ -279,7 +308,7 @@ void TimedSort(
 	}
     
 	// Free allocated memory
-	RadixSort32<TYPE_DX11>::deallocate( planData);
+	RadixSort32<type>::deallocate( planData);
     delete deviceData;
     // Clean up events
 	
@@ -428,7 +457,7 @@ int CompareResults(T* computed, T* reference, SizeT len, bool verbose = true)
 		}
 	}
 
-	printf("CORRECT");
+	printf("CORRECT\n");
 	return 0;
 }
 
@@ -441,12 +470,14 @@ int CompareResults(T* computed, T* reference, SizeT len, bool verbose = true)
  * 		Number of times to invoke the GPU sorting primitive
  * @param[in] 		num_elements 
  * 		Size in elements of the vector to sort
+ * @param[in] 		cfg 
+ * 		Config
  */
-template<typename K, typename V>
+template<typename K, typename V, DeviceType type>
 void TestSort(
 	unsigned int iterations,
 	int num_elements,
-	bool keys_only)
+	bool keys_only, const DeviceUtils::Config& cfg)
 {
     // Allocate the sorting problem on the host and fill the keys with random bytes
 
@@ -470,9 +501,9 @@ void TestSort(
 
     // Run the timing test 
 	if (keys_only) {
-		TimedSort<K>(num_elements, h_keys, iterations);
+		TimedSort<K, type>(num_elements, h_keys, iterations, cfg);
 	} else {
-		TimedSort<K, V>(num_elements, h_keys, h_values, iterations);
+		TimedSort<K, V, type>(num_elements, h_keys, h_values, iterations, cfg);
 	}
 
 //	cudaThreadSynchronize();
@@ -636,20 +667,27 @@ int main( int argc, char** argv)
 		Usage();
 		return 0;
 	}
-
 	
-
 	args.GetCmdLineArgument("i", iterations);
 	args.GetCmdLineArgument("n", num_elements);
 	keys_only = args.CheckCmdLineFlag("keys-only");
 	g_verbose = args.CheckCmdLineFlag("v");
 
+	DeviceUtils::Config cfg;
 
-	TestSort<unsigned int, unsigned int>(
+	// Choose AMD or NVidia
+	cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_AMD;
+	//cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_NV;
+
+	TestSort<unsigned int, unsigned int, TYPE_CL>(
 			iterations,
 			num_elements, 
-			keys_only);
-			
+			keys_only, cfg);
+
+	TestSort<unsigned int, unsigned int, TYPE_DX11>(
+			iterations,
+			num_elements, 
+			keys_only, cfg);
 }
 
 
