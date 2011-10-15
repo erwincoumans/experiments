@@ -122,8 +122,10 @@ void TimedSort(
 
 	if ( type == TYPE_CL )
 		deviceData = new DeviceCL();
+#ifdef ADL_ENABLE_DX11
 	else if ( type == TYPE_DX11 )
 		deviceData = new DeviceDX11();
+#endif //ADL_ENABLE_DX11
 
 	deviceData->initialize(cfg);
 
@@ -230,8 +232,10 @@ void TimedSort(
 
 	if ( type == TYPE_CL )
 		deviceData = new DeviceCL();
+#ifdef ADL_ENABLE_DX11
 	else if ( type == TYPE_DX11 )
 		deviceData = new DeviceDX11();
+#endif //ADL_ENABLE_DX11
 
 	deviceData->initialize(cfg);
 	RadixSort32<type>::Data* planData = RadixSort32<type>::allocate( deviceData, max_elements);
@@ -689,10 +693,12 @@ int main( int argc, char** argv)
 			num_elements, 
 			keys_only, cfg);
 
+#ifdef ADL_ENABLE_DX11
 	TestSort<unsigned int, unsigned int, TYPE_DX11>(
 			iterations,
 			num_elements, 
 			keys_only, cfg);
+#endif //ADL_ENABLE_DX11
 }
 
 

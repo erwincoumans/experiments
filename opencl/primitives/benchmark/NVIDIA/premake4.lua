@@ -4,7 +4,7 @@
 	
 	if (hasCL) then
 
-		project "OpenCL_radixsort_benchmark_NVIDIA"
+		project "OpenCL_DX11_radixsort_benchmark_NVIDIA"
 
 		initOpenCL_NVIDIA()
 

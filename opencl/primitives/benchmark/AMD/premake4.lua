@@ -4,7 +4,7 @@
 	
 	if (hasCL) then
 
-		project "OpenCL_radixsort_benchmark_AMD"
+		project "OpenCL_DX11_radixsort_benchmark_AMD"
 
 		initOpenCL_AMD()
 
