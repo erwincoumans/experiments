@@ -26,6 +26,15 @@ int main()
 		Device* deviceGPU;
 		{
 			DeviceUtils::Config cfg;
+
+		// Choose AMD or NVidia
+#ifdef CL_PLATFORM_AMD
+	cfg.m_vendor = DeviceUtils::Config::VD_AMD;
+#endif
+
+#ifdef CL_PLATFORM_NVIDIA
+	cfg.m_vendor = adl::DeviceUtils::Config::VD_NV;
+#endif
 			deviceGPU = DeviceUtils::allocate( TYPE_DX11, cfg );
 			deviceHost = DeviceUtils::allocate( TYPE_HOST, cfg );
 		}

@@ -49,7 +49,7 @@ bool OpenGLContext::MakeContextCurrent(pp::Instance* instance) {
         PP_GRAPHICS3DATTRIB_HEIGHT, size_.height(),
         PP_GRAPHICS3DATTRIB_NONE
     };
-    context_ = pp::Graphics3D(instance, pp::Graphics3D(), attribs);
+    context_ = pp::Graphics3D(*instance, pp::Graphics3D(), attribs);
     if (context_.is_null()) {
       glSetCurrentContextPPAPI(0);
       return false;

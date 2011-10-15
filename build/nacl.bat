@@ -1,5 +1,7 @@
 rem make sure that the NACL_SDK_ROOT environment variable is set
 set NACL_ENABLE_PPAPI_DEV=1
+set NACL_TARGET_PLATFORM=pepper_15
+set NACL_SDK_ROOT=%CD%/nacl/nacl_sdk
 
 premake4 --with-nacl gmake
 cd nacl

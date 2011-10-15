@@ -652,7 +652,7 @@ int main( int argc, char** argv)
 	//srand(time(NULL));	
 	srand(0);				// presently deterministic
 
-    unsigned int num_elements 					= 1024*1024*8;//16*1024;//8*524288;//2048;//512;//524288;
+    unsigned int num_elements 					= 1024*1024*12;//16*1024;//8*524288;//2048;//512;//524288;
     unsigned int iterations  					= 10;
     bool keys_only;
 
@@ -676,8 +676,13 @@ int main( int argc, char** argv)
 	DeviceUtils::Config cfg;
 
 	// Choose AMD or NVidia
-	cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_AMD;
-	//cfg.m_vendor = DeviceUtils::Config::DeviceVendor::VD_NV;
+#ifdef CL_PLATFORM_AMD
+	cfg.m_vendor = DeviceUtils::Config::VD_AMD;
+#endif
+
+#ifdef CL_PLATFORM_NVIDIA
+	cfg.m_vendor = DeviceUtils::Config::VD_NV;
+#endif
 
 	TestSort<unsigned int, unsigned int, TYPE_CL>(
 			iterations,

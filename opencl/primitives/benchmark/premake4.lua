@@ -1,1 +1,2 @@
 include "AMD"
+include "NVIDIA"

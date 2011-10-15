@@ -696,6 +696,16 @@ void runAllTest()
 
 	{
 		DeviceUtils::Config cfg;
+
+				// Choose AMD or NVidia
+#ifdef CL_PLATFORM_AMD
+		cfg.m_vendor = adl::DeviceUtils::Config::VD_AMD;
+#endif
+
+#ifdef CL_PLATFORM_NVIDIA
+		cfg.m_vendor = adl::DeviceUtils::Config::VD_NV;
+#endif
+
 //		cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
 		ddcl = DeviceUtils::allocate( TYPE_CL, cfg );
 		ddhost = DeviceUtils::allocate( TYPE_HOST, cfg );
