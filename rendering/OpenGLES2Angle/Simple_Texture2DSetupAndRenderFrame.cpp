@@ -21,6 +21,9 @@
 #include "esUtil.h"
 #endif//
 
+#include "../NativeClient/base64.h"
+#include "../NativeClient/base64.cpp"
+
 #ifdef __APPLE__
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/ES1/gl.h>
@@ -31,6 +34,7 @@
 
 #endif//__APPLE__
 
+#include <string>
 #include <stdio.h>
 #include "LinearMath/btTransform.h"
 #include "btTransformUtil.h"
@@ -76,7 +80,8 @@ void	zoomCamera(int deltaY)
 //#define LOAD_FROM_FILE 1
 
 #ifndef LOAD_FROM_FILE
-#include "PhysicsAnimationBakingDemo.h"
+//#include "PhysicsAnimationBakingDemo.h"
+#include "PhysicsAnimationBakingDemo.uue64.h"
 #endif //LOAD_FROM_FILE
 
 void createWorld()
@@ -126,8 +131,11 @@ void createWorld()
 	}
 		fclose(file);
 #else
-	int fileLen=sizeof(mydata);
-	char*memoryBuffer =  mydata;
+
+	std::string decoded = base64_decode(mydata_base64);
+
+	int fileLen=decoded.size();
+	char*memoryBuffer =  (char*)decoded.c_str();
 
 #endif //LOAD_FROM_FILE
 
