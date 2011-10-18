@@ -94,6 +94,5 @@ if not _OPTIONS["with-nacl"] then
 
 else
 	include "../rendering/NativeClient"	
-	include "../rendering/NaClFileIO"	
 	
 end

@@ -1,0 +1,14 @@
+{
+    "name": "Bullet Physics NaCl Test",
+    "version": "0.8",
+    "description": "The Native Client module executed in this page runs a basic C++ Bullet Physics simulation.",
+    "app": {
+	    "launch": {
+	       "local_path": "main.html"
+	    }
+	  },
+	  "icons": {
+	  "16": "bullet_icon16.png",
+      "128": "bullet_icon128.png"
+    }
+}
