@@ -67,6 +67,20 @@ btCollisionDispatcher* dispatcher = 0;
 btDbvtBroadphase* broadphase = 0;
 btSequentialImpulseConstraintSolver* solver = 0;
 
+
+btVector3 m_cameraPosition(0,0,-2);
+btVector3 m_cameraTargetPosition(0,0,0);
+btVector3 m_cameraUp(0,1,0);//1,0);
+btRigidBody* pickedBody = 0;
+btTypedConstraint* m_pickConstraint = 0;
+int m_glutScreenWidth = 0;
+int m_glutScreenHeight = 0;
+float m_cameraDistance = 0.f;
+
+
+
+//////////////////////////////////////////////////////////
+
 void	zoomCamera(int deltaY)
 {
 	if (reader)
@@ -77,12 +91,347 @@ void	zoomCamera(int deltaY)
 	}
 }
 
+
+int m_mouseButtons=0;
+int m_mouseOldX=0;
+int m_mouseOldY=0;
+bool m_ortho = false;
+bool use6Dof = false;
+btVector3 gOldPickingPos;
+btVector3 gHitPos;
+btScalar gOldPickingDist;
+
+btScalar mousePickClamping = 30.f;
+
+
+btVector3	getRayTo(int x,int y)
+{
+	if (m_ortho)
+	{
+		btScalar aspect;
+		btVector3 extents;
+		aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+		extents.setValue(aspect * 1.0f, 1.0f,0);
+		
+		extents *= m_cameraDistance;
+		btVector3 lower = m_cameraTargetPosition - extents;
+		btVector3 upper = m_cameraTargetPosition + extents;
+
+		btScalar u = x / btScalar(m_glutScreenWidth);
+		btScalar v = (m_glutScreenHeight - y) / btScalar(m_glutScreenHeight);
+		
+		btVector3	p(0,0,0);
+		p.setValue((1.0f - u) * lower.getX() + u * upper.getX(),(1.0f - v) * lower.getY() + v * upper.getY(),m_cameraTargetPosition.getZ());
+		return p;
+	}
+
+	float top = 1.f;
+	float bottom = -1.f;
+	float nearPlane = 1.f;
+	float tanFov = (top-bottom)*0.5f / nearPlane;
+	float fov = btScalar(2.0) * btAtan(tanFov);
+
+	btVector3	rayFrom = m_cameraPosition;
+	btVector3 rayForward = (m_cameraTargetPosition-m_cameraPosition);
+	rayForward.normalize();
+	float farPlane = 10000.f;
+	rayForward*= farPlane;
+
+	btVector3 rightOffset;
+	btVector3 vertical = m_cameraUp;
+
+	btVector3 hor;
+	hor = rayForward.cross(vertical);
+	hor.normalize();
+	vertical = hor.cross(rayForward);
+	vertical.normalize();
+
+	float tanfov = tanf(0.5f*fov);
+
+
+	hor *= 2.f * farPlane * tanfov;
+	vertical *= 2.f * farPlane * tanfov;
+
+	btScalar aspect;
+	
+	aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+	
+	hor*=aspect;
+
+
+	btVector3 rayToCenter = rayFrom + rayForward;
+	btVector3 dHor = hor * 1.f/float(m_glutScreenWidth);
+	btVector3 dVert = vertical * 1.f/float(m_glutScreenHeight);
+
+
+	btVector3 rayTo = rayToCenter - 0.5f * hor + 0.5f * vertical;
+	rayTo += btScalar(x) * dHor;
+	rayTo -= btScalar(y) * dVert;
+	return rayTo;
+}
+
+void removePickingConstraint()
+{
+	if (m_pickConstraint && dynWorld)
+	{
+		dynWorld->removeConstraint(m_pickConstraint);
+		delete m_pickConstraint;
+		//printf("removed constraint %i",gPickingConstraintId);
+		m_pickConstraint = 0;
+		pickedBody->forceActivationState(ACTIVE_TAG);
+		pickedBody->setDeactivationTime( 0.f );
+		pickedBody = 0;
+	}
+}
+
+
+void mouseFunc(int button, int state, int x, int y)
+{
+	if (state == 0) 
+	{
+        m_mouseButtons |= 1<<button;
+    } else
+	{
+        m_mouseButtons = 0;
+    }
+
+	m_mouseOldX = x;
+    m_mouseOldY = y;
+
+
+	//printf("button %i, state %i, x=%i,y=%i\n",button,state,x,y);
+	//button 0, state 0 means left mouse down
+
+	btVector3 rayTo = getRayTo(x,y);
+
+	switch (button)
+	{
+	
+
+	case 0:
+		{
+			if (state==0)
+			{
+
+
+				//add a point to point constraint for picking
+				if (dynWorld)
+				{
+					
+					btVector3 rayFrom;
+					if (m_ortho)
+					{
+						rayFrom = rayTo;
+						rayFrom.setZ(-100.f);
+					} else
+					{
+						rayFrom = m_cameraPosition;
+					}
+					
+					btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom,rayTo);
+					dynWorld->rayTest(rayFrom,rayTo,rayCallback);
+					if (rayCallback.hasHit())
+					{
+
+
+						btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObject);
+						if (body)
+						{
+							//other exclusions?
+							if (!(body->isStaticObject() || body->isKinematicObject()))
+							{
+								pickedBody = body;
+								pickedBody->setActivationState(DISABLE_DEACTIVATION);
+
+
+								btVector3 pickPos = rayCallback.m_hitPointWorld;
+								//printf("pickPos=%f,%f,%f\n",pickPos.getX(),pickPos.getY(),pickPos.getZ());
+
+
+								btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+
+								
+
+								
+
+
+								if (use6Dof)
+								{
+									btTransform tr;
+									tr.setIdentity();
+									tr.setOrigin(localPivot);
+									btGeneric6DofConstraint* dof6 = new btGeneric6DofConstraint(*body, tr,false);
+									dof6->setLinearLowerLimit(btVector3(0,0,0));
+									dof6->setLinearUpperLimit(btVector3(0,0,0));
+									dof6->setAngularLowerLimit(btVector3(0,0,0));
+									dof6->setAngularUpperLimit(btVector3(0,0,0));
+
+									dynWorld->addConstraint(dof6);
+									m_pickConstraint = dof6;
+
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,0);
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,1);
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,2);
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,3);
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,4);
+									dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,5);
+
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,0);
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,1);
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,2);
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,3);
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,4);
+									dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,5);
+								} else
+								{
+									btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body,localPivot);
+									dynWorld->addConstraint(p2p);
+									m_pickConstraint = p2p;
+									p2p->m_setting.m_impulseClamp = mousePickClamping;
+									//very weak constraint for picking
+									p2p->m_setting.m_tau = 0.001f;
+/*
+									p2p->setParam(BT_CONSTRAINT_CFM,0.8,0);
+									p2p->setParam(BT_CONSTRAINT_CFM,0.8,1);
+									p2p->setParam(BT_CONSTRAINT_CFM,0.8,2);
+									p2p->setParam(BT_CONSTRAINT_ERP,0.1,0);
+									p2p->setParam(BT_CONSTRAINT_ERP,0.1,1);
+									p2p->setParam(BT_CONSTRAINT_ERP,0.1,2);
+									*/
+									
+
+								}
+								use6Dof = !use6Dof;
+
+								//save mouse position for dragging
+								gOldPickingPos = rayTo;
+								gHitPos = pickPos;
+
+								gOldPickingDist  = (pickPos-rayFrom).length();
+							}
+						}
+					}
+				}
+
+			} else
+			{
+				removePickingConstraint();
+			}
+
+			break;
+
+		}
+	default:
+		{
+		}
+	}
+
+}
+
+
+
+
+
+void	mouseMotionFunc(int x,int y)
+{
+
+	if (m_pickConstraint)
+	{
+		//move the constraint pivot
+
+		if (m_pickConstraint->getConstraintType() == D6_CONSTRAINT_TYPE)
+		{
+			btGeneric6DofConstraint* pickCon = static_cast<btGeneric6DofConstraint*>(m_pickConstraint);
+			if (pickCon)
+			{
+				//keep it at the same picking distance
+
+				btVector3 newRayTo = getRayTo(x,y);
+				btVector3 rayFrom;
+				btVector3 oldPivotInB = pickCon->getFrameOffsetA().getOrigin();
+
+				btVector3 newPivotB;
+				if (m_ortho)
+				{
+					newPivotB = oldPivotInB;
+					newPivotB.setX(newRayTo.getX());
+					newPivotB.setY(newRayTo.getY());
+				} else
+				{
+					rayFrom = m_cameraPosition;
+					btVector3 dir = newRayTo-rayFrom;
+					dir.normalize();
+					dir *= gOldPickingDist;
+
+					newPivotB = rayFrom + dir;
+				}
+				pickCon->getFrameOffsetA().setOrigin(newPivotB);
+			}
+
+		} else
+		{
+			btPoint2PointConstraint* pickCon = static_cast<btPoint2PointConstraint*>(m_pickConstraint);
+			if (pickCon)
+			{
+				//keep it at the same picking distance
+
+				btVector3 newRayTo = getRayTo(x,y);
+				btVector3 rayFrom;
+				btVector3 oldPivotInB = pickCon->getPivotInB();
+				btVector3 newPivotB;
+				if (m_ortho)
+				{
+					newPivotB = oldPivotInB;
+					newPivotB.setX(newRayTo.getX());
+					newPivotB.setY(newRayTo.getY());
+				} else
+				{
+					rayFrom = m_cameraPosition;
+					btVector3 dir = newRayTo-rayFrom;
+					dir.normalize();
+					dir *= gOldPickingDist;
+
+					newPivotB = rayFrom + dir;
+				}
+				pickCon->setPivotB(newPivotB);
+			}
+		}
+	}
+
+	float dx, dy;
+    dx = btScalar(x) - m_mouseOldX;
+    dy = btScalar(y) - m_mouseOldY;
+
+
+	
+
+	m_mouseOldX = x;
+    m_mouseOldY = y;
+	
+
+}
+
+
+
+
+//////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
 //#define LOAD_FROM_FILE 1
 
 #ifndef LOAD_FROM_FILE
 //#include "PhysicsAnimationBakingDemo.h"
 #include "PhysicsAnimationBakingDemo.uue64.h"
 #endif //LOAD_FROM_FILE
+
+char* theData = mydata_base64;
 
 void createWorld()
 {
@@ -132,14 +481,27 @@ void createWorld()
 		fclose(file);
 #else
 
-	std::string decoded = base64_decode(mydata_base64);
+	if (!theData)
+		return;
+	
+	std::string decoded = base64_decode(theData);
 
 	int fileLen=decoded.size();
 	char*memoryBuffer =  (char*)decoded.c_str();
 
+
 #endif //LOAD_FROM_FILE
 
 
+	if (dynWorld)
+	{
+		delete dynWorld;
+		delete solver;
+		delete dispatcher;
+		delete broadphase;
+		delete collisionConfiguration;
+		delete reader;
+	}
 
 	if (memoryBuffer && fileLen)
 	{
@@ -158,7 +520,8 @@ void createWorld()
 
 		reader = new OolongBulletBlendReader(dynWorld);
 		int result = reader->readFile(memoryBuffer,fileLen);
-		reader->convertAllObjects();
+		if (result)
+			reader->convertAllObjects();
 	}
 
 }
@@ -228,6 +591,9 @@ float projMat[16];
 //
 bool setupGraphics(int screenWidth, int screenHeight) 
 {
+	m_glutScreenWidth = screenWidth;
+	m_glutScreenHeight = screenHeight;
+
 
 	 glViewport ( 0, 0, screenWidth,screenHeight );
 
@@ -280,25 +646,6 @@ bool setupGraphics(int screenWidth, int screenHeight)
    modelMatrix = glGetUniformLocation ( programObject, "modelMatrix" );
    viewMatrix = glGetUniformLocation ( programObject, "viewMatrix" );
    projectionMatrix = glGetUniformLocation ( programObject, "projectionMatrix" );
-
-   float aspect;
-	btVector3 extents;
-
-	if (screenWidth > screenHeight) 
-	{
-		aspect = screenWidth / (float)screenHeight;
-		extents.setValue(aspect * 1.0f, 1.0f,0);
-	} else 
-	{
-		aspect = screenHeight / (float)screenWidth;
-		extents.setValue(1.0f, aspect*1.f,0);
-	}
-	
-	float m_frustumZNear=1;
-	float m_frustumZFar=1000;
-
-	
-	btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projMat);
 
    // Load the texture
    textureId = 0;//CreateSimpleTexture2D ();
@@ -356,16 +703,21 @@ void renderFrame()
    glUniform1i ( samplerLoc, 0 );
 
 
-   btVector3 m_cameraPosition(0,0,-2);
-   btVector3 m_cameraTargetPosition(0,0,0);
-   btVector3 m_cameraUp(0,1,0);//1,0);
+ 
+
    static float mat2[16];
 
 #define USE_CAM_FROM_FILE 1
 #ifdef USE_CAM_FROM_FILE
-   if (reader)
+   if (reader && reader->isBlendFileOk())
    {
-		reader->m_cameraTrans.inverse().getOpenGLMatrix(mat2);
+		//reader->m_cameraTrans.inverse().getOpenGLMatrix(mat2);
+
+		btVector3 fwd = reader->m_cameraTrans.getBasis().getColumn(2);
+		m_cameraPosition = reader->m_cameraTrans.getOrigin();
+		m_cameraTargetPosition = m_cameraPosition - fwd; //why is this -?
+		m_cameraUp = reader->m_cameraTrans.getBasis().getColumn(1);
+		btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,mat2);
    } else
 #endif
    {
@@ -374,25 +726,34 @@ void renderFrame()
 
    glUniformMatrix4fv(viewMatrix,1,GL_FALSE,mat2);
 
+
+    float aspect;
+	btVector3 extents;
+
+	if (m_glutScreenWidth > m_glutScreenHeight) 
+	{
+		aspect = m_glutScreenWidth / (float)m_glutScreenHeight;
+		extents.setValue(aspect * 1.0f, 1.0f,0);
+	} else 
+	{
+		aspect = m_glutScreenHeight / (float)m_glutScreenWidth;
+		extents.setValue(1.0f, aspect*1.f,0);
+	}
+	
+	float m_frustumZNear=1;
+	float m_frustumZFar=1000;
+
+	
+	btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projMat);
+
+  
+
    	glUniformMatrix4fv(projectionMatrix,1,GL_FALSE,projMat);
 
 
-	btTransform tr;
-	tr.setIdentity();
-
-	static float mat1[16];
-	tr.getOpenGLMatrix(mat1);
-	glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
-	glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
-
-	tr.setOrigin(btVector3(0,1,0));
-
-	tr.getOpenGLMatrix(mat1);
-	glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
-	glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
 
-	if (reader)
+	if (reader && reader->isBlendFileOk())
 	{
 		for (int i=0;i<reader->m_graphicsObjects.size();i++)
 		{
@@ -405,6 +766,21 @@ void renderFrame()
 			dynWorld->stepSimulation(0.016f);
 			dynWorld->stepSimulation(0.016f);
 		}
+	} else
+	{
+		btTransform tr;
+		tr.setIdentity();
+
+		static float mat1[16];
+		tr.getOpenGLMatrix(mat1);
+		glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
+		glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
+
+		tr.setOrigin(btVector3(0,1,0));
+
+		tr.getOpenGLMatrix(mat1);
+		glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
+		glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 	}
 
 	g_lastError = glGetError();
@@ -424,3 +800,8 @@ void	shutdownGraphics()
    glDeleteProgram ( programObject );
 }
 
+
+void mouseMove()
+{
+
+}

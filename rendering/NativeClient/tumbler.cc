@@ -27,6 +27,15 @@
 
 extern bool simulationPaused;
 extern void zoomCamera(int deltaY);
+extern void	mouseMotionFunc(int x,int y);
+extern void mouseFunc(int button, int state, int x, int y);
+extern void createWorld();
+std::string sCurString="";
+extern char* theData;
+
+extern int m_glutScreenWidth;
+extern int m_glutScreenHeight;
+
 
 std::string ModifierToString(uint32_t modifier) {
   std::string s;
@@ -177,12 +186,21 @@ bool Tumbler::Init(uint32_t /* argc */,
   return true;
 }
 
+
 void Tumbler::HandleMessage(const pp::Var& message) {
+	
+	
+	 //PostMessage("received some data");
+	  //PostMessage(message.AsString());
+  
   if (!message.is_string())
     return;
-  scripting_bridge_.InvokeMethod(message.AsString());
   
   const std::string msg = message.AsString();
+  	  
+  //scripting_bridge_.InvokeMethod(message.AsString());
+  
+  
  	//PostMessage("Handled Javascript message");
   //PostMessage(message.AsString());
   
@@ -190,14 +208,34 @@ void Tumbler::HandleMessage(const pp::Var& message) {
 		{
 			simulationPaused = !simulationPaused;
 			if (simulationPaused)
-				{
-			//PostMessage("simulation paused");
+			{
+				PostMessage("simulation paused");
 			} else
 			{
-				//PostMessage("simulation running");
+				PostMessage("simulation running");
 			}
-  
-		}
+  	}
+		
+	if (msg=="start")
+		{
+			PostMessage("start send data");
+			sCurString="";
+		} else
+		if (msg=="end")
+			{
+				PostMessage("end send data");
+				theData = (char*)sCurString.c_str();
+				
+				char strmsg[1024];
+				sprintf(strmsg,"String length = %d\n",sCurString.length());
+				PostMessage(strmsg);
+				
+				createWorld();
+			}		else
+				{
+						sCurString+=msg;
+				}
+			
   
 }
 
@@ -216,14 +254,50 @@ bool Tumbler::HandleInputEvent(const pp::InputEvent& event) {
       case PP_INPUTEVENT_TYPE_UNDEFINED:
         break;
       case PP_INPUTEVENT_TYPE_MOUSEDOWN:
+      	{
+      		pp::MouseInputEvent mouse_event = pp::MouseInputEvent(event);
+      			
+    	    if (mouse_event.GetButton()==PP_INPUTEVENT_MOUSEBUTTON_LEFT)
+        	{
+        		int posX = mouse_event.GetPosition().x();
+        		int posY = mouse_event.GetPosition().y();
+    	    		mouseFunc(0,0,posX,posY);
+    	    		
+    	    		
+    	    		char tmp[1024];
+    	    		sprintf(tmp,"Mouse Down, posX = %d posY = %d, screenWidth %d, screenHeight %d",posX,posY, m_glutScreenWidth,m_glutScreenHeight);
+    	    		PostMessage(tmp);
+    	    		
+  	      }
         GotMouseEvent(pp::MouseInputEvent(event), "Down");
         break;
+      }
       case PP_INPUTEVENT_TYPE_MOUSEUP:
+      	{
+      			pp::MouseInputEvent mouse_event = pp::MouseInputEvent(event);
+      			
+    	    if (mouse_event.GetButton()==PP_INPUTEVENT_MOUSEBUTTON_LEFT)
+        	{
+    	    		mouseFunc(0,1,mouse_event.GetPosition().x(),mouse_event.GetPosition().y());
+    	    		PostMessage("Mouse Up");
+  	      }
         GotMouseEvent(pp::MouseInputEvent(event), "Up");
+        }
         break;
       case PP_INPUTEVENT_TYPE_MOUSEMOVE:
+      	{
+      		pp::MouseInputEvent mouse_event = pp::MouseInputEvent(event);
+      		int xPos = mouse_event.GetPosition().x();
+      		int yPos = mouse_event.GetPosition().y();
+      			
+      			mouseMotionFunc(xPos,yPos);
+      				char tmp[1024];
+    	    		sprintf(tmp,"Mouse Move, posX = %d posY = %d",xPos,yPos);
+    	    		PostMessage(tmp);
+      			
         GotMouseEvent(pp::MouseInputEvent(event), "Move");
         break;
+      }
       case PP_INPUTEVENT_TYPE_MOUSEENTER:
         GotMouseEvent(pp::MouseInputEvent(event), "Enter");
         break;
@@ -319,6 +393,10 @@ void Tumbler::DidChangeView(const pp::Rect& position, const pp::Rect& clip) {
     cube_->PrepareOpenGL();
   }
   cube_->Resize(position.size().width(), position.size().height());
+  
+  m_glutScreenWidth = position.size().width();
+m_glutScreenHeight = position.size().height();
+  
   DrawSelf();
 }
 

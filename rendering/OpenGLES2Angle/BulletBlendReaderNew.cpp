@@ -64,6 +64,15 @@ int		BulletBlendReaderNew::readFile(char* memoryBuffer, int fileLen, int verbose
 	return ok;
 }
 
+bool	BulletBlendReaderNew::isBlendFileOk()
+{
+	bool ok =false;
+	if (m_blendFile)
+		ok = (m_blendFile->getFlags()& bParse::FD_OK)!=0;
+	return ok;
+}
+
+
 int		BulletBlendReaderNew::writeFile(const char* fileName)
 {
 	bool replaceOldPointers = true;
@@ -335,7 +344,10 @@ btCollisionObject* BulletBlendReaderNew::createBulletObject(Blender::Object* obj
 				};
 			case OB_BOUND_BOX:
 				{
-					colShape = new btBoxShape(localSize);
+					btBoxShape* boxShape = new btBoxShape(localSize);
+					boxShape->initializePolyhedralFeatures();
+					colShape = boxShape;
+
 					break;
 				}
 			case OB_BOUND_CYLINDER:

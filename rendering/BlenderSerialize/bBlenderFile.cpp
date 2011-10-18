@@ -31,16 +31,19 @@ extern int DNAlen64;
 using namespace bParse;
 
 bBlenderFile::bBlenderFile(const char* fileName)
-:bFile(fileName, "BLENDER")
+:bFile(fileName, "BLENDER"),
+m_glob(0)
 {
 	mMain= new bMain(this, fileName, mVersion);
+	
 }
 
 
 
 bBlenderFile::bBlenderFile(char *memoryBuffer, int len)
 :bFile(memoryBuffer,len, "BLENDER"),
-mMain(0)
+mMain(0),
+m_glob(0)
 {
 	mMain= new bMain(this, "memoryBuf", mVersion);
 }

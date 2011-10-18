@@ -11,16 +11,17 @@
   	
   	helloWorldModule = null;  // Global application object.
  	
-    function updateStatus(opt_message) {
+    function updateStatus(opt_message) 
+    {
       if (opt_message)
-	{
+			{
         statusText = opt_message;
       	var statusField = document.getElementById('statusField');
       	if (statusField) 
-			{
+				{
         		statusField.innerHTML = statusText;
-      		}
-		}
+      	}
+			}
     }
     
     function pauseSim() {
@@ -62,12 +63,67 @@
       The Native Client module executed in this page runs 
       a 3D rigid body simulation using the C++ Bullet Physics library
     <br>
-    It has a Blender .blend file embedded and uses jpeg library for the embedded textures.
-    </p>
+		<script>
+		$ = function(id) { return document.getElementById(id); }
+		var example3 = example3 || {};
+		example3.handleFileSelect = function(evt) 
+		{
+			var files = evt.target.files; // FileList object.
+	  	// Loop through the FileList and render image files as thumbnails.
+	  	for (var i = 0, f; f = files[i]; i++) 
+	  	{
+	    	// Only process image files.
+	    	//if (!f.type.match('image.*')) {
+		    //  continue;
+	    	//}
+	    	var reader = new FileReader();
+	    	// Need a closure to capture the file information.
+	    	reader.onload = (function(theFile) {
+		      return function(e) {
+	        	// Render thumbnail.
+	        	
+	        	var encodedData = window.btoa(e.target.result); // encode to a string
+						helloWorldModule = document.getElementById('tumbler');
+						if (helloWorldModule)
+						{
+							
+							helloWorldModule.postMessage('start');
+							
+							start=0;
+							batchsize = 16384;
+							end = encodedData.length;
+							
+							if (end > batchsize)
+								end = batchsize;
+							do
+  						{
+  							helloWorldModule.postMessage(encodedData.substring(start,end));
+  							start = end;
+  							// for debugging document.getElementById('encodedDataField').innerHTML = start;
+  							end+=batchsize;
+  							if (end >encodedData.length)
+  								end = encodedData.length;
+  						}
+							while (start<encodedData.length);								
+							helloWorldModule.postMessage('end');
+						}
+	      	};
+	    	})(f);
+	    	reader.readAsBinaryString(f);
+	  	}
+		}
+		$('files3').addEventListener('change', example3.handleFileSelect, false);
+		</script>
+
+  <!--
+	<div id="encodedDataField">NO-STATUS</div>
+	 -->
+	 
+      Use left mouse button to drag objects, mouse wheel to zoom or browse for a local .blend file 
+	<br>
+			<input type="button" value="Pause Simulation" onclick="pauseSim()" />
+	    <input type="file" id="files3" name="files3[]" >
     
-  <input type="button" value="Pause Simulation" onclick="pauseSim()" />
-  
-  
     <div id="tumbler_view"></div>
     
     <script type="text/javascript">
@@ -75,9 +131,14 @@
       tumbler.application.run('tumbler_view');
 	  tumbmodule = document.getElementById('tumbler_view');
 	  if (tumbmodule)
+	  {
      	tumbmodule.addEventListener('load', moduleDidLoad, true);
+     	tumbmodule.addEventListener('message', receiveMessage, true);
+     	
+    }
 
     </script>
     <div id="statusField">Native Client loading, please wait</div>
+    This sample has a Blender .blend file embedded and uses jpeg library for the embedded textures.
   </body>
 </HTML>

@@ -70,6 +70,8 @@ public:
 
 	void	convertAllObjects(int verboseDumpAllBlocks=false);
 
+	bool	isBlendFileOk();
+	
 	virtual	void	convertConstraints();
 
 	virtual	void	convertLogicBricks() = 0;

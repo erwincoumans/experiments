@@ -17,11 +17,11 @@
 	files {
 		"Simple_Texture2D.c",
 		"esShader.cpp",
-		"esShapes.c",
-		"esTransform.c",
+		"esShapes.cpp",
+		"esTransform.cpp",
 		"esUtil.cpp",
 		"esUtil_TGA.cpp",
-		"esUtil_win32.c"		
+		"esUtil_win32.cpp"		
 	}
 	
 	
@@ -51,7 +51,7 @@
 		"BulletBlendReaderNew.cpp",
 		"esShader.cpp",
 		"esUtil.cpp",
-		"esUtil_win32.c",
+		"esUtil_win32.cpp",
 		"OolongReadBlend.cpp",
 		"Simple_Texture2DSetupAndRenderFrame.cpp",
 		"SimpleGLSL2.cpp",
