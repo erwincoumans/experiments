@@ -1,4 +1,3 @@
-@echo off
 
 :: Copyright (c) 2011 The Native Client Authors. All rights reserved.
 :: Use of this source code is governed by a BSD-style license that can be
@@ -21,4 +20,5 @@ if exist %SDK_TOOLS_UPDATE% (
 
 set PYTHONPATH=%SCRIPT_DIR%
 
-python %SDK_TOOLS%\sdk_update.py %*
+python %SDK_TOOLS%\sdk_update.py update %*
+python %SDK_TOOLS%\sdk_update.py update pepper_15
