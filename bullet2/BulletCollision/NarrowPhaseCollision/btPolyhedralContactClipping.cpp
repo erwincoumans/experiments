@@ -88,9 +88,9 @@ static bool TestSepAxis(const btConvexPolyhedron& hullA, const btConvexPolyhedro
 		return false;
 
 	btScalar d0 = Max0 - Min1;
-	btAssert(d0>=0.0f);
+	assert(d0>=0.0f);
 	btScalar d1 = Max1 - Min0;
-	btAssert(d1>=0.0f);
+	assert(d1>=0.0f);
 	depth = d0<d1 ? d0:d1;
 	return true;
 }
