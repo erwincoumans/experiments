@@ -1,0 +1,1 @@
+Make sure the logs directory exists so that nginx.exe can create its log files
