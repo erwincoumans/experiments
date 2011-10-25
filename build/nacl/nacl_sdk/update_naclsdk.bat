@@ -20,5 +20,5 @@ if exist %SDK_TOOLS_UPDATE% (
 
 set PYTHONPATH=%SCRIPT_DIR%
 
-python %SDK_TOOLS%\sdk_update.py update %*
+
 python %SDK_TOOLS%\sdk_update.py update pepper_15
