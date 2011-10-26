@@ -18,4 +18,4 @@ make
 
 cd ..
 
-
+pause
