@@ -15,7 +15,7 @@
 	
 	
 	files {
-		"Simple_Texture2D.c",
+		"Simple_Texture2D.cpp",
 		"esShader.cpp",
 		"esShapes.cpp",
 		"esTransform.cpp",

@@ -16,7 +16,6 @@
 //
 #include <stdlib.h>
 #include "esUtil.h"
-#include <assert.h>
 
 typedef struct
 {
@@ -78,9 +77,8 @@ GLuint CreateSimpleTexture2D( )
 //
 int Init ( ESContext *esContext )
 {
-		GLenum err;
-   UserData *userData = esContext->userData;
-   GLbyte vShaderStr[] =  
+   UserData *userData = (UserData *)esContext->userData;
+    const char  vShaderStr[] =  
       "attribute vec4 a_position;   \n"
       "attribute vec2 a_texCoord;   \n"
       "varying vec2 v_texCoord;     \n"
@@ -90,7 +88,7 @@ int Init ( ESContext *esContext )
       "   v_texCoord = a_texCoord;  \n"
       "}                            \n";
    
-   GLbyte fShaderStr[] =  
+   const char fShaderStr[] =  
       "precision mediump float;                            \n"
       "varying vec2 v_texCoord;                            \n"
       "uniform sampler2D s_texture;                        \n"
@@ -100,7 +98,7 @@ int Init ( ESContext *esContext )
       "}                                                   \n";
 
    // Load the shaders and get a linked program object
-   userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
+   userData->programObject = esLoadProgram ( (const char*)vShaderStr, (const char*)fShaderStr );
 
    // Get the attribute locations
    userData->positionLoc = glGetAttribLocation ( userData->programObject, "a_position" );
@@ -112,10 +110,6 @@ int Init ( ESContext *esContext )
    // Load the texture
    userData->textureId = CreateSimpleTexture2D ();
 
-   	err = glGetError();
-   assert(err==GL_NO_ERROR);
-
-
    glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
    return TRUE;
 }
@@ -125,8 +119,7 @@ int Init ( ESContext *esContext )
 //
 void Draw ( ESContext *esContext )
 {
-	GLenum err;
-   UserData *userData = esContext->userData;
+   UserData *userData = (UserData *)esContext->userData;
    GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f,  // Position 0
                             0.0f,  0.0f,        // TexCoord 0 
                            -0.5f, -0.5f, 0.0f,  // Position 1
@@ -166,9 +159,6 @@ void Draw ( ESContext *esContext )
 
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
-	err = glGetError();
-   assert(err==GL_NO_ERROR);
-
    eglSwapBuffers ( esContext->eglDisplay, esContext->eglSurface );
 }
 
@@ -177,7 +167,7 @@ void Draw ( ESContext *esContext )
 //
 void ShutDown ( ESContext *esContext )
 {
-   UserData *userData = esContext->userData;
+   UserData *userData = (UserData *)esContext->userData;
 
    // Delete texture object
    glDeleteTextures ( 1, &userData->textureId );
@@ -186,6 +176,9 @@ void ShutDown ( ESContext *esContext )
    glDeleteProgram ( userData->programObject );
 }
 
+void	zoomCamera(int deltaY){}
+void	mouseMotionFunc(int x,int y){}
+void mouseFunc(int button, int state, int x, int y){}
 
 int main ( int argc, char *argv[] )
 {

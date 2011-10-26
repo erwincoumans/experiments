@@ -37,6 +37,12 @@ if not _OPTIONS["with-nacl"] then
 
 else
 --	targetdir "../bin_html"
+
+--remove some default flags when cross-compiling for Native Client
+--see also http://industriousone.com/topic/how-remove-usrlib64-x86-builds-cross-compiling
+	premake.gcc.platforms.x64.ldflags = string.gsub(premake.gcc.platforms.x64.ldflags, "-L/usr/lib64", "")
+	premake.gcc.platforms.x32.ldflags = string.gsub(premake.gcc.platforms.x32.ldflags, "-L/usr/lib32", "")
+	
 	targetdir "nacl/nginx-1.1.2/html"
 	
 	location("./nacl")
