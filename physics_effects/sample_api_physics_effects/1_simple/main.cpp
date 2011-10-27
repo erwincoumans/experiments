@@ -36,7 +36,7 @@ bool simulating = false;
 
 int landscapeMeshId;
 int convexMeshId;
-
+#ifdef _WIN32
 static void render(void)
 {
 	render_begin();
@@ -106,14 +106,17 @@ static void render(void)
 
 	render_end();
 }
+#endif
 
 static int init(void)
 {
 	perf_init();
 	ctrl_init();
-	render_init();
 	physics_init();
-
+	
+#ifdef _WIN32
+	render_init();
+	
 	landscapeMeshId = render_init_mesh(
 		LargeMeshVtx,sizeof(float)*6,
 		LargeMeshVtx+3,sizeof(float)*6,
@@ -125,21 +128,24 @@ static int init(void)
 		BarrelVtx+3,sizeof(float)*6,
 		BarrelIdx,sizeof(unsigned short)*3,
 		BarrelVtxCount,BarrelIdxCount/3);
-
+#endif
+	
 	return 0;
 }
 
 static int shutdown(void)
 {
 	ctrl_release();
+#ifdef _WIN32
 	render_release();
+#endif
 	physics_release();
 	perf_release();
 
 	return 0;
 }
 
-
+#ifdef _WIN32
 static void update(float deltaTime)
 {
 	float dt = deltaTime*10.f;
@@ -200,7 +206,9 @@ static void update(float deltaTime)
 
 	render_set_view_angle(angX,angY,r);
 }
-#ifndef _WIN32
+#endif
+
+#ifndef  _WIN32
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main
@@ -214,9 +222,14 @@ int main(void)
 	printf("## %s: INIT SUCCEEDED ##\n", SAMPLE_NAME);
 
 	while (s_isRunning) {
-		update();
-		if(simulating) physics_simulate();
+#ifdef _WIN32
+		update(1.f/60.f);
+#endif
+		if(simulating) 
+			physics_simulate();
+#ifdef _WIN32
 		render();
+#endif
 
 		perf_sync();
 	}

@@ -1,3 +1,5 @@
+	if os.is("Windows") then
+
 	project "pe_sample_2_stable"
 		
 	kind "WindowedApp"
@@ -15,8 +17,13 @@
 	
 	files {
 		"main.cpp",
-		"physics_func.cpp",
-		"../common/ctrl_func.win32.cpp",
-		"../common/perf_func.win32.cpp",
-		"../common/render_func.win32.cpp"
-	}
+		"physics_func.cpp"
+		}
+	 files {
+                "../common/ctrl_func.win32.cpp",
+                "../common/perf_func.win32.cpp",
+                "../common/render_func.win32.cpp"
+        }
+	end
+
+

@@ -27,8 +27,8 @@
  		libdirs {"../../rendering/GlutGlewWindows"}
 
 
-		configuration {"MaxOSX"}
- 		linkoptions { "-framework Carbon -framework OpenGL -framework AGL -framework Glut" } 
+		configuration {"MacOSX"}
+ 		links { "Carbon.framework","OpenGL.framework","AGL.framework","Glut.framework" } 
 		configuration {"not Windows", "not MacOSX"}
 		links {"GL","GLU","glut"}
 	

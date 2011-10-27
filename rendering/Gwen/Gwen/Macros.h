@@ -4,7 +4,9 @@
 #define GWEN_MACROS_H
 #include <stdlib.h>
 #include <stdarg.h>
+#ifdef _WIN32
 #include <malloc.h>
+#endif //_WIN32
 #include <memory.h>
 #include <algorithm>
 

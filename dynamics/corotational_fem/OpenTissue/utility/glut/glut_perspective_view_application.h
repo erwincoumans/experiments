@@ -244,6 +244,7 @@ namespace OpenTissue
       */
       void init_gl_state()
       {
+#ifdef _WIN32
         int err = glewInit();
         if ( GLEW_OK != err )
         {
@@ -252,7 +253,7 @@ namespace OpenTissue
           exit( 1 );
         }
         std::cout << "GLEW status: Using GLEW " << glewGetString( GLEW_VERSION ) << std::endl;
-
+#endif
         glClearColor( .7, .7, .7, 1.0 );
         glEnable( GL_DEPTH_TEST );
 

@@ -1,3 +1,5 @@
+	if os.is("Windows") then
+
 	project "pe_sample_5_raycast"
 		
 	kind "WindowedApp"
@@ -22,3 +24,5 @@
 		"../common/perf_func.win32.cpp",
 		"../common/render_func.win32.cpp"
 	}
+	end
+

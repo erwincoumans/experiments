@@ -72,13 +72,11 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/gui_initialize"
 	
 	
-	
-
-
 	include "../physics_effects/base_level"
 	include "../physics_effects/low_level"
 	include "../physics_effects/util"
 	include "../physics_effects/sample_api_physics_effects/0_console"
+	
 	include "../physics_effects/sample_api_physics_effects/1_simple"
 	include "../physics_effects/sample_api_physics_effects/2_stable"
 	include "../physics_effects/sample_api_physics_effects/3_sleep"
@@ -95,9 +93,7 @@ if not _OPTIONS["with-nacl"] then
 
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"
-
 	include "../rendering/OpenGLES2Angle"
-
 else
 	include "../rendering/NativeClient"	
 	

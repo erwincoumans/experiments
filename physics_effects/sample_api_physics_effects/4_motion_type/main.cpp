@@ -246,7 +246,7 @@ int main(void)
 	printf("## %s: INIT SUCCEEDED ##\n", SAMPLE_NAME);
 
 	while (s_isRunning) {
-		update();
+		update(1.f/60.f);
 		if(simulating) physics_simulate();
 		render();
 
