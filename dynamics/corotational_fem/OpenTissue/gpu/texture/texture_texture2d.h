@@ -172,8 +172,11 @@ namespace OpenTissue
         {
           if(glIsEnabled(GL_TEXTURE_RECTANGLE_ARB))
             glDisable(GL_TEXTURE_RECTANGLE_ARB);
-          if(glIsEnabled(GL_TEXTURE_RECTANGLE_NV))
+#ifdef _WIN32
+			if(glIsEnabled(GL_TEXTURE_RECTANGLE_NV))
             glDisable(GL_TEXTURE_RECTANGLE_NV);
+#endif
+			
         }
         else
         {

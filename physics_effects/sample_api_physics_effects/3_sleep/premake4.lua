@@ -1,3 +1,5 @@
+	if os.is("Windows") then
+
 	project "pe_sample_3_sleep"
 		
 	kind "WindowedApp"
@@ -20,3 +22,4 @@
 		"../common/perf_func.win32.cpp",
 		"../common/render_func.win32.cpp"
 	}
+	end

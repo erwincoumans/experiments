@@ -1,22 +1,32 @@
-	
-		project "position_based_dynamics"
+	if os.is("Windows") then	
+		project "CDTestFramework"
 
 		language "C++"
 				
 		kind "ConsoleApp"
 		targetdir "../../bin"
 
+	configuration {"Windows"}
+		defines {"USE_ANTTWEAKBAR"}
+	configuration{}
+	
+	defines { "BAN_OPCODE_AUTOLINK","WIN32","ICE_NO_DLL"}
+	
   		includedirs {
                 ".",
                 "../../bullet2",
-                "../testbed",
+                "Opcode",
+                "AntTweakBar/include",
+                --"../testbed",
                 	"../../rendering/Gwen",
                 }
 		
 
-		links { "testbed",
+		links { 
+		  "opcode",
 			"bullet2",
-			"gwen"
+			"AntTweakBarStatic"
+			--"gwen"
 		}
 		
 
@@ -27,14 +37,15 @@
  		libdirs {"../../rendering/GlutGlewWindows"}
 
 
-		configuration {"MacOSX"}
- 		links { "Carbon.framework","OpenGL.framework","AGL.framework","Glut.framework" } 
+		configuration {"MaxOSX"}
+ 		linkoptions { "-framework Carbon -framework OpenGL -framework AGL -framework Glut" } 
 		configuration {"not Windows", "not MacOSX"}
 		links {"GL","GLU","glut"}
 	
 		configuration{}
 	
 		files {
-		"**.cpp",
-		"**.h"
+		"*.cpp",
+		"*.h"
 		}
+end

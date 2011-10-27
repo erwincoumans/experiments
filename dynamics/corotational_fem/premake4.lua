@@ -21,8 +21,13 @@
 		"../testbed"
 		}
 
+		configuration {"MacOSX"}
+                links { "Carbon.framework","OpenGL.framework","AGL.framework","Glut.framework" }
+                configuration {"not Windows", "not MacOSX"}
+                links {"GL","GLU","glut"}
+
 		
-                configuration {"not Windows", "not MaxOSX"}
+                configuration {"not Windows", "not MacOSX"}
 		links {
                 "GL", "GLU", "glut","GLEW"
                 }

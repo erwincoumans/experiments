@@ -153,8 +153,10 @@ namespace OpenTissue
     {
       switch(channels)
       {
+#ifdef _WIN32
       case 1:  return GL_FLOAT_R32_NV;
-      case 2:  return GL_LUMINANCE_ALPHA;
+#endif
+	  case 2:  return GL_LUMINANCE_ALPHA;
       case 3:  return GL_RGB;
       case 4:  return GL_RGBA;
       }
@@ -166,8 +168,10 @@ namespace OpenTissue
     {
       switch(channels)
       {
+#ifdef _WIN32
       case 1:  return GL_FLOAT_R32_NV;
-      case 2:  return GL_LUMINANCE_ALPHA;
+#endif
+	  case 2:  return GL_LUMINANCE_ALPHA;
       case 3:  return GL_RGB;
       case 4:  return GL_RGBA;
       }
@@ -179,8 +183,10 @@ namespace OpenTissue
     {
       switch(channels)
       {
-      case 1:  return GL_FLOAT_R32_NV;
-      case 2:  return GL_LUMINANCE_ALPHA;
+#ifdef _WIN32
+	case 1:  return GL_FLOAT_R32_NV;
+#endif
+	  case 2:  return GL_LUMINANCE_ALPHA;
       case 3:  return GL_RGB;
       case 4:  return GL_RGBA;
       }

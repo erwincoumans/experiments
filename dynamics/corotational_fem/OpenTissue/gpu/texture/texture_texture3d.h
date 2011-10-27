@@ -123,12 +123,15 @@ namespace OpenTissue
         GLint max_tex_size;
         GLint max_tex_size_ext;
         glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &max_tex_size);
-        glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE_EXT, &max_tex_size_ext);
-        if(width>max_tex_size ||height>max_tex_size || depth>max_tex_size )
+#ifdef _WIN32
+		  glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE_EXT, &max_tex_size_ext);
+
+		if(width>max_tex_size ||height>max_tex_size || depth>max_tex_size )
           return 0;
         if(width>max_tex_size_ext ||height>max_tex_size_ext || depth>max_tex_size_ext )
           return 0;
-
+#endif
+		  
         //--- see if texture is capable of being loaded into texture memory
         //---
         //--- If successfull this does not imply that texture will be resident in texture memory!!!

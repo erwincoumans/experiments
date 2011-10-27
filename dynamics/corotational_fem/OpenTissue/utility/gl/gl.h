@@ -9,14 +9,14 @@
 //
 #include <OpenTissue/configuration.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
 #  undef WIN32_LEAN_AND_MEAN
 #  undef NOMINMAX
-#endif
 #include <GL/glew.h>
+#endif
 #if defined(__APPLE__) && !defined (VMDMESA)
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -25,6 +25,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+#include <GL/glew.h>
 #endif
 
 //OPENTISSUE_UTILITY_GL_GL_GL_H

@@ -1,3 +1,5 @@
+	if os.is("Windows") then
+
 	project "GLSL_instancing"
 		
 	kind "ConsoleApp"
@@ -20,3 +22,5 @@
 	files {
 		"main.cpp"
 	}
+	end
+

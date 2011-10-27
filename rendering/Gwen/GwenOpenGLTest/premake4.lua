@@ -1,3 +1,5 @@
+	if os.is("Windows") then
+
 	project "Gwen_OpenGLTest"
 		
 	kind "ConsoleApp"
@@ -25,3 +27,5 @@
 		"**.cpp",
 		"**.h",
 	}
+	end
+

@@ -489,10 +489,13 @@ namespace OpenTissue
     {
       // Read more here: http://opengl.org/registry/specs/EXT/framebuffer_object.txt
       //if (glewIsSupported("GL_VERSION_1_1  GL_EXT_framebuffer_object"))
-      if (glewIsSupported("GL_EXT_framebuffer_object"))
+#ifdef _WIN32
+		if (glewIsSupported("GL_EXT_framebuffer_object"))
       {
         return true;
       }
+#endif
+		
       return false;
     }
 
