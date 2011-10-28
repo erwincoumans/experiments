@@ -4,9 +4,9 @@
 #define GWEN_MACROS_H
 #include <stdlib.h>
 #include <stdarg.h>
-#ifdef _WIN32
+#ifndef __APPLE__
 #include <malloc.h>
-#endif //_WIN32
+#endif //__APPLE__
 #include <memory.h>
 #include <algorithm>
 
