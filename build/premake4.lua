@@ -86,6 +86,8 @@ if not _OPTIONS["with-nacl"] then
 
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
+	include "../dynamics/basic_demo"
+	
 
 	
 	include "../dynamics/corotational_fem"

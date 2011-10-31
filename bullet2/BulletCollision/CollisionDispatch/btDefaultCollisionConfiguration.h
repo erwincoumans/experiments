@@ -117,6 +117,12 @@ public:
 		return m_simplexSolver;
 	}
 
+	virtual	btConvexPenetrationDepthSolver*	getPenetrationDepthSolver()
+	{
+		return m_pdSolver;
+	}
+
+
 
 	virtual btCollisionAlgorithmCreateFunc* getCollisionAlgorithmCreateFunc(int proxyType0,int proxyType1);
 

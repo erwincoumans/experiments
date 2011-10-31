@@ -37,7 +37,7 @@ public:
 	virtual ~btPolyhedralConvexShape();
 
 	///optional method mainly used to generate multiple contact points by clipping polyhedral features (faces/edges)
-	virtual bool	initializePolyhedralFeatures();
+	virtual bool	initializePolyhedralFeatures(bool mergeCoplanarTriangles = true);
 
 	const btConvexPolyhedron*	getConvexPolyhedron() const
 	{

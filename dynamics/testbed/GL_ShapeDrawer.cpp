@@ -35,6 +35,7 @@ subject to the following restrictions:
 #include "BulletCollision/CollisionShapes/btUniformScalingShape.h"
 #include "BulletCollision/CollisionShapes/btStaticPlaneShape.h"
 #include "BulletCollision/CollisionShapes/btMultiSphereShape.h"
+#include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
 
 
 ///
@@ -351,36 +352,98 @@ GL_ShapeDrawer::ShapeCache*		GL_ShapeDrawer::cache(btConvexShape* shape)
 	if(!sc)
 	{
 		sc=new(btAlignedAlloc(sizeof(ShapeCache),16)) ShapeCache(shape);
-		sc->m_shapehull.buildHull(shape->getMargin());
+		
 		m_shapecaches.push_back(sc);
 		shape->setUserPointer(sc);
-		/* Build edges	*/ 
-		const int			ni=sc->m_shapehull.numIndices();
-		const int			nv=sc->m_shapehull.numVertices();
-		const unsigned int*	pi=sc->m_shapehull.getIndexPointer();
-		const btVector3*	pv=sc->m_shapehull.getVertexPointer();
-		btAlignedObjectArray<ShapeCache::Edge*>	edges;
-		sc->m_edges.reserve(ni);
-		edges.resize(nv*nv,0);
-		for(int i=0;i<ni;i+=3)
+
+		const btConvexPolyhedron* poly = shape->isPolyhedral() ? ((btPolyhedralConvexShape*) shape)->getConvexPolyhedron() : 0;
+		if (poly)
 		{
-			const unsigned int* ti=pi+i;
-			const btVector3		nrm=btCross(pv[ti[1]]-pv[ti[0]],pv[ti[2]]-pv[ti[0]]).normalized();
-			for(int j=2,k=0;k<3;j=k++)
+			int i;
+			/* Build edges	*/ 
+			const int			nv=			poly->m_vertices.size();
+			if (nv)
 			{
-				const unsigned int	a=ti[j];
-				const unsigned int	b=ti[k];
-				ShapeCache::Edge*&	e=edges[btMin(a,b)*nv+btMax(a,b)];
-				if(!e)
+				const btVector3*	pv=&poly->m_vertices[0];
+				btAlignedObjectArray<ShapeCache::Edge*>	edges;
+				edges.resize(nv*nv,0);
+				
+				int maxIndices = 0;
+				for (i=0;i<poly->m_faces.size();i++)
 				{
-					sc->m_edges.push_back(ShapeCache::Edge());
-					e=&sc->m_edges[sc->m_edges.size()-1];
-					e->n[0]=nrm;e->n[1]=-nrm;
-					e->v[0]=a;e->v[1]=b;
+					maxIndices += poly->m_faces[i].m_indices.size();
 				}
-				else
+				sc->m_edges.reserve(maxIndices);
+
+				for (i=0;i<poly->m_faces.size();i++)
 				{
-					e->n[1]=nrm;
+					int numVerts = poly->m_faces[i].m_indices.size();
+					if (numVerts>2)
+					{
+						int index0 = poly->m_faces[i].m_indices[0];
+						int index1 = poly->m_faces[i].m_indices[1];
+						int index2 = poly->m_faces[i].m_indices[2];
+						int j = poly->m_faces[i].m_indices.size()-1;
+						const btVector3		nrm=btCross(pv[index1]-pv[index0],pv[index2]-pv[index0]).normalized();
+
+						for (int v=0;v<poly->m_faces[i].m_indices.size();j=v++)
+						{
+							{
+								const unsigned int	a=poly->m_faces[i].m_indices[j];
+								const unsigned int	b=poly->m_faces[i].m_indices[v];
+								int edgeIndex = btMin(a,b)*nv+btMax(a,b);
+								ShapeCache::Edge*&	e=edges[edgeIndex];
+								if(!e)
+								{
+									sc->m_edges.push_back(ShapeCache::Edge());
+									e=&sc->m_edges[sc->m_edges.size()-1];
+									e->n[0]=nrm;e->n[1]=-nrm;
+									e->v[0]=a;e->v[1]=b;
+								}
+								else
+								{
+									e->n[1]=nrm;
+								}
+							}
+						}
+					}
+				}
+			}
+
+		} else
+		{
+
+			sc->m_shapehull.buildHull(shape->getMargin());
+
+
+			/* Build edges	*/ 
+			const int			ni=sc->m_shapehull.numIndices();
+			const int			nv=sc->m_shapehull.numVertices();
+			const unsigned int*	pi=sc->m_shapehull.getIndexPointer();
+			const btVector3*	pv=sc->m_shapehull.getVertexPointer();
+			btAlignedObjectArray<ShapeCache::Edge*>	edges;
+			sc->m_edges.reserve(ni);
+			edges.resize(nv*nv,0);
+			for(int i=0;i<ni;i+=3)
+			{
+				const unsigned int* ti=pi+i;
+				const btVector3		nrm=btCross(pv[ti[1]]-pv[ti[0]],pv[ti[2]]-pv[ti[0]]).normalized();
+				for(int j=2,k=0;k<3;j=k++)
+				{
+					const unsigned int	a=ti[j];
+					const unsigned int	b=ti[k];
+					ShapeCache::Edge*&	e=edges[btMin(a,b)*nv+btMax(a,b)];
+					if(!e)
+					{
+						sc->m_edges.push_back(ShapeCache::Edge());
+						e=&sc->m_edges[sc->m_edges.size()-1];
+						e->n[0]=nrm;e->n[1]=-nrm;
+						e->v[0]=a;e->v[1]=b;
+					}
+					else
+					{
+						e->n[1]=nrm;
+					}
 				}
 			}
 		}
@@ -729,44 +792,42 @@ void GL_ShapeDrawer::drawOpenGL(btScalar* m, const btCollisionShape* shape, cons
 
 			default:
 				{
-
-
 					if (shape->isConvex())
 					{
-						ShapeCache*	sc=cache((btConvexShape*)shape);
-#if 0
-						btConvexShape* convexShape = (btConvexShape*)shape;
-						if (!shape->getUserPointer())
+						const btConvexPolyhedron* poly = shape->isPolyhedral() ? ((btPolyhedralConvexShape*) shape)->getConvexPolyhedron() : 0;
+						if (poly)
 						{
-							//create a hull approximation
-							void* mem = btAlignedAlloc(sizeof(btShapeHull),16);
-							btShapeHull* hull = new(mem) btShapeHull(convexShape);
-
-							///cleanup memory
-							m_shapeHulls.push_back(hull);
-
-							btScalar margin = shape->getMargin();
-							hull->buildHull(margin);
-							convexShape->setUserPointer(hull);
-
-
-							//	printf("numTriangles = %d\n", hull->numTriangles ());
-							//	printf("numIndices = %d\n", hull->numIndices ());
-							//	printf("numVertices = %d\n", hull->numVertices ());
-
-
-						}
-#endif
-
-
-
-						//if (shape->getUserPointer())
+							int i;
+							glBegin (GL_TRIANGLES);
+							for (i=0;i<poly->m_faces.size();i++)
+							{
+								btVector3 centroid(0,0,0);
+								int numVerts = poly->m_faces[i].m_indices.size();
+								if (numVerts>2)
+								{
+									btVector3 v1 = poly->m_vertices[poly->m_faces[i].m_indices[0]];
+									for (int v=0;v<poly->m_faces[i].m_indices.size()-2;v++)
+									{
+										
+										btVector3 v2 = poly->m_vertices[poly->m_faces[i].m_indices[v+1]];
+										btVector3 v3 = poly->m_vertices[poly->m_faces[i].m_indices[v+2]];
+										btVector3 normal = (v3-v1).cross(v2-v1);
+										normal.normalize ();
+										glNormal3f(normal.getX(),normal.getY(),normal.getZ());
+										glVertex3f (v1.x(), v1.y(), v1.z());
+										glVertex3f (v2.x(), v2.y(), v2.z());
+										glVertex3f (v3.x(), v3.y(), v3.z());
+									}
+								}
+							}
+							glEnd ();
+						} else
 						{
+							ShapeCache*	sc=cache((btConvexShape*)shape);
 							//glutSolidCube(1.0);
 							btShapeHull* hull = &sc->m_shapehull/*(btShapeHull*)shape->getUserPointer()*/;
 
-
-							if (hull->numTriangles () > 0)
+							if (hull && hull->numTriangles () > 0)
 							{
 								int index = 0;
 								const unsigned int* idx = hull->getIndexPointer();
@@ -923,29 +984,37 @@ void		GL_ShapeDrawer::drawShadow(btScalar* m,const btVector3& extrusion,const bt
 	//	bool useWireframeFallback = true;
 		if (shape->isConvex())
 		{
+			
+			const btConvexPolyhedron* poly = shape->isPolyhedral() ? ((btPolyhedralConvexShape*) shape)->getConvexPolyhedron() : 0;
 			ShapeCache*	sc=cache((btConvexShape*)shape);
 			btShapeHull* hull =&sc->m_shapehull;
-			glBegin(GL_QUADS);
-			for(int i=0;i<sc->m_edges.size();++i)
-			{			
-				const btScalar		d=btDot(sc->m_edges[i].n[0],extrusion);
-				if((d*btDot(sc->m_edges[i].n[1],extrusion))<0)
-				{
-					const int			q=	d<0?1:0;
-					const btVector3&	a=	hull->getVertexPointer()[sc->m_edges[i].v[q]];
-					const btVector3&	b=	hull->getVertexPointer()[sc->m_edges[i].v[1-q]];
-					glVertex3f(a[0],a[1],a[2]);
-					glVertex3f(b[0],b[1],b[2]);
-					glVertex3f(b[0]+extrusion[0],b[1]+extrusion[1],b[2]+extrusion[2]);
-					glVertex3f(a[0]+extrusion[0],a[1]+extrusion[1],a[2]+extrusion[2]);
+			const btVector3* vertexPointer = 0;
+			
+			vertexPointer = (poly && poly->m_vertices.size())? &poly->m_vertices[0] : 0;
+			if (!vertexPointer)
+				vertexPointer = hull->numVertices() ? hull->getVertexPointer():0;
+
+			if (vertexPointer)
+			{
+				glBegin(GL_QUADS);
+				for(int i=0;i<sc->m_edges.size();++i)
+				{			
+					const btScalar		d=btDot(sc->m_edges[i].n[0],extrusion);
+					if((d*btDot(sc->m_edges[i].n[1],extrusion))<0)
+					{
+						const int			q=	d<0?1:0;
+						const btVector3&	a=	vertexPointer[sc->m_edges[i].v[q]];
+						const btVector3&	b=	vertexPointer[sc->m_edges[i].v[1-q]];
+						glVertex3f(a[0],a[1],a[2]);
+						glVertex3f(b[0],b[1],b[2]);
+						glVertex3f(b[0]+extrusion[0],b[1]+extrusion[1],b[2]+extrusion[2]);
+						glVertex3f(a[0]+extrusion[0],a[1]+extrusion[1],a[2]+extrusion[2]);
+					}
 				}
+				glEnd();
 			}
-			glEnd();
 		}
-
 	}
-
-
 
 
 	if (shape->isConcave())//>getShapeType() == TRIANGLE_MESH_SHAPE_PROXYTYPE||shape->getShapeType() == GIMPACT_SHAPE_PROXYTYPE)
