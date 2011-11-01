@@ -71,12 +71,6 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/basic_initialize"
 	include "../opencl/gui_initialize"
 	
-	include "../dynamics/CDTestFramework"
-	include "../dynamics/CDTestFramework/opcode"
-	include "../dynamics/CDTestFramework/AntTweakBar/src"
-	
-	
-	
 	
 	include "../physics_effects/base_level"
 	include "../physics_effects/low_level"
@@ -92,6 +86,8 @@ if not _OPTIONS["with-nacl"] then
 
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
+	include "../dynamics/basic_demo"
+	
 
 	
 	include "../dynamics/corotational_fem"
