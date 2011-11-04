@@ -1,3 +1,6 @@
+
+include "AMD"
+
 	if os.is("Windows") then	
 		project "CDTestFramework"
 

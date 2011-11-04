@@ -30,6 +30,13 @@ subject to the following restrictions:
 #include "GLFontRenderer.h"
 #include "BulletCollision/BroadphaseCollision/btDbvtBroadphase.h"
 #include "LinearMath/btQuickprof.h"
+#ifdef CL_PLATFORM_AMD
+#include "../../basic_initialize/btOpenCLUtils.h"
+
+cl_context			g_cxMainContext=0;
+cl_command_queue	g_cqCommandQue=0;
+cl_device_id		g_clDevice=0;
+#endif
 
 #define NUM_SAP_BOXES 8192
 //#define NUM_SAP_BOXES 16384
@@ -77,16 +84,19 @@ enum TestIndex
 // 	TEST_BULLET_MULTISAP_8192,
 //	TEST_BIPARTITE_BOX_PRUNING,
 	TEST_DBVT_8192,
-	TEST_BULLET_CUDA_8192,
+//	TEST_BULLET_CUDA_8192,
+#ifdef CL_PLATFORM_AMD
 	TEST_BULLET_3DGRID_8192,
- 	TEST_OPCODE_ARRAY_SAP,
+	TEST_BULLET_3DGRID_OPENCL_8192,
+#endif //CL_PLATFORM_AMD
+	TEST_OPCODE_ARRAY_SAP,
 	MAX_NB_TESTS
 };
 
 //static int gTest = TEST_DBVT_8192;//TEST_BULLET_MULTISAP_8192;
 //static int gSelectedTest = TEST_DBVT_8192;//TEST_BULLET_MULTISAP_8192;
-static int gTest = TEST_BULLET_CUDA_8192;
-static int gSelectedTest = TEST_BULLET_CUDA_8192;
+static int gTest = TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
+static int gSelectedTest = TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
 static CollisionTest* gCollisionTests[MAX_NB_TESTS];
 
 static GLFontRenderer gFnt;
@@ -251,6 +261,7 @@ static void Terminate()
 #endif //USE_ANTTWEAKBAR
 }
 
+
 int main(int argc, char** argv)
 {
 	{
@@ -259,6 +270,33 @@ int main(int argc, char** argv)
 	exit(0);*/
 	}
 
+#ifdef CL_PLATFORM_AMD
+	int ciErrNum = 0;
+	const char* vendorSDK = btOpenCLUtils::getSdkVendorName();
+	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
+
+	cl_device_type deviceType = CL_DEVICE_TYPE_CPU;//GPU;
+	
+	
+	void* glCtx=0;
+	void* glDC = 0;
+	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
+	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
+	int numDev = btOpenCLUtils::getNumDevices(g_cxMainContext);
+
+	if (numDev>0)
+	{
+		int deviceIndex =0;
+		g_clDevice = btOpenCLUtils::getDevice(g_cxMainContext,deviceIndex);
+		btOpenCLDeviceInfo clInfo;
+		btOpenCLUtils::getDeviceInfo(g_clDevice,clInfo);
+		btOpenCLUtils::printDeviceInfo(g_clDevice);
+		// create a command-queue
+		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_clDevice, 0, &ciErrNum);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
+#endif //#ifdef CL_PLATFORM_AMD
 
 	// Initialize Glut
 	glutInit(&argc, argv);
@@ -335,8 +373,11 @@ int main(int argc, char** argv)
 //			{TEST_BULLET_MULTISAP_8192, "Bullet MultiSAP 8192"},
 //			{TEST_BIPARTITE_BOX_PRUNING, "Bipartite box pruning"},
 			{TEST_DBVT_8192, "Bullet DBVT 8192"},
-			{TEST_BULLET_CUDA_8192, "Bullet CUDA 8192"},
+//			{TEST_BULLET_CUDA_8192, "Bullet CUDA 8192"},
+#ifdef CL_PLATFORM_AMD
 			{TEST_BULLET_3DGRID_8192, "Bullet 3D Grid 8192"},
+			{TEST_BULLET_3DGRID_OPENCL_8192, "Bullet OpenCL grid 8192"},
+#endif
 			{TEST_OPCODE_ARRAY_SAP, "OPCODE ARRAY SAP"},
 		};
 		TwType testType = TwDefineEnum("CollisionTest", testEV, MAX_NB_TESTS);
@@ -360,8 +401,13 @@ int main(int argc, char** argv)
 // 	gCollisionTests[TEST_BULLET_MULTISAP_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,6);
 //	gCollisionTests[TEST_BIPARTITE_BOX_PRUNING]	= new BipartiteBoxPruningTest;
 	gCollisionTests[TEST_DBVT_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,7);
-	gCollisionTests[TEST_BULLET_CUDA_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,8);
+	//gCollisionTests[TEST_BULLET_CUDA_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,8);
+#ifdef CL_PLATFORM_AMD
 	gCollisionTests[TEST_BULLET_3DGRID_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,9);
+	gCollisionTests[TEST_BULLET_3DGRID_OPENCL_8192]	= new BulletSAPCompleteBoxPruningTest(NUM_SAP_BOXES,10);
+#endif //#ifdef CL_PLATFORM_AMD
+
+
 	gCollisionTests[TEST_OPCODE_ARRAY_SAP]	= new OpcodeArraySAPTest(NUM_SAP_BOXES);
 
 	for(int i=0;i<MAX_NB_TESTS;i++)
@@ -373,6 +419,11 @@ int main(int argc, char** argv)
 
 	// Run
 	glutMainLoop();
+
+#ifdef CL_PLATFORM_AMD
+	clReleaseCommandQueue(g_cqCommandQue);
+	clReleaseContext(g_cxMainContext);
+#endif
 
 	return 0;
 }

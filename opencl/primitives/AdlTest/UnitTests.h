@@ -728,7 +728,7 @@ void runAllTest()
 	RUN_GPU_TEMPLATE( radixSort32Test );
 	RUN_GPU_TEMPLATE( radixSortKeyValue32Test );
 
-	if (0)
+	if (1)
 	{
 		RUN_GPU_TEMPLATE( CopyF1Test );
 		RUN_GPU_TEMPLATE( CopyF2Test );

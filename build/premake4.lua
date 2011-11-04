@@ -70,6 +70,9 @@ if not _OPTIONS["with-nacl"] then
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/basic_initialize"
 	include "../opencl/gui_initialize"
+	include "../opencl/3dGridBroadphase"
+	
+	
 	
 	
 	include "../physics_effects/base_level"
@@ -87,6 +90,10 @@ if not _OPTIONS["with-nacl"] then
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"
+	
+	include "../dynamics/CDTestFramework"
+	include "../dynamics/CDTestFramework/opcode"
+	include "../dynamics/CDTestFramework/AntTweakBar/src"
 	
 
 	

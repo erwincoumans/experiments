@@ -40,9 +40,7 @@ subject to the following restrictions:
 		virtual	void			MouseCallback(int button, int state, int x, int y);
 		virtual	void			MotionCallback(int x, int y);
 
-#ifdef USE_ANTTWEAKBAR
 				TwBar*			mBar;		//!< AntTweakBar
-#endif //USE_ANTTWEAKBAR
 				Profiler		mProfiler;
 
 				class btBroadphaseInterface*	m_broadphase;

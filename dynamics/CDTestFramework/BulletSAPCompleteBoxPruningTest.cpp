@@ -17,16 +17,35 @@ subject to the following restrictions:
 
 //This file was added by Erwin Coumans, to test Bullet SAP performance
 
+
 #include "stdafx.h"
+
+
 #include "BulletSAPCompleteBoxPruningTest.h"
 #include "RenderingHelpers.h"
 #include "GLFontRenderer.h"
 #include "btBulletCollisionCommon.h"
 #include "BulletCollision/BroadphaseCollision/btDbvtBroadphase.h"
 #include "Camera.h"
+
+#ifdef CL_PLATFORM_AMD
+#include "btGpu3DGridBroadphase.h"
+#include "../../basic_initialize/btOpenCLUtils.h"
+extern cl_context			g_cxMainContext;
+extern cl_command_queue	g_cqCommandQue;
+extern cl_device_id		g_clDevice;
+#include "../OpenCL/3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
+//#include "../OpenCL/Hier3dGridBroadphase/Shared/btHier3dGridBroadphaseOCL.h"
+#endif //CL_PLATFORM_AMD
+
+//#define USE_CUDA_BROADPHASE 1
+
 #ifdef USE_CUDA_BROADPHASE
 #include "../CUDA/btCudaBroadphase.h"
 #endif
+
+
+
 #include "LinearMath/btQuickprof.h"
 
 int numParts =2;
@@ -39,6 +58,8 @@ bool	showOcclusion	=	true;
 int		visiblecount	=	0;
 
 static bool sBulletProfilerToggle = false;
+static bool sBulletSingleStepMode = false;
+static bool sBulletSingleStepDoStep = false;
 
 struct OcclusionBuffer
 {
@@ -380,8 +401,8 @@ mBar			(null),
 		m_broadphase = new btSimpleBroadphase(maxNumBoxes,new btNullPairCache());
 		methodname	=	"btSimpleBroadphase+btNullPairCache";
 		break;
-
-/*	case 6:
+#if 0
+	case 6:
 		{
 		methodname	=	"btMultiSapBroadphase";
 			btMultiSapBroadphase* multiSap = new btMultiSapBroadphase(maxNumBoxes);
@@ -418,7 +439,8 @@ mBar			(null),
 	
 		}
 		break;
-		*/
+#endif
+
 	case	7:
 		{
 		btDbvtBroadphase*	pbp=new btDbvtBroadphase();
@@ -435,20 +457,56 @@ mBar			(null),
 //		m_broadphase = new btCudaBroadphase(aabbMin, aabbMax, 12, 12, 12, 8192, 8192, 64, 16);
 //		m_broadphase = new btCudaBroadphase(aabbMin, aabbMax, 16, 16, 16, 8192, 8192, 64, 16);
 #ifdef USE_CUDA_BROADPHASE
-		m_broadphase = new btCudaBroadphase(aabbMin, aabbMax, 24, 24, 24,maxNumBoxes , maxNumBoxes, 64, 16);
+		m_broadphase = new btCudaBroadphase(NULL, aabbMin, aabbMax, 24, 24, 24,maxNumBoxes , maxNumBoxes, 64, 16);
 //		m_broadphase = new btCudaBroadphase(aabbMin, aabbMax, 32, 32, 32, 8192, 8192, 64, 16);
 		methodname	=	"btCudaBroadphase";
 		break;
-
-	case 9:
-		m_broadphase = new bt3DGridBroadphase(aabbMin, aabbMax, 24, 24, 24,maxNumBoxes , maxNumBoxes, 64, 16);
-		methodname	=	"bt3DGridBroadphase";
-		break;
 #endif //USE_CUDA_BROADPHASE
 
+#ifdef CL_PLATFORM_AMD
+	case 9:
+		m_broadphase = new btGpu3DGridBroadphase(btVector3(10.f, 10.f, 10.f), 32, 32, 32,maxNumBoxes , maxNumBoxes, 64, 100.f, 16);
+		methodname	=	"bt3DGridBroadphase";
+		break;
+
+	case 10:
+
+
+		m_broadphase = new bt3dGridBroadphaseOCL(NULL, btVector3(10.f, 10.f, 10.f), 32, 32, 32,maxNumBoxes , maxNumBoxes, 64, 100.f, 16
+			,g_cxMainContext,g_clDevice,g_cqCommandQue);
+
+
+
+#if defined(CL_PLATFORM_MINI_CL)
+		methodname	=	"bt3dGridBroadphaseOCL(MiniCL)";
+#elif defined(CL_PLATFORM_AMD)
+		methodname	=	"bt3dGridBroadphaseOCL(AMD)";
+#elif defined(CL_PLATFORM_NVIDIA)
+		methodname	=	"bt3dGridBroadphaseOCL(NVIDIA)";
+#else
+#error "OpenCL platform not supported"
+#endif
+		break;
+#endif //CL_PLATFORM_AMD
+
+#if 0
+	case 11:
+//		m_broadphase = new btHier3dGridBroadphaseOCL(NULL, btVector3(10.f, 10.f, 10.f), 32, 32, 32, maxNumBoxes, 64);
+		m_broadphase = new btHier3dGridBroadphaseOCL(NULL, btVector3(8.f, 8.f, 8.f), 32, 32, 32, maxNumBoxes, 64);
+#if defined(CL_PLATFORM_MINI_CL)
+		methodname	=	"btHier3dGridBroadphaseOCL(MiniCL)";
+#elif defined(CL_PLATFORM_AMD)
+		methodname	=	"btHier3dGridBroadphaseOCL(AMD)";
+#elif defined(CL_PLATFORM_NVIDIA)
+		methodname	=	"btHier3dGridBroadphaseOCL(NVIDIA)";
+#else
+#error "OpenCL platform not supported"
+#endif
+		break;
+#endif
 	default:
 		{
-
+		btAssert(0);
 			btDbvtBroadphase*	pbp=new btDbvtBroadphase();
 			m_broadphase			=	pbp;
 			pbp->m_deferedcollide	=	true;	/* Faster initialization, set to false after.	*/ 
@@ -620,7 +678,18 @@ void BulletSAPCompleteBoxPruningTest::PerformTest()
 		numUpdatedBoxes = mNbBoxes;
 	}
 	mProfiler.Start();
-	UpdateBoxes(numUpdatedBoxes);
+	if(sBulletSingleStepMode)
+	{
+		if(sBulletSingleStepDoStep)
+		{
+			UpdateBoxes(numUpdatedBoxes);
+			sBulletSingleStepDoStep = false;
+		}
+	}
+	else
+	{
+		UpdateBoxes(numUpdatedBoxes);
+	}
 	
 
 	mPairs.ResetPairs();
@@ -647,8 +716,10 @@ void BulletSAPCompleteBoxPruningTest::PerformTest()
 	}
 #endif //BT_NO_PROFILE
 
-	m_broadphase->calculateOverlappingPairs(0);
-
+	{
+		BT_PROFILE("calculateOverlappingPairs");
+		m_broadphase->calculateOverlappingPairs(0);
+	}
 #ifndef BT_NO_PROFILE
 	if(sBulletProfilerToggle)
 	{
@@ -1077,6 +1148,18 @@ void BulletSAPCompleteBoxPruningTest::KeyboardCallback(unsigned char key, int x,
 		case 'p':
 		case 'P':
 			sBulletProfilerToggle = !sBulletProfilerToggle;
+			break;
+		case 'i':
+		case 'I':
+			sBulletSingleStepMode = !sBulletSingleStepMode;
+			sBulletSingleStepDoStep = false;
+			break;
+		case 's':
+		case 'S':
+			if(sBulletSingleStepMode)
+			{
+				sBulletSingleStepDoStep = true;
+			}
 			break;
 		default : break;
 	}

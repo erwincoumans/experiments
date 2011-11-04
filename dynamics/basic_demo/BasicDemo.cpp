@@ -185,7 +185,7 @@ void BasicDemo::renderSurfacePoints()
 	for (int i=0;i<m_dynamicsWorld->getCollisionObjectArray().size();i++)
 	{
 		btCollisionObject* ob = m_dynamicsWorld->getCollisionObjectArray()[i];
-		if (ob->getCollisionShape()->getShapeType() == CONVEX_HULL_SHAPE_PROXYTYPE)
+		if (ob->getCollisionShape()->getShapeType() == CUSTOM_POLYHEDRAL_SHAPE_TYPE)
 		{
 			CustomConvexShape* customConvex = (CustomConvexShape*)ob->getCollisionShape();
 			ConvexHeightField* cvxShape= customConvex->m_ConvexHeightField;
@@ -265,6 +265,7 @@ void BasicDemo::displayCallback(void) {
 
 
 
+
 void	BasicDemo::initPhysics()
 {
 	setTexturing(true);
@@ -280,7 +281,7 @@ void	BasicDemo::initPhysics()
 	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 
 	
-	m_dispatcher->registerCollisionCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
+	//m_dispatcher->registerCollisionCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
 
 	m_broadphase = new btDbvtBroadphase();
 
@@ -332,12 +333,13 @@ void	BasicDemo::initPhysics()
 		//btCollisionShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
 
-	CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+	btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
 	btScalar scale = 0.5f;
 	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx,BarrelVtxCount,3*sizeof(float));
 	//btScalar scale = 1.f;
 
-		//		colShape->setLocalScaling(btVector3(0.5,0.5,0.5));
+		//colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
 		colShape->initializePolyhedralFeatures();
 
 		m_collisionShapes.push_back(colShape);

@@ -17,7 +17,7 @@ class PrefixScan<TYPE_HOST> : public PrefixScanBase
 			ADLASSERT( deviceData->m_type == TYPE_HOST );
 
 			Data* data = new Data;
-			data->m_option = EXCLUSIVE;
+			data->m_option = option;
 			return data;
 		}
 
