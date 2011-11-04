@@ -606,6 +606,7 @@ void btGpu3DGridBroadphase::scanOverlappingPairBuff()
 {
 	BT_PROFILE("bt3DGrid_scanOverlappingPairBuff");
 	unsigned int sum = 0;
+	m_hPairScan[0]=0;
 	for(int i = 0; i <= m_numHandles+1; i++) 
 	{
 		unsigned int delta = m_hPairScan[i];

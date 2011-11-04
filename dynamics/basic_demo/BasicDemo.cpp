@@ -281,7 +281,7 @@ void	BasicDemo::initPhysics()
 	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 
 	
-	//m_dispatcher->registerCollisionCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
+	m_dispatcher->registerCollisionCreateFunc(CUSTOM_POLYHEDRAL_SHAPE_TYPE,CUSTOM_POLYHEDRAL_SHAPE_TYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
 
 	m_broadphase = new btDbvtBroadphase();
 
@@ -332,9 +332,12 @@ void	BasicDemo::initPhysics()
 
 		//btCollisionShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-
-	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+#define USE_CUSTOM_HEIGHTFIELD_SHAPE 
+#ifdef USE_CUSTOM_HEIGHTFIELD_SHAPE
+	CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+#else
 	btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+#endif //USE_CUSTOM_HEIGHTFIELD_SHAPE
 	btScalar scale = 0.5f;
 	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx,BarrelVtxCount,3*sizeof(float));
 	//btScalar scale = 1.f;

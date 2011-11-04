@@ -306,7 +306,7 @@ BT_GPU___global__ void squeezeOverlappingPairBuffD(uint* pPairBuff, uint2* pPair
 	uint start = start_curr.x;
 	uint curr = start_curr.y;
 	uint* pInp = pPairBuff + start;
-	uint* pOut = pPairOut + pPairScan[index];
+	uint* pOut = pPairOut + pPairScan[index+1];
 	uint* pOut2 = pInp;
 	uint num = 0; 
 	for(uint k = 0; k < curr; k++, pInp++)

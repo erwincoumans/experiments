@@ -93,10 +93,14 @@ enum TestIndex
 	MAX_NB_TESTS
 };
 
-//static int gTest = TEST_DBVT_8192;//TEST_BULLET_MULTISAP_8192;
-//static int gSelectedTest = TEST_DBVT_8192;//TEST_BULLET_MULTISAP_8192;
+#ifdef CL_PLATFORM_AMD
+static int gTest = TEST_BULLET_3DGRID_OPENCL_8192;//TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
+static int gSelectedTest = TEST_BULLET_3DGRID_OPENCL_8192;//TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
+#else
 static int gTest = TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
 static int gSelectedTest = TEST_DBVT_8192;//TEST_BULLET_CUDA_8192;
+
+#endif
 static CollisionTest* gCollisionTests[MAX_NB_TESTS];
 
 static GLFontRenderer gFnt;
@@ -275,7 +279,7 @@ int main(int argc, char** argv)
 	const char* vendorSDK = btOpenCLUtils::getSdkVendorName();
 	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
 
-	cl_device_type deviceType = CL_DEVICE_TYPE_CPU;//GPU;
+	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;//CPU;//GPU;
 	
 	
 	void* glCtx=0;
