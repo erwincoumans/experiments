@@ -273,12 +273,12 @@ void btGpu3DGridBroadphase::addPairsToCache(btDispatcher* dispatcher)
 	m_numPairsRemoved = 0;
 	for(int i = 0; i < m_numHandles; i++) 
 	{
-		unsigned int num = m_hPairScan[i+1] - m_hPairScan[i];
+		unsigned int num = m_hPairScan[i+2] - m_hPairScan[i+1];
 		if(!num)
 		{
 			continue;
 		}
-		unsigned int* pInp = m_hPairOut + m_hPairScan[i];
+		unsigned int* pInp = m_hPairOut + m_hPairScan[i+1];
 		unsigned int index0 = m_hAABB[i * 2].uw;
 		btSimpleBroadphaseProxy* proxy0 = &m_pHandles[index0];
 		for(unsigned int j = 0; j < num; j++)

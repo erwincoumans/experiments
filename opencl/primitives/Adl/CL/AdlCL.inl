@@ -34,7 +34,7 @@ struct DeviceCL : public Device
 
 	template<typename T>
 	__inline
-	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems);
+	void copy(Buffer<T>* dst, const Buffer<T>* src, int nElems,int srcOffsetNElems = 0,int dstOffsetNElems = 0);
 
 	template<typename T>
 	__inline
@@ -261,12 +261,12 @@ void DeviceCL::deallocate(Buffer<T>* buf)
 }
 
 template<typename T>
-void DeviceCL::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems )
+void DeviceCL::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems,int srcOffsetNElems,int dstOffsetNElems )
 {
 	if( dst->m_device->m_type == TYPE_CL || src->m_device->m_type == TYPE_CL )
 	{
 		cl_int status = 0;
-		status = clEnqueueCopyBuffer( m_commandQueue, (cl_mem)src->m_ptr, (cl_mem)dst->m_ptr, 0, 0, sizeof(T)*nElems, 0, 0, 0 );
+		status = clEnqueueCopyBuffer( m_commandQueue, (cl_mem)src->m_ptr, (cl_mem)dst->m_ptr, sizeof(T)*srcOffsetNElems, sizeof(T)*dstOffsetNElems, sizeof(T)*nElems, 0, 0, 0 );
 		ADLASSERT( status == CL_SUCCESS );
 	}
 	else if( src->m_device->m_type == TYPE_HOST )

@@ -392,7 +392,7 @@ int main(int argc, char** argv)
 #endif //USE_ANTTWEAKBAR
 
 	// Create tests
-	gTest = 0;
+
 //	gCollisionTests[TEST_SPHERE_MESH_QUERY]	= new SphereMeshQuery;
 //	gCollisionTests[TEST_OBB_MESH_QUERY]	= new OBBMeshQuery;
 //	gCollisionTests[TEST_CAPSULE_MESH_QUERY]	= new CapsuleMeshQuery;

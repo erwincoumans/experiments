@@ -94,10 +94,8 @@ int testAABBOverlap(float4 min0, float4 max0, float4 min1, float4 max1)
 }
 
 
-const int BT_3DGRID_PAIR_FOUND_FLG = 0x40000000;
-const int BT_3DGRID_PAIR_NEW_FLG  = 0x20000000;
-const int BT_3DGRID_PAIR_ANY_FLG  =  0x60000000; 
-// (BT_3DGRID_PAIR_FOUND_FLG | BT_3DGRID_PAIR_NEW_FLG) // expression is not supported by NVidia, build failed without error message
+
+
 
 void findPairsInCell(	int numObjects,
 						int4	gridPos,
@@ -149,10 +147,10 @@ void findPairsInCell(	int numObjects,
 				int k;
 				for(k = 0; k < curr; k++)
 				{
-					int old_pair = pPairBuff[start+k] & (~BT_3DGRID_PAIR_ANY_FLG);
+					int old_pair = pPairBuff[start+k] & (~0x60000000);
 					if(old_pair == handleIndex2)
 					{
-						pPairBuff[start+k] |= BT_3DGRID_PAIR_FOUND_FLG;
+						pPairBuff[start+k] |= 0x40000000;
 						break;
 					}
 				}
@@ -162,7 +160,7 @@ void findPairsInCell(	int numObjects,
 					{ // not a good solution, but let's avoid crash
 						break;
 					}
-					pPairBuff[start+curr] = handleIndex2 | BT_3DGRID_PAIR_NEW_FLG;
+					pPairBuff[start+curr] = handleIndex2 | 0x20000000;
 					curr++;
 				}
 			}
@@ -251,16 +249,16 @@ __kernel void kFindPairsLarge(	int numObjects,
 			int handleIndex2 =  as_int(min1.w);
 			for(k = 0; k < curr; k++)
 			{
-				int old_pair = pPairBuff[start+k] & (~BT_3DGRID_PAIR_ANY_FLG);
+				int old_pair = pPairBuff[start+k] & (~0x60000000);
 				if(old_pair == handleIndex2)
 				{
-					pPairBuff[start+k] |= BT_3DGRID_PAIR_FOUND_FLG;
+					pPairBuff[start+k] |= 0x40000000;
 					break;
 				}
 			}
 			if(k == curr)
 			{
-				pPairBuff[start+curr] = handleIndex2 | BT_3DGRID_PAIR_NEW_FLG;
+				pPairBuff[start+curr] = handleIndex2 | 0x20000000;
 				if(curr >= curr_max) 
 				{ // not a good solution, but let's avoid crash
 					break;
@@ -296,7 +294,7 @@ __kernel void kComputePairCacheChanges(	int numObjects,
 	int num_changes = 0;
 	for(int k = 0; k < curr; k++, pInp++)
 	{
-		if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		if(!((*pInp) & 0x40000000))
 		{
 			num_changes++;
 		}
@@ -327,14 +325,14 @@ __kernel void kSqueezeOverlappingPairBuff(	int numObjects,
 	int num = 0; 
 	for(int k = 0; k < curr; k++, pInp++)
 	{
-		if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		if(!((*pInp) & 0x40000000))
 		{
 			*pOut = *pInp;
 			pOut++;
 		}
-		if((*pInp) & BT_3DGRID_PAIR_ANY_FLG)
+		if((*pInp) & 0x60000000)
 		{
-			*pOut2 = (*pInp) & (~BT_3DGRID_PAIR_ANY_FLG);
+			*pOut2 = (*pInp) & (~0x60000000);
 			pOut2++;
 			num++;
 		}

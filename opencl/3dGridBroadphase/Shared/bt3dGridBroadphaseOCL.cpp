@@ -37,6 +37,10 @@ static const char* spProgramSource =
 adl::PrefixScan<adl::TYPE_CL>::Data* gData1=0;
 adl::Buffer<unsigned int>* m_srcClBuffer=0;
 
+static unsigned int zeroEl = 0;
+static unsigned int minusOne= -1;
+unsigned int gSum=0;
+
 bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappingPairCache,
 												const btVector3& cellSize, 
 												int gridSizeX, int gridSizeY, int gridSizeZ, 
@@ -63,6 +67,10 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 	m_deviceCL->m_kernelManager = new adl::KernelManager;
 
 	m_srcClBuffer = new adl::Buffer<unsigned int> (m_deviceCL,maxSmallProxies+2);
+
+	m_srcClBuffer->write(&zeroEl,maxSmallProxies+2);
+	m_deviceCL->waitForCompletion();
+	
 	gData1 = adl::PrefixScan<adl::TYPE_CL>::allocate( m_deviceCL, maxSmallProxies+2,adl::PrefixScanBase::EXCLUSIVE );
 
 }
@@ -490,7 +498,7 @@ void bt3dGridBroadphaseOCL::computePairCacheChanges()
 	return;
 }
 
-static unsigned int zeroEl = 0;
+
 
 
 extern cl_device_type deviceType;
@@ -516,7 +524,8 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 			destBuffer.m_ptr = (unsigned int*)m_dPairScan;
 			destBuffer.m_device = m_deviceCL;
 			destBuffer.m_size =  sizeof(unsigned int)*(m_numHandles+2);
-			m_deviceCL->copy(m_srcClBuffer, &destBuffer,m_numHandles+1);
+			m_deviceCL->copy(m_srcClBuffer, &destBuffer,m_numHandles,1,1);
+
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
@@ -525,22 +534,12 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 
 		{
 			BT_PROFILE("PrefixScan");
-			static bool onlyOnce = true;
-			if (onlyOnce)
-			{
-				onlyOnce = false;
-				m_srcClBuffer->write(&zeroEl,1,m_numHandles+1);
-			}
-			//m_deviceCL->waitForCompletion();
-			unsigned int gSum=0;
+			
 			adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&gSum);
-			//m_deviceCL->waitForCompletion();
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
-
 		}
-
 		{
 			BT_PROFILE("copy GPU -> CPU");
 			//the data 
@@ -550,6 +549,7 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 #endif
 
 		}
+
 	}
 #endif
 
@@ -663,4 +663,3 @@ void bt3dGridBroadphaseOCL::bitonicSort(cl_mem pKey, unsigned int arrayLength, u
         }
     }
 }
-
