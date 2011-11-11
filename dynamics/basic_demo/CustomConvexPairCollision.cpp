@@ -4,6 +4,9 @@
 #include "ConvexHeightFieldShape.h"
 #include "CustomConvexShape.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
+#include "Stubs/AdlContact4.h"
+#include "Stubs/AdlTransform.h"
+
 
 CustomConvexConvexPairCollision::CustomConvexConvexPairCollision(btPersistentManifold* mf,const btCollisionAlgorithmConstructionInfo& ci,btCollisionObject* body0,btCollisionObject* body1, btSimplexSolverInterface* simplexSolver, btConvexPenetrationDepthSolver* pdSolver, int numPerturbationIterations, int minimumPointsPerturbationThreshold)
 :btConvexConvexAlgorithm(mf,ci,body0,body1,simplexSolver,pdSolver,numPerturbationIterations, minimumPointsPerturbationThreshold)
@@ -17,41 +20,6 @@ CustomConvexConvexPairCollision::~CustomConvexConvexPairCollision()
 }
 
 
-struct Transform
-{
-	float4 m_translation;
-	Matrix3x3 m_rotation;
-};
-
-Transform trSetTransform(const float4& translation, const Quaternion& quat)
-{
-	Transform tr;
-	tr.m_translation = translation;
-	tr.m_rotation = qtGetRotationMatrix( quat );
-	return tr;
-}
-
-Transform trInvert( const Transform& tr )
-{
-	Transform ans;
-	ans.m_rotation = mtTranspose( tr.m_rotation );
-	ans.m_translation = mtMul1( ans.m_rotation, -tr.m_translation );
-	return ans;
-}
-
-Transform trMul(const Transform& trA, const Transform& trB)
-{
-	Transform ans; 
-	ans.m_rotation = mtMul( trA.m_rotation, trB.m_rotation );
-	ans.m_translation = mtMul1( trA.m_rotation, trB.m_translation ) + trA.m_translation;
-	return ans;
-}
-
-float4 trMul1(const Transform& tr, const float4& p)
-{
-	return mtMul1( tr.m_rotation, p ) + tr.m_translation;
-}
-
 #include <Windows.h>
 
 template<typename T>
@@ -59,46 +27,6 @@ T atomAdd(const T* ptr, int value)
 {
 	return (T)InterlockedExchangeAdd((LONG*)ptr, value);
 }
-
-struct ContactPoint4
-		{
-			float4 m_worldPos[4];
-			union
-			{
-				float4 m_worldNormal;
-
-				struct Data
-				{
-					int m_padding[3];
-					float m_nPoints;	//	for cl
-				}m_data;
-
-			};
-			float m_restituitionCoeff;
-			float m_frictionCoeff;
-//			int m_nPoints;
-//			int m_padding0;
-
-			void* m_bodyAPtr;
-			void* m_bodyBPtr;
-//			int m_padding1;
-//			int m_padding2;
-
-			float& getNPoints() { return m_data.m_nPoints; }
-			float getNPoints() const { return m_data.m_nPoints; }
-
-			float getPenetration(int idx) const { return m_worldPos[idx].w; }
-
-//			__inline
-//			void load(int idx, const ContactPoint& src);
-//			__inline
-//			void store(int idx, ContactPoint& dst) const;
-
-			bool isInvalid() const { return ((u32)m_bodyAPtr+(u32)m_bodyBPtr) == 0; }
-
-		};
-
-
 
 
 
@@ -331,6 +259,12 @@ int collideStraight(const ConvexHeightField* shapeA,const ConvexHeightField* sha
 	return nContacts;
 }
 
+
+void	CustomConvexConvexPairCollision::createManifoldPtr(btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo)
+{
+	m_manifoldPtr = m_dispatcher->getNewManifold(body0,body1);
+	m_ownManifold = true;
+}
 
 	
 void CustomConvexConvexPairCollision::processCollision (btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo,btManifoldResult* resultOut)

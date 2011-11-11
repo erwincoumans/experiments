@@ -1,3 +1,6 @@
+
+include "AMD"
+
 if os.is("Windows") then
 	
 		project "basic_bullet2_demo"

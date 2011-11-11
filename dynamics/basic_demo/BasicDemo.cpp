@@ -13,11 +13,32 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "BasicDemo.h"
+#include "GlutStuff.h"
+///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
+#include "btBulletDynamicsCommon.h"
+#include "CustomConvexShape.h"
+#include "CustomConvexPairCollision.h"
+#include "CustomCollisionDispatcher.h"
+
+#include "ConvexHeightFieldShape.h"
+#include "GLDebugDrawer.h"
+static GLDebugDrawer sDebugDraw;
+
+#include <stdio.h> //printf debugging
+
+#ifdef CL_PLATFORM_AMD
+#include "../../opencl/basic_initialize/btOpenCLUtils.h"
+
+cl_context			g_cxMainContext=0;
+cl_command_queue	g_cqCommandQue=0;
+cl_device_id		g_clDevice=0;
+#endif
 
 ///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 5
+#define ARRAY_SIZE_X 25
 #define ARRAY_SIZE_Y 4
-#define ARRAY_SIZE_Z 5
+#define ARRAY_SIZE_Z 25
 
 //maximum number of objects (and allow user to shoot additional boxes)
 #define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
@@ -168,17 +189,6 @@ static int BarrelIdx[] = {
 44,26,47,
 };
 
-#include "BasicDemo.h"
-#include "GlutStuff.h"
-///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
-#include "btBulletDynamicsCommon.h"
-#include "CustomConvexShape.h"
-#include "CustomConvexPairCollision.h"
-#include "ConvexHeightFieldShape.h"
-#include "GLDebugDrawer.h"
-static GLDebugDrawer sDebugDraw;
-
-#include <stdio.h> //printf debugging
 
 void BasicDemo::renderSurfacePoints()
 {
@@ -265,11 +275,12 @@ void BasicDemo::displayCallback(void) {
 
 
 
-
 void	BasicDemo::initPhysics()
 {
 	setTexturing(true);
 	setShadows(true);
+
+	m_acceleratedRigidBodies = 0;
 
 	setCameraDistance(btScalar(SCALING*20.));
 
@@ -278,7 +289,17 @@ void	BasicDemo::initPhysics()
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
 
 	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
+	//m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
+
+#ifdef CL_PLATFORM_AMD
+	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration,	g_cxMainContext,g_clDevice,g_cqCommandQue);
+#else
+	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration);
+#endif
+
+	
+
+
 
 	
 	m_dispatcher->registerCollisionCreateFunc(CUSTOM_POLYHEDRAL_SHAPE_TYPE,CUSTOM_POLYHEDRAL_SHAPE_TYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
@@ -297,6 +318,7 @@ void	BasicDemo::initPhysics()
 
 	///create a few basic rigid bodies
 	//btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+#if 0
 	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
 	
 	m_collisionShapes.push_back(groundShape);
@@ -324,6 +346,7 @@ void	BasicDemo::initPhysics()
 		//add the body to the dynamics world
 		m_dynamicsWorld->addRigidBody(body);
 	}
+#endif
 
 
 	{
@@ -343,7 +366,8 @@ void	BasicDemo::initPhysics()
 	//btScalar scale = 1.f;
 
 		//colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
-		colShape->initializePolyhedralFeatures();
+		//next line is already called inside the CustomConvexShape constructor
+		//colShape->initializePolyhedralFeatures();
 
 		m_collisionShapes.push_back(colShape);
 
@@ -378,11 +402,23 @@ void	BasicDemo::initPhysics()
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 					btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-					btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
-					btRigidBody* body = new btRigidBody(rbInfo);
-					
+					btRigidBody* body=0;
 
+					if (k==0)
+					{
+						btVector3 zeroInertia(0,0,0);
+						btRigidBody::btRigidBodyConstructionInfo rbInfo(0.f,myMotionState,colShape,zeroInertia);
+						body = new btRigidBody(rbInfo);
+					} else
+					{
+						btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
+						body = new btRigidBody(rbInfo);
+					}
+
+					//m_acceleratedRigidBodies is used as a mapping to the accelerated rigid body index
+					body->setCompanionId(m_acceleratedRigidBodies++);
 					m_dynamicsWorld->addRigidBody(body);
+
 				}
 			}
 		}

@@ -18,12 +18,46 @@ subject to the following restrictions:
 #include "btBulletDynamicsCommon.h"
 #include "LinearMath/btHashMap.h"
 
-
+#ifdef CL_PLATFORM_AMD
+#include "../../opencl/basic_initialize/btOpenCLUtils.h"
+extern cl_context			g_cxMainContext;
+extern cl_command_queue	g_cqCommandQue;
+extern cl_device_id		g_clDevice;
+#endif
 
 
 	
 int main(int argc,char** argv)
 {
+
+	#ifdef CL_PLATFORM_AMD
+	int ciErrNum = 0;
+	const char* vendorSDK = btOpenCLUtils::getSdkVendorName();
+	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
+
+	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;//CPU;//GPU;
+	
+	
+	void* glCtx=0;
+	void* glDC = 0;
+	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
+	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
+	int numDev = btOpenCLUtils::getNumDevices(g_cxMainContext);
+
+	if (numDev>0)
+	{
+		int deviceIndex =0;
+		g_clDevice = btOpenCLUtils::getDevice(g_cxMainContext,deviceIndex);
+		btOpenCLDeviceInfo clInfo;
+		btOpenCLUtils::getDeviceInfo(g_clDevice,clInfo);
+		btOpenCLUtils::printDeviceInfo(g_clDevice);
+		// create a command-queue
+		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_clDevice, 0, &ciErrNum);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
+#endif //#ifdef CL_PLATFORM_AMD
+
 
 	BasicDemo ccdDemo;
 	ccdDemo.initPhysics();

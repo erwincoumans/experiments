@@ -9,6 +9,8 @@ class CustomConvexShape  : public btConvexHullShape
 		
 		class ConvexHeightField* m_ConvexHeightField;
 
+		int m_acceleratedCompanionShapeIndex;
+
 		CustomConvexShape(const btScalar* points,int numPoints,int stride);
 		virtual ~CustomConvexShape();
 		

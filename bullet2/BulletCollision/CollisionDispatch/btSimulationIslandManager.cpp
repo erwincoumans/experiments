@@ -86,7 +86,7 @@ void   btSimulationIslandManager::updateActivationState(btCollisionWorld* colWor
 			{
 				collisionObject->setIslandTag(index++);
 			}
-			collisionObject->setCompanionId(-1);
+			//collisionObject->setCompanionId(-1);
 			collisionObject->setHitFraction(btScalar(1.));
 		}
 	}
@@ -111,12 +111,12 @@ void   btSimulationIslandManager::storeIslandActivationState(btCollisionWorld* c
 				collisionObject->setIslandTag( m_unionFind.find(index) );
 				//Set the correct object offset in Collision Object Array
 				m_unionFind.getElement(index).m_sz = i;
-				collisionObject->setCompanionId(-1);
+//				collisionObject->setCompanionId(-1);
 				index++;
 			} else
 			{
 				collisionObject->setIslandTag(-1);
-				collisionObject->setCompanionId(-2);
+//				collisionObject->setCompanionId(-2);
 			}
 		}
 	}

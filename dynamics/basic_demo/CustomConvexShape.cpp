@@ -4,7 +4,8 @@
 
 
 CustomConvexShape::CustomConvexShape(const btScalar* points,int numPoints, int stride)
-:btConvexHullShape(points,numPoints,stride)
+:btConvexHullShape(points,numPoints,stride),
+m_acceleratedCompanionShapeIndex(-1)
 {
 	m_shapeType = CUSTOM_POLYHEDRAL_SHAPE_TYPE;
 

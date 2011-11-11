@@ -13,6 +13,12 @@ class CustomConvexConvexPairCollision : public btConvexConvexAlgorithm
 
 	virtual void processCollision (btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo,btManifoldResult* resultOut);
 
+	btPersistentManifold*	getManifoldPtr()
+	{
+		return m_manifoldPtr;
+	}
+
+	void	createManifoldPtr(btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo);
 
 	struct CreateFunc :public 	btConvexConvexAlgorithm::CreateFunc
 	{

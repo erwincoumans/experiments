@@ -49,6 +49,8 @@ class BasicDemo : public PlatformDemoApplication
 
 	btDefaultCollisionConfiguration* m_collisionConfiguration;
 
+	int m_acceleratedRigidBodies;
+
 	public:
 
 	BasicDemo()
