@@ -340,7 +340,7 @@ Matrix3x3 qtGetRotationMatrix(Quaternion quat)
 
 
 #define WG_SIZE 64
-#define HEIGHT_RES 8
+#define HEIGHT_RES 4
 
 typedef struct
 {

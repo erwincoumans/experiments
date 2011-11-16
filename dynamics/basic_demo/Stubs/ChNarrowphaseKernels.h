@@ -341,7 +341,7 @@ static const char* narrowphaseKernelsCL= \
 "\n"
 "\n"
 "#define WG_SIZE 64\n"
-"#define HEIGHT_RES 8\n"
+"#define HEIGHT_RES 4\n"
 "\n"
 "typedef struct\n"
 "{\n"

@@ -12,7 +12,7 @@ class ConvexHeightField : public CollisionShape
 	public:
 		enum
 		{
-			HEIGHT_RES = 8, //was 4 originally
+			HEIGHT_RES = 4, //was 4 originally
 		};
 		enum Face
 		{
