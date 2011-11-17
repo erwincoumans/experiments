@@ -71,6 +71,7 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/basic_initialize"
 	include "../opencl/gui_initialize"
 	include "../opencl/3dGridBroadphase"
+	include "../opencl/global_atomics"
 	
 	
 	
