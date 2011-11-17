@@ -1,5 +1,8 @@
 static const char* globalAtomicsKernelString= \
 "\n"
+"\n"
+"\n"
+"\n"
 "//OpenCL 1.1 has atomic_inc build-in (no extension needed)\n"
 "//see http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/atomic_inc.html\n"
 "__kernel void  globalAtomicKernelOpenCL1_1( volatile __global int* counter)\n"

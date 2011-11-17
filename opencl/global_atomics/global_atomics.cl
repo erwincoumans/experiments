@@ -1,4 +1,7 @@
 
+
+
+
 //OpenCL 1.1 has atomic_inc build-in (no extension needed)
 //see http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/atomic_inc.html
 __kernel void  globalAtomicKernelOpenCL1_1( volatile __global int* counter)
