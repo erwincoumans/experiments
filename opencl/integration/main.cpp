@@ -1097,7 +1097,7 @@ int main(int argc, char* argv[])
 	clFinish(g_cqCommandQue);
 
 
-	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
+	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "interopKernel" );
 
 	glutMainLoop();
 	ShutdownRC();
