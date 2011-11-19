@@ -56,10 +56,10 @@ static float BarrelVtx[] = {
 -0.5,-0.5,0.5,
 -0.5,0.5,-0.5,
 -0.5,0.5,0.5,
-0.3,-0.5,-0.5,
-0.3,-0.5,0.5,
-0.3,0.5,-0.5,
-0.3,0.5,0.5,
+0.5,-0.5,-0.5,
+0.5,-0.5,0.5,
+0.5,0.5,-0.5,
+0.5,0.5,0.5,
 };
 
 
@@ -192,6 +192,7 @@ static int BarrelIdx[] = {
 
 void BasicDemo::renderSurfacePoints()
 {
+	if (m_dynamicsWorld->getDebugDrawer()->getDebugMode()& btIDebugDraw::DBG_DrawContactPoints)
 	for (int i=0;i<m_dynamicsWorld->getCollisionObjectArray().size();i++)
 	{
 		btCollisionObject* ob = m_dynamicsWorld->getCollisionObjectArray()[i];
@@ -289,19 +290,15 @@ void	BasicDemo::initPhysics()
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
 
 	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-	//m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
+	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 
+	
 #ifdef CL_PLATFORM_AMD
 	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration,	g_cxMainContext,g_clDevice,g_cqCommandQue);
 #else
 	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration);
 #endif
 
-	
-
-
-
-	
 	m_dispatcher->registerCollisionCreateFunc(CUSTOM_POLYHEDRAL_SHAPE_TYPE,CUSTOM_POLYHEDRAL_SHAPE_TYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
 
 	m_broadphase = new btDbvtBroadphase();
@@ -365,7 +362,7 @@ void	BasicDemo::initPhysics()
 	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx,BarrelVtxCount,3*sizeof(float));
 	//btScalar scale = 1.f;
 
-		//colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
+		colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
 		//next line is already called inside the CustomConvexShape constructor
 		//colShape->initializePolyhedralFeatures();
 

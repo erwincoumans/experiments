@@ -2,9 +2,10 @@
 //starts crashing when more than 32700 objects on my Geforce 260, unless _USE_SUB_DATA is defined (still unstable though)
 //runs fine with fewer objects
 
-#define NUM_OBJECTS_X 327
-#define NUM_OBJECTS_Y 10
-#define NUM_OBJECTS_Z 10
+#define NUM_OBJECTS_X 32
+//327
+#define NUM_OBJECTS_Y 16
+#define NUM_OBJECTS_Z 16
 //#define NUM_OBJECTS_Z 20
 
 //#define _USE_SUB_DATA
@@ -26,7 +27,7 @@
 #include <stdio.h>
 
 #include "btGlutInclude.h"
-#include "btStopwatch.h"
+#include "../opengl_interop/btStopwatch.h"
 
 
 #include "btVector3.h"
@@ -40,26 +41,82 @@ static float angle(0);
 #include <windows.h>
 #endif
 
+#include <stdlib.h>
+#include <math.h>
+
+#define RS_SCALE (1.0 / (1.0 + RAND_MAX))
+
+
+int randbiased (double x) {
+    for (;;) {
+        double p = rand () * RS_SCALE;
+        if (p >= x) return 0;
+        if (p+RS_SCALE <= x) return 1;
+        /* p < x < p+RS_SCALE */
+        x = (x - p) * (1.0 + RAND_MAX);
+    }
+}
+
+size_t randrange (size_t n) 
+{
+    double xhi;
+    double resolution = n * RS_SCALE;
+    double x = resolution * rand (); /* x in [0,n) */
+    size_t lo = (size_t) floor (x);
+
+    xhi = x + resolution;
+
+    for (;;) {
+        lo++;
+        if (lo >= xhi || randbiased ((lo - x) / (xhi - x))) return lo-1;
+        x = lo;
+    }
+}
+
 //OpenCL stuff
 #include "../basic_initialize/btOpenCLUtils.h"
-#include "btOpenCLGLInteropBuffer.h"
+#include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
 cl_device_id		g_device;
-static const size_t workGroupSize = 128;
+static const size_t workGroupSize = 64;
+cl_mem				gLinVelMem;
+cl_mem				gAngVelMem;
+cl_mem				gBodyTimes;
+
+btVector3 m_cameraPosition(142,120,142);
+btVector3 m_cameraTargetPosition(0,-30,0);
+btScalar m_cameraDistance = 30;
+btVector3 m_cameraUp(0,1,0);
+float m_azi=0.f;
+float m_ele=0.f;
+
+
 
 
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_interopKernel;
+cl_kernel g_broadphaseKernel;
+
+
+////for Adl
+#include <Adl/Adl.h>
+
+adl::DeviceCL* g_deviceCL=0;
+
+
 
 bool useCPU = false;
 bool printStats = false;
 bool runOpenCLKernels = true;
 
 #define MSTRINGIFY(A) #A
-static char* interopKernelString =
-#include "interopKernel.cl"
+static char* interopKernelString = 
+#include "integrateKernel.cl"
+
+static char* broadphaseKernelString = 
+#include "broadphaseKernel.cl"
 
 btStopwatch gStopwatch;
 int m_glutScreenWidth = 640;
@@ -78,6 +135,7 @@ static GLint                angle_loc = 0;
 static GLint ModelViewMatrix;
 static GLint ProjectionMatrix;
 
+void writeTransforms();
 
 static GLint                uniform_texture_diffuse = 0;
 
@@ -96,6 +154,8 @@ static const char* vertexShader= \
 "layout (location = 2) in vec4 instance_quaternion;\n"
 "layout (location = 3) in vec2 uvcoords;\n"
 "layout (location = 4) in vec3 vertexnormal;\n"
+"layout (location = 5) in vec4 instance_color;\n"
+"layout (location = 6) in vec3 instance_scale;\n"
 "\n"
 "\n"
 "uniform float angle = 0.0;\n"
@@ -152,19 +212,19 @@ static const char* vertexShader= \
 "		\n"
 "		\n"
 "	vec4 local_normal = (quatRotate3( vertexnormal,q));\n"
-"	vec3 light_pos = vec3(1000,1000,1000);\n"
+"	vec3 light_pos = vec3(10000,10000,10000);\n"
 "	normal = normalize(ModelViewMatrix * local_normal).xyz;\n"
 "\n"
 "	lightDir = normalize(light_pos);//gl_LightSource[0].position.xyz));\n"
 "//	lightDir = normalize(vec3(gl_LightSource[0].position));\n"
 "		\n"
 "	vec4 axis = vec4(1,1,1,0);\n"
-"	vec4 localcoord = quatRotate3( position.xyz,q);\n"
+"	vec4 localcoord = quatRotate3( position.xyz*instance_scale,q);\n"
 "	vec4 vertexPos = ProjectionMatrix * ModelViewMatrix *(instance_position+localcoord);\n"
 "\n"
 "	gl_Position = vertexPos;\n"
 "	\n"
-"//	fragment.color = instance_color;\n"
+"	fragment.color = instance_color;\n"
 "	vert.texcoord = uvcoords;\n"
 "}\n"
 ;
@@ -192,15 +252,15 @@ static const char* fragmentShader= \
 "\n"
 "void main_textured(void)\n"
 "{\n"
-"    color = texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
+"    color =  texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
 "}\n"
 "\n"
 "void main(void)\n"
 "{\n"
-"    vec4 texel = texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
+"    vec4 texel = fragment.color*texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
 "	vec3 ct,cf;\n"
 "	float intensity,at,af;\n"
-"	intensity = max(dot(lightDir,normalize(normal)),0.0);\n"
+"	intensity = max(dot(lightDir,normalize(normal)),0.5);\n"
 "	cf = intensity*vec3(1.0,1.0,1.0);//intensity * (gl_FrontMaterial.diffuse).rgb+ambient;//gl_FrontMaterial.ambient.rgb;\n"
 "	af = 1.0;\n"
 "		\n"
@@ -402,8 +462,146 @@ static const int cube_indices[]=
 	20,21,22,20,22,23
 };
 
+int m_mouseOldX = -1;
+int m_mouseOldY = -1;
+int m_mouseButtons = 0;
 
 
+void mouseFunc(int button, int state, int x, int y)
+{
+	if (state == 0) 
+	{
+        m_mouseButtons |= 1<<button;
+    } else
+	{
+        m_mouseButtons = 0;
+    }
+
+	m_mouseOldX = x;
+    m_mouseOldY = y;
+}
+
+
+btVector3	getRayTo(int x,int y)
+{
+
+	
+
+	if (m_ortho)
+	{
+
+		btScalar aspect;
+		btVector3 extents;
+		aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+		extents.setValue(aspect * 1.0f, 1.0f,0);
+		
+		extents *= m_cameraDistance;
+		btVector3 lower = m_cameraTargetPosition - extents;
+		btVector3 upper = m_cameraTargetPosition + extents;
+
+		btScalar u = x / btScalar(m_glutScreenWidth);
+		btScalar v = (m_glutScreenHeight - y) / btScalar(m_glutScreenHeight);
+		
+		btVector3	p(0,0,0);
+		p.setValue((1.0f - u) * lower.getX() + u * upper.getX(),(1.0f - v) * lower.getY() + v * upper.getY(),m_cameraTargetPosition.getZ());
+		return p;
+	}
+
+	float top = 1.f;
+	float bottom = -1.f;
+	float nearPlane = 1.f;
+	float tanFov = (top-bottom)*0.5f / nearPlane;
+	float fov = btScalar(2.0) * btAtan(tanFov);
+
+	btVector3	rayFrom = m_cameraPosition;
+	btVector3 rayForward = (m_cameraTargetPosition-m_cameraPosition);
+	rayForward.normalize();
+	float farPlane = 10000.f;
+	rayForward*= farPlane;
+
+	btVector3 rightOffset;
+	btVector3 vertical = m_cameraUp;
+
+	btVector3 hor;
+	hor = rayForward.cross(vertical);
+	hor.normalize();
+	vertical = hor.cross(rayForward);
+	vertical.normalize();
+
+	float tanfov = tanf(0.5f*fov);
+
+
+	hor *= 2.f * farPlane * tanfov;
+	vertical *= 2.f * farPlane * tanfov;
+
+	btScalar aspect;
+	
+	aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+	
+	hor*=aspect;
+
+
+	btVector3 rayToCenter = rayFrom + rayForward;
+	btVector3 dHor = hor * 1.f/float(m_glutScreenWidth);
+	btVector3 dVert = vertical * 1.f/float(m_glutScreenHeight);
+
+
+	btVector3 rayTo = rayToCenter - 0.5f * hor + 0.5f * vertical;
+	rayTo += btScalar(x) * dHor;
+	rayTo -= btScalar(y) * dVert;
+	return rayTo;
+}
+
+
+void mouseMotionFunc(int x, int y)
+{
+	float dx, dy;
+    dx = btScalar(x) - m_mouseOldX;
+    dy = btScalar(y) - m_mouseOldY;
+
+
+	///only if ALT key is pressed (Maya style)
+	{
+		if(m_mouseButtons & 2)
+		{
+			btVector3 hor = getRayTo(0,0)-getRayTo(1,0);
+			btVector3 vert = getRayTo(0,0)-getRayTo(0,1);
+			btScalar multiplierX = btScalar(0.001);
+			btScalar multiplierY = btScalar(0.001);
+			if (m_ortho)
+			{
+				multiplierX = 1;
+				multiplierY = 1;
+			}
+			m_cameraTargetPosition += hor* dx * multiplierX;
+			m_cameraTargetPosition += vert* dy * multiplierY;
+		}
+
+		if(m_mouseButtons & (2 << 2) && m_mouseButtons & 1)
+		{
+		}
+		else if(m_mouseButtons & 1) 
+		{
+			m_azi += dx * btScalar(0.2);
+			m_azi = fmodf(m_azi, btScalar(360.f));
+			m_ele += dy * btScalar(0.2);
+			m_ele = fmodf(m_ele, btScalar(180.f));
+		} 
+		else if(m_mouseButtons & 4) 
+		{
+			m_cameraDistance -= dy * btScalar(0.02f);
+			if (m_cameraDistance<btScalar(0.1))
+				m_cameraDistance = btScalar(0.1);
+
+			
+		} 
+	}
+
+
+	m_mouseOldX = x;
+    m_mouseOldY = y;
+
+}
 
 
 void DeleteCL()
@@ -425,7 +623,7 @@ void InitCL()
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//CPU;
+	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//GPU;
 	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
@@ -450,10 +648,15 @@ void InitCL()
 #define NUM_OBJECTS (NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z)
 #define POSITION_BUFFER_SIZE (NUM_OBJECTS*sizeof(float)*4)
 #define ORIENTATION_BUFFER_SIZE (NUM_OBJECTS*sizeof(float)*4)
+#define COLOR_BUFFER_SIZE (NUM_OBJECTS*sizeof(float)*4)
+#define SCALE_BUFFER_SIZE (NUM_OBJECTS*sizeof(float)*3)
 
 
 GLfloat* instance_positions_ptr = 0;
 GLfloat* instance_quaternion_ptr = 0;
+GLfloat* instance_colors_ptr = 0;
+GLfloat* instance_scale_ptr= 0;
+
 
 void DeleteShaders()
 {
@@ -463,54 +666,6 @@ void DeleteShaders()
 	glDeleteProgram(instancingShader);
 }
 
-void writeTransforms()
-{
-
-
-	glFlush();
-	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
-
-	float* positions = (float*)(bla+sizeof(cube_vertices));
-	float* orientations = (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE);
-	//	positions[0]+=0.001f;
-
-	static int offset=0;
-	//offset++;
-
-	static btVector3 axis(1,0,0);
-	angle += 0.01f;
-	int index=0;
-	btQuaternion orn(axis,angle);
-	for (int i=0;i<NUM_OBJECTS_X;i++)
-	{
-		for (int j=0;j<NUM_OBJECTS_Y;j++)
-		{
-			for (int k=0;k<NUM_OBJECTS_Z;k++)
-			{
-				//if (!((index+offset)%15))
-				{
-					instance_positions_ptr[index*4+1]-=0.01f;
-					positions[index*4]=instance_positions_ptr[index*4];
-					positions[index*4+1]=instance_positions_ptr[index*4+1];
-					positions[index*4+2]=instance_positions_ptr[index*4+2];
-					positions[index*4+3]=instance_positions_ptr[index*4+3];
-
-					orientations[index*4] = orn[0];
-					orientations[index*4+1] = orn[1];
-					orientations[index*4+2] = orn[2];
-					orientations[index*4+3] = orn[3];
-				}
-				//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
-				index++;
-			}
-		}
-	}
-
-	glUnmapBuffer( GL_ARRAY_BUFFER);
-	//if this glFinish is removed, the animation is not always working/blocks
-	//@todo: figure out why
-	glFlush();
-}
 
 void InitShaders()
 {
@@ -532,6 +687,9 @@ void InitShaders()
 
 	instance_positions_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
 	instance_quaternion_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
+	instance_colors_ptr = (GLfloat*)new float[NUM_OBJECTS*4];
+	instance_scale_ptr = (GLfloat*)new float[NUM_OBJECTS*3];
+
 	int index=0;
 	for (int i=0;i<NUM_OBJECTS_X;i++)
 	{
@@ -541,25 +699,38 @@ void InitShaders()
 			{
 				instance_positions_ptr[index*4]=-(i-NUM_OBJECTS_X/2)*10;
 				instance_positions_ptr[index*4+1]=-(j-NUM_OBJECTS_Y/2)*10;
-				instance_positions_ptr[index*4+2]=-k*10;
+				instance_positions_ptr[index*4+2]=-(k-NUM_OBJECTS_Z/2)*10;
 				instance_positions_ptr[index*4+3]=1;
 
 				instance_quaternion_ptr[index*4]=0;
 				instance_quaternion_ptr[index*4+1]=0;
 				instance_quaternion_ptr[index*4+2]=0;
 				instance_quaternion_ptr[index*4+3]=1;
+
+				instance_colors_ptr[index*4]=j<NUM_OBJECTS_Y/2? 0.5f : 1.f;
+				instance_colors_ptr[index*4+1]=k<NUM_OBJECTS_Y/2? 0.5f : 1.f;
+				instance_colors_ptr[index*4+2]=i<NUM_OBJECTS_Y/2? 0.5f : 1.f;
+				instance_colors_ptr[index*4+3]=1.f;
+
+				instance_scale_ptr[index*3] = 1;
+				instance_scale_ptr[index*3+1] = 1;
+				instance_scale_ptr[index*3+2] = 1;
+				
+
 				index++;
 			}
 		}
 	}
 
-	int size = sizeof(cube_vertices)  + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE;
+	int size = sizeof(cube_vertices)  + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE+SCALE_BUFFER_SIZE;
 
 	char* bla = (char*)malloc(size);
 	int szc = sizeof(cube_vertices);
 	memcpy(bla,&cube_vertices[0],szc);
 	memcpy(bla+sizeof(cube_vertices),instance_positions_ptr,POSITION_BUFFER_SIZE);
 	memcpy(bla+sizeof(cube_vertices)+POSITION_BUFFER_SIZE,instance_quaternion_ptr,ORIENTATION_BUFFER_SIZE);
+	memcpy(bla+sizeof(cube_vertices)+POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE,instance_colors_ptr, COLOR_BUFFER_SIZE);
+	memcpy(bla+sizeof(cube_vertices)+POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE,instance_scale_ptr, SCALE_BUFFER_SIZE);
 
 	glBufferData(GL_ARRAY_BUFFER, size, bla, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW);
 
@@ -604,18 +775,39 @@ void InitShaders()
 
 void updateCamera() {
 
-	float m_ele = 0;
-	float m_azi=0;
 
-	btVector3 m_cameraPosition(12,20,12);
-	btVector3 m_cameraTargetPosition(0,10,0);
-
+	
 	btVector3 m_cameraUp(0,1,0);
 	int m_forwardAxis=2;
-	btScalar m_cameraDistance = 130;
+	
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+
+		btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
+	btScalar razi = m_azi * btScalar(0.01745329251994329547);// rads per deg
+
+
+		btQuaternion rot(m_cameraUp,razi);
+
+
+	btVector3 eyePos(0,0,0);
+	eyePos[m_forwardAxis] = -m_cameraDistance;
+
+	btVector3 forward(eyePos[0],eyePos[1],eyePos[2]);
+	if (forward.length2() < SIMD_EPSILON)
+	{
+		forward.setValue(1.f,0.f,0.f);
+	}
+	btVector3 right = m_cameraUp.cross(forward);
+	btQuaternion roll(right,-rele);
+
+	eyePos = btMatrix3x3(rot) * btMatrix3x3(roll) * eyePos;
+
+	m_cameraPosition[0] = eyePos.getX();
+	m_cameraPosition[1] = eyePos.getY();
+	m_cameraPosition[2] = eyePos.getZ();
+	m_cameraPosition += m_cameraTargetPosition;
 
 
 	float m_frustumZNear=1;
@@ -679,7 +871,7 @@ void myinit()
 	GLfloat light_diffuse[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0) };
 	GLfloat light_specular[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0 )};
 	/*	light_position is NOT default value	*/
-	GLfloat light_position0[] = { btScalar(1000.0), btScalar(1000.0), btScalar(1000.0), btScalar(0.0 )};
+	GLfloat light_position0[] = { btScalar(10000.0), btScalar(10000.0), btScalar(10000.0), btScalar(0.0 )};
 	GLfloat light_position1[] = { btScalar(-1.0), btScalar(-10.0), btScalar(-1.0), btScalar(0.0) };
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
@@ -728,7 +920,7 @@ void myinit()
 					const int		s=x>>5;
 					const GLubyte	b=180;					
 					GLubyte			c=b+((s+t&1)&1)*(255-b);
-					pi[0]=255;
+					pi[0]=c;
 					pi[1]=c;
 					pi[2]=c;
 					pi+=3;
@@ -767,6 +959,61 @@ void myinit()
 
 //#pragma optimize( "g", off )
 
+
+
+void writeTransforms()
+{
+
+
+	glFlush();
+	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
+
+	float* positions = (float*)(bla+sizeof(cube_vertices));
+	float* orientations = (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE);
+	float* colors= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
+	float* scaling= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
+
+	//	positions[0]+=0.001f;
+
+	static int offset=0;
+	//offset++;
+
+	static btVector3 axis(1,0,0);
+	angle += 0.01f;
+	int index=0;
+	btQuaternion orn(axis,angle);
+	for (int i=0;i<NUM_OBJECTS_X;i++)
+	{
+		for (int j=0;j<NUM_OBJECTS_Y;j++)
+		{
+			for (int k=0;k<NUM_OBJECTS_Z;k++)
+			{
+				//if (!((index+offset)%15))
+				{
+					instance_positions_ptr[index*4+1]-=0.01f;
+					positions[index*4]=instance_positions_ptr[index*4];
+					positions[index*4+1]=instance_positions_ptr[index*4+1];
+					positions[index*4+2]=instance_positions_ptr[index*4+2];
+					positions[index*4+3]=instance_positions_ptr[index*4+3];
+
+					orientations[index*4] = orn[0];
+					orientations[index*4+1] = orn[1];
+					orientations[index*4+2] = orn[2];
+					orientations[index*4+3] = orn[3];
+				}
+				//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
+				index++;
+			}
+		}
+	}
+
+	glUnmapBuffer( GL_ARRAY_BUFFER);
+	//if this glFinish is removed, the animation is not always working/blocks
+	//@todo: figure out why
+	glFlush();
+}
+
+
 void updatePos()
 {
 
@@ -794,6 +1041,7 @@ void updatePos()
 	{
 
 		glFinish();
+
 		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
 		cl_int ciErrNum = CL_SUCCESS;
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
@@ -806,10 +1054,20 @@ void updatePos()
 			ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
 			ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
 			ciErrNum = clSetKernelArg(g_interopKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
-			size_t	numWorkItems = workGroupSize*((NUM_OBJECTS + (workGroupSize-1)) / workGroupSize);
+
+			ciErrNum = clSetKernelArg(g_interopKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
+			ciErrNum = clSetKernelArg(g_interopKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
+			ciErrNum = clSetKernelArg(g_interopKernel, 5, sizeof(cl_mem), (void*)&gBodyTimes);
+			
+			
+			
+
+		
+			size_t	numWorkItems = NUM_OBJECTS;//workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
 			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_interopKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		}
+	
 		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		clFinish(g_cqCommandQue);
@@ -817,6 +1075,102 @@ void updatePos()
 	}
 
 }
+
+
+void cpuBroadphase()
+{
+
+
+	glFlush();
+	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
+
+	float* positions = (float*)(bla+sizeof(cube_vertices));
+	float* orientations = (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE);
+	float* colors= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
+	float* scaling= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
+
+	//	positions[0]+=0.001f;
+
+	static int offset=0;
+	//offset++;
+
+	static btVector3 axis(1,0,0);
+	angle += 0.01f;
+	int index=0;
+	btQuaternion orn(axis,angle);
+	for (int i=0;i<NUM_OBJECTS_X;i++)
+	{
+		for (int j=0;j<NUM_OBJECTS_Y;j++)
+		{
+			for (int k=0;k<NUM_OBJECTS_Z;k++)
+			{
+				//if (!((index+offset)%15))
+				{
+					instance_positions_ptr[index*4+1]-=0.01f;
+					//positions[index*4]=instance_positions_ptr[index*4];
+					//positions[index*4+1]=instance_positions_ptr[index*4+1];
+					//positions[index*4+2]=instance_positions_ptr[index*4+2];
+					//positions[index*4+3]=instance_positions_ptr[index*4+3];
+
+					//orientations[index*4] = orn[0];
+					//orientations[index*4+1] = orn[1];
+					//orientations[index*4+2] = orn[2];
+					//orientations[index*4+3] = orn[3];
+				}
+				//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
+				index++;
+			}
+		}
+	}
+
+	glUnmapBuffer( GL_ARRAY_BUFFER);
+	//if this glFinish is removed, the animation is not always working/blocks
+	//@todo: figure out why
+	glFlush();
+}
+
+void	broadphase()
+{
+	if (useCPU)
+	{
+		cpuBroadphase();
+
+	} 
+	else
+	{
+
+		glFinish();
+
+		cl_mem clBuffer = g_interopBuffer->getCLBUffer();
+		cl_int ciErrNum = CL_SUCCESS;
+		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		if (runOpenCLKernels)
+		{
+			int numObjects = NUM_OBJECTS;
+			int offset = (sizeof(cube_vertices) )/4;
+
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
+			ciErrNum = clSetKernelArg(g_broadphaseKernel, 5, sizeof(cl_mem), (void*)&gBodyTimes);
+		
+			size_t	numWorkItems = NUM_OBJECTS;///workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
+			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_broadphaseKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		}
+	
+		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+		clFinish(g_cqCommandQue);
+
+	}
+}
+
+
 //#pragma optimize( "g", on )
 
 void RenderScene(void)
@@ -857,7 +1211,10 @@ void RenderScene(void)
 	//	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	glFlush();
+
 	updatePos();
+
+	broadphase();
 
 	float stop = gStopwatch.getTimeMilliseconds();
 	gStopwatch.reset();
@@ -890,18 +1247,25 @@ void RenderScene(void)
 
 	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)uvoffset);
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (GLvoid *)normaloffset);
+	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices)+POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE));
+	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(cube_vertices)+POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE));
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 	glEnableVertexAttribArray(3);
 	glEnableVertexAttribArray(4);
+	glEnableVertexAttribArray(5);
+	glEnableVertexAttribArray(6);
 
+	glVertexAttribDivisor(0, 0);
 	glVertexAttribDivisor(1, 1);
 	glVertexAttribDivisor(2, 1);
 	glVertexAttribDivisor(3, 0);
 	glVertexAttribDivisor(4, 0);
-
+	glVertexAttribDivisor(5, 1);
+	glVertexAttribDivisor(6, 1);
+	
 	glUseProgram(instancingShader);
 	glUniform1f(angle_loc, 0);
 	GLfloat pm[16];
@@ -942,6 +1306,7 @@ void ChangeSize(int w, int h)
 #ifdef RECREATE_CL_AND_SHADERS_ON_RESIZE
 	delete g_interopBuffer;
 	clReleaseKernel(g_interopKernel);
+	clReleaseKernel(g_broadphaseKernel);
 	DeleteCL();
 	DeleteShaders();
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
@@ -956,6 +1321,7 @@ void ChangeSize(int w, int h)
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
+	g_broadphaseKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, broadphaseKernelString, "broadphaseKernel" );
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
 
 }
@@ -1012,6 +1378,7 @@ void ShutdownRC(void)
 
 int main(int argc, char* argv[])
 {
+	srand(0);
 	//	printf("vertexShader = \n%s\n",vertexShader);
 	//	printf("fragmentShader = \n%s\n",fragmentShader);
 
@@ -1026,6 +1393,9 @@ int main(int argc, char* argv[])
 	glutCreateWindow(buf);
 
 	glutReshapeFunc(ChangeSize);
+
+	glutMouseFunc(mouseFunc);
+	glutMotionFunc(mouseMotionFunc);
 
 	glutKeyboardFunc(Keyboard);
 	glutDisplayFunc(RenderScene);
@@ -1042,6 +1412,45 @@ int main(int argc, char* argv[])
 	InitCL();
 	
 
+#define CUSTOM_CL_INITIALIZATION
+#ifdef CUSTOM_CL_INITIALIZATION
+	g_deviceCL = new adl::DeviceCL();
+	g_deviceCL->m_deviceIdx = g_device;
+	g_deviceCL->m_context = g_cxMainContext;
+	g_deviceCL->m_commandQueue = g_cqCommandQue;
+
+#else
+	DeviceUtils::Config cfg;
+	cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
+	g_deviceCL = DeviceUtils::allocate( TYPE_CL, cfg );
+#endif
+
+	int size = NUM_OBJECTS;
+	adl::Buffer<btVector3> linvelBuf( g_deviceCL, size );
+	adl::Buffer<btVector3> angvelBuf( g_deviceCL, size );
+	adl::Buffer<float>		bodyTimes(g_deviceCL,size);
+
+	gLinVelMem = (cl_mem)linvelBuf.m_ptr;
+	gAngVelMem = (cl_mem)angvelBuf.m_ptr;
+	gBodyTimes = (cl_mem)bodyTimes.m_ptr;
+	
+	btVector3* linVelHost= new btVector3[size];
+	btVector3* angVelHost = new btVector3[size];
+	float*		bodyTimesHost = new float[size];
+
+	for (int i=0;i<NUM_OBJECTS;i++)
+	{
+		linVelHost[i].setValue(0,0,0);
+		angVelHost[i].setValue(1,0,0);
+		bodyTimesHost[i] = double(randrange(0x2fffffff))/double(0x2fffffff)*float(1024);//NUM_OBJECTS);
+	}
+
+	linvelBuf.write(linVelHost,NUM_OBJECTS);
+	angvelBuf.write(angVelHost,NUM_OBJECTS);
+	bodyTimes.write(bodyTimesHost,NUM_OBJECTS);
+
+	adl::DeviceUtils::waitForCompletion( g_deviceCL );
+	
 	InitShaders();
 	
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
@@ -1049,6 +1458,7 @@ int main(int argc, char* argv[])
 
 
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "interopKernel" );
+	g_broadphaseKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,broadphaseKernelString, "broadphaseKernel" );
 
 	glutMainLoop();
 	ShutdownRC();
