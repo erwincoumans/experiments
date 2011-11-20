@@ -676,6 +676,7 @@ void radixSortKeyValue32Test( Device* deviceGPU, Device* deviceHost )
 #if defined(ADL_ENABLE_DX11)
 	#define RUN_GPU( func ) func(ddcl); func(dddx);
 	#define RUN_GPU_TEMPLATE( func ) func<TYPE_CL>( ddcl, ddhost ); func<TYPE_DX11>( dddx, ddhost );
+	#define RUN_CL_TEMPLATE( func ) func<TYPE_CL>( ddcl, ddhost );
 #else
 	#define RUN_GPU( func ) func(ddcl);
 	#define RUN_GPU_TEMPLATE( func ) func<TYPE_CL>( ddcl, ddhost ); 

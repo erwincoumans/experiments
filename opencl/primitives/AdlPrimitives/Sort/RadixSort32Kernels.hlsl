@@ -998,3 +998,14 @@ void SortAndScatterKeyValueKernel( DEFAULT_ARGS )
 		GROUP_LDS_BARRIER;
 	}
 }
+
+[numthreads(WG_SIZE, 1, 1)]
+void SortAndScatterSortDataKernel( DEFAULT_ARGS )
+{
+
+}
+
+[numthreads(WG_SIZE, 1, 1)]
+void StreamCountSortDataKernel( DEFAULT_ARGS )
+{
+}

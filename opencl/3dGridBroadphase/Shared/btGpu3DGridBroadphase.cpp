@@ -129,6 +129,7 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	m_LastLargeHandleIndex = -1;
 
     assert(!m_bInitialized);
+	
     // allocate host storage
     m_hBodiesHash = new unsigned int[m_maxHandles * 2];
     memset(m_hBodiesHash, 0x00, m_maxHandles*2*sizeof(unsigned int));
@@ -153,8 +154,10 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	memset(m_hPairBuff, 0x00, m_maxHandles * m_maxPairsPerBody * sizeof(unsigned int)); // needed?
 
 	m_hPairScan = new unsigned int[m_maxHandles + 2];
+	memset(m_hPairScan,0,sizeof(int)*m_maxHandles + 2);
 
 	m_hPairOut = new unsigned int[m_maxHandles * m_maxPairsPerBody];
+	memset(m_hPairOut,0,sizeof(int)*(m_maxHandles * m_maxPairsPerBody));
 
 // large proxies
 
@@ -175,6 +178,7 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	m_numPairsAdded = 0;
 	m_numOverflows = 0;
 
+	
     m_bInitialized = true;
 }
 

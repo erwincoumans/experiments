@@ -24,7 +24,8 @@ subject to the following restrictions:
 #include <string.h>
 #include "Adl/Adl.h"
 #include <AdlPrimitives/Scan/PrefixScan.h>
-
+#include <AdlPrimitives/Sort/RadixSort32.h>
+#include <AdlPrimitives/Sort/RadixSort.h>
 
 #define ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 
@@ -37,9 +38,22 @@ static const char* spProgramSource =
 adl::PrefixScan<adl::TYPE_CL>::Data* gData1=0;
 adl::Buffer<unsigned int>* m_srcClBuffer=0;
 
+struct MySortData
+{
+	int key;
+	int value;
+};
+
+adl::RadixSort32<adl::TYPE_CL>::Data* dataC = 0;
+adl::RadixSort<adl::TYPE_HOST>::Data* dataHost = 0;
+
+
+static unsigned int infElem = 0x2fffffff;
+
 static unsigned int zeroEl = 0;
 static unsigned int minusOne= -1;
-unsigned int gSum=0;
+static unsigned int gSum=0;
+
 
 bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappingPairCache,
 												const btVector3& cellSize, 
@@ -52,7 +66,9 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 {
 	initCL(context, device, queue);
 	allocateBuffers();
+	
 	prefillBuffers();
+
 	initKernels();
 
 	//create an Adl device host and OpenCL device
@@ -66,13 +82,18 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 	m_deviceCL->m_commandQueue = queue;
 	m_deviceCL->m_kernelManager = new adl::KernelManager;
 
+	int minSize = 256*1024;
+	int maxSortBuffer = maxSmallProxies < minSize ? minSize :maxSmallProxies;
+
 	m_srcClBuffer = new adl::Buffer<unsigned int> (m_deviceCL,maxSmallProxies+2);
 
-	m_srcClBuffer->write(&zeroEl,maxSmallProxies+2);
+	m_srcClBuffer->write(&zeroEl,1,0);
 	m_deviceCL->waitForCompletion();
 	
 	gData1 = adl::PrefixScan<adl::TYPE_CL>::allocate( m_deviceCL, maxSmallProxies+2,adl::PrefixScanBase::EXCLUSIVE );
-
+	dataHost = adl::RadixSort<adl::TYPE_HOST>::allocate( m_deviceHost, maxSmallProxies+2 );
+	dataC = adl::RadixSort32<adl::TYPE_CL>::allocate( m_deviceCL, maxSortBuffer+2 );
+	
 }
 
 
@@ -334,18 +355,24 @@ void bt3dGridBroadphaseOCL::setKernelArg(int kernelId, int argNum, int argSize, 
 
 void bt3dGridBroadphaseOCL::copyArrayToDevice(cl_mem device, const void* host, unsigned int size, int devOffs, int hostOffs)
 {
-    cl_int ciErrNum;
-	char* pHost = (char*)host + hostOffs;
-    ciErrNum = clEnqueueWriteBuffer(m_cqCommandQue, device, CL_TRUE, devOffs, size, pHost, 0, NULL, NULL);
-	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
+	if (size)
+	{
+		cl_int ciErrNum;
+		char* pHost = (char*)host + hostOffs;
+		ciErrNum = clEnqueueWriteBuffer(m_cqCommandQue, device, CL_TRUE, devOffs, size, pHost, 0, NULL, NULL);
+		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
+	}
 }
 
 void bt3dGridBroadphaseOCL::copyArrayFromDevice(void* host, const cl_mem device, unsigned int size, int hostOffs, int devOffs)
 {
-    cl_int ciErrNum;
-	char* pHost = (char*)host + hostOffs;
-    ciErrNum = clEnqueueReadBuffer(m_cqCommandQue, device, CL_TRUE, devOffs, size, pHost, 0, NULL, NULL);
-	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
+	if (size)
+    {
+		cl_int ciErrNum;
+		char* pHost = (char*)host + hostOffs;
+		ciErrNum = clEnqueueReadBuffer(m_cqCommandQue, device, CL_TRUE, devOffs, size, pHost, 0, NULL, NULL);
+		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
+	}
 }
 
 
@@ -401,22 +428,51 @@ void bt3dGridBroadphaseOCL::calcHashAABB()
 }
 
 
-
 void bt3dGridBroadphaseOCL::sortHash()
 {
 	BT_PROFILE("sortHash");
-#if defined(CL_PLATFORM_MINI_CL) || defined(CL_PLATFORM_AMD)
+#ifdef CL_PLATFORM_MINI_CL
 	copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
 	btGpu3DGridBroadphase::sortHash();
 	copyArrayToDevice(m_dBodiesHash, m_hBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+#else
+	
+//#define USE_HOST
+#ifdef USE_HOST
+	copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+	//adl::Buffer<unsigned int> keysIn,keysOut,valuesIn,valuesOut;
+	///adl::RadixSort32<adl::TYPE_CL>::execute(dataC,keysIn,keysOut,valuesIn,valuesOut,m_numHandles);
+	adl::HostBuffer<adl::SortData> inoutHost;
+	inoutHost.m_device = m_deviceHost;
+	inoutHost.m_ptr = (adl::SortData*)m_hBodiesHash;
+	inoutHost.m_size = m_numHandles;
+	adl::RadixSort<adl::TYPE_HOST>::execute(dataHost, inoutHost,m_numHandles);
+	copyArrayToDevice(m_dBodiesHash, m_hBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+#else
+	{
+	clFinish(m_cqCommandQue);
+	BT_PROFILE("RadixSort32::execute");
+	adl::Buffer<adl::SortData> inout;
+	inout.m_device = this->m_deviceCL;
+	inout.m_size = m_numHandles;
+	inout.m_ptr = (adl::SortData*)m_dBodiesHash;
+	adl::RadixSort32<adl::TYPE_CL>::execute(dataC,inout, m_numHandles);
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif //ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
-#else
-	int dir = 1;
-	bitonicSort(m_dBodiesHash, m_hashSize, dir);
+	}
+	{
+		BT_PROFILE("copyArrayFromDevice");
+	copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+#ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
+	clFinish(m_cqCommandQue);
+#endif //ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
+	}
+
+
+#endif //USE_HOST
 #endif
-	
+
 	return;
 }
 
@@ -427,7 +483,7 @@ void bt3dGridBroadphaseOCL::findCellStart()
 #if 1
 	BT_PROFILE("findCellStart");
 	runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_CLEAR_CELL_START, m_numCells);
-	#if defined(CL_PLATFORM_MINI_CL) || defined(CL_PLATFORM_AMD)
+	#if defined(CL_PLATFORM_MINI_CL)
 		btGpu3DGridBroadphase::findCellStart();
 		copyArrayToDevice(m_dCellStart, m_hCellStart, m_numCells * sizeof(unsigned int));
 	#else

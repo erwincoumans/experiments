@@ -65,6 +65,13 @@ typedef struct
 	int m_nBlocksPerWG;
 } ConstBuffer;
 
+typedef struct
+{
+	unsigned int m_key;
+	unsigned int m_value;
+} SortDataCL;
+
+
 uint prefixScanVectorEx( uint4* data )
 {
 	u32 sum = 0;
@@ -253,6 +260,68 @@ void StreamCountKernel( __global u32* gSrc, __global u32* histogramOut, ConstBuf
 	}
 }
 
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void StreamCountSortDataKernel( __global SortDataCL* gSrc, __global u32* histogramOut, ConstBuffer cb )
+{
+	__local u32 localHistogramMat[NUM_BUCKET*WG_SIZE];
+
+	u32 gIdx = GET_GLOBAL_IDX;
+	u32 lIdx = GET_LOCAL_IDX;
+	u32 wgIdx = GET_GROUP_IDX;
+	u32 wgSize = GET_GROUP_SIZE;
+	const int startBit = cb.m_startBit;
+	const int n = cb.m_n;
+	const int nWGs = cb.m_nWGs;
+	const int nBlocksPerWG = cb.m_nBlocksPerWG;
+
+	for(int i=0; i<NUM_BUCKET; i++)
+	{
+		MY_HISTOGRAM(i) = 0;
+	}
+
+	GROUP_LDS_BARRIER;
+
+	const int blockSize = ELEMENTS_PER_WORK_ITEM*WG_SIZE;
+	u32 localKey;
+
+	int nBlocks = (n)/blockSize - nBlocksPerWG*wgIdx;
+
+	int addr = blockSize*nBlocksPerWG*wgIdx + ELEMENTS_PER_WORK_ITEM*lIdx;
+
+	for(int iblock=0; iblock<min(nBlocksPerWG, nBlocks); iblock++, addr+=blockSize)
+	{
+		//	MY_HISTOGRAM( localKeys.x ) ++ is much expensive than atomic add as it requires read and write while atomics can just add on AMD
+		//	Using registers didn't perform well. It seems like use localKeys to address requires a lot of alu ops
+		//	AMD: AtomInc performs better while NV prefers ++
+		for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+		{
+#if defined(CHECK_BOUNDARY)
+			if( addr+i < n )
+#endif
+			{
+				localKey = (gSrc[addr+i].m_key>>startBit) & 0xf;
+#if defined(NV_GPU)
+				MY_HISTOGRAM( localKey )++;
+#else
+				AtomInc( MY_HISTOGRAM( localKey ) );
+#endif
+			}
+		}
+	}
+
+	GROUP_LDS_BARRIER;
+	
+	if( lIdx < NUM_BUCKET )
+	{
+		u32 sum = 0;
+		for(int i=0; i<GET_GROUP_SIZE; i++)
+		{
+			sum += localHistogramMat[lIdx*WG_SIZE+(i+lIdx)%GET_GROUP_SIZE];
+		}
+		histogramOut[lIdx*nWGs+wgIdx] = sum;
+	}
+}
 
 #define nPerLane (nPerWI/4)
 
@@ -529,7 +598,12 @@ void SortAndScatterKernel( __global const u32* restrict gSrc, __global const u32
 #if defined(CHECK_BOUNDARY)
 				if( addr+i < n )
 #endif
+
+#if defined(NV_GPU)
+				SET_HISTOGRAM( setIdx, keys[i] )++;
+#else
 				AtomInc( SET_HISTOGRAM( setIdx, keys[i] ) );
+#endif
 			
 			GROUP_LDS_BARRIER;
 			
@@ -707,6 +781,8 @@ void sort4Bits1KeyValue(u32 sortData[4], int sortVal[4], int startBit, int lIdx,
 	}
 }
 
+
+
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global const int* restrict gSrcVal, __global const u32* rHistogram, __global u32* restrict gDst, __global int* restrict gDstVal, ConstBuffer cb)
@@ -779,7 +855,12 @@ void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global c
 #if defined(CHECK_BOUNDARY)
 				if( addr+i < n )
 #endif
+
+#if defined(NV_GPU)
+				SET_HISTOGRAM( setIdx, keys[i] )++;
+#else
 				AtomInc( SET_HISTOGRAM( setIdx, keys[i] ) );
+#endif
 			
 			GROUP_LDS_BARRIER;
 			
@@ -848,6 +929,166 @@ void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global c
 #else
 				gDst[ groupOffset + myIdx ] = sortData[ie];
 				gDstVal[ groupOffset + myIdx ] = sortVal[ie];		
+#endif
+			}
+		}
+
+		GROUP_LDS_BARRIER;
+
+		if( lIdx < NUM_BUCKET )
+		{
+			localHistogramToCarry[lIdx] += myHistogram;
+		}
+		GROUP_LDS_BARRIER;
+	}
+}
+
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void SortAndScatterSortDataKernel( __global const SortDataCL* restrict gSrc, __global const u32* rHistogram, __global SortDataCL* restrict gDst, ConstBuffer cb)
+{
+	__local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
+	__local int ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
+	__local u32 localHistogramToCarry[NUM_BUCKET];
+	__local u32 localHistogram[NUM_BUCKET*2];
+
+	u32 gIdx = GET_GLOBAL_IDX;
+	u32 lIdx = GET_LOCAL_IDX;
+	u32 wgIdx = GET_GROUP_IDX;
+	u32 wgSize = GET_GROUP_SIZE;
+
+	const int n = cb.m_n;
+	const int nWGs = cb.m_nWGs;
+	const int startBit = cb.m_startBit;
+	const int nBlocksPerWG = cb.m_nBlocksPerWG;
+
+	if( lIdx < (NUM_BUCKET) )
+	{
+		localHistogramToCarry[lIdx] = rHistogram[lIdx*nWGs + wgIdx];
+	}
+
+	GROUP_LDS_BARRIER;
+
+	const int blockSize = ELEMENTS_PER_WORK_ITEM*WG_SIZE;
+
+	int nBlocks = n/blockSize - nBlocksPerWG*wgIdx;
+
+	int addr = blockSize*nBlocksPerWG*wgIdx + ELEMENTS_PER_WORK_ITEM*lIdx;
+
+	for(int iblock=0; iblock<min(nBlocksPerWG, nBlocks); iblock++, addr+=blockSize)
+	{
+
+		u32 myHistogram = 0;
+
+		u32 sortData[ELEMENTS_PER_WORK_ITEM];
+		int sortVal[ELEMENTS_PER_WORK_ITEM];
+
+		for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+#if defined(CHECK_BOUNDARY)
+		{
+			sortData[i] = ( addr+i < n )? gSrc[ addr+i ].m_key : 0xffffffff;
+			sortVal[i] = ( addr+i < n )? gSrc[ addr+i ].m_value : 0xffffffff;
+		}
+#else
+		{
+			sortData[i] = gSrc[ addr+i ].m_key;
+			sortVal[i] = gSrc[ addr+i ].m_value;
+		}
+#endif
+
+		sort4Bits1KeyValue(sortData, sortVal, startBit, lIdx, ldsSortData, ldsSortVal);
+
+		u32 keys[ELEMENTS_PER_WORK_ITEM];
+		for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+			keys[i] = (sortData[i]>>startBit) & 0xf;
+
+		{	//	create histogram
+			u32 setIdx = lIdx/16;
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[lIdx] = 0;
+			}
+			ldsSortData[lIdx] = 0;
+			GROUP_LDS_BARRIER;
+
+			for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++)
+#if defined(CHECK_BOUNDARY)
+				if( addr+i < n )
+#endif
+
+#if defined(NV_GPU)
+				SET_HISTOGRAM( setIdx, keys[i] )++;
+#else
+				AtomInc( SET_HISTOGRAM( setIdx, keys[i] ) );
+#endif
+			
+			GROUP_LDS_BARRIER;
+			
+			uint hIdx = NUM_BUCKET+lIdx;
+			if( lIdx < NUM_BUCKET )
+			{
+				u32 sum = 0;
+				for(int i=0; i<WG_SIZE/16; i++)
+				{
+					sum += SET_HISTOGRAM( i, lIdx );
+				}
+				myHistogram = sum;
+				localHistogram[hIdx] = sum;
+			}
+			GROUP_LDS_BARRIER;
+
+#if defined(USE_2LEVEL_REDUCE)
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[hIdx] = localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+
+				u32 u0, u1, u2;
+				u0 = localHistogram[hIdx-3];
+				u1 = localHistogram[hIdx-2];
+				u2 = localHistogram[hIdx-1];
+				AtomAdd( localHistogram[hIdx], u0 + u1 + u2 );
+				GROUP_MEM_FENCE;
+				u0 = localHistogram[hIdx-12];
+				u1 = localHistogram[hIdx-8];
+				u2 = localHistogram[hIdx-4];
+				AtomAdd( localHistogram[hIdx], u0 + u1 + u2 );
+				GROUP_MEM_FENCE;
+			}
+#else
+			if( lIdx < NUM_BUCKET )
+			{
+				localHistogram[hIdx] = localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-1];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-2];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-4];
+				GROUP_MEM_FENCE;
+				localHistogram[hIdx] += localHistogram[hIdx-8];
+				GROUP_MEM_FENCE;
+			}
+#endif
+			GROUP_LDS_BARRIER;
+		}
+
+		{
+			for(int ie=0; ie<ELEMENTS_PER_WORK_ITEM; ie++)
+			{
+				int dataIdx = ELEMENTS_PER_WORK_ITEM*lIdx+ie;
+				int binIdx = keys[ie];
+				int groupOffset = localHistogramToCarry[binIdx];
+				int myIdx = dataIdx - localHistogram[NUM_BUCKET+binIdx];
+#if defined(CHECK_BOUNDARY)
+				if( addr+ie < n )
+				{
+					gDst[groupOffset + myIdx ].m_key = sortData[ie];
+					gDst[groupOffset + myIdx ].m_value = sortVal[ie];
+				}
+#else
+				gDst[ groupOffset + myIdx ].m_key = sortData[ie];
+				gDst[ groupOffset + myIdx ].m_value = sortVal[ie];
 #endif
 			}
 		}

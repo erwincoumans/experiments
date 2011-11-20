@@ -45,6 +45,7 @@ class RadixSort<TYPE_HOST> : public RadixSortBase
 			SortData* src = inout.m_ptr;
 			SortData* dst = data->m_workBuffer->m_ptr;
 
+			int count=0;
 			for(int startBit=0; startBit<sortBits; startBit+=BITS_PER_PASS)
 			{
 				for(int i=0; i<NUM_TABLES; i++)
@@ -78,10 +79,12 @@ class RadixSort<TYPE_HOST> : public RadixSortBase
 				}
 
 				swap2( src, dst );
+				count++;
 			}
 
 			{
-				if( src != inout.m_ptr )
+				if (count&1)
+				//if( src != inout.m_ptr )
 				{
 					memcpy( dst, src, sizeof(SortData)*n );
 				}

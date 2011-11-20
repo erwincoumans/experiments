@@ -697,24 +697,20 @@ void BulletSAPCompleteBoxPruningTest::PerformTest()
 	//CompleteBoxPruning(mNbBoxes, mBoxPtrs, mPairs, Axes(AXES_XZY));
 	///add batch query?
 	
-
-	for (int i=0;i<numUpdatedBoxes;i++)
 	{
-		Point Center;
-		Point Extents;
-		mBoxPtrs[i]->GetCenter(Center);
-		mBoxPtrs[i]->GetExtents(Extents);
-		btVector3	aabbMin(Center.x-Extents.x,Center.y-Extents.y,Center.z-Extents.z);
-		btVector3	aabbMax(Center.x+Extents.x,Center.y+Extents.y,Center.z+Extents.z);
-		m_broadphase->setAabb(m_proxies[i],aabbMin,aabbMax,0);//m_dispatcher);
+		BT_PROFILE("broadphase->setAabb");
+		for (int i=0;i<numUpdatedBoxes;i++)
+		{
+			Point Center;
+			Point Extents;
+			mBoxPtrs[i]->GetCenter(Center);
+			mBoxPtrs[i]->GetExtents(Extents);
+			btVector3	aabbMin(Center.x-Extents.x,Center.y-Extents.y,Center.z-Extents.z);
+			btVector3	aabbMax(Center.x+Extents.x,Center.y+Extents.y,Center.z+Extents.z);
+			m_broadphase->setAabb(m_proxies[i],aabbMin,aabbMax,0);//m_dispatcher);
+		}
 	}
 
-#ifndef BT_NO_PROFILE
-	if(sBulletProfilerToggle)
-	{
-		CProfileManager::Reset();
-	}
-#endif //BT_NO_PROFILE
 
 	{
 		BT_PROFILE("calculateOverlappingPairs");
@@ -725,7 +721,10 @@ void BulletSAPCompleteBoxPruningTest::PerformTest()
 	{
 		CProfileManager::Increment_Frame_Counter();
 		CProfileManager::dumpAll();
+		CProfileManager::Reset();
+
 	}
+
 #endif //BT_NO_PROFILE
 	
 

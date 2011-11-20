@@ -7,6 +7,7 @@
 #include <Adl/Adl.h>
 #include <AdlPrimitives/Math/Math.h>
 #include <AdlPrimitives/Copy/Copy.h>
+#include <AdlPrimitives/Sort/SortData.h>
 
 namespace adl
 {
@@ -55,13 +56,17 @@ class RadixSort32 : public RadixSort32Base
 			int m_maxSize;
 
 			Kernel* m_streamCountKernel;
+			Kernel* m_streamCountSortDataKernel;
 			Kernel* m_prefixScanKernel;
 			Kernel* m_sortAndScatterKernel;
 			Kernel* m_sortAndScatterKeyValueKernel;
+			Kernel* m_sortAndScatterSortDataKernel;
 
 			Buffer<u32>* m_workBuffer0;
 			Buffer<u32>* m_workBuffer1;
 			Buffer<u32>* m_workBuffer2;
+			Buffer<SortData>* m_workBuffer3;
+
 			Buffer<ConstData>* m_constBuffer[32/BITS_PER_PASS];
 
 			typename Copy<TYPE>::Data* m_copyData;
@@ -81,6 +86,9 @@ class RadixSort32 : public RadixSort32Base
 
 		static
 		void execute(Data* data, Buffer<u32>& keysIn, Buffer<u32>& keysOut, Buffer<u32>& valuesIn, Buffer<u32>& valuesOut, int n, int sortBits = 32);
+		
+		static
+		void execute(Data* data, Buffer<SortData>& keyValuesInOut, int n, int sortBits = 32 );
 };
 
 

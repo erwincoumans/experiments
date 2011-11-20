@@ -175,8 +175,9 @@ void KernelBuilder<TYPE_CL>::setFromSrc( const Device* deviceData, const char* s
 		debugPrintf("%s\n", build_log);
 		printf("%s\n", build_log);
 
-		delete build_log;
 		ADLASSERT(0);
+		delete build_log;
+		
 	}
 }
 
