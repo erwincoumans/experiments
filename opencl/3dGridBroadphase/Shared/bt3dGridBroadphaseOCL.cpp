@@ -52,7 +52,6 @@ static unsigned int infElem = 0x2fffffff;
 
 static unsigned int zeroEl = 0;
 static unsigned int minusOne= -1;
-static unsigned int gSum=0;
 
 
 bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappingPairCache,
@@ -209,14 +208,14 @@ void bt3dGridBroadphaseOCL::initKernels()
 	initKernel(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, "kComputePairCacheChanges");
 	setKernelArg(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
 	setKernelArg(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
-	setKernelArg(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, 3, sizeof(cl_mem),(void*)&m_dPairScan);
+	setKernelArg(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
 	setKernelArg(GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES, 4, sizeof(cl_mem),(void*)&m_dAABB);
 
 	initKernel(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, "kSqueezeOverlappingPairBuff");
 	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
 	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
-	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 3, sizeof(cl_mem),(void*)&m_dPairScan);
-	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 4, sizeof(cl_mem),(void*)&m_dPairOut);
+	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
+	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 4, sizeof(cl_mem),(void*)&m_dPairsChanged);
 	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 5, sizeof(cl_mem),(void*)&m_dAABB);
 
 	initKernel(GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL, "kBitonicSortCellIdLocal");
@@ -262,11 +261,14 @@ void bt3dGridBroadphaseOCL::allocateBuffers()
 	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
 
 	memSize = (m_maxHandles + 2) * sizeof(unsigned int);
-	m_dPairScan = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
+	m_dPairScanChanged = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
 	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
 
 	memSize = m_maxHandles * m_maxPairsPerBody * sizeof(unsigned int);
-	m_dPairOut = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
+	m_dPairsChanged = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
+	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
+
+	m_dPairsContiguous = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
 	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
 
 	memSize = 3 * 4 * sizeof(float);
@@ -565,9 +567,9 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 	//Intel/CPU version doesn't handlel Adl scan well
 #if 0
 	{
-		copyArrayFromDevice(m_hPairScan, m_dPairScan, sizeof(unsigned int)*(m_numHandles + 2)); 
+		copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
 		btGpu3DGridBroadphase::scanOverlappingPairBuff();
-		copyArrayToDevice(m_dPairScan, m_hPairScan, sizeof(unsigned int)*(m_numHandles + 2)); 
+		copyArrayToDevice(m_dPairScanChanged, m_hPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
 	}
 #else
 	{
@@ -577,7 +579,7 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 		{
 			BT_PROFILE("copy GPU->GPU");
 		
-			destBuffer.m_ptr = (unsigned int*)m_dPairScan;
+			destBuffer.m_ptr = (unsigned int*)m_dPairScanChanged;
 			destBuffer.m_device = m_deviceCL;
 			destBuffer.m_size =  sizeof(unsigned int)*(m_numHandles+2);
 			m_deviceCL->copy(m_srcClBuffer, &destBuffer,m_numHandles,1,1);
@@ -591,7 +593,7 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 		{
 			BT_PROFILE("PrefixScan");
 			
-			adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&gSum);
+			adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&m_numPrefixSum);
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
@@ -599,7 +601,7 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 		{
 			BT_PROFILE("copy GPU -> CPU");
 			//the data 
-			copyArrayFromDevice(m_hPairScan, m_dPairScan, sizeof(unsigned int)*(m_numHandles + 2));
+			//copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2));
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
@@ -619,9 +621,9 @@ void bt3dGridBroadphaseOCL::squeezeOverlappingPairBuff()
 	BT_PROFILE("btCuda_squeezeOverlappingPairBuff");
 #if 1
 	runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, m_numHandles);
-//	btCuda_squeezeOverlappingPairBuff(m_dPairBuff, m_dPairBuffStartCurr, m_dPairScan, m_dPairOut, m_dAABB, m_numHandles);
+//	btCuda_squeezeOverlappingPairBuff(m_dPairBuff, m_dPairBuffStartCurr, m_dPairScanChanged, m_dPairsChanged, m_dAABB, m_numHandles);
 	
-	copyArrayFromDevice(m_hPairOut, m_dPairOut, sizeof(unsigned int) * m_hPairScan[m_numHandles+1]); //gSum
+	copyArrayFromDevice(m_hPairsChanged, m_dPairsChanged, sizeof(unsigned int) * m_hPairScanChanged[m_numHandles+1]); //gSum
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif

@@ -91,17 +91,20 @@ protected:
 	cl_mem					m_dCellStart;
 	cl_mem					m_dPairBuff; 
 	cl_mem					m_dPairBuffStartCurr;
+public:
 	cl_mem					m_dAABB;
-	cl_mem					m_dPairScan;
-	cl_mem					m_dPairOut;
+protected:
+	cl_mem					m_dPairScanChanged;
+	cl_mem					m_dPairsChanged;
+	cl_mem					m_dPairsContiguous;
 	cl_mem					m_dBpParams;
 
 	adl::Device*			m_deviceHost;
 	adl::DeviceCL*			m_deviceCL;
 
 
-
 public:
+	unsigned int			m_numPrefixSum;
 
 	bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappingPairCache,
 							const btVector3& cellSize, 

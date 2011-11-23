@@ -132,10 +132,10 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	
     // allocate host storage
     m_hBodiesHash = new unsigned int[m_maxHandles * 2];
-    memset(m_hBodiesHash, 0x00, m_maxHandles*2*sizeof(unsigned int));
+    //memset(m_hBodiesHash, 0x00, m_maxHandles*2*sizeof(unsigned int));
 
     m_hCellStart = new unsigned int[m_params.m_numCells];
-    memset(m_hCellStart, 0x00, m_params.m_numCells * sizeof(unsigned int));
+    //memset(m_hCellStart, 0x00, m_params.m_numCells * sizeof(unsigned int));
 
 	m_hPairBuffStartCurr = new unsigned int[m_maxHandles * 2 + 2];
 	// --------------- for now, init with m_maxPairsPerBody for each body
@@ -153,11 +153,11 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	m_hPairBuff = new unsigned int[m_maxHandles * m_maxPairsPerBody];
 	memset(m_hPairBuff, 0x00, m_maxHandles * m_maxPairsPerBody * sizeof(unsigned int)); // needed?
 
-	m_hPairScan = new unsigned int[m_maxHandles + 2];
-	memset(m_hPairScan,0,sizeof(int)*m_maxHandles + 2);
+	m_hPairScanChanged = new unsigned int[m_maxHandles + 2];
+	memset(m_hPairScanChanged,0,sizeof(int)*m_maxHandles + 2);
 
-	m_hPairOut = new unsigned int[m_maxHandles * m_maxPairsPerBody];
-	memset(m_hPairOut,0,sizeof(int)*(m_maxHandles * m_maxPairsPerBody));
+	m_hPairsChanged = new unsigned int[m_maxHandles * m_maxPairsPerBody];
+	memset(m_hPairsChanged,0,sizeof(int)*(m_maxHandles * m_maxPairsPerBody));
 
 // large proxies
 
@@ -192,8 +192,8 @@ void btGpu3DGridBroadphase::_finalize()
     delete [] m_hPairBuffStartCurr;
     delete [] m_hAABB;
 	delete [] m_hPairBuff;
-	delete [] m_hPairScan;
-	delete [] m_hPairOut;
+	delete [] m_hPairScanChanged;
+	delete [] m_hPairsChanged;
 	btAlignedFree(m_pLargeHandlesRawPtr);
 	m_bInitialized = false;
 }
@@ -211,7 +211,7 @@ void btGpu3DGridBroadphase::calculateOverlappingPairs(btDispatcher* dispatcher)
 	// update constants
 	{
 		BT_PROFILE("setParameters");
-	setParameters(&m_params);
+		setParameters(&m_params);
 	}
 
 	// prepare AABB array
@@ -277,12 +277,12 @@ void btGpu3DGridBroadphase::addPairsToCache(btDispatcher* dispatcher)
 	m_numPairsRemoved = 0;
 	for(int i = 0; i < m_numHandles; i++) 
 	{
-		unsigned int num = m_hPairScan[i+2] - m_hPairScan[i+1];
+		unsigned int num = m_hPairScanChanged[i+2] - m_hPairScanChanged[i+1];
 		if(!num)
 		{
 			continue;
 		}
-		unsigned int* pInp = m_hPairOut + m_hPairScan[i+1];
+		unsigned int* pInp = m_hPairsChanged + m_hPairScanChanged[i+1];
 		unsigned int index0 = m_hAABB[i * 2].uw;
 		btSimpleBroadphaseProxy* proxy0 = &m_pHandles[index0];
 		for(unsigned int j = 0; j < num; j++)
@@ -401,18 +401,10 @@ void btGpu3DGridBroadphase::addLarge2LargePairsToCache(btDispatcher* dispatcher)
 	for(i = 0; i <= m_LastLargeHandleIndex; i++)
 	{
 		btSimpleBroadphaseProxy* proxy0 = &m_pLargeHandles[i];
-		if(!proxy0->m_clientObject)
-		{
-			continue;
-		}
 		new_largest_index = i;
 		for(j = i + 1; j <= m_LastLargeHandleIndex; j++)
 		{
 			btSimpleBroadphaseProxy* proxy1 = &m_pLargeHandles[j];
-			if(!proxy1->m_clientObject)
-			{
-				continue;
-			}
 			btAssert(proxy0 != proxy1);
 			btSimpleBroadphaseProxy* p0 = getSimpleProxyFromProxy(proxy0);
 			btSimpleBroadphaseProxy* p1 = getSimpleProxyFromProxy(proxy1);
@@ -444,10 +436,6 @@ void btGpu3DGridBroadphase::rayTest(const btVector3& rayFrom,const btVector3& ra
 	for (int i=0; i <= m_LastLargeHandleIndex; i++)
 	{
 		btSimpleBroadphaseProxy* proxy = &m_pLargeHandles[i];
-		if(!proxy->m_clientObject)
-		{
-			continue;
-		}
 		rayCallback.process(proxy);
 	}
 }
@@ -470,10 +458,6 @@ void btGpu3DGridBroadphase::prepareAABB()
 	for(i = 0; i <= m_LastHandleIndex; i++) 
 	{
 		btSimpleBroadphaseProxy* proxy0 = &m_pHandles[i];
-		if(!proxy0->m_clientObject)
-		{
-			continue;
-		}
 		new_largest_index = i;
 		pBB->fx = proxy0->m_aabbMin.getX();
 		pBB->fy = proxy0->m_aabbMin.getY();
@@ -493,10 +477,6 @@ void btGpu3DGridBroadphase::prepareAABB()
 	for(i = 0; i <= m_LastLargeHandleIndex; i++) 
 	{
 		btSimpleBroadphaseProxy* proxy0 = &m_pLargeHandles[i];
-		if(!proxy0->m_clientObject)
-		{
-			continue;
-		}
 		new_largest_index = i;
 		pBB->fx = proxy0->m_aabbMin.getX();
 		pBB->fy = proxy0->m_aabbMin.getY();
@@ -601,7 +581,7 @@ void btGpu3DGridBroadphase::findPairsLarge()
 void btGpu3DGridBroadphase::computePairCacheChanges()
 {
 	BT_PROFILE("bt3DGrid_computePairCacheChanges");
-	btGpu_computePairCacheChanges(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScan, m_hAABB, m_numHandles);
+	btGpu_computePairCacheChanges(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScanChanged, m_hAABB, m_numHandles);
 	return;
 }
 
@@ -610,11 +590,11 @@ void btGpu3DGridBroadphase::scanOverlappingPairBuff()
 {
 	BT_PROFILE("bt3DGrid_scanOverlappingPairBuff");
 	unsigned int sum = 0;
-	m_hPairScan[0]=0;
+	m_hPairScanChanged[0]=0;
 	for(int i = 0; i <= m_numHandles+1; i++) 
 	{
-		unsigned int delta = m_hPairScan[i];
-		m_hPairScan[i] = sum;
+		unsigned int delta = m_hPairScanChanged[i];
+		m_hPairScanChanged[i] = sum;
 		sum += delta;
 	}
 	return;
@@ -625,7 +605,7 @@ void btGpu3DGridBroadphase::scanOverlappingPairBuff()
 void btGpu3DGridBroadphase::squeezeOverlappingPairBuff()
 {
 	BT_PROFILE("bt3DGrid_squeezeOverlappingPairBuff");
-	btGpu_squeezeOverlappingPairBuff(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScan, m_hPairOut, m_hAABB, m_numHandles);
+	btGpu_squeezeOverlappingPairBuff(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScanChanged, m_hPairsChanged, m_hAABB, m_numHandles);
 	return;
 }
 

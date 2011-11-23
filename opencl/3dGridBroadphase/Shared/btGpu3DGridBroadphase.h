@@ -44,8 +44,8 @@ protected:
 	unsigned int*	m_hPairBuffStartCurr;
 	bt3DGrid3F1U*	m_hAABB;
 	unsigned int*	m_hPairBuff;
-	unsigned int*	m_hPairScan;
-	unsigned int*	m_hPairOut;
+	unsigned int*	m_hPairScanChanged;
+	unsigned int*	m_hPairsChanged;
 // large proxies
 	int		m_numLargeHandles;						
 	int		m_maxLargeHandles;						

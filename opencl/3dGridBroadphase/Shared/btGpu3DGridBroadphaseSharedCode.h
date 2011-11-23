@@ -282,7 +282,7 @@ BT_GPU___global__ void computePairCacheChangesD(uint* pPairBuff, uint2* pPairBuf
 	uint num_changes = 0;
 	for(uint k = 0; k < curr; k++, pInp++)
 	{
-		if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		if(((*pInp) & BT_3DGRID_PAIR_FOUND_FLG)||((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
 		{
 			num_changes++;
 		}
