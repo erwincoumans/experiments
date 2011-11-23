@@ -81,7 +81,7 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 	m_deviceCL->m_commandQueue = queue;
 	m_deviceCL->m_kernelManager = new adl::KernelManager;
 
-	int minSize = 256*1024;
+	int minSize = 1024*1024;
 	int maxSortBuffer = maxSmallProxies < minSize ? minSize :maxSmallProxies;
 
 	m_srcClBuffer = new adl::Buffer<unsigned int> (m_deviceCL,maxSmallProxies+2);
@@ -240,6 +240,9 @@ void bt3dGridBroadphaseOCL::allocateBuffers()
 		m_hashSize <<= 1;
 	}
 	memSize = m_hashSize * 2 * sizeof(unsigned int);
+	if (memSize < 1024*1024)
+		memSize = 1024*1024;
+
 	m_dBodiesHash = clCreateBuffer(m_cxMainContext, CL_MEM_READ_WRITE, memSize, NULL, &ciErrNum);
 	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
 
@@ -317,7 +320,8 @@ void bt3dGridBroadphaseOCL::runKernelWithWorkgroupSize(int kernelId, int globalS
 	cl_kernel kernelFunc = m_kernels[kernelId].m_kernel;
 	cl_int ciErrNum = clSetKernelArg(kernelFunc, 0, sizeof(int), (void*)&globalSize);
 	GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-	int workgroupSize = m_kernels[kernelId].m_workgroupSize;
+	int workgroupSize = btMin(64,m_kernels[kernelId].m_workgroupSize);
+
 	if(workgroupSize <= 0)
 	{ // let OpenCL library calculate workgroup size
 		size_t globalWorkSize[2];
@@ -561,7 +565,7 @@ void bt3dGridBroadphaseOCL::computePairCacheChanges()
 
 extern cl_device_type deviceType;
 
-void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
+void bt3dGridBroadphaseOCL::scanOverlappingPairBuff(bool copyToCpu)
 {
 
 	//Intel/CPU version doesn't handlel Adl scan well
@@ -601,7 +605,8 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff()
 		{
 			BT_PROFILE("copy GPU -> CPU");
 			//the data 
-			//copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2));
+			if (copyToCpu)
+				copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2));
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif

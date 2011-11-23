@@ -112,22 +112,25 @@ void btGridBroadphaseCl::calculateOverlappingPairs(float* positions, int numObje
 		BT_PROFILE("calcHashAABB");
 		calcHashAABB();
 	}
+
 	{
 		BT_PROFILE("sortHash");
 		// sort bodies based on hash
 		sortHash();
 	}
+
 	// find start of each cell
 	{
 		BT_PROFILE("findCellStart");
 		findCellStart();
 	}
+	
 	{
 		BT_PROFILE("findOverlappingPairs");
 		// findOverlappingPairs (small/small)
 		findOverlappingPairs();
 	}
-	
+
 	// add pairs to CPU cache
 	{
 		BT_PROFILE("computePairCacheChanges");
@@ -154,7 +157,7 @@ oclCHECKERROR(ciErrNum, CL_SUCCESS);
 	}
 	{
 		BT_PROFILE("scanOverlappingPairBuff");
-		scanOverlappingPairBuff();
+		scanOverlappingPairBuff(false);
 	}
 	{
 		BT_PROFILE("squeezeOverlappingPairBuff");
@@ -173,11 +176,12 @@ oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		
 
-		copyArrayFromDevice(m_hPairsChangedXY, m_dPairsChangedXY, sizeof(unsigned int) * m_numPrefixSum*2); //gSum
+//		copyArrayFromDevice(m_hPairsChangedXY, m_dPairsChangedXY, sizeof(unsigned int) * m_numPrefixSum*2); //gSum
 		clFinish(m_cqCommandQue);
 
 	}
-	
+
+
 	return;
 }
 

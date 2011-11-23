@@ -132,10 +132,10 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	
     // allocate host storage
     m_hBodiesHash = new unsigned int[m_maxHandles * 2];
-    //memset(m_hBodiesHash, 0x00, m_maxHandles*2*sizeof(unsigned int));
+    memset(m_hBodiesHash, 0x00, m_maxHandles*2*sizeof(unsigned int));
 
     m_hCellStart = new unsigned int[m_params.m_numCells];
-    //memset(m_hCellStart, 0x00, m_params.m_numCells * sizeof(unsigned int));
+    memset(m_hCellStart, 0x00, m_params.m_numCells * sizeof(unsigned int));
 
 	m_hPairBuffStartCurr = new unsigned int[m_maxHandles * 2 + 2];
 	// --------------- for now, init with m_maxPairsPerBody for each body
@@ -586,7 +586,7 @@ void btGpu3DGridBroadphase::computePairCacheChanges()
 }
 
 
-void btGpu3DGridBroadphase::scanOverlappingPairBuff()
+void btGpu3DGridBroadphase::scanOverlappingPairBuff(bool copyToCpu)
 {
 	BT_PROFILE("bt3DGrid_scanOverlappingPairBuff");
 	unsigned int sum = 0;
@@ -612,5 +612,4 @@ void btGpu3DGridBroadphase::squeezeOverlappingPairBuff()
 
 
 #include "btGpu3DGridBroadphaseSharedCode.h"
-
 

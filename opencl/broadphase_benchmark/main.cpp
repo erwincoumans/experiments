@@ -637,7 +637,13 @@ void InitCL()
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;//GPU;
+#ifdef CL_PLATFORM_INTEL
+	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
+#else
+	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
+#endif
+
+
 	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
@@ -1215,6 +1221,7 @@ void	broadphase()
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		if (runOpenCLKernels)
 		{
+
 			gFpIO.m_numObjects = NUM_OBJECTS;
 			gFpIO.m_positionOffset = (sizeof(cube_vertices) )/4;
 			gFpIO.m_clObjectsBuffer = clBuffer;
@@ -1223,30 +1230,11 @@ void	broadphase()
 
 			sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
 
-			
 
 			gFpIO.m_dPairsChangedXY = sBroadphase->m_dPairsChangedXY;
 			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
 			drawPairsOpenCL(gFpIO);
-
-#if 0
-			for (int i=0;i<overlap;i++)
-			{
-				int indexA = sBroadphase->m_hPairsChangedXY[i].x;
-				int indexB = sBroadphase->m_hPairsChangedXY[i].y;
-				colors[indexA*4] = 1.f;
-				colors[indexA*4+1] = 0.f;
-				colors[indexA*4+2] = 0.f;
-				colors[indexA*4+3] = 1.f;
-
-				colors[indexB*4] = 1.f;
-				colors[indexB*4+1] = 0.f;
-				colors[indexB*4+2] = 0.f;
-				colors[indexB*4+3] = 1.f;
-			}
-#endif
-
 
 		}
 	

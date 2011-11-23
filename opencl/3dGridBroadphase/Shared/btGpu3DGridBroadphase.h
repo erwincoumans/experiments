@@ -127,7 +127,7 @@ protected:
 	virtual void findOverlappingPairs();
 	virtual void findPairsLarge();
 	virtual void computePairCacheChanges();
-	virtual void scanOverlappingPairBuff();
+	virtual void scanOverlappingPairBuff(bool copyToCpu=true);
 	virtual void squeezeOverlappingPairBuff();
 };
 
