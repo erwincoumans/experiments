@@ -381,10 +381,9 @@ void btOpenCLUtils::getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info)
 	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &info.m_vecWidthDouble, NULL);
 }
 
-
-cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_device_id device, const char* kernelSource, const char* kernelName, cl_int* pErrNum, const char* additionalMacros )
+cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSource, cl_int* pErrNum, const char* additionalMacros )
 {
-	printf("compiling kernelName: %s ",kernelName);
+
 	cl_kernel kernel;
 	cl_int localErrNum;
 	size_t program_length = strlen(kernelSource);
@@ -430,6 +429,26 @@ cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_devi
 		return 0;
 	}
 
+	delete [] compileFlags;
+
+	return m_cpProgram;
+}
+
+
+cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_device_id device, const char* kernelSource, const char* kernelName, cl_int* pErrNum, cl_program prog, const char* additionalMacros )
+{
+	printf("compiling kernelName: %s ",kernelName);
+	cl_kernel kernel;
+	cl_int localErrNum;
+	size_t program_length = strlen(kernelSource);
+
+
+	cl_program m_cpProgram = prog;
+	if (!m_cpProgram)
+	{
+		m_cpProgram = compileCLProgramFromString(clContext,device,kernelSource,pErrNum, additionalMacros);
+	}
+
 
 	// Create the kernel
 	kernel = clCreateKernel(m_cpProgram, kernelName, &localErrNum);
@@ -441,9 +460,12 @@ cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_devi
 		return 0;
 	}
 
-	clReleaseProgram(m_cpProgram);
+	if (!prog && m_cpProgram)
+	{
+		clReleaseProgram(m_cpProgram);
+	}
 	printf("ready. \n");
-	delete [] compileFlags;
+
 
 	if (pErrNum)
 			*pErrNum = CL_SUCCESS;

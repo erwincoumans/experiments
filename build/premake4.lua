@@ -10,6 +10,11 @@ solution "0MySolution"
     description = "Enable Native Client build"
   }
   
+  newoption {
+    trigger     = "with-pe",
+    description = "Enable Physics Effects"
+  }
+  
 	configurations {"Release", "Debug"}
 	configuration "Release"
 		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "FloatFast"}
@@ -76,7 +81,7 @@ if not _OPTIONS["with-nacl"] then
 	
 	
 	
-	
+if _OPTIONS["with-pe"] then
 	
 	include "../physics_effects/base_level"
 	include "../physics_effects/low_level"
@@ -90,6 +95,8 @@ if not _OPTIONS["with-nacl"] then
 	include "../physics_effects/sample_api_physics_effects/5_raycast"
 	include "../physics_effects/sample_api_physics_effects/6_joint"
 
+end
+	
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"

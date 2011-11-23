@@ -1,5 +1,8 @@
 
 include "AMD"
+--include "Intel"
+--include "NVIDIA"
+
 
 	if os.is("Windows") then	
 		project "CDTestFramework"

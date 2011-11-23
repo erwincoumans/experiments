@@ -4,7 +4,7 @@
 
 #define NUM_OBJECTS_X 32
 //327
-#define NUM_OBJECTS_Y 16
+#define NUM_OBJECTS_Y 32
 #define NUM_OBJECTS_Z 16
 //#define NUM_OBJECTS_Z 20
 
@@ -43,6 +43,19 @@ static float angle(0);
 
 #include <stdlib.h>
 #include <math.h>
+#include "../3dGridBroadphase/Shared/btGpu3DGridBroadphase.h"
+#include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
+#include "btGridBroadphaseCl.h"
+
+#define USE_NEW
+#ifdef USE_NEW
+btGridBroadphaseCl* sBroadphase=0;
+#else
+btGpu3DGridBroadphase* sBroadphase=0;
+#endif
+
+btAlignedObjectArray<btBroadphaseProxy*> proxyArray;
+
 
 #define RS_SCALE (1.0 / (1.0 + RAND_MAX))
 
@@ -76,6 +89,9 @@ size_t randrange (size_t n)
 //OpenCL stuff
 #include "../basic_initialize/btOpenCLUtils.h"
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
+#include "findPairsOpenCL.h"
+
+btFindPairsIO gFpIO;
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
@@ -97,7 +113,7 @@ float m_ele=0.f;
 
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_interopKernel;
-cl_kernel g_broadphaseKernel;
+
 
 
 ////for Adl
@@ -115,8 +131,6 @@ bool runOpenCLKernels = true;
 static char* interopKernelString = 
 #include "integrateKernel.cl"
 
-static char* broadphaseKernelString = 
-#include "broadphaseKernel.cl"
 
 btStopwatch gStopwatch;
 int m_glutScreenWidth = 640;
@@ -669,6 +683,22 @@ void DeleteShaders()
 
 void InitShaders()
 {
+	
+	btOverlappingPairCache* overlappingPairCache=0;
+#ifdef	USE_NEW
+	sBroadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16,
+		g_cxMainContext ,g_device,g_cqCommandQue);
+#else
+	sBroadphase = new btGpu3DGridBroadphase(btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16);
+#endif
+
+
+
+//	sBroadphase = new bt3dGridBroadphaseOCL(overlappingPairCache,btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16,
+//		g_cxMainContext ,g_device,g_cqCommandQue);
+
+
+
 	bool loadFromFile = false;
 	instancingShader = gltLoadShaderPair("instancing.vs","instancing.fs", loadFromFile);
 
@@ -701,6 +731,20 @@ void InitShaders()
 				instance_positions_ptr[index*4+1]=-(j-NUM_OBJECTS_Y/2)*10;
 				instance_positions_ptr[index*4+2]=-(k-NUM_OBJECTS_Z/2)*10;
 				instance_positions_ptr[index*4+3]=1;
+
+				int shapeType =0;
+				void* userPtr = 0;
+				btVector3 aabbMin(
+					instance_positions_ptr[index*4],
+					instance_positions_ptr[index*4+1],
+					instance_positions_ptr[index*4+2]);
+				btVector3 aabbMax = aabbMin;
+				aabbMin -= btVector3(1,1,1);
+				aabbMax += btVector3(1,1,1);
+
+				void* myptr = (void*)index;//0;//&mBoxes[i]
+				btBroadphaseProxy* proxy = sBroadphase->createProxy(aabbMin,aabbMax,shapeType,myptr,1,1,0,0);//m_dispatcher);
+				proxyArray.push_back(proxy);
 
 				instance_quaternion_ptr[index*4]=0;
 				instance_quaternion_ptr[index*4+1]=0;
@@ -865,6 +909,7 @@ void myinit()
 {
 
 
+
 	//	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
 	GLfloat light_ambient[] = { btScalar(1.0), btScalar(1.2), btScalar(0.2), btScalar(1.0) };
 
@@ -1020,6 +1065,7 @@ void updatePos()
 
 	if (useCPU)
 	{
+#if 0
 		int index=0;
 		for (int i=0;i<NUM_OBJECTS_X;i++)
 		{
@@ -1035,6 +1081,7 @@ void updatePos()
 			}
 		}
 		writeTransforms();
+#endif
 
 	} 
 	else
@@ -1079,8 +1126,6 @@ void updatePos()
 
 void cpuBroadphase()
 {
-
-
 	glFlush();
 	char* bla =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
 
@@ -1089,39 +1134,62 @@ void cpuBroadphase()
 	float* colors= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
 	float* scaling= (float*)(bla+sizeof(cube_vertices) + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
 
-	//	positions[0]+=0.001f;
-
-	static int offset=0;
-	//offset++;
-
-	static btVector3 axis(1,0,0);
-	angle += 0.01f;
 	int index=0;
-	btQuaternion orn(axis,angle);
+
 	for (int i=0;i<NUM_OBJECTS_X;i++)
 	{
 		for (int j=0;j<NUM_OBJECTS_Y;j++)
 		{
 			for (int k=0;k<NUM_OBJECTS_Z;k++)
 			{
-				//if (!((index+offset)%15))
-				{
-					instance_positions_ptr[index*4+1]-=0.01f;
-					//positions[index*4]=instance_positions_ptr[index*4];
-					//positions[index*4+1]=instance_positions_ptr[index*4+1];
-					//positions[index*4+2]=instance_positions_ptr[index*4+2];
-					//positions[index*4+3]=instance_positions_ptr[index*4+3];
+				colors[index*4] = 0.f;
+				colors[index*4+1] = 1.f;
+				colors[index*4+2] = 0.f;
+				colors[index*4+3] = 1.f;
 
-					//orientations[index*4] = orn[0];
-					//orientations[index*4+1] = orn[1];
-					//orientations[index*4+2] = orn[2];
-					//orientations[index*4+3] = orn[3];
-				}
-				//				memcpy((void*)&orientations[index*4],orn,sizeof(btQuaternion));
+
+//				instance_positions_ptr[index*4+1]-=0.01f;
+				btVector3 aabbMin(
+					positions[index*4],
+					positions[index*4+1],
+					positions[index*4+2]);
+				btVector3 aabbMax = aabbMin;
+				aabbMin -= btVector3(1,1,1);
+				aabbMax += btVector3(1,1,1);
+
+				//sBroadphase->setAabb(proxyArray[index],aabbMin,aabbMax,0);
+
 				index++;
 			}
 		}
 	}
+
+#ifdef USE_NEW
+	
+
+#else
+	sBroadphase->calculateOverlappingPairs(0);
+	int overlap = sBroadphase->getOverlappingPairCache()->getNumOverlappingPairs();
+	for (int i=0;i<overlap;i++)
+	{
+		const btBroadphasePair& pair = sBroadphase->getOverlappingPairCache()->getOverlappingPairArray()[i];
+		int indexA = (int)pair.m_pProxy0->m_clientObject;
+		int indexB = (int)pair.m_pProxy1->m_clientObject;
+				colors[indexA*4] = 1.f;
+				colors[indexA*4+1] = 0.f;
+				colors[indexA*4+2] = 0.f;
+				colors[indexA*4+3] = 1.f;
+
+				colors[indexB*4] = 1.f;
+				colors[indexB*4+1] = 0.f;
+				colors[indexB*4+2] = 0.f;
+				colors[indexB*4+3] = 1.f;
+	}
+#endif
+
+	//now color the overlap
+
+	
 
 	glUnmapBuffer( GL_ARRAY_BUFFER);
 	//if this glFinish is removed, the animation is not always working/blocks
@@ -1147,25 +1215,46 @@ void	broadphase()
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		if (runOpenCLKernels)
 		{
-			int numObjects = NUM_OBJECTS;
-			int offset = (sizeof(cube_vertices) )/4;
+			gFpIO.m_numObjects = NUM_OBJECTS;
+			gFpIO.m_positionOffset = (sizeof(cube_vertices) )/4;
+			gFpIO.m_clObjectsBuffer = clBuffer;
+			gFpIO.m_dAABB = sBroadphase->m_dAABB;
+			findPairsOpenCL(gFpIO);
 
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 0, sizeof(int), &offset);
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 1, sizeof(int), &numObjects);
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+			sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
 
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
-			ciErrNum = clSetKernelArg(g_broadphaseKernel, 5, sizeof(cl_mem), (void*)&gBodyTimes);
-		
-			size_t	numWorkItems = NUM_OBJECTS;///workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
-			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_broadphaseKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
-			oclCHECKERROR(ciErrNum, CL_SUCCESS);
+			
+
+			gFpIO.m_dPairsChangedXY = sBroadphase->m_dPairsChangedXY;
+			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
+
+			drawPairsOpenCL(gFpIO);
+
+#if 0
+			for (int i=0;i<overlap;i++)
+			{
+				int indexA = sBroadphase->m_hPairsChangedXY[i].x;
+				int indexB = sBroadphase->m_hPairsChangedXY[i].y;
+				colors[indexA*4] = 1.f;
+				colors[indexA*4+1] = 0.f;
+				colors[indexA*4+2] = 0.f;
+				colors[indexA*4+3] = 1.f;
+
+				colors[indexB*4] = 1.f;
+				colors[indexB*4+1] = 0.f;
+				colors[indexB*4+2] = 0.f;
+				colors[indexB*4+3] = 1.f;
+			}
+#endif
+
+
 		}
 	
 		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		clFinish(g_cqCommandQue);
+
+
 
 	}
 }
@@ -1215,6 +1304,8 @@ void RenderScene(void)
 	updatePos();
 
 	broadphase();
+
+	//useCPU = true;
 
 	float stop = gStopwatch.getTimeMilliseconds();
 	gStopwatch.reset();
@@ -1306,7 +1397,7 @@ void ChangeSize(int w, int h)
 #ifdef RECREATE_CL_AND_SHADERS_ON_RESIZE
 	delete g_interopBuffer;
 	clReleaseKernel(g_interopKernel);
-	clReleaseKernel(g_broadphaseKernel);
+	releaseFindPairs(fpio);
 	DeleteCL();
 	DeleteShaders();
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
@@ -1321,7 +1412,7 @@ void ChangeSize(int w, int h)
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
-	g_broadphaseKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, broadphaseKernelString, "broadphaseKernel" );
+	initFindPairs(...);
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
 
 }
@@ -1433,7 +1524,7 @@ int main(int argc, char* argv[])
 	gLinVelMem = (cl_mem)linvelBuf.m_ptr;
 	gAngVelMem = (cl_mem)angvelBuf.m_ptr;
 	gBodyTimes = (cl_mem)bodyTimes.m_ptr;
-	
+
 	btVector3* linVelHost= new btVector3[size];
 	btVector3* angVelHost = new btVector3[size];
 	float*		bodyTimesHost = new float[size];
@@ -1450,7 +1541,8 @@ int main(int argc, char* argv[])
 	bodyTimes.write(bodyTimesHost,NUM_OBJECTS);
 
 	adl::DeviceUtils::waitForCompletion( g_deviceCL );
-	
+
+
 	InitShaders();
 	
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
@@ -1458,7 +1550,10 @@ int main(int argc, char* argv[])
 
 
 	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "interopKernel" );
-	g_broadphaseKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,broadphaseKernelString, "broadphaseKernel" );
+	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, NUM_OBJECTS);
+
+	
+
 
 	glutMainLoop();
 	ShutdownRC();

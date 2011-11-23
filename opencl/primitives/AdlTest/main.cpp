@@ -32,6 +32,10 @@ int main()
 	cfg.m_vendor = DeviceUtils::Config::VD_AMD;
 #endif
 
+#ifdef CL_PLATFORM_INTEL
+	cfg.m_vendor = DeviceUtils::Config::VD_INTEL;
+#endif
+
 #ifdef CL_PLATFORM_NVIDIA
 	cfg.m_vendor = adl::DeviceUtils::Config::VD_NV;
 #endif

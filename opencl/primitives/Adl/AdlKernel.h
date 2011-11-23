@@ -1,6 +1,8 @@
 /*
 		2011 Takahiro Harada
 */
+#ifndef ADL_KERNEL_H
+#define ADL_KERNEL_H
 
 #include <map>
 #include <string>
@@ -119,3 +121,5 @@ class KernelBuilder
 };
 
 };
+
+#endif //ADL_KERNEL_H

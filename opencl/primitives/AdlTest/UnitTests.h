@@ -703,11 +703,17 @@ void runAllTest()
 		cfg.m_vendor = adl::DeviceUtils::Config::VD_AMD;
 #endif
 
+#ifdef CL_PLATFORM_INTEL
+		cfg.m_vendor = adl::DeviceUtils::Config::VD_INTEL;
+		cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
+#endif
+		
+
 #ifdef CL_PLATFORM_NVIDIA
 		cfg.m_vendor = adl::DeviceUtils::Config::VD_NV;
 #endif
 
-//		cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
+
 		ddcl = DeviceUtils::allocate( TYPE_CL, cfg );
 		ddhost = DeviceUtils::allocate( TYPE_HOST, cfg );
 //		cfg.m_type = DeviceUtils::Config::DEVICE_GPU;
