@@ -37,7 +37,8 @@ class BoundSearch<TYPE_HOST> : public BoundSearchBase
 			HostBuffer<SortData>& src = *(HostBuffer<SortData>*)&rawSrc;
 			HostBuffer<u32>& dst = *(HostBuffer<u32>*)&rawDst;
 
-			for(u32 i=0; i<nSrc-1; i++) ADLASSERT( src[i].m_key <= src[i+1].m_key );
+			for(int i=0; i<nSrc-1; i++) 
+				ADLASSERT( src[i].m_key <= src[i+1].m_key );
 
 			if( option == BOUND_LOWER )
 			{
