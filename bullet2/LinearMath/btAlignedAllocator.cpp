@@ -15,6 +15,9 @@ subject to the following restrictions:
 
 #include "btAlignedAllocator.h"
 
+
+
+
 int gNumAlignedAllocs = 0;
 int gNumAlignedFree = 0;
 int gTotalBytesAlignedAllocs = 0;//detect memory leaks
@@ -103,6 +106,14 @@ void btAlignedAllocSetCustom(btAllocFunc *allocFunc, btFreeFunc *freeFunc)
 }
 
 #ifdef BT_DEBUG_MEMORY_ALLOCATIONS
+
+#define _CRTDBG_MAP_ALLOC
+
+#if (defined (_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && defined(_CRTDBG_MAP_ALLOC))
+	#include <stdlib.h>
+	#include <crtdbg.h>
+#endif //(defined (_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && defined(_CRTDBG_MAP_ALLOC))
+
 //this generic allocator provides the total allocated number of bytes
 #include <stdio.h>
 
@@ -115,8 +126,13 @@ void*   btAlignedAllocInternal  (size_t size, int alignment,int line,char* filen
  gTotalBytesAlignedAllocs += size;
  gNumAlignedAllocs++;
 
- 
- real = (char *)sAllocFunc(size + 2*sizeof(void *) + (alignment-1));
+ size_t sz = size + 2*sizeof(void *) + (alignment-1);
+
+#if (defined (_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && defined(_CRTDBG_MAP_ALLOC))
+ real = (char*) _malloc_dbg(sz, _NORMAL_BLOCK, filename, line);
+#else
+ real = (char *)sAllocFunc(sz);
+#endif
  if (real) {
    offset = (alignment - (unsigned long)(real + 2*sizeof(void *))) &
 (alignment-1);
@@ -148,7 +164,11 @@ void    btAlignedFreeInternal   (void* ptr,int line,char* filename)
 
 	   printf("free #%d at address %x, from %s,line %d, size %d\n",gNumAlignedFree,real, filename,line,size);
 
+#if (defined (_WIN32) && defined(_MSC_VER) && defined(_DEBUG) && defined(_CRTDBG_MAP_ALLOC))
+	  _free_dbg(real, _NORMAL_BLOCK);
+#else
    sFreeFunc(real);
+#endif
  } else
  {
 	 printf("NULL ptr\n");

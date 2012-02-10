@@ -21,8 +21,10 @@ subject to the following restrictions:
 ///that is better portable and more predictable
 
 #include "btScalar.h"
+
 //#define BT_DEBUG_MEMORY_ALLOCATIONS 1
 #ifdef BT_DEBUG_MEMORY_ALLOCATIONS
+
 
 #define btAlignedAlloc(a,b) \
 		btAlignedAllocInternal(a,b,__LINE__,__FILE__)
