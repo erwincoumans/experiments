@@ -23,6 +23,11 @@ subject to the following restrictions:
 #include "BulletCollision/BroadphaseCollision/btSimpleBroadphase.h"
 
 #include "btGpu3DGridBroadphaseSharedTypes.h"
+struct MyUint2
+{
+	int x;
+	int y;
+};
 
 //----------------------------------------------------------------------------------------
 
@@ -46,6 +51,7 @@ protected:
 	unsigned int*	m_hPairBuff;
 	unsigned int*	m_hPairScanChanged;
 	unsigned int*	m_hPairsChanged;
+	MyUint2*		m_hAllOverlappingPairs;
 // large proxies
 	int		m_numLargeHandles;						
 	int		m_maxLargeHandles;						
@@ -86,6 +92,14 @@ protected:
 	unsigned int	m_numOverflows;
 // 
 public:
+	virtual int getNumOverlap()
+	{
+		return m_hPairScanChanged[m_numHandles+1];
+	}
+	virtual MyUint2* getOverlap()
+	{
+		return m_hAllOverlappingPairs;
+	}
 	// NOTE : for better results gridSizeX, gridSizeY and gridSizeZ should be powers of 2 
 	btGpu3DGridBroadphase(const btVector3& cellSize, 
 					   int gridSizeX, int gridSizeY, int gridSizeZ, 

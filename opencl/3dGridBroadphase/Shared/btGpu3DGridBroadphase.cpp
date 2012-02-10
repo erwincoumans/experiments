@@ -83,6 +83,8 @@ btGpu3DGridBroadphase::~btGpu3DGridBroadphase()
 	//btSimpleBroadphase will free memory of btSortedOverlappingPairCache, because m_ownsPairCache
 	assert(m_bInitialized);
 	_finalize();
+
+	
 }
 
 // returns 2^n : 2^(n+1) > val >= 2^n
@@ -159,6 +161,10 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 	m_hPairsChanged = new unsigned int[m_maxHandles * m_maxPairsPerBody];
 	memset(m_hPairsChanged,0,sizeof(int)*(m_maxHandles * m_maxPairsPerBody));
 
+	m_hAllOverlappingPairs= new MyUint2[m_maxHandles * m_maxPairsPerBody];
+	memset(m_hAllOverlappingPairs,0,sizeof(MyUint2)*(m_maxHandles * m_maxPairsPerBody));
+
+
 // large proxies
 
 	// allocate handles buffer and put all handles on free list
@@ -194,6 +200,7 @@ void btGpu3DGridBroadphase::_finalize()
 	delete [] m_hPairBuff;
 	delete [] m_hPairScanChanged;
 	delete [] m_hPairsChanged;
+	delete [] m_hAllOverlappingPairs;
 	btAlignedFree(m_pLargeHandlesRawPtr);
 	m_bInitialized = false;
 }
@@ -202,6 +209,8 @@ void btGpu3DGridBroadphase::_finalize()
 
 void btGpu3DGridBroadphase::calculateOverlappingPairs(btDispatcher* dispatcher)
 {
+	btSimpleBroadphase::calculateOverlappingPairs(dispatcher);
+
 	if(m_numHandles <= 0)
 	{
 		BT_PROFILE("addLarge2LargePairsToCache");
@@ -605,7 +614,9 @@ void btGpu3DGridBroadphase::scanOverlappingPairBuff(bool copyToCpu)
 void btGpu3DGridBroadphase::squeezeOverlappingPairBuff()
 {
 	BT_PROFILE("bt3DGrid_squeezeOverlappingPairBuff");
-	btGpu_squeezeOverlappingPairBuff(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScanChanged, m_hPairsChanged, m_hAABB, m_numHandles);
+	//btGpu_squeezeOverlappingPairBuff(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScanChanged, m_hPairsChanged, m_hAABB, m_numHandles);
+	btGpu_squeezeOverlappingPairBuff(m_hPairBuff, m_hPairBuffStartCurr, m_hPairScanChanged, (unsigned int*)m_hAllOverlappingPairs, m_hAABB, m_numHandles);
+	
 	return;
 }
 

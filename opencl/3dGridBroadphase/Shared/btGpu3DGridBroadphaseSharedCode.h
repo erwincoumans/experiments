@@ -282,7 +282,8 @@ BT_GPU___global__ void computePairCacheChangesD(uint* pPairBuff, uint2* pPairBuf
 	uint num_changes = 0;
 	for(uint k = 0; k < curr; k++, pInp++)
 	{
-		if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		//if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		if(((*pInp) & BT_3DGRID_PAIR_ANY_FLG))
 		{
 			num_changes++;
 		}
@@ -293,7 +294,7 @@ BT_GPU___global__ void computePairCacheChangesD(uint* pPairBuff, uint2* pPairBuf
 //----------------------------------------------------------------------------------------
 
 BT_GPU___global__ void squeezeOverlappingPairBuffD(uint* pPairBuff, uint2* pPairBuffStartCurr, uint* pPairScan,
-												   uint* pPairOut, bt3DGrid3F1U* pAABB, uint numBodies)
+												   uint2* pPairOut, bt3DGrid3F1U* pAABB, uint numBodies)
 {
     int index = BT_GPU___mul24(BT_GPU_blockIdx.x, BT_GPU_blockDim.x) + BT_GPU_threadIdx.x;
     if(index >= (int)numBodies)
@@ -306,14 +307,17 @@ BT_GPU___global__ void squeezeOverlappingPairBuffD(uint* pPairBuff, uint2* pPair
 	uint start = start_curr.x;
 	uint curr = start_curr.y;
 	uint* pInp = pPairBuff + start;
-	uint* pOut = pPairOut + pPairScan[index+1];
+	uint2* pOut = pPairOut + pPairScan[index+1];
 	uint* pOut2 = pInp;
 	uint num = 0; 
 	for(uint k = 0; k < curr; k++, pInp++)
 	{
-		if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
+		if((*pInp) & BT_3DGRID_PAIR_ANY_FLG)
+		//if(!((*pInp) & BT_3DGRID_PAIR_FOUND_FLG))
 		{
-			*pOut = *pInp;
+			pOut->x = handleIndex;
+			pOut->y = (*pInp) & (~BT_3DGRID_PAIR_ANY_FLG);
+
 			pOut++;
 		}
 		if((*pInp) & BT_3DGRID_PAIR_ANY_FLG)
@@ -407,11 +411,11 @@ void BT_GPU_PREF(computePairCacheChanges(unsigned int* pPairBuff, unsigned int* 
 
 //----------------------------------------------------------------------------------------
 
-void BT_GPU_PREF(squeezeOverlappingPairBuff(unsigned int* pPairBuff, unsigned int* pPairBuffStartCurr, unsigned int* pPairScan, unsigned int* pPairOut, bt3DGrid3F1U* pAABB, unsigned int numBodies))
+void BT_GPU_PREF(squeezeOverlappingPairBuff(unsigned int* pPairBuff, unsigned int* pPairBuffStartCurr, unsigned int* pPairScan,  unsigned int* pPairOut, bt3DGrid3F1U* pAABB, unsigned int numBodies))
 {
     int numThreads, numBlocks;
     BT_GPU_PREF(computeGridSize)(numBodies, 256, numBlocks, numThreads);
-    BT_GPU_EXECKERNEL(numBlocks, numThreads, squeezeOverlappingPairBuffD, ((uint*)pPairBuff,(uint2*)pPairBuffStartCurr,(uint*)pPairScan,(uint*)pPairOut,pAABB,numBodies));
+    BT_GPU_EXECKERNEL(numBlocks, numThreads, squeezeOverlappingPairBuffD, ((uint*)pPairBuff,(uint2*)pPairBuffStartCurr,(uint*)pPairScan,(uint2*)pPairOut,pAABB,numBodies));
     BT_GPU_CHECK_ERROR("Kernel execution failed: btCudaSqueezeOverlappingPairBuffD");
 } // btCuda_squeezeOverlappingPairBuff()
 

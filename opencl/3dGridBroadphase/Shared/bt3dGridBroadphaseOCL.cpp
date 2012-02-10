@@ -17,6 +17,7 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedAllocator.h"
 #include "LinearMath/btQuickprof.h"
 #include "BulletCollision/BroadphaseCollision/btOverlappingPairCache.h"
+#include "../basic_initialize/btOpenCLUtils.h"
 
 #include "bt3dGridBroadphaseOCL.h"
 
@@ -28,6 +29,8 @@ subject to the following restrictions:
 #include <AdlPrimitives/Sort/RadixSort.h>
 
 #define ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
+
+#define GRID_OCL_PATH "..\\..\\opencl\\3dGridBroadphase\\Shared\\bt3dGridBroadphaseOCL.cl"
 
 
 #define MSTRINGIFY(A) #A
@@ -60,7 +63,9 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 												int maxSmallProxies, int maxLargeProxies, int maxPairsPerSmallProxy,
 												btScalar maxSmallProxySize,
 												int maxSmallProxiesPerCell,
-												cl_context context, cl_device_id device, cl_command_queue queue) : 
+												cl_context context, cl_device_id device, cl_command_queue queue,
+												adl::DeviceCL* deviceCL
+												) : 
 	btGpu3DGridBroadphase(overlappingPairCache, cellSize, gridSizeX, gridSizeY, gridSizeZ, maxSmallProxies, maxLargeProxies, maxPairsPerSmallProxy, maxSmallProxySize, maxSmallProxiesPerCell)
 {
 	initCL(context, device, queue);
@@ -75,21 +80,20 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 	adl::DeviceUtils::Config cfg;
 	m_deviceHost = adl::DeviceUtils::allocate( adl::TYPE_HOST, cfg );
 
-	m_deviceCL = new adl::DeviceCL();
-	m_deviceCL->m_deviceIdx = device;
-	m_deviceCL->m_context = context;
-	m_deviceCL->m_commandQueue = queue;
-	m_deviceCL->m_kernelManager = new adl::KernelManager;
+	m_deviceCL = deviceCL;
 
-	int minSize = 1024*1024;
+	int minSize = 256*1024;
 	int maxSortBuffer = maxSmallProxies < minSize ? minSize :maxSmallProxies;
 
 	m_srcClBuffer = new adl::Buffer<unsigned int> (m_deviceCL,maxSmallProxies+2);
-
 	m_srcClBuffer->write(&zeroEl,1,0);
+
+	//m_srcClBuffer->write(&infElem,maxSmallProxies,0);
+	m_srcClBuffer->write(&infElem,1,maxSmallProxies);
+	m_srcClBuffer->write(&zeroEl,1,maxSmallProxies+1);
 	m_deviceCL->waitForCompletion();
 	
-	gData1 = adl::PrefixScan<adl::TYPE_CL>::allocate( m_deviceCL, maxSmallProxies+2,adl::PrefixScanBase::EXCLUSIVE );
+	gData1 = adl::PrefixScan<adl::TYPE_CL>::allocate( m_deviceCL, maxSortBuffer+2,adl::PrefixScanBase::EXCLUSIVE );
 	dataHost = adl::RadixSort<adl::TYPE_HOST>::allocate( m_deviceHost, maxSmallProxies+2 );
 	dataC = adl::RadixSort32<adl::TYPE_CL>::allocate( m_deviceCL, maxSortBuffer+2 );
 	
@@ -101,11 +105,11 @@ bt3dGridBroadphaseOCL::~bt3dGridBroadphaseOCL()
 {
 	//btSimpleBroadphase will free memory of btSortedOverlappingPairCache, because m_ownsPairCache
 	assert(m_bInitialized);
-	adl::DeviceUtils::deallocate(m_deviceHost);
+	adl::RadixSort<adl::TYPE_HOST>::deallocate(dataHost);
 	adl::PrefixScan<adl::TYPE_CL>::deallocate(gData1);
-	delete m_deviceCL;
-	
-
+	adl::RadixSort32<adl::TYPE_CL>::deallocate(dataC);
+	adl::DeviceUtils::deallocate(m_deviceHost);
+	delete m_srcClBuffer;
 }
 
 #ifdef CL_PLATFORM_MINI_CL
@@ -121,10 +125,6 @@ MINICL_DECLARE(kFindOverlappingPairs)
 MINICL_DECLARE(kFindPairsLarge)
 MINICL_DECLARE(kComputePairCacheChanges)
 MINICL_DECLARE(kSqueezeOverlappingPairBuff)
-MINICL_DECLARE(kBitonicSortCellIdLocal)
-MINICL_DECLARE(kBitonicSortCellIdLocal1)
-MINICL_DECLARE(kBitonicSortCellIdMergeGlobal)
-MINICL_DECLARE(kBitonicSortCellIdMergeLocal)
 #undef MINICL_DECLARE
 #endif
 
@@ -140,10 +140,6 @@ void bt3dGridBroadphaseOCL::initCL(cl_context context, cl_device_id device, cl_c
 		MINICL_REGISTER(kFindPairsLarge)
 		MINICL_REGISTER(kComputePairCacheChanges)
 		MINICL_REGISTER(kSqueezeOverlappingPairBuff)
-		MINICL_REGISTER(kBitonicSortCellIdLocal)
-		MINICL_REGISTER(kBitonicSortCellIdLocal1)
-		MINICL_REGISTER(kBitonicSortCellIdMergeGlobal)
-		MINICL_REGISTER(kBitonicSortCellIdMergeLocal)
 	#endif
 
 	cl_int ciErrNum;
@@ -155,23 +151,10 @@ void bt3dGridBroadphaseOCL::initCL(cl_context context, cl_device_id device, cl_c
 	btAssert(queue);
 	m_cqCommandQue = queue;
 	
-	// create the program
-	size_t programLength = strlen(spProgramSource);
-	printf("OpenCL compiles bt3dGridBroadphaseOCL.cl ...");
-	m_cpProgram = clCreateProgramWithSource(m_cxMainContext, 1, &spProgramSource, &programLength, &ciErrNum);
-	// build the program
-	ciErrNum = clBuildProgram(m_cpProgram, 0, NULL, "-DGUID_ARG=""""", NULL, NULL);
-	if(ciErrNum != CL_SUCCESS)
-	{
-		// write out standard error
-		char cBuildLog[10240];
-		clGetProgramBuildInfo(m_cpProgram, m_cdDevice, CL_PROGRAM_BUILD_LOG, 
-							  sizeof(cBuildLog), cBuildLog, NULL );
-		printf("\n\n%s\n\n\n", cBuildLog);
-		printf("Press ENTER key to terminate the program\n");
-		getchar();
-		exit(-1); 
-	}
+	//adl::Kernel kern = m_deviceCL->getKernel(fileName,funcName,options,src);
+	
+	m_cpProgram = btOpenCLUtils::compileCLProgramFromString(m_cxMainContext,m_cdDevice,spProgramSource, &ciErrNum,"-DGUID_ARG=""""",GRID_OCL_PATH);
+	
 	printf("OK\n");
 }
 
@@ -218,10 +201,6 @@ void bt3dGridBroadphaseOCL::initKernels()
 	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 4, sizeof(cl_mem),(void*)&m_dPairsChanged);
 	setKernelArg(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, 5, sizeof(cl_mem),(void*)&m_dAABB);
 
-	initKernel(GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL, "kBitonicSortCellIdLocal");
-	initKernel(GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL_1, "kBitonicSortCellIdLocal1");
-	initKernel(GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL, "kBitonicSortCellIdMergeGlobal");
-	initKernel(GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL, "kBitonicSortCellIdMergeLocal");
 }
 
 
@@ -281,7 +260,7 @@ void bt3dGridBroadphaseOCL::allocateBuffers()
 
 void bt3dGridBroadphaseOCL::prefillBuffers()
 {
-	memset(m_hBodiesHash, 0x7F, m_maxHandles*2*sizeof(unsigned int));
+	memset(m_hBodiesHash, 0xFF, m_maxHandles*2*sizeof(unsigned int));
 	copyArrayToDevice(m_dBodiesHash, m_hBodiesHash, m_maxHandles * 2 * sizeof(unsigned int));
 	// now fill the rest (bitonic sorting works with size == pow of 2)
 	int remainder = m_hashSize - m_maxHandles;
@@ -332,7 +311,7 @@ void bt3dGridBroadphaseOCL::runKernelWithWorkgroupSize(int kernelId, int globalS
 	else
 	{
 		size_t localWorkSize[2], globalWorkSize[2];
-		workgroupSize = btMin(workgroupSize, globalSize);
+		//workgroupSize = btMin(workgroupSize, globalSize);
 		int num_t = globalSize / workgroupSize;
 		int num_g = num_t * workgroupSize;
 		if(num_g < globalSize)
@@ -438,7 +417,7 @@ void bt3dGridBroadphaseOCL::sortHash()
 {
 	BT_PROFILE("sortHash");
 #ifdef CL_PLATFORM_MINI_CL
-	copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+	//copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
 	btGpu3DGridBroadphase::sortHash();
 	copyArrayToDevice(m_dBodiesHash, m_hBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
 #else
@@ -462,14 +441,22 @@ void bt3dGridBroadphaseOCL::sortHash()
 	inout.m_device = this->m_deviceCL;
 	inout.m_size = m_numHandles;
 	inout.m_ptr = (adl::SortData*)m_dBodiesHash;
-	adl::RadixSort32<adl::TYPE_CL>::execute(dataC,inout, m_numHandles);
+	int actualHandles = m_numHandles;
+	int dataAlignment = adl::RadixSort32<adl::TYPE_CL>::DATA_ALIGNMENT;
+
+	if (actualHandles%dataAlignment)
+	{
+		actualHandles += dataAlignment-(actualHandles%dataAlignment);
+	}
+
+	adl::RadixSort32<adl::TYPE_CL>::execute(dataC,inout, actualHandles);
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif //ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	}
 	{
-		BT_PROFILE("copyArrayFromDevice");
-	copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
+		//BT_PROFILE("copyArrayFromDevice");
+	//copyArrayFromDevice(m_hBodiesHash, m_dBodiesHash, m_numHandles * 2 * sizeof(unsigned int));
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif //ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
@@ -488,12 +475,13 @@ void bt3dGridBroadphaseOCL::findCellStart()
 {
 #if 1
 	BT_PROFILE("findCellStart");
-	runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_CLEAR_CELL_START, m_numCells);
+		
 	#if defined(CL_PLATFORM_MINI_CL)
 		btGpu3DGridBroadphase::findCellStart();
 		copyArrayToDevice(m_dCellStart, m_hCellStart, m_numCells * sizeof(unsigned int));
 	#else
-		runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_FIND_CELL_START, m_numHandles);
+			runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_CLEAR_CELL_START, m_numCells);	
+			runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_FIND_CELL_START, m_numHandles);
 	#endif
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
@@ -519,6 +507,8 @@ void bt3dGridBroadphaseOCL::findOverlappingPairs()
 
 #else
 	btGpu3DGridBroadphase::findOverlappingPairs();
+	copyArrayToDevice(m_dPairBuffStartCurr, m_hPairBuffStartCurr, (m_maxHandles * 2 + 1) * sizeof(unsigned int)); 
+	copyArrayToDevice(m_dPairBuff, m_hPairBuff, m_maxHandles * m_maxPairsPerBody * sizeof(unsigned int));
 #endif
 	return;
 }
@@ -553,9 +543,13 @@ void bt3dGridBroadphaseOCL::computePairCacheChanges()
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
+	copyArrayFromDevice( m_hPairScanChanged,m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
 
 #else
 	btGpu3DGridBroadphase::computePairCacheChanges();
+	copyArrayToDevice(m_dPairScanChanged, m_hPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
+	
+
 #endif
 	return;
 }
@@ -574,9 +568,15 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff(bool copyToCpu)
 		copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
 		btGpu3DGridBroadphase::scanOverlappingPairBuff();
 		copyArrayToDevice(m_dPairScanChanged, m_hPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
+		m_numPrefixSum = m_hPairScanChanged[m_numHandles+1];
+		clFinish(m_cqCommandQue);
+		//memset(m_hPairScanChanged,0,sizeof(int)*m_maxHandles + 2);
 	}
 #else
 	{
+
+	//	copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
+	//	btGpu3DGridBroadphase::scanOverlappingPairBuff();
 
 		adl::Buffer<unsigned int> destBuffer;
 		
@@ -598,18 +598,48 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff(bool copyToCpu)
 			BT_PROFILE("PrefixScan");
 			
 			adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&m_numPrefixSum);
+			
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
+		//if (m_numPrefixSum>0x1000)
+		//	{
+		//		printf("error m_numPrefixSum==%d\n",m_numPrefixSum);
+		//	}
+
 		}
+
+#if 0
+		unsigned int* verifyhPairScanChanged = new unsigned int[m_maxHandles + 2];
+		memset(verifyhPairScanChanged,0,sizeof(int)*m_maxHandles + 2);
+
+		copyArrayFromDevice(verifyhPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2));
+		clFinish(m_cqCommandQue);
+
+		/*for (int i=0;i<m_numHandles+2;i++)
 		{
-			BT_PROFILE("copy GPU -> CPU");
+			if (verifyhPairScanChanged[i] != m_hPairScanChanged[i])
+			{
+				printf("hello!\n");
+			}
+		}
+		*/
+
+#endif
+
+
+		if (1)
+		{
+			
 			//the data 
 			if (copyToCpu)
+			{
+				BT_PROFILE("copy GPU -> CPU");
 				copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2));
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
+			}
 
 		}
 
@@ -628,7 +658,7 @@ void bt3dGridBroadphaseOCL::squeezeOverlappingPairBuff()
 	runKernelWithWorkgroupSize(GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF, m_numHandles);
 //	btCuda_squeezeOverlappingPairBuff(m_dPairBuff, m_dPairBuffStartCurr, m_dPairScanChanged, m_dPairsChanged, m_dAABB, m_numHandles);
 	
-	copyArrayFromDevice(m_hPairsChanged, m_dPairsChanged, sizeof(unsigned int) * m_hPairScanChanged[m_numHandles+1]); //gSum
+	//copyArrayFromDevice(m_hPairsChanged, m_dPairsChanged, sizeof(unsigned int) * m_numPrefixSum);//m_hPairScanChanged[m_numHandles+1]); //gSum
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif
@@ -648,81 +678,3 @@ void bt3dGridBroadphaseOCL::resetPool(btDispatcher* dispatcher)
 }
 
 
-
-//Note: logically shared with BitonicSort OpenCL code!
-
-void bt3dGridBroadphaseOCL::bitonicSort(cl_mem pKey, unsigned int arrayLength, unsigned int dir)
-{
-	unsigned int localSizeLimit = m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL].m_workgroupSize * 2;
-    if(arrayLength < 2)
-        return;
-    //Only power-of-two array lengths are supported so far
-    dir = (dir != 0);
-    cl_int ciErrNum;
-    size_t localWorkSize, globalWorkSize;
-    if(arrayLength <= localSizeLimit)
-    {
-        btAssert( (arrayLength % localSizeLimit) == 0);
-        //Launch bitonicSortLocal
-		ciErrNum  = clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL].m_kernel, 0,   sizeof(cl_mem), (void *)&pKey);
-        ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL].m_kernel, 1,  sizeof(cl_uint), (void *)&arrayLength);
-        ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL].m_kernel, 2,  sizeof(cl_uint), (void *)&dir);
-		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-
-        localWorkSize  = localSizeLimit / 2;
-        globalWorkSize = arrayLength / 2;
-        ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL].m_kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, NULL);
-		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-    }
-    else
-    {
-        //Launch bitonicSortLocal1
-        ciErrNum  = clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL_1].m_kernel, 0,  sizeof(cl_mem), (void *)&pKey);
-		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-
-        localWorkSize  = localSizeLimit / 2;
-        globalWorkSize = arrayLength / 2;
-        ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL_1].m_kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, NULL);
-		GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-
-        for(unsigned int size = 2 * localSizeLimit; size <= arrayLength; size <<= 1)
-        {
-            for(unsigned stride = size / 2; stride > 0; stride >>= 1)
-            {
-                if(stride >= localSizeLimit)
-                {
-                    //Launch bitonicMergeGlobal
-                    ciErrNum  = clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 0,  sizeof(cl_mem), (void *)&pKey);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 1, sizeof(cl_uint), (void *)&arrayLength);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 2, sizeof(cl_uint), (void *)&size);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 3, sizeof(cl_uint), (void *)&stride);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 4, sizeof(cl_uint), (void *)&dir);
-					GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-
-                    localWorkSize  = localSizeLimit / 4;
-                    globalWorkSize = arrayLength / 2;
-
-                    ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL].m_kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, NULL);
-					GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-                }
-                else
-                {
-                    //Launch bitonicMergeLocal
-					ciErrNum  = clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 0,  sizeof(cl_mem), (void *)&pKey);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 1, sizeof(cl_uint), (void *)&arrayLength);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 2, sizeof(cl_uint), (void *)&stride);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 3, sizeof(cl_uint), (void *)&size);
-                    ciErrNum |= clSetKernelArg(m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 4, sizeof(cl_uint), (void *)&dir);
-					GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-
-                    localWorkSize  = localSizeLimit / 2;
-                    globalWorkSize = arrayLength / 2;
-
-                    ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, m_kernels[GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL].m_kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, NULL);
-					GRID3DOCL_CHECKERROR(ciErrNum, CL_SUCCESS);
-                    break;
-                }
-            }
-        }
-    }
-}

@@ -59,10 +59,6 @@ enum
 	GRID3DOCL_KERNEL_FIND_PAIRS_LARGE,
 	GRID3DOCL_KERNEL_COMPUTE_CACHE_CHANGES,
 	GRID3DOCL_KERNEL_SQUEEZE_PAIR_BUFF,
-	GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL,
-	GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_LOCAL_1,
-	GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_GLOBAL,
-	GRID3DOCL_KERNEL_BITONIC_SORT_CELL_ID_MERGE_LOCAL,
 	GRID3DOCL_KERNEL_TOTAL
 };
 
@@ -114,7 +110,9 @@ public:
 							int maxSmallProxiesPerCell = 8,
 							cl_context context = NULL,
 							cl_device_id device = NULL,
-							cl_command_queue queue = NULL);
+							cl_command_queue queue = NULL,
+							adl::DeviceCL* deviceCL = 0
+							);
 	virtual ~bt3dGridBroadphaseOCL();
 
 protected:
@@ -129,7 +127,6 @@ protected:
 	void setKernelArg(int kernelId, int argNum, int argSize, void* argPtr);
 	void copyArrayToDevice(cl_mem device, const void* host, unsigned int size, int devOffs = 0, int hostOffs = 0);
 	void copyArrayFromDevice(void* host, const cl_mem device, unsigned int size, int hostOffs = 0, int devOffs = 0);
-	void bitonicSort(cl_mem pKey, unsigned int arrayLength, unsigned int dir);
 
 // overrides
 	virtual void setParameters(bt3DGridBroadphaseParams* hostParams);
