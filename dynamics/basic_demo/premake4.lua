@@ -1,5 +1,5 @@
 
-include "AMD"
+-- include "AMD"
 
 if os.is("Windows") then
 	
