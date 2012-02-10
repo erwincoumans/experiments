@@ -28,7 +28,9 @@ typename PrefixScan<TYPE>::Data* PrefixScan<TYPE>::allocate(const Device* device
 	data->m_localScanKernel = device->getKernel( PATH, KERNEL0, 0, src[TYPE] );
 	data->m_blockSumKernel = device->getKernel( PATH, KERNEL1, 0, src[TYPE] );
 	data->m_propagationKernel = device->getKernel( PATH, KERNEL2, 0, src[TYPE] );
-	data->m_workBuffer = new Buffer<u32>( device, (NEXTMULTIPLEOF( max2( maxSize/BLOCK_SIZE, (int)BLOCK_SIZE ), BLOCK_SIZE )+1) );
+
+	int bufSize = (NEXTMULTIPLEOF( max2( maxSize/BLOCK_SIZE, (int)BLOCK_SIZE ), BLOCK_SIZE )+1);
+	data->m_workBuffer = new Buffer<u32>( device, bufSize );
 	data->m_constBuffer[0] = new Buffer<int4>( device, 1, BufferBase::BUFFER_CONST );
 	data->m_constBuffer[1] = new Buffer<int4>( device, 1, BufferBase::BUFFER_CONST );
 	data->m_constBuffer[2] = new Buffer<int4>( device, 1, BufferBase::BUFFER_CONST );
@@ -83,11 +85,7 @@ void PrefixScan<TYPE>::execute(Data* data, Buffer<u32>& src, Buffer<u32>& dst, i
 		launcher.setConst( *data->m_constBuffer[1], constBuffer );
 		launcher.launch1D( BLOCK_SIZE, BLOCK_SIZE );
 	}
-
-	if( sum )
-	{
-		data->m_workBuffer->read( sum, 1, numBlocks );
-	}
+	
 
 	if( numBlocks > 1 )
 	{
@@ -97,6 +95,13 @@ void PrefixScan<TYPE>::execute(Data* data, Buffer<u32>& src, Buffer<u32>& dst, i
 		launcher.setConst( *data->m_constBuffer[2], constBuffer );
 		launcher.launch1D( (numBlocks-1)*BLOCK_SIZE, BLOCK_SIZE );
 	}
+
+	DeviceUtils::waitForCompletion( data->m_device );
+	if( sum )
+	{
+		dstNative->read( sum, 1, n-1);
+	}
+	DeviceUtils::waitForCompletion( data->m_device );
 
 	BufferUtils::unmap<false>( srcNative, &src );
 	BufferUtils::unmap<true>( dstNative, &dst );

@@ -6,8 +6,7 @@
 static char* broadphaseKernelString = 
 #include "broadphaseKernel.cl"
 
-static const char* sp3dGridBroadphaseSource = 
-#include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.cl"
+#define GRID_BROADPHASE_PATH "..\\..\\opencl\\broadphase_benchmark\\broadphaseKernel.cl"
 
 
 
@@ -20,11 +19,15 @@ void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id de
 	fpio.m_mainContext = cxMainContext;
 	fpio.m_cqCommandQue = commandQueue;
 	fpio.m_device = device;
-	fpio.m_broadphaseBruteForceKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseKernel" );
-	fpio.m_broadphaseGridKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseGridKernel" );
-	fpio.m_broadphaseColorKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseColorKernel" );
+	cl_int pErrNum;
+	cl_program prog = btOpenCLUtils::compileCLProgramFromString(cxMainContext, device, broadphaseKernelString, &pErrNum ,"",GRID_BROADPHASE_PATH);
 
-	
+	fpio.m_broadphaseBruteForceKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseKernel" ,&pErrNum,prog);
+	fpio.m_initializeGpuAabbsKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "initializeGpuAabbs" ,&pErrNum,prog);
+	fpio.m_broadphaseColorKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseColorKernel" ,&pErrNum,prog);
+
+	fpio.m_setupBodiesKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "setupBodiesKernel" ,&pErrNum,prog);
+	fpio.m_copyVelocitiesKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "copyVelocitiesKernel" ,&pErrNum,prog);
 
 
 
@@ -48,7 +51,7 @@ void	findPairsOpenCLBruteForce(btFindPairsIO& fpio)
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
 
-void	findPairsOpenCL(btFindPairsIO& fpio)
+void	setupGpuAabbs(btFindPairsIO& fpio)
 {
 
 			int ciErrNum = 0;
@@ -56,19 +59,74 @@ void	findPairsOpenCL(btFindPairsIO& fpio)
 			int numObjects = fpio.m_numObjects;
 			int offset = fpio.m_positionOffset;
 
-			ciErrNum = clSetKernelArg(fpio.m_broadphaseGridKernel, 0, sizeof(int), &offset);
-			ciErrNum = clSetKernelArg(fpio.m_broadphaseGridKernel, 1, sizeof(int), &numObjects);
-			ciErrNum = clSetKernelArg(fpio.m_broadphaseGridKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
-			ciErrNum = clSetKernelArg(fpio.m_broadphaseGridKernel, 3, sizeof(cl_mem), (void*)&fpio.m_dAABB);
-
-			size_t numWorkItems = numObjects;///workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
-			size_t workGroupSize = 64;
-			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_broadphaseGridKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 3, sizeof(cl_mem), (void*)&fpio.m_dAABB);
+				size_t workGroupSize = 64;
+			size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
+		
+			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
 
 
-void	drawPairsOpenCL(btFindPairsIO&	fpio)
+void	setupBodies(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias)
+{
+	int ciErrNum = 0;
+
+	int numObjects = fpio.m_numObjects;
+	int offset = fpio.m_positionOffset;
+
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 0, sizeof(int), &offset);
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 1, sizeof(int), &fpio.m_numObjects);
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
+
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 3, sizeof(cl_mem), (void*)&linVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 4, sizeof(cl_mem), (void*)&angVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 5, sizeof(cl_mem), (void*)&bodies);
+	ciErrNum = clSetKernelArg(fpio.m_setupBodiesKernel, 6, sizeof(cl_mem), (void*)&bodyInertias);
+	
+	if (numObjects)
+	{
+		size_t workGroupSize = 64;
+		size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
+
+		ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_setupBodiesKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
+
+}
+
+
+void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias)
+{
+	int ciErrNum = 0;
+
+	int numObjects = fpio.m_numObjects;
+	int offset = fpio.m_positionOffset;
+
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 0, sizeof(int), &offset);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 1, sizeof(int), &fpio.m_numObjects);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
+
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 3, sizeof(cl_mem), (void*)&linVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 4, sizeof(cl_mem), (void*)&angVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 5, sizeof(cl_mem), (void*)&bodies);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 6, sizeof(cl_mem), (void*)&bodyInertias);
+	
+	if (numObjects)
+	{
+		size_t workGroupSize = 64;
+		size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
+				
+		ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_copyVelocitiesKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
+
+}
+
+void	colorPairsOpenCL(btFindPairsIO&	fpio)
 {
 	int ciErrNum = 0;
 
@@ -78,23 +136,30 @@ void	drawPairsOpenCL(btFindPairsIO&	fpio)
 	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 0, sizeof(int), &offset);
 	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 1, sizeof(int), &fpio.m_numObjects);
 	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
-	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 3, sizeof(cl_mem), (void*)&fpio.m_dPairsChangedXY);
+	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 3, sizeof(cl_mem), (void*)&fpio.m_dAllOverlappingPairs);
 	ciErrNum = clSetKernelArg(fpio.m_broadphaseColorKernel, 4, sizeof(int), &fpio.m_numOverlap);
 
 
-	size_t numWorkItems = numObjects;///workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
-	size_t workGroupSize = 64;
-	ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_broadphaseColorKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
-	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	if (fpio.m_numOverlap)
+	{
+		size_t workGroupSize = 64;
+		size_t numWorkItems = workGroupSize*((fpio.m_numOverlap+ (workGroupSize)) / workGroupSize);
+				
+		ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_broadphaseColorKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
 }
 
 
 
 void releaseFindPairs(btFindPairsIO& fpio)
 {
-	clReleaseKernel(fpio.m_broadphaseGridKernel);
+	clReleaseKernel(fpio.m_initializeGpuAabbsKernel);
 	clReleaseKernel(fpio.m_broadphaseColorKernel);
 	clReleaseKernel(fpio.m_broadphaseBruteForceKernel);
+	clReleaseKernel(fpio.m_setupBodiesKernel);
+	clReleaseKernel(fpio.m_copyVelocitiesKernel);
+
 
 }
 

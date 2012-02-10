@@ -96,6 +96,7 @@ int main()
 	{
 		runAllTest();
 	}
+	printf("End, press <enter>\n");
+	getchar();
 }
-
 

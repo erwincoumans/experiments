@@ -112,7 +112,7 @@ float m_ele=0.f;
 
 
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
-cl_kernel g_interopKernel;
+cl_kernel g_sineWaveKernel;
 
 
 
@@ -125,7 +125,7 @@ adl::DeviceCL* g_deviceCL=0;
 
 bool useCPU = false;
 bool printStats = false;
-bool runOpenCLKernels = true;
+bool runOpenCLKernels = false;//true;
 
 #define MSTRINGIFY(A) #A
 static char* interopKernelString = 
@@ -692,7 +692,7 @@ void InitShaders()
 	
 	btOverlappingPairCache* overlappingPairCache=0;
 #ifdef	USE_NEW
-	sBroadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16,
+	sBroadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(3.f, 3.f, 3.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16,
 		g_cxMainContext ,g_device,g_cqCommandQue);
 #else
 	sBroadphase = new btGpu3DGridBroadphase(btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16);
@@ -1104,20 +1104,20 @@ void updatePos()
 			int numObjects = NUM_OBJECTS;
 			int offset = (sizeof(cube_vertices) )/4;
 
-			ciErrNum = clSetKernelArg(g_interopKernel, 0, sizeof(int), &offset);
-			ciErrNum = clSetKernelArg(g_interopKernel, 1, sizeof(int), &numObjects);
-			ciErrNum = clSetKernelArg(g_interopKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
 
-			ciErrNum = clSetKernelArg(g_interopKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
-			ciErrNum = clSetKernelArg(g_interopKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
-			ciErrNum = clSetKernelArg(g_interopKernel, 5, sizeof(cl_mem), (void*)&gBodyTimes);
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 3, sizeof(cl_mem), (void*)&gLinVelMem);
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 4, sizeof(cl_mem), (void*)&gAngVelMem);
+			ciErrNum = clSetKernelArg(g_sineWaveKernel, 5, sizeof(cl_mem), (void*)&gBodyTimes);
 			
 			
 			
 
 		
 			size_t	numWorkItems = NUM_OBJECTS;//workGroupSize*((NUM_OBJECTS + (workGroupSize)) / workGroupSize);
-			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_interopKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_sineWaveKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		}
 	
@@ -1226,15 +1226,15 @@ void	broadphase()
 			gFpIO.m_positionOffset = (sizeof(cube_vertices) )/4;
 			gFpIO.m_clObjectsBuffer = clBuffer;
 			gFpIO.m_dAABB = sBroadphase->m_dAABB;
-			findPairsOpenCL(gFpIO);
+			setupGpuAabbs(gFpIO);
 
 			sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
 
 
-			gFpIO.m_dPairsChangedXY = sBroadphase->m_dPairsChangedXY;
+			gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
 			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
-			drawPairsOpenCL(gFpIO);
+			colorPairsOpenCL(gFpIO);
 
 		}
 	
@@ -1384,7 +1384,7 @@ void ChangeSize(int w, int h)
 
 #ifdef RECREATE_CL_AND_SHADERS_ON_RESIZE
 	delete g_interopBuffer;
-	clReleaseKernel(g_interopKernel);
+	clReleaseKernel(g_sineWaveKernel);
 	releaseFindPairs(fpio);
 	DeleteCL();
 	DeleteShaders();
@@ -1399,7 +1399,7 @@ void ChangeSize(int w, int h)
 	
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
-	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
+	g_sineWaveKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, interopKernelString, "interopKernel" );
 	initFindPairs(...);
 #endif //RECREATE_CL_AND_SHADERS_ON_RESIZE
 
@@ -1521,7 +1521,7 @@ int main(int argc, char* argv[])
 	{
 		linVelHost[i].setValue(0,0,0);
 		angVelHost[i].setValue(1,0,0);
-		bodyTimesHost[i] = double(randrange(0x2fffffff))/double(0x2fffffff)*float(1024);//NUM_OBJECTS);
+		bodyTimesHost[i] = i*(1024.f/NUM_OBJECTS);//double(randrange(0x2fffffff))/double(0x2fffffff)*float(1024);//NUM_OBJECTS);
 	}
 
 	linvelBuf.write(linVelHost,NUM_OBJECTS);
@@ -1537,7 +1537,7 @@ int main(int argc, char* argv[])
 	clFinish(g_cqCommandQue);
 
 
-	g_interopKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "interopKernel" );
+	g_sineWaveKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "sineWaveKernel" );
 	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, NUM_OBJECTS);
 
 	

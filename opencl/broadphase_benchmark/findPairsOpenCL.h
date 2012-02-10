@@ -22,9 +22,12 @@ struct btFindPairsIO
 	int				m_positionOffset;//offset in m_clObjectsBuffer where position array starts
 
 	cl_command_queue			m_cqCommandQue;
-	cl_kernel		m_broadphaseGridKernel;
+	cl_kernel		m_initializeGpuAabbsKernel;
 	cl_kernel	m_broadphaseColorKernel;
 	cl_kernel	m_broadphaseBruteForceKernel;
+
+	cl_kernel	m_setupBodiesKernel;
+	cl_kernel	m_copyVelocitiesKernel;
 
 	cl_context		m_mainContext;
 	cl_device_id	m_device;
@@ -37,7 +40,7 @@ struct btFindPairsIO
 	cl_kernel		m_squeezePairBuffKernel;
 
 
-	cl_mem m_dPairsChangedXY;
+	cl_mem m_dAllOverlappingPairs;
 	int m_numOverlap;
 
 	cl_mem					m_dBpParams;
@@ -53,10 +56,14 @@ struct btFindPairsIO
 
 void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id device, cl_command_queue commandQueue, int maxHandles,int maxPairsPerBody = 16);
 
-void findPairsOpenCL(btFindPairsIO& fpio);
+void	findPairsOpenCLBruteForce(btFindPairsIO& fpio);
 
-void	drawPairsOpenCL(btFindPairsIO&	fpio);
+void	setupGpuAabbs(btFindPairsIO& fpio);
 
+void	colorPairsOpenCL(btFindPairsIO&	fpio);
+
+void	setupBodies(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias);
+void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias);
 
 void releaseFindPairs(btFindPairsIO& fpio);
 

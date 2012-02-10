@@ -2,6 +2,8 @@
 		2011 Takahiro Harada
 */
 
+
+
 namespace adl
 {
 
@@ -9,6 +11,136 @@ struct KernelCL : public Kernel
 {
 	cl_kernel& getKernel() { return (cl_kernel&)m_kernel; }
 };
+
+static const char* strip(const char* name, const char* pattern)
+{
+	  size_t const patlen = strlen(pattern);
+  	size_t patcnt = 0;
+	  const char * oriptr;
+	  const char * patloc;
+		// find how many times the pattern occurs in the original string
+	  for (oriptr = name; patloc = strstr(oriptr, pattern); oriptr = patloc + patlen)
+	  {
+		patcnt++;
+	  }
+	  return oriptr;
+}
+
+static bool isFileUpToDate(const char* binaryFileName,const char* srcFileName)
+
+{
+	bool fileUpToDate = false;
+
+	bool binaryFileValid=false;
+	FILETIME modtimeBinary; 
+
+	int nameLength = (int)strlen(binaryFileName)+1;
+#ifdef UNICODE
+	WCHAR* fName = new WCHAR[nameLength];
+	MultiByteToWideChar(CP_ACP,0,binaryFileName,-1, fName, nameLength);
+	HANDLE binaryFileHandle = CreateFile(fName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+	delete [] fName;
+#else
+	HANDLE binaryFileHandle = CreateFile(binaryFileName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+#endif
+	if (binaryFileHandle ==INVALID_HANDLE_VALUE)
+	{
+		DWORD errorCode;
+		errorCode = GetLastError();
+		switch (errorCode)
+		{
+		case ERROR_FILE_NOT_FOUND:
+			{
+				debugPrintf("\nCached file not found %s\n", binaryFileName);
+				break;
+			}
+		case ERROR_PATH_NOT_FOUND:
+			{
+				debugPrintf("\nCached file path not found %s\n", binaryFileName);
+				break;
+			}
+		default:
+			{
+				debugPrintf("\nFailed reading cached file with errorCode = %d\n", errorCode);
+			}
+		}
+	} else
+	{
+		if (GetFileTime(binaryFileHandle, NULL, NULL, &modtimeBinary)==0)
+		{
+			DWORD errorCode;
+			errorCode = GetLastError();
+			debugPrintf("\nGetFileTime errorCode = %d\n", errorCode);
+		} else
+		{
+			binaryFileValid = true;
+		}
+		CloseHandle(binaryFileHandle);
+	}
+
+	if (binaryFileValid)
+	{
+#ifdef UNICODE
+		int nameLength = (int)strlen(srcFileName)+1;
+		WCHAR* fName = new WCHAR[nameLength];
+		MultiByteToWideChar(CP_ACP,0,srcFileName,-1, fName, nameLength);
+		HANDLE srcFileHandle = CreateFile(fName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+		delete [] fName;
+#else
+		HANDLE srcFileHandle = CreateFile(srcFileName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+#endif
+		if (srcFileHandle!=INVALID_HANDLE_VALUE)
+		{
+			FILETIME modtimeSrc; 
+			if (GetFileTime(srcFileHandle, NULL, NULL, &modtimeSrc)==0)
+			{
+				DWORD errorCode;
+				errorCode = GetLastError();
+				debugPrintf("\nGetFileTime errorCode = %d\n", errorCode);
+			}
+			if (  ( modtimeSrc.dwHighDateTime < modtimeBinary.dwHighDateTime)
+				||(( modtimeSrc.dwHighDateTime == modtimeBinary.dwHighDateTime)&&(modtimeSrc.dwLowDateTime <= modtimeBinary.dwLowDateTime)))
+			{
+				fileUpToDate=true;
+			} else
+			{
+				debugPrintf("\nCached binary file found (%s), but out-of-date\n",binaryFileName);
+			}
+			CloseHandle(srcFileHandle);
+		} 
+		else
+		{
+#ifdef _DEBUG
+			DWORD errorCode;
+			errorCode = GetLastError();
+			switch (errorCode)
+			{
+			case ERROR_FILE_NOT_FOUND:
+				{
+					debugPrintf("\nSrc file not found %s\n", srcFileName);
+					break;
+				}
+			case ERROR_PATH_NOT_FOUND:
+				{
+					debugPrintf("\nSrc path not found %s\n", srcFileName);
+					break;
+				}
+			default:
+				{
+					debugPrintf("\nnSrc file reading errorCode = %d\n", errorCode);
+				}
+			}
+			ADLASSERT(0);
+#else
+			//if we cannot find the source, assume it is OK in release builds
+			fileUpToDate = true;
+#endif
+		}
+	}
+			
+
+	return fileUpToDate;
+}
 
 template<>
 void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* fileName, const char* option, bool addExtension,
@@ -77,14 +209,22 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 	cacheBinary = false;
 #endif
 
-	char binaryFileName[256];
+	char binaryFileName[512];
 	{
 		char deviceName[256];
 		deviceData->getDeviceName(deviceName);
-		sprintf_s(binaryFileName,"%s.%s.bin",fileName, deviceName );
+		char driverVersion[256];
+		const DeviceCL* dd = (const DeviceCL*) deviceData;
+		clGetDeviceInfo(dd->m_deviceIdx, CL_DRIVER_VERSION, 256, &driverVersion, NULL);
+		const char* strippedFileName = strip(fileName,"\\");
+		strippedFileName = strip(strippedFileName,"/");
+
+		sprintf_s(binaryFileName,"cache/%s.%s.%s.bin",strippedFileName, deviceName,driverVersion );
 	}
 
-	if( cacheBinary )
+	bool upToDate = isFileUpToDate(binaryFileName,fileNameWithExtension);
+
+	if( cacheBinary && upToDate)
 	{
 		FILE* file = fopen(binaryFileName, "rb");
 
@@ -92,17 +232,19 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 		{
 			fseek( file, 0L, SEEK_END );
 			size_t binarySize = ftell( file );
+
 			rewind( file );
 			char* binary = new char[binarySize];
 			fread( binary, sizeof(char), binarySize, file );
 			fclose( file );
 
-			const DeviceCL* dd = (const DeviceCL*) deviceData;
-			program = clCreateProgramWithBinary( dd->m_context, 1, &dd->m_deviceIdx, &binarySize, (const unsigned char**)&binary, 0, &status );
-			ADLASSERT( status == CL_SUCCESS );
-			status = clBuildProgram( program, 1, &dd->m_deviceIdx, option, 0, 0 );
-			ADLASSERT( status == CL_SUCCESS );
-
+			if (binarySize)
+			{
+				const DeviceCL* dd = (const DeviceCL*) deviceData;
+				program = clCreateProgramWithBinary( dd->m_context, 1, &dd->m_deviceIdx, &binarySize, (const unsigned char**)&binary, 0, &status );
+				ADLASSERT( status == CL_SUCCESS );
+				status = clBuildProgram( program, 1, &dd->m_deviceIdx, option, 0, 0 );
+				ADLASSERT( status == CL_SUCCESS );
 			if( status != CL_SUCCESS )
 			{
 				char *build_log;
@@ -117,6 +259,8 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 
 				delete build_log;
 				ADLASSERT(0);
+				}
+
 			}
 		}
 	}
@@ -127,7 +271,7 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 		const char* source = kernelFile.getSource().c_str();
 		setFromSrc( m_deviceData, source, option );
 
-//		if( cacheBinary )
+		if( cacheBinary )
 		{	//	write to binary
 			size_t binarySize;
 			status = clGetProgramInfo( program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, 0 );
@@ -140,14 +284,132 @@ void KernelBuilder<TYPE_CL>::setFromFile( const Device* deviceData, const char* 
 
 			{
 				FILE* file = fopen(binaryFileName, "wb");
-				fwrite( binary, sizeof(char), binarySize, file );
-				fclose( file );
+				if (file)
+				{
+					fwrite( binary, sizeof(char), binarySize, file );
+					fclose( file );
+				}
 			}
 
 			delete [] binary;
 		}
 	}
 }
+
+
+
+template<>
+void KernelBuilder<TYPE_CL>::setFromSrcCached( const Device* deviceData, const char* src, const char* fileName, const char* option )
+{
+	m_deviceData = deviceData;
+
+	bool cacheBinary = true;
+	cl_program& program = (cl_program&)m_ptr;
+	cl_int status = 0;	
+	
+	char binaryFileName[512];
+	{
+		char deviceName[256];
+		deviceData->getDeviceName(deviceName);
+		char driverVersion[256];
+		const DeviceCL* dd = (const DeviceCL*) deviceData;
+		clGetDeviceInfo(dd->m_deviceIdx, CL_DRIVER_VERSION, 256, &driverVersion, NULL);
+		
+		const char* strippedFileName = strip(fileName,"\\");
+		strippedFileName = strip(strippedFileName,"/");
+
+		sprintf_s(binaryFileName,"cache/%s.%s.%s.bin",strippedFileName, deviceName,driverVersion );
+	}
+
+	
+	char fileNameWithExtension[256];
+	sprintf_s(fileNameWithExtension,"%s.cl",fileName, ".cl");
+
+	bool upToDate = isFileUpToDate(binaryFileName,fileNameWithExtension);
+
+
+	if( cacheBinary )
+	{
+		
+		bool fileUpToDate = isFileUpToDate(binaryFileName,fileNameWithExtension);
+
+		if( fileUpToDate)
+		{
+			FILE* file = fopen(binaryFileName, "rb");
+			if (file)
+			{
+				fseek( file, 0L, SEEK_END );
+				size_t binarySize = ftell( file );
+				rewind( file );
+				char* binary = new char[binarySize];
+				fread( binary, sizeof(char), binarySize, file );
+				fclose( file );
+
+				const DeviceCL* dd = (const DeviceCL*) deviceData;
+				program = clCreateProgramWithBinary( dd->m_context, 1, &dd->m_deviceIdx, &binarySize, (const unsigned char**)&binary, 0, &status );
+				ADLASSERT( status == CL_SUCCESS );
+				status = clBuildProgram( program, 1, &dd->m_deviceIdx, option, 0, 0 );
+				ADLASSERT( status == CL_SUCCESS );
+
+				if( status != CL_SUCCESS )
+				{
+					char *build_log;
+					size_t ret_val_size;
+					clGetProgramBuildInfo(program, dd->m_deviceIdx, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
+					build_log = new char[ret_val_size+1];
+					clGetProgramBuildInfo(program, dd->m_deviceIdx, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+
+					build_log[ret_val_size] = '\0';
+
+					debugPrintf("%s\n", build_log);
+
+					delete build_log;
+					ADLASSERT(0);
+				}
+				delete[] binary;
+			}
+		}
+	}
+
+
+	if( !m_ptr )
+	{
+		
+		setFromSrc( deviceData, src, option );
+
+		if( cacheBinary )
+		{	//	write to binary
+			cl_uint numAssociatedDevices;
+			status = clGetProgramInfo( program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &numAssociatedDevices, 0 );
+			ADLASSERT( status == CL_SUCCESS );
+			if (numAssociatedDevices==1)
+			{
+			
+
+				size_t binarySize;
+				status = clGetProgramInfo( program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, 0 );
+				ADLASSERT( status == CL_SUCCESS );
+
+				char* binary = new char[binarySize];
+
+				status = clGetProgramInfo( program, CL_PROGRAM_BINARIES, sizeof(char*), &binary, 0 );
+				ADLASSERT( status == CL_SUCCESS );
+
+				{
+					FILE* file = fopen(binaryFileName, "wb");
+					if (file)
+					{
+						fwrite( binary, sizeof(char), binarySize, file );
+						fclose( file );
+					}
+				}
+
+				delete [] binary;
+			}
+		}
+	}
+}
+
 
 template<>
 void KernelBuilder<TYPE_CL>::setFromSrc( const Device* deviceData, const char* src, const char* option )
@@ -239,7 +501,8 @@ template<typename T>
 void LauncherCL::setConst( Launcher* launcher, Buffer<T>& constBuff, const T& consts )
 {
 	KernelCL* clKernel = (KernelCL*)launcher->m_kernel;
-	cl_int status = clSetKernelArg( clKernel->getKernel(), launcher->m_idx++, sizeof(T), &consts );
+	int sz=sizeof(T);
+	cl_int status = clSetKernelArg( clKernel->getKernel(), launcher->m_idx++, sz, &consts );
 	ADLASSERT( status == CL_SUCCESS );
 }
 

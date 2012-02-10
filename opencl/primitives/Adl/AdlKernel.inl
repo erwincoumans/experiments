@@ -18,6 +18,7 @@ namespace adl
 Kernel* KernelManager::query(const Device* dd, const char* fileName, const char* funcName, const char* option, const char* src,
 	bool cacheKernel)
 {
+	printf("compiling kernel %s",funcName);
 	const int charSize = 1024*2;
 	KernelManager* s_kManager = this;
 
@@ -63,7 +64,13 @@ Kernel* KernelManager::query(const Device* dd, const char* fileName, const char*
 			{
 				KernelBuilder<TYPE_CL> builder;
 				if( src )
-					builder.setFromSrc( dd, src, option );
+					if (cacheKernel)
+					{
+						builder.setFromSrcCached( dd, src, fileName, option );
+					} else
+					{
+						builder.setFromSrc( dd, src, option );
+					}
 				else
 					builder.setFromFile( dd, fileName, option, true, cacheKernel );
 				builder.createKernel( funcName, *kernelOut );
@@ -93,6 +100,7 @@ Kernel* KernelManager::query(const Device* dd, const char* fileName, const char*
 		kernelOut = iter->second;
 	}
 
+	printf(" ready\n");
 	return kernelOut;
 }
 
@@ -106,11 +114,13 @@ KernelManager::~KernelManager()
 #if defined(ADL_ENABLE_CL)
 		case TYPE_CL:
 			KernelBuilder<TYPE_CL>::deleteKernel( *k );
+			delete k;
 			break;
 #endif
 #if defined(ADL_ENABLE_DX11)
 		case TYPE_DX11:
 			KernelBuilder<TYPE_DX11>::deleteKernel( *k );
+			delete k;
 			break;
 #endif
 		default:

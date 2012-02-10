@@ -22,6 +22,14 @@ subject to the following restrictions:
 #include <stdio.h>
 #include <stdlib.h>
 
+#define BT_MAX_CL_DEVICES 16 //who needs 16 devices?
+
+#ifdef _WIN32
+#include <Windows.h>
+#include <assert.h>
+
+#define btAssert assert
+#endif
 
 //Set the preferred platform vendor using the OpenCL SDK
 static char* spPlatformVendor = 
@@ -99,7 +107,7 @@ void btOpenCLUtils::getPlatformInfo(cl_platform_id platform, btOpenCLPlatformInf
 	oclCHECKERROR(ciErrNum,CL_SUCCESS);
 }
 
-cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC)
+cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC, int preferredDeviceIndex, int preferredPlatformIndex)
 {
 	cl_context retContext = 0;
 	cl_int ciErrNum=0;
@@ -119,12 +127,42 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
 		cps[5] = (cl_context_properties)pGLDC;
 	}
 
+	cl_uint num_entries = BT_MAX_CL_DEVICES;
+ 	cl_device_id devices[BT_MAX_CL_DEVICES];
+
+	cl_uint num_devices=-1;
+
+	ciErrNum = clGetDeviceIDs(	
+		platform,
+		deviceType,
+ 		num_entries,
+ 		devices,
+ 		&num_devices);
+
 	cl_context_properties* cprops = (NULL == platform) ? NULL : cps;
-	retContext = clCreateContextFromType(cprops, 
-		deviceType,                  
-		NULL,                  
-		NULL,                  
-		&ciErrNum);
+
+	if (pGLContext)
+	{
+		//search for the GPU that relates to the OpenCL context
+		for (int i=0;i<num_devices;i++)
+		{
+			retContext = clCreateContext(cprops,1,&devices[i],NULL,NULL,&ciErrNum);
+			if (ciErrNum==CL_SUCCESS)
+				break;
+		}
+	}
+	else
+	{
+		if (preferredDeviceIndex>=0 && preferredDeviceIndex<num_devices)
+		{
+			//create a context of the preferred device index
+			retContext = clCreateContext(cprops,1,&devices[preferredDeviceIndex],NULL,NULL,&ciErrNum);
+		} else
+		{
+			//create a context of all devices
+			retContext = clCreateContext(cprops,num_devices,devices,NULL,NULL,&ciErrNum);
+		}
+	}
 	if(pErrNum != NULL) 
 	{
 		*pErrNum = ciErrNum;
@@ -133,7 +171,7 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
 	return retContext;
 }
 
-cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC )
+cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC , int preferredDeviceIndex, int preferredPlatformIndex)
 {
 	cl_uint numPlatforms;
 	cl_context retContext = 0;
@@ -155,6 +193,7 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 		}
 		int i;
 
+
 		for ( i = 0; i < numPlatforms; ++i)         
 		{            
 			char pbuf[128];            
@@ -169,12 +208,21 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 				return NULL;
 			}
 
-			if(!strcmp(pbuf, spPlatformVendor))
+			if (preferredPlatformIndex>=0 && i==preferredPlatformIndex)
 			{
 				cl_platform_id tmpPlatform = platforms[0];
 				platforms[0] = platforms[i];
 				platforms[i] = tmpPlatform;
 				break;
+			} else
+			{
+				if(!strcmp(pbuf, spPlatformVendor))
+				{
+					cl_platform_id tmpPlatform = platforms[0];
+					platforms[0] = platforms[i];
+					platforms[i] = tmpPlatform;
+					break;
+				}
 			}
 		}
 
@@ -183,11 +231,11 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 			cl_platform_id platform = platforms[i];
 			assert(platform);
 
-			retContext = btOpenCLUtils::createContextFromPlatform(platform,deviceType,pErrNum,pGLContext,pGLDC);
+			retContext = btOpenCLUtils::createContextFromPlatform(platform,deviceType,pErrNum,pGLContext,pGLDC,preferredDeviceIndex);
 
 			if (retContext)
 			{
-				printf("OpenCL platform details:\n");
+//				printf("OpenCL platform details:\n");
 				btOpenCLPlatformInfo platformInfo;
 
 				btOpenCLUtils::getPlatformInfo(platform, platformInfo);
@@ -381,55 +429,264 @@ void btOpenCLUtils::getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info)
 	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &info.m_vecWidthDouble, NULL);
 }
 
-cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSource, cl_int* pErrNum, const char* additionalMacros )
+static const char* strip2(const char* name, const char* pattern)
+{
+	  size_t const patlen = strlen(pattern);
+  	size_t patcnt = 0;
+	  const char * oriptr;
+	  const char * patloc;
+		// find how many times the pattern occurs in the original string
+	  for (oriptr = name; patloc = strstr(oriptr, pattern); oriptr = patloc + patlen)
+	  {
+		patcnt++;
+	  }
+	  return oriptr;
+}
+
+cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSource, cl_int* pErrNum, const char* additionalMacros , const char* clFileNameForCaching)
 {
 
-	cl_kernel kernel;
-	cl_int localErrNum;
-	size_t program_length = strlen(kernelSource);
+	cl_program m_cpProgram=0;
+	cl_int status;
 
-	cl_program m_cpProgram = clCreateProgramWithSource(clContext, 1, (const char**)&kernelSource, &program_length, &localErrNum);
-	if (localErrNum!= CL_SUCCESS)
+	char binaryFileName[522];
+
+	if (clFileNameForCaching)
 	{
-		if (pErrNum)
-			*pErrNum = localErrNum;
-		return 0;
-	}
+		
+		char deviceName[256];
+		char driverVersion[256];
+		clGetDeviceInfo(device, CL_DEVICE_NAME, 256, &deviceName, NULL);
+		clGetDeviceInfo(device, CL_DRIVER_VERSION, 256, &driverVersion, NULL);
 
-	// Build the program with 'mad' Optimization option
+		
+		const char* strippedName = strip2(clFileNameForCaching,"\\");
+		strippedName = strip2(strippedName,"/");
 
+		sprintf_s(binaryFileName,"cache/%s.%s.%s.bin",strippedName, deviceName,driverVersion );
+		//printf("searching for %s\n", binaryFileName);
 
-#ifdef MAC
-	char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
+		bool fileUpToDate = false;
+		bool binaryFileValid=false;
+
+		FILETIME modtimeBinary; 
+
+#ifdef _WIN32
+		CreateDirectory("cache",0);
+		{
+			
+			HANDLE binaryFileHandle = CreateFile(binaryFileName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+			if (binaryFileHandle ==INVALID_HANDLE_VALUE)
+			{
+				DWORD errorCode;
+				errorCode = GetLastError();
+				switch (errorCode)
+				{
+				case ERROR_FILE_NOT_FOUND:
+					{
+						printf("\nCached file not found %s\n", binaryFileName);
+						break;
+					}
+				case ERROR_PATH_NOT_FOUND:
+					{
+						printf("\nCached file path not found %s\n", binaryFileName);
+						break;
+					}
+				default:
+					{
+						printf("\nFailed reading cached file with errorCode = %d\n", errorCode);
+					}
+				}
+			} else
+			{
+				if (GetFileTime(binaryFileHandle, NULL, NULL, &modtimeBinary)==0)
+				{
+					DWORD errorCode;
+					errorCode = GetLastError();
+					printf("\nGetFileTime errorCode = %d\n", errorCode);
+				} else
+				{
+					binaryFileValid = true;
+				}
+				CloseHandle(binaryFileHandle);
+			}
+
+			if (binaryFileValid)
+			{
+				HANDLE srcFileHandle = CreateFile(clFileNameForCaching,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+				if (srcFileHandle!=INVALID_HANDLE_VALUE)
+				{
+					FILETIME modtimeSrc; 
+					if (GetFileTime(srcFileHandle, NULL, NULL, &modtimeSrc)==0)
+					{
+						DWORD errorCode;
+						errorCode = GetLastError();
+						printf("\nGetFileTime errorCode = %d\n", errorCode);
+					}
+					if (  ( modtimeSrc.dwHighDateTime < modtimeBinary.dwHighDateTime)
+						||(( modtimeSrc.dwHighDateTime == modtimeBinary.dwHighDateTime)&&(modtimeSrc.dwLowDateTime <= modtimeBinary.dwLowDateTime)))
+					{
+						fileUpToDate=true;
+					} else
+					{
+						printf("\nCached binary file out-of-date (%s)\n",binaryFileName);
+					}
+					CloseHandle(srcFileHandle);
+				} 
+				else
+				{
+#ifdef _DEBUG
+					DWORD errorCode;
+					errorCode = GetLastError();
+					switch (errorCode)
+					{
+					case ERROR_FILE_NOT_FOUND:
+						{
+							printf("\nSrc file not found %s\n", clFileNameForCaching);
+							break;
+						}
+					case ERROR_PATH_NOT_FOUND:
+						{
+							printf("\nSrc path not found %s\n", clFileNameForCaching);
+							break;
+						}
+					default:
+						{
+							printf("\nnSrc file reading errorCode = %d\n", errorCode);
+						}
+					}
+
+					//we should make sure the src file exists so we can verify the timestamp with binary
+					assert(0);
 #else
-	//const char* flags = "-DGUID_ARG= -fno-alias";
-	const char* flags = "-DGUID_ARG= ";
+					//if we cannot find the source, assume it is OK in release builds
+					fileUpToDate = true;
 #endif
+				}
+			}
+			
 
-	char* compileFlags = new char[strlen(additionalMacros) + strlen(flags) + 5];
-	sprintf(compileFlags, "%s %s", flags, additionalMacros);
-	localErrNum = clBuildProgram(m_cpProgram, 1, &device, compileFlags, NULL, NULL);
-	if (localErrNum!= CL_SUCCESS)
-	{
-		char *build_log;
-		size_t ret_val_size;
-		clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
-		build_log = new char[ret_val_size+1];
-		clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+		}
 
-		// to be carefully, terminate with \0
-		// there's no information in the reference whether the string is 0 terminated or not
-		build_log[ret_val_size] = '\0';
+		if( fileUpToDate)
+		{
+			FILE* file = fopen(binaryFileName, "rb");
+			if (file)
+			{
+				fseek( file, 0L, SEEK_END );
+				size_t binarySize = ftell( file );
+				rewind( file );
+				char* binary = new char[binarySize];
+				fread( binary, sizeof(char), binarySize, file );
+				fclose( file );
 
+				m_cpProgram = clCreateProgramWithBinary( clContext, 1,&device, &binarySize, (const unsigned char**)&binary, 0, &status );
+				btAssert( status == CL_SUCCESS );
+				status = clBuildProgram( m_cpProgram, 1, &device, additionalMacros, 0, 0 );
+				btAssert( status == CL_SUCCESS );
 
-		printf("Error in clBuildProgram, Line %u in file %s, Log: \n%s\n !!!\n\n", __LINE__, __FILE__, build_log);
-		delete[] build_log;
-		if (pErrNum)
-			*pErrNum = localErrNum;
-		return 0;
+				if( status != CL_SUCCESS )
+				{
+					char *build_log;
+					size_t ret_val_size;
+					clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
+					build_log = new char[ret_val_size+1];
+					clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+					build_log[ret_val_size] = '\0';
+					printf("%s\n", build_log);
+					delete build_log;
+					btAssert(0);
+					m_cpProgram = 0;
+				}
+				delete[] binary;
+			}
+		}
+#endif //_WIN32
+		
 	}
+	
+	if (!m_cpProgram)
+	{
+		cl_kernel kernel;
+		cl_int localErrNum;
+		size_t program_length = strlen(kernelSource);
 
-	delete [] compileFlags;
+		m_cpProgram = clCreateProgramWithSource(clContext, 1, (const char**)&kernelSource, &program_length, &localErrNum);
+		if (localErrNum!= CL_SUCCESS)
+		{
+			if (pErrNum)
+				*pErrNum = localErrNum;
+			return 0;
+		}
+
+		// Build the program with 'mad' Optimization option
+
+
+	#ifdef MAC
+		char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
+	#else
+		//const char* flags = "-DGUID_ARG= -fno-alias";
+		const char* flags = "-DGUID_ARG= ";
+	#endif
+
+		char* compileFlags = new char[strlen(additionalMacros) + strlen(flags) + 5];
+		sprintf(compileFlags, "%s %s", flags, additionalMacros);
+		localErrNum = clBuildProgram(m_cpProgram, 1, &device, compileFlags, NULL, NULL);
+		if (localErrNum!= CL_SUCCESS)
+		{
+			char *build_log;
+			size_t ret_val_size;
+			clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
+			build_log = new char[ret_val_size+1];
+			clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
+
+			// to be carefully, terminate with \0
+			// there's no information in the reference whether the string is 0 terminated or not
+			build_log[ret_val_size] = '\0';
+
+
+			printf("Error in clBuildProgram, Line %u in file %s, Log: \n%s\n !!!\n\n", __LINE__, __FILE__, build_log);
+			delete[] build_log;
+			if (pErrNum)
+				*pErrNum = localErrNum;
+			return 0;
+		}
+
+		if( clFileNameForCaching )
+		{	//	write to binary
+
+			cl_uint numAssociatedDevices;
+			status = clGetProgramInfo( m_cpProgram, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &numAssociatedDevices, 0 );
+			btAssert( status == CL_SUCCESS );
+			if (numAssociatedDevices==1)
+			{
+
+				size_t binarySize;
+				status = clGetProgramInfo( m_cpProgram, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, 0 );
+				btAssert( status == CL_SUCCESS );
+
+				char* binary = new char[binarySize];
+
+				status = clGetProgramInfo( m_cpProgram, CL_PROGRAM_BINARIES, sizeof(char*), &binary, 0 );
+				btAssert( status == CL_SUCCESS );
+
+				{
+					FILE* file = fopen(binaryFileName, "wb");
+					if (file)
+					{
+						fwrite( binary, sizeof(char), binarySize, file );
+						fclose( file );
+					} else
+					{
+						printf("cannot write file %s\n", binaryFileName);
+					}
+				}
+
+				delete [] binary;
+			}
+		}
+		delete [] compileFlags;
+	}
 
 	return m_cpProgram;
 }
@@ -437,7 +694,7 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 
 cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_device_id device, const char* kernelSource, const char* kernelName, cl_int* pErrNum, cl_program prog, const char* additionalMacros )
 {
-	printf("compiling kernelName: %s ",kernelName);
+	printf("compiling kernel %s ",kernelName);
 	cl_kernel kernel;
 	cl_int localErrNum;
 	size_t program_length = strlen(kernelSource);

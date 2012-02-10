@@ -38,6 +38,9 @@ int main(int argc, char* argv[])
 {
 	int ciErrNum = 0;
 	
+	printf("press a key to start\n");
+	getchar();
+
 	const char* vendorSDK = btOpenCLUtils::getSdkVendorName();
 	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
 
@@ -131,7 +134,10 @@ int main(int argc, char* argv[])
 	}
 
 	clReleaseContext(g_cxMainContext);
-		
+	
+	printf("press a key to end\n");
+	getchar();
+
 	return 0;
 }
 

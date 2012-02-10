@@ -231,13 +231,15 @@ void DeviceCL::allocate(Buffer<T>* buf, int nElems, BufferBase::BufferType type)
 	fflush( stdout );
 #endif
 
+	int sz=sizeof(T)*nElems;
+
 	cl_int status = 0;
 	if( type == BufferBase::BUFFER_ZERO_COPY )
-		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, sizeof(T)*nElems, 0, &status );
+		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, sz, 0, &status );
 	else if( type == BufferBase::BUFFER_RAW )
-		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_WRITE_ONLY, sizeof(T)*nElems, 0, &status );
+		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_WRITE_ONLY, sz, 0, &status );
 	else
-		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE, sizeof(T)*nElems, 0, &status );
+		buf->m_ptr = (T*)clCreateBuffer( m_context, CL_MEM_READ_WRITE, sz, 0, &status );
 
 	m_memoryUsage += buf->m_size*sizeof(T);
 #if defined(ADL_CL_DUMP_MEMORY_LOG)
@@ -263,7 +265,7 @@ void DeviceCL::deallocate(Buffer<T>* buf)
 template<typename T>
 void DeviceCL::copy(Buffer<T>* dst, const Buffer<T>* src, int nElems,int srcOffsetNElems,int dstOffsetNElems )
 {
-	if( dst->m_device->m_type == TYPE_CL || src->m_device->m_type == TYPE_CL )
+	if( dst->m_device->m_type == TYPE_CL && src->m_device->m_type == TYPE_CL )
 	{
 		cl_int status = 0;
 		status = clEnqueueCopyBuffer( m_commandQueue, (cl_mem)src->m_ptr, (cl_mem)dst->m_ptr, sizeof(T)*srcOffsetNElems, sizeof(T)*dstOffsetNElems, sizeof(T)*nElems, 0, 0, 0 );
@@ -298,7 +300,8 @@ template<typename T>
 void DeviceCL::copy(Buffer<T>* dst, const T* src, int nElems, int dstOffsetNElems )
 {
 	cl_int status = 0;
-	status = clEnqueueWriteBuffer( m_commandQueue, (cl_mem)dst->m_ptr, 0, sizeof(T)*dstOffsetNElems, sizeof(T)*nElems,
+	int sz=sizeof(T)*nElems;
+	status = clEnqueueWriteBuffer( m_commandQueue, (cl_mem)dst->m_ptr, 0, sizeof(T)*dstOffsetNElems, sz,
 		src, 0,0,0 );
 	ADLASSERT( status == CL_SUCCESS );
 }

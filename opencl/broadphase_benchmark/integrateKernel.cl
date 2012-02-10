@@ -27,65 +27,85 @@ float4 quatNorm(float4 q)
 
 
 
+
+
 __kernel void 
-  interopKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer,
+  integrateTransformsKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer,
 		   __global float4 *linVel,
 		   __global float4 *pAngVel,
 		   __global float* pBodyTimes)
 {
 	int nodeID = get_global_id(0);
-	float timeStepPos = 0.000166666;
+	
 	
 	
 	float BT_GPU_ANGULAR_MOTION_THRESHOLD = (0.25f * 3.14159254f);
-	float mAmplitude = 60.f;
-	float timeStep = 0.0166666;
+	float mAmplitude = 66.f;
+	float timeStep = 0.0166666f;
 	
 	if( nodeID < numNodes )
 	{
 	
-		pBodyTimes[nodeID] += timeStepPos;
-
-		
-				
-		if (0)
-		{
 		//g_vertexBuffer[nodeID + startOffset/4+numNodes] += pAngVel[nodeID];
+		if (1)
+		{
+			float4 axis;
+			float4 angvel = pAngVel[nodeID];
+			float fAngle = native_sqrt(dot(angvel, angvel));
+			//limit the angular motion
+			if(fAngle*timeStep > BT_GPU_ANGULAR_MOTION_THRESHOLD)
+			{
+				fAngle = BT_GPU_ANGULAR_MOTION_THRESHOLD / timeStep;
+			}
+			if(fAngle < 0.001f)
+			{
+				// use Taylor's expansions of sync function
+				axis = angvel * (0.5f*timeStep-(timeStep*timeStep*timeStep)*0.020833333333f * fAngle * fAngle);
+			}
+			else
+			{
+				// sync(fAngle) = sin(c*fAngle)/t
+				axis = angvel * ( native_sin(0.5f * fAngle * timeStep) / fAngle);
+			}
+			float4 dorn = axis;
+			dorn.w = native_cos(fAngle * timeStep * 0.5f);
+			float4 orn0 = g_vertexBuffer[nodeID + startOffset/4+numNodes];
+			float4 predictedOrn = quatMult(dorn, orn0);
+			predictedOrn = quatNorm(predictedOrn);
+			g_vertexBuffer[nodeID + startOffset/4+numNodes]=predictedOrn;
+		}
 
-		float4 axis;
-		float4 angvel = pAngVel[nodeID];
-		float fAngle = native_sqrt(dot(angvel, angvel));
-		//limit the angular motion
-		if(fAngle*timeStep > BT_GPU_ANGULAR_MOTION_THRESHOLD)
-		{
-			fAngle = BT_GPU_ANGULAR_MOTION_THRESHOLD / timeStep;
-		}
-		if(fAngle < 0.001f)
-		{
-			// use Taylor's expansions of sync function
-			axis = angvel * (0.5f*timeStep-(timeStep*timeStep*timeStep)*0.020833333333f * fAngle * fAngle);
-		}
-		else
-		{
-			// sync(fAngle) = sin(c*fAngle)/t
-			axis = angvel * ( native_sin(0.5f * fAngle * timeStep) / fAngle);
-		}
-		float4 dorn = axis;
-		dorn.w = native_cos(fAngle * timeStep * 0.5f);
-		float4 orn0 = g_vertexBuffer[nodeID + startOffset/4+numNodes];
-		float4 predictedOrn = quatMult(dorn, orn0);
-		predictedOrn = quatNorm(predictedOrn);
-		g_vertexBuffer[nodeID + startOffset/4+numNodes]=predictedOrn;
-		}
+	//linear velocity		
+		g_vertexBuffer[nodeID + startOffset/4] +=  linVel[nodeID] * timeStep;
 		
+	}
+}
+
+
+__kernel void 
+  sineWaveKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer,
+		   __global float4 *linVel,
+		   __global float4 *pAngVel,
+		   __global float* pBodyTimes)
+{
+	int nodeID = get_global_id(0);
+	float timeStepPos = 0.00166666;
+	
+	float BT_GPU_ANGULAR_MOTION_THRESHOLD = (0.25f * 3.14159254f);
+	float mAmplitude = 66.f;
+	float timeStep = 0.00166666;
+	
+	if( nodeID < numNodes )
+	{
+		pBodyTimes[nodeID] += timeStepPos;
 		float4 position = g_vertexBuffer[nodeID + startOffset/4];
 		position.x = native_cos(pBodyTimes[nodeID]*2.17f)*mAmplitude + native_sin(pBodyTimes[nodeID])*mAmplitude*0.5f;
 		position.y = native_cos(pBodyTimes[nodeID]*1.38f)*mAmplitude + native_sin(pBodyTimes[nodeID]*mAmplitude);
 		position.z = native_cos(pBodyTimes[nodeID]*2.17f)*mAmplitude + native_sin(pBodyTimes[nodeID]*0.777f)*mAmplitude;
 		g_vertexBuffer[nodeID + startOffset/4] = position;
-		
-		
 	}
 }
+
+
 
 );

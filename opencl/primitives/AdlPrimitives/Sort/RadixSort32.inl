@@ -3,12 +3,12 @@
 */
 
 #define PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Sort\\RadixSort32Kernels"
-#define KERNEL0 "StreamCountKernel"
-#define KERNEL1 "PrefixScanKernel"
-#define KERNEL2 "SortAndScatterKernel"
-#define KERNEL3 "SortAndScatterKeyValueKernel"
-#define KERNEL4 "SortAndScatterSortDataKernel"
-#define KERNEL5 "StreamCountSortDataKernel"
+#define RADIXSORT32_KERNEL0 "StreamCountKernel"
+#define RADIXSORT32_KERNEL1 "PrefixScanKernel"
+#define RADIXSORT32_KERNEL2 "SortAndScatterKernel"
+#define RADIXSORT32_KERNEL3 "SortAndScatterKeyValueKernel"
+#define RADIXSORT32_KERNEL4 "SortAndScatterSortDataKernel"
+#define RADIXSORT32_KERNEL5 "StreamCountSortDataKernel"
 
 #include "RadixSort32KernelsCL.h"
 #include "RadixSort32KernelsDX11.h"
@@ -31,15 +31,15 @@ typename RadixSort32<TYPE>::Data* RadixSort32<TYPE>::allocate( const Device* dev
 	Data* data = new Data;
 	data->m_device = device;
 	data->m_maxSize = maxSize;
-	data->m_streamCountKernel = device->getKernel( PATH, KERNEL0, 0, src[TYPE] );
-	data->m_streamCountSortDataKernel = device->getKernel( PATH, KERNEL5, 0, src[TYPE] );
+	data->m_streamCountKernel = device->getKernel( PATH, RADIXSORT32_KERNEL0, 0, src[TYPE] );
+	data->m_streamCountSortDataKernel = device->getKernel( PATH, RADIXSORT32_KERNEL5, 0, src[TYPE] );
 
 	
 
-	data->m_prefixScanKernel = device->getKernel( PATH, KERNEL1, 0, src[TYPE] );
-	data->m_sortAndScatterKernel = device->getKernel( PATH, KERNEL2, 0, src[TYPE] );
-	data->m_sortAndScatterKeyValueKernel = device->getKernel( PATH, KERNEL3, 0, src[TYPE] );
-	data->m_sortAndScatterSortDataKernel = device->getKernel( PATH, KERNEL4, 0, src[TYPE] );
+	data->m_prefixScanKernel = device->getKernel( PATH, RADIXSORT32_KERNEL1, 0, src[TYPE] );
+	data->m_sortAndScatterKernel = device->getKernel( PATH, RADIXSORT32_KERNEL2, 0, src[TYPE] );
+	data->m_sortAndScatterKeyValueKernel = device->getKernel( PATH, RADIXSORT32_KERNEL3, 0, src[TYPE] );
+	data->m_sortAndScatterSortDataKernel = device->getKernel( PATH, RADIXSORT32_KERNEL4, 0, src[TYPE] );
 
 	int wtf = NUM_WGS*(1<<BITS_PER_PASS);
 
@@ -339,8 +339,8 @@ void RadixSort32<TYPE>::execute(Data* data, Buffer<SortData>& keyValuesInOut, in
 	}
 }
 #undef PATH
-#undef KERNEL0
-#undef KERNEL1
-#undef KERNEL2
-#undef KERNEL3
+#undef RADIXSORT32_KERNEL0
+#undef RADIXSORT32_KERNEL1
+#undef RADIXSORT32_KERNEL2
+#undef RADIXSORT32_KERNEL3
 

@@ -98,7 +98,9 @@ struct Device
 {
 	typedef DeviceUtils::Config Config;
 
-	Device( DeviceType type ) : m_type( type ), m_memoryUsage(0){}
+	Device( DeviceType type ) : m_type( type ), m_memoryUsage(0)
+	{
+	}
 
 	virtual void* getContext() const { return 0; }
 	virtual void initialize(const Config& cfg){}

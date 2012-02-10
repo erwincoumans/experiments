@@ -98,6 +98,10 @@ class KernelBuilder
 		void setFromSrc( const Device* deviceData, const char* src, const char* option = NULL );
 
 		__inline
+		void setFromSrcCached( const Device* deviceData, const char* src, const char* fileName, const char* option );
+
+
+		__inline
 		void createKernel( const char* funcName, Kernel& kernelOut );
 
 		__inline

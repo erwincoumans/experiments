@@ -37,7 +37,7 @@ __kernel void   computeAabb( __global btAabbCL* aabbs,__global float4* positions
 }
 
 
-__kernel void computePairCacheChanges(	int numObjects,
+__kernel void countOverlappingpairs(	int numObjects,
 										__global int* pPairBuff, 
 										__global int2* pPairBuffStartCurr, 
 										__global int* pPairScan, 
@@ -57,7 +57,7 @@ __kernel void computePairCacheChanges(	int numObjects,
 	int num_changes = 0;
 	for(int k = 0; k < curr; k++, pInp++)
 	{
-		if(((*pInp) & 0x60000000))
+		if(((*pInp) & 0x60000000))//either new or existing pairs (ignore old non-overlapping pairs)
 		{
 			num_changes++;
 		}
