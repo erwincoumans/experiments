@@ -36,9 +36,9 @@ cl_device_id		g_clDevice=0;
 #endif
 
 ///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 25
-#define ARRAY_SIZE_Y 4
-#define ARRAY_SIZE_Z 25
+#define ARRAY_SIZE_X 6
+#define ARRAY_SIZE_Y 6
+#define ARRAY_SIZE_Z 4
 
 //maximum number of objects (and allow user to shoot additional boxes)
 #define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
@@ -49,9 +49,9 @@ cl_device_id		g_clDevice=0;
 #define START_POS_Y 0
 #define START_POS_Z 0
 
-#define BarrelVtxCount 8
+#define BoxVtxCount 8
 
-static float BarrelVtx[] = {
+static float BoxVtx[] = {
 -0.5,-0.5,-0.5,
 -0.5,-0.5,0.5,
 -0.5,0.5,-0.5,
@@ -60,6 +60,17 @@ static float BarrelVtx[] = {
 0.5,-0.5,0.5,
 0.5,0.5,-0.5,
 0.5,0.5,0.5,
+};
+
+static float BoxVtx2[] = {
+-20.3,-10.3,-20.3,
+-20.3,-10.3,20.3,
+-20.3,10.3,-20.3,
+-20.3,10.3,20.3,
+20.3,-10.3,-20.3,
+20.3,-10.3,20.3,
+20.3,10.3,-20.3,
+20.3,10.3,20.3,
 };
 
 
@@ -190,6 +201,46 @@ static int BarrelIdx[] = {
 };
 
 
+__inline void glVertexFloat4( const float4& v )
+{
+	glVertex3f( v.x, v.y, v.z );
+}
+
+__inline void drawPointListTransformed(const float4* vtx,  int nVtx, const float4& translation, const Quaternion& quat)
+{
+	glPushMatrix();
+
+	Matrix3x3 rotMat = mtTranspose( qtGetRotationMatrix( quat ) );
+	float transformMat[16] =
+	{
+		rotMat.m_row[0].x, rotMat.m_row[0].y, rotMat.m_row[0].z, 0,
+		rotMat.m_row[1].x, rotMat.m_row[1].y, rotMat.m_row[1].z, 0,
+		rotMat.m_row[2].x, rotMat.m_row[2].y, rotMat.m_row[2].z, 0,
+		translation.x, translation.y, translation.z,1
+	};
+
+	glMultMatrixf( transformMat );
+
+	float4 c = make_float4(1,1,0,0);
+
+	glPointSize(3.f);
+	glBegin(GL_POINTS);
+	for(int i=0; i<nVtx; i++)
+	{
+		glColor4f(c.x, c.y, c.z, 1);
+		glVertexFloat4( vtx[i] );
+	}
+	glEnd();
+
+	glPopMatrix();
+}
+void displaySamples(const float4* vertices, int numVertices, const float4& translation, const Quaternion& quaternion) 
+{
+	drawPointListTransformed( vertices,numVertices, translation, quaternion );
+}
+
+
+
 void BasicDemo::renderSurfacePoints()
 {
 	if (m_dynamicsWorld->getDebugDrawer()->getDebugMode()& btIDebugDraw::DBG_DrawContactPoints)
@@ -222,7 +273,7 @@ void BasicDemo::renderSurfacePoints()
 	bodyAquat.w = qA.getW();
 
 
-			cvxShape->displaySamples( bodyApos, bodyAquat );
+	displaySamples(cvxShape->getSamplePoints(),cvxShape->getNumSamplePoints(),bodyApos,bodyAquat);
 
 		}
 
@@ -315,14 +366,15 @@ void	BasicDemo::initPhysics()
 
 	///create a few basic rigid bodies
 	//btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
-#if 0
-	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
+#if 1
+	CustomConvexShape* groundShape = new CustomConvexShape(BoxVtx2,BoxVtxCount,3*sizeof(float));
+	//btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
 	
 	m_collisionShapes.push_back(groundShape);
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	//groundTransform.setOrigin(btVector3(0,-30,0));
+	groundTransform.setOrigin(btVector3(0,-11,0));
 
 	//We can also use DemoApplication::localCreateRigidBody, but for clarity it is provided here:
 	{
@@ -355,14 +407,17 @@ void	BasicDemo::initPhysics()
 #define USE_CUSTOM_HEIGHTFIELD_SHAPE 
 #ifdef USE_CUSTOM_HEIGHTFIELD_SHAPE
 	CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+
+	//CustomConvexShape* colShape = new CustomConvexShape(BoxVtx,BoxVtxCount,3*sizeof(float));
 #else
 	btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
+		colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
+
 #endif //USE_CUSTOM_HEIGHTFIELD_SHAPE
 	btScalar scale = 0.5f;
-	//CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx,BarrelVtxCount,3*sizeof(float));
+	
 	//btScalar scale = 1.f;
 
-		colShape->setLocalScaling(btVector3(0.9,0.9,0.9));
 		//next line is already called inside the CustomConvexShape constructor
 		//colShape->initializePolyhedralFeatures();
 
@@ -387,10 +442,17 @@ void	BasicDemo::initPhysics()
 
 		for (int k=0;k<ARRAY_SIZE_Y;k++)
 		{
-			for (int i=0;i<ARRAY_SIZE_X;i++)
+			for(int j = 0;j<ARRAY_SIZE_Z;j++)	
 			{
-				for(int j = 0;j<ARRAY_SIZE_Z;j++)
+				for (int i=0;i<ARRAY_SIZE_X;i++)
 				{
+					
+					{
+					//	if ((k>0) && ((j<2) || (j>(ARRAY_SIZE_Z-3))))
+					//		continue;
+					//	if ((k>0) && ((i<2) || (i>(ARRAY_SIZE_X-3))))
+					//		continue;
+
 					startTransform.setOrigin(SCALING*btVector3(
 										btScalar(scale*2.0*i + start_x),
 										btScalar(scale*1+scale*2.0*k + start_y),
@@ -401,7 +463,7 @@ void	BasicDemo::initPhysics()
 					btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 					btRigidBody* body=0;
 
-					if (k==0)
+					if (0)//k==0)
 					{
 						btVector3 zeroInertia(0,0,0);
 						btRigidBody::btRigidBodyConstructionInfo rbInfo(0.f,myMotionState,colShape,zeroInertia);
@@ -415,7 +477,8 @@ void	BasicDemo::initPhysics()
 					//m_acceleratedRigidBodies is used as a mapping to the accelerated rigid body index
 					body->setCompanionId(m_acceleratedRigidBodies++);
 					m_dynamicsWorld->addRigidBody(body);
-
+						
+					}
 				}
 			}
 		}

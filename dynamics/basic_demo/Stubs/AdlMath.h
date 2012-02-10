@@ -7,7 +7,7 @@
 #include <xmmintrin.h>
 
 
-#include <Stubs/AdlError.h>
+#include "AdlError.h"
 #include <algorithm>
 #define pxSort std::sort
 
@@ -52,6 +52,12 @@ struct float4
 		__m128 m_quad;
 	};
 };
+
+__forceinline
+unsigned int isZero(const float4& a)
+{
+	return (a.x == 0.f) & (a.y == 0.f) & (a.z == 0.f) & (a.w == 0.f);
+}
 
 _MEM_CLASSALIGN16
 struct int4
@@ -107,7 +113,7 @@ typedef unsigned char u8;
 
 
 
-#include <Stubs/Adlfloat4.inl>
+#include "Adlfloat4.inl"
 //#include <Common/Math/float4SSE.inl>
 
 

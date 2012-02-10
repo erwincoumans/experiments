@@ -6,9 +6,9 @@
 #include "BulletCollision/BroadphaseCollision/btOverlappingPairCache.h"
 
 
-#define MAX_CONVEX_BODIES_CL 8192
+#define MAX_CONVEX_BODIES_CL 64*1024
 #define MAX_PAIRS_PER_BODY_CL 32
-#define MAX_CONVEX_SHAPES_CL 128
+#define MAX_CONVEX_SHAPES_CL 8192
 #define MAX_BROADPHASE_COLLISION_CL (MAX_CONVEX_BODIES_CL*MAX_PAIRS_PER_BODY_CL)
 
 

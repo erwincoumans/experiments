@@ -1,7 +1,7 @@
 #ifndef QUATERNION_H
 #define QUATERNION_H
 
-#include <Stubs/AdlMatrix3x3.h>
+#include "AdlMatrix3x3.h"
 
 
 typedef float4 Quaternion;

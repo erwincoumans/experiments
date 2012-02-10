@@ -1,9 +1,9 @@
 #ifndef CONVEX_HEIGHT_FIELD_SHAPE_H
 #define CONVEX_HEIGHT_FIELD_SHAPE_H
 
-#include <Stubs/AdlQuaternion.h>
-#include <Stubs/AdlCollisionShape.h>
-#include <Stubs/AdlAabb.h>
+#include "Stubs/AdlQuaternion.h"
+#include "Stubs/AdlCollisionShape.h"
+#include "Stubs/AdlAabb.h"
 
 class ShapeBase;
 
@@ -56,8 +56,10 @@ class ConvexHeightField : public CollisionShape
 		void calcSamplePoints(float4* points) const;
 		float4 calcSamplePoint(int sIdx) const;
 		const float4* getSamplePoints() const;
+		
+		int getNumSamplePoints() const;
 
-		void displaySamples(const float4& translation, const Quaternion& quaternion) const;
+		//void displaySamples(const float4& translation, const Quaternion& quaternion) const;
 
 	private:
 		void create( const float4* vtxBuffer, const int4* idxBuffer, int nTriangles );

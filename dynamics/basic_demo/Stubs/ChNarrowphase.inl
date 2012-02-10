@@ -1,5 +1,5 @@
-//#define PATH "..\\..\\AdlPhysics\\Narrowphase\\ChNarrowphaseKernels"
-#define PATH "NarrowPhaseCL\\ChNarrowphaseKernels"
+//#define PATH "..\\..\\dynamics\\basic_demo\\Stubs\\ChNarrowphaseKernels"
+#define PATH "..\\..\\dynamics\\basic_demo\\Stubs\\ChNarrowphaseKernels"
 #define KERNEL0 "SupportCullingKernel"
 #define KERNEL1 "NarrowphaseKernel"
 
@@ -31,6 +31,7 @@ typename ChNarrowphase<TYPE>::Data* ChNarrowphase<TYPE>::allocate( const Device*
 
 	
 
+
 	//sprintf(options, "-I ..\\..\\ -Wf,--c++");
 	sprintf(options, "-I .\\NarrowPhaseCL\\");
 
@@ -43,6 +44,7 @@ typename ChNarrowphase<TYPE>::Data* ChNarrowphase<TYPE>::allocate( const Device*
 
 	return data;
 }
+
 
 template<DeviceType TYPE>
 void ChNarrowphase<TYPE>::deallocate( Data* data )

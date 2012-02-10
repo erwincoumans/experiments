@@ -7,7 +7,7 @@
 #include "AdlContact4.h"
 #include "AdlRigidBody.h"
 
-#include "ConvexHeightFieldShape.h"
+#include "../ConvexHeightFieldShape.h"
 
 //#include "TypeDefinition.h"
 //#include "RigidBody.h"

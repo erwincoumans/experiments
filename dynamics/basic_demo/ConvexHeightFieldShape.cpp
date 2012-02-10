@@ -1,10 +1,10 @@
 
-#include <ConvexHeightFieldShape.h>
-#include <Stubs/AdlCollideUtils.h>
-#include <CubeMapUtils.h>
+#include "ConvexHeightFieldShape.h"
+#include "Stubs/AdlCollideUtils.h"
+#include "CubeMapUtils.h"
 //#include <common/Physics/ShapeBase.h>
 //#include <common/Physics/SphereShape.h>
-#include "GlutStuff.h"
+//#include "GlutStuff.h"
 
 //#define USE_OLD
 
@@ -202,6 +202,33 @@ ConvexHeightField::ConvexHeightField(const float4* eqn, int nEqn)
 	}
 
 	calcSamplePoints( m_samplePoints );
+
+	//	calc support height using m_samplePoints
+	{
+		for(u32 faceIdx=0; faceIdx<6; faceIdx++) for(int i=0; i<HEIGHT_RES; i++) for(int j=0; j<HEIGHT_RES; j++)
+		{
+			float4 v;
+			float x = (i+0.5f)/(float)HEIGHT_RES;
+			float y = (j+0.5f)/(float)HEIGHT_RES;
+			v = CubeMapUtils::calcVector(faceIdx, x, y);
+			v = normalize3( v );
+
+			float maxHeight = -1;
+			for(int ie=0; ie<6*HEIGHT_RES*HEIGHT_RES; ie++)
+			{
+				float h = dot3F4( v, m_samplePoints[ie] )/m_scale;
+				if (h>1.f)
+					h=1.f;
+//				ADLASSERT( h <= 1.f );
+				if( h > maxHeight ) maxHeight = h;
+			}
+
+			{
+				u8 quantizedHeight = min2((u8)(maxHeight*255.f)+1, 255);
+				sampleSupport( (Face)faceIdx, i, j ) = quantizedHeight;
+			}
+		}
+	}
 
 	for(int i=0; i<6; i++)
 	{
@@ -445,6 +472,11 @@ const float4* ConvexHeightField::getSamplePoints() const
 	return m_samplePoints;
 }
 
+int ConvexHeightField::getNumSamplePoints() const
+{
+	return HEIGHT_RES*HEIGHT_RES*6;
+}
+
 __inline
 float4 rainbowMap( float s )
 {
@@ -458,59 +490,3 @@ float4 rainbowMap( float s )
 	return col;
 }
 
-#define pxDrawPointListTransformed(vtx,color,nVtx,translation,quaternion) drawPointListTransformed(vtx,color,nVtx,translation,quaternion);
-
-__inline void glVertexFloat4( const float4& v )
-{
-	glVertex3f( v.x, v.y, v.z );
-}
-
-__inline void drawPointListTransformed(const float4* vtx, const float4* color, int nVtx, const float4& translation, const Quaternion& quat)
-{
-	glPushMatrix();
-
-	Matrix3x3 rotMat = mtTranspose( qtGetRotationMatrix( quat ) );
-	float transformMat[16] =
-	{
-		rotMat.m_row[0].x, rotMat.m_row[0].y, rotMat.m_row[0].z, 0,
-		rotMat.m_row[1].x, rotMat.m_row[1].y, rotMat.m_row[1].z, 0,
-		rotMat.m_row[2].x, rotMat.m_row[2].y, rotMat.m_row[2].z, 0,
-		translation.x, translation.y, translation.z,1
-	};
-
-	glMultMatrixf( transformMat );
-
-
-	glPointSize(3.f);
-	glBegin(GL_POINTS);
-	for(int i=0; i<nVtx; i++)
-	{
-		const float4& c = color[i];
-		glColor4f(c.x, c.y, c.z, 1);
-		glVertexFloat4( vtx[i] );
-	}
-	glEnd();
-
-	glPopMatrix();
-}
-void ConvexHeightField::displaySamples(const float4& translation, const Quaternion& quaternion) const
-{
-	float4 c[HEIGHT_RES*HEIGHT_RES*6];
-//	float4 v[HEIGHT_RES*HEIGHT_RES*6];
-
-	float s = 0.3f;
-	for(int i=0; i<HEIGHT_RES*HEIGHT_RES*6; i++)
-	{
-		const float4& n = m_normal[i];
-		s = n.w;
-		c[i] = rainbowMap( s );
-		c[i] = make_float4(1.f);
-		c[i] = make_float4(1,1,0,0);
-//		v[i] = calcSamplePoint( i );
-	}
-
-	pxDrawPointListTransformed( (float4*)m_samplePoints, c, HEIGHT_RES*HEIGHT_RES*6, translation, quaternion );
-//	pxDrawPointListTransformed( v, c, HEIGHT_RES*HEIGHT_RES*6, translation, quaternion );
-
-//	pxDrawPointListTransformed( m_samplePoints, c, HEIGHT_RES*HEIGHT_RES, translation, quaternion );
-}

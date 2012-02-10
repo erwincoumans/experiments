@@ -1,8 +1,8 @@
 #ifndef AABB_H
 #define AABB_H
 
-#include <Stubs/AdlMath.h>
-#include <Stubs/AdlQuaternion.h>
+#include "Stubs/AdlMath.h"
+#include "Stubs/AdlQuaternion.h"
 
 enum AdlCollisionShapeTypes
 {

@@ -1,7 +1,7 @@
 #ifndef MATRIX3X3_H
 #define MATRIX3X3_H
 
-#include <Stubs/AdlMath.h>
+#include "AdlMath.h"
 
 ///////////////////////////////////////
 //	Matrix3x3

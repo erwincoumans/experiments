@@ -1,8 +1,15 @@
 #ifndef ADL_CONTACT4_H
 #define ADL_CONTACT4_H
 
+#ifdef CL_PLATFORM_AMD
+#include "AdlConstraint4.h"
+#include "Adl/Adl.h"
 
+typedef adl::Buffer<Constraint4>* SolverData;
+#else
 typedef void* SolverData;
+#endif
+
 typedef void* ShapeDataType;
 
 

@@ -19,13 +19,26 @@ class RigidBodyBase
 			float4 m_angVel;
 
 			u32 m_shapeIdx;
+			u32 m_shapeType;
+
 			float m_invMass;
 			float m_restituitionCoeff;
 			float m_frictionCoeff;
 			
 		};
+
+		struct Inertia
+		{
+/*			u16 m_shapeType;
+			u16 m_shapeIdx;
+			float m_restituitionCoeff;
+			float m_frictionCoeff;
+			int m_padding;
+*/
+			Matrix3x3 m_invInertia;
+			Matrix3x3 m_initInvInertia;
+		};
 };
 
 #endif// ADL_RIGID_BODY_H
-
 

@@ -1,8 +1,8 @@
 #ifndef COLLISION_SHAPE_H
 #define COLLISION_SHAPE_H
 
-#include <Stubs/AdlMath.h>
-#include <Stubs/AdlAabb.h>
+#include "Stubs/AdlMath.h"
+#include "Stubs/AdlAabb.h"
 
 
 _MEM_CLASSALIGN16
@@ -15,6 +15,7 @@ class CollisionShape
 		{
 			SHAPE_HEIGHT_FIELD,
 			SHAPE_CONVEX_HEIGHT_FIELD,
+			SHAPE_PLANE,
 			MAX_NUM_SHAPE_TYPES,
 		};
 

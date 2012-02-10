@@ -4,7 +4,13 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_extended_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics : enable
+
+#ifdef cl_ext_atomic_counters_32
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable
+#else
+#define counter32_t volatile global int*
+#endif
+
 
 typedef unsigned int u32;
 typedef unsigned short u16;
@@ -341,6 +347,7 @@ Matrix3x3 qtGetRotationMatrix(Quaternion quat)
 
 #define WG_SIZE 64
 #define HEIGHT_RES 4
+#define SHAPE_CONVEX_HEIGHT_FIELD 1//keep this in sync with AdlCollisionShape.h!
 
 typedef struct
 {
@@ -369,6 +376,8 @@ typedef struct
 	float4 m_angVel;
 
 	u32 m_shapeIdx;
+	u32 m_shapeType;
+	
 	float m_invMass;
 	float m_restituitionCoeff;
 	float m_frictionCoeff;
@@ -418,8 +427,27 @@ void CubeMapUtilsCalcCrd(const float4 p, int* faceIdxOut, float* x, float* y)
 		int idx;
 		float r2[] = {p.x*p.x, p.y*p.y, p.z*p.z};
 
-		idx = (r2[1]>r2[0])? 1:0;
-		idx = (r2[2]>r2[idx])? 2:idx;
+		if (r2[1]>r2[0])
+		{
+			if (r2[2]>r2[1])
+			{
+				idx = 2;
+			
+			} else
+			{
+				idx = 1;
+			}
+		
+		} else
+		{
+			if (r2[2]>r2[0])
+			{
+				idx = 2;
+			} else
+			{
+				idx = 0;
+			}
+		}
 
 		*faceIdxOut = (idx*2);
 //==
@@ -504,7 +532,7 @@ float4 sampleNormalGlobal(const __global ShapeData* shape, int face, int x, int 
 	return shape->m_normal[HEIGHT_RES*HEIGHT_RES*face + x + y*HEIGHT_RES];
 }
 
-float4 ShapeDataCalcSamplePoint( __local ShapeDeviceData* shape, int sIdx )//u8 height, int sIdx, float scale )
+float4 ShapeDataCalcSamplePoint( __local const ShapeDeviceData* shape, int sIdx )//u8 height, int sIdx, float scale )
 {
 	const float oneOver255 = 1.f/255.f;
 
@@ -524,7 +552,7 @@ float4 ShapeDataCalcSamplePoint( __local ShapeDeviceData* shape, int sIdx )//u8 
 	return rheight*v;
 }
 
-float ShapeDataQueryDistance(__local ShapeDeviceData* shape, float4 p )
+float ShapeDataQueryDistance(__local const ShapeDeviceData* shape, float4 p )
 {
 	if( dot3F4( p, p ) >= shape->m_scale*shape->m_scale ) return FLT_MAX;
 
@@ -595,7 +623,7 @@ float ShapeDataQuerySupportHeight(__global ShapeData* shape, float4 p )
 
 }
 
-float4 ShapeDataQueryNormal(const __global ShapeData* shape,  float4 p )
+float4 ShapeDataQueryNormal(__global const ShapeData* shape,  float4 p )
 {
 	int faceIdx;
 	float x, y;
@@ -639,7 +667,14 @@ void SupportCullingKernel( __global int2* restrict gPairsIn, __global ShapeData*
 	int shapeBIdx = bodyB.m_shapeIdx;
 
 
-	bool collide;
+	bool collide = false;
+	
+	//only collide if one of the two bodies has a non-zero mass
+	if (bodyA.m_invMass==0.f && bodyB.m_invMass==0.f)
+		return;
+		
+		
+	if (bodyA.m_shapeType == SHAPE_CONVEX_HEIGHT_FIELD && bodyB.m_shapeType==SHAPE_CONVEX_HEIGHT_FIELD)
 	{
 		float4 abInA, baInB;
 		float4 ab = bodyB.m_pos - bodyA.m_pos;
@@ -991,10 +1026,10 @@ void testVtx2(__local const BodyData* bodyA, __local const BodyData* bodyB,
 
 	while( pIdx < HEIGHT_RES*HEIGHT_RES*6*2 )
 	{
-		__local BodyData* bodyAPtr			=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?bodyA:bodyB;
-		__local BodyData* bodyBPtr			=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?bodyB:bodyA;
-		__local ShapeDeviceData* shapeAPtr	=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?shapeA:shapeB;
-		__local ShapeDeviceData* shapeBPtr	=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?shapeB:shapeA;
+		__local const BodyData* bodyAPtr			=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?bodyA:bodyB;
+		__local const BodyData* bodyBPtr			=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?bodyB:bodyA;
+		__local const ShapeDeviceData* shapeAPtr	=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?shapeA:shapeB;
+		__local const ShapeDeviceData* shapeBPtr	=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?shapeB:shapeA;
 		__local int* lNContacts				=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?lNContactsA:lNContactsB;
 		__local float4* lCPoints			=( pIdx < HEIGHT_RES*HEIGHT_RES*6 )?lCPointsA:lCPointsB;
 
@@ -1483,10 +1518,10 @@ void NarrowphaseKernel( const __global int2* restrict pairs, const __global Shap
 		}
 		else
 		{
-			output2( (firstSet)?&bodyA: &bodyB, (firstSet)?&bodyB : &bodyA, 
-				(firstSet)?iPairAB.x : iPairAB.y, (firstSet)?iPairAB.y : iPairAB.x, 
-				(firstSet)?&lNContactsA : &lNContactsB, (firstSet)?lCPointsA:lCPointsB, 
-				(firstSet)?center[0] : center[1], shapeData, contactsOut, nContactsOut, capacity, collisionMargin );
+			//output2( (firstSet)?&bodyA: &bodyB, (firstSet)?&bodyB : &bodyA, 
+			//	(firstSet)?iPairAB.x : iPairAB.y, (firstSet)?iPairAB.y : iPairAB.x, 
+			//	(firstSet)?&lNContactsA : &lNContactsB, (firstSet)?lCPointsA:lCPointsB, 
+			//	(firstSet)?center[0] : center[1], shapeData, contactsOut, nContactsOut, capacity, collisionMargin );
 		}
 	}
 }
@@ -1526,9 +1561,12 @@ void NarrowphaseWithPlaneKernel( const __global int2* restrict pairs, const __gl
 			lNContactsA = 0;
 //			lNContactsB = 0;
 		}
-		
+
 		GROUP_LDS_BARRIER;
 
+		if (bodyB.m_invMass == 0.f)
+			return;
+			
 		//	todo. can check if the shape is the same to previous one. If same, dont read
 		{	//	load shape data
 			int idx = GET_LOCAL_IDX%32;
@@ -1547,6 +1585,7 @@ void NarrowphaseWithPlaneKernel( const __global int2* restrict pairs, const __gl
 		GROUP_LDS_BARRIER;
 
 		float4 nA = make_float4(0,1,0,0);
+
 
 //		testVtx2( &bodyA, &bodyB, &shapeA, &shapeB, &lNContactsA, lCPointsA, &lNContactsB, lCPointsB );
 		testVtxWithPlane( &bodyA, &bodyB, nA, &shapeB, &lNContactsA, lCPointsA, collisionMargin );
@@ -1573,4 +1612,3 @@ void NarrowphaseWithPlaneKernel( const __global int2* restrict pairs, const __gl
 			center[0], nA, shapeData, contactsOut, nContactsOut, capacity, collisionMargin );
 	}
 }
-
