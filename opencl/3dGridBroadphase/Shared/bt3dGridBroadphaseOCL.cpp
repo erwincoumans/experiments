@@ -68,6 +68,8 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 												) : 
 	btGpu3DGridBroadphase(overlappingPairCache, cellSize, gridSizeX, gridSizeY, gridSizeZ, maxSmallProxies, maxLargeProxies, maxPairsPerSmallProxy, maxSmallProxySize, maxSmallProxiesPerCell)
 {
+
+
 	initCL(context, device, queue);
 	allocateBuffers();
 	
@@ -79,6 +81,16 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 
 	adl::DeviceUtils::Config cfg;
 	m_deviceHost = adl::DeviceUtils::allocate( adl::TYPE_HOST, cfg );
+	m_ownsDevice = false;
+	if (!deviceCL)
+	{
+		m_ownsDevice = true;
+		deviceCL = new adl::DeviceCL;
+		deviceCL->m_context = context;
+		deviceCL->m_deviceIdx = device;
+		deviceCL->m_commandQueue = queue;
+		deviceCL->m_kernelManager = new adl::KernelManager;
+	}
 
 	m_deviceCL = deviceCL;
 
@@ -110,6 +122,11 @@ bt3dGridBroadphaseOCL::~bt3dGridBroadphaseOCL()
 	adl::RadixSort32<adl::TYPE_CL>::deallocate(dataC);
 	adl::DeviceUtils::deallocate(m_deviceHost);
 	delete m_srcClBuffer;
+	if (m_ownsDevice)
+	{
+		delete m_deviceCL->m_kernelManager;
+		delete m_deviceCL;
+	}
 }
 
 #ifdef CL_PLATFORM_MINI_CL

@@ -97,6 +97,7 @@ protected:
 
 	adl::Device*			m_deviceHost;
 	adl::DeviceCL*			m_deviceCL;
+	bool					m_ownsDevice;
 
 
 public:

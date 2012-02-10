@@ -50,6 +50,11 @@ __kernel void
 		if (1)
 		{
 			float4 axis;
+			//add some hardcoded angular damping
+			pAngVel[nodeID].x *= 0.99f;
+			pAngVel[nodeID].y *= 0.99f;
+			pAngVel[nodeID].z *= 0.99f;
+			
 			float4 angvel = pAngVel[nodeID];
 			float fAngle = native_sqrt(dot(angvel, angvel));
 			//limit the angular motion
