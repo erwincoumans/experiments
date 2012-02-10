@@ -369,8 +369,8 @@ void akSubMesh::deform(akGeometryDeformer::SkinningOption method,
 {
 	akVector3 *posin, *posout;
 	unsigned int posins, posouts;
-	akVector3 *norin, *norout;
-	unsigned int norins, norouts;
+	akVector3 *norin=0, *norout=0;
+	unsigned int norins=0, norouts=0;
 	
 	//be sure vbuf is up to date
 	getVertexBuffer();

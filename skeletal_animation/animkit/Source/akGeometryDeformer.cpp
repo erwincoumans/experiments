@@ -51,10 +51,13 @@ void akGeometryDeformer::Morphing(const akMorphTarget *morph, akScalar weight,
 		const akVector3* src = (akVector3*)((char*)vtxDst + idx * vtxDstStride);
 		akVector3* dst = (akVector3*)((char*)vtxDst + idx * vtxDstStride);
 		*dst = *src + weight * morph->getVertexOffset(i);
-		// normal
-		src = (akVector3*)((char*)normDst + idx * normDstStride);
-		dst = (akVector3*)((char*)normDst + idx * normDstStride);
-		*dst = *src + weight * morph->getNormal(i);
+		if (normDst)
+		{
+			// normal
+			src = (akVector3*)((char*)normDst + idx * normDstStride);
+			dst = (akVector3*)((char*)normDst + idx * normDstStride);
+			*dst = *src + weight * morph->getNormal(i);
+		}
 	}
 }
 
