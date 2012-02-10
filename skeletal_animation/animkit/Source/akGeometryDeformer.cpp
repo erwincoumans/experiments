@@ -233,10 +233,14 @@ void akGeometryDeformer::LBSkinningNoNormals(
 	{
 		akVector4 pos(vtxSrc[0].getX(), vtxSrc[0].getY(), vtxSrc[0].getZ(), 1);
 		akVector4 posout(0,0,0,1);
-		if (weights[0]) posout += matrices[indices[0]] * weights[0] * pos;
-		if (weights[1]) posout += matrices[indices[1]] * weights[1] * pos;
-		if (weights[2]) posout += matrices[indices[2]] * weights[2] * pos;
-		if (weights[3]) posout += matrices[indices[3]] * weights[3] * pos;
+		if (weights[0]) 
+			posout += matrices[indices[0]] * weights[0] * pos;
+		if (weights[1]) 
+			posout += matrices[indices[1]] * weights[1] * pos;
+		if (weights[2]) 
+			posout += matrices[indices[2]] * weights[2] * pos;
+		if (weights[3]) 
+			posout += matrices[indices[3]] * weights[3] * pos;
 		
 		*vtxDst = posout.getXYZ();
 		

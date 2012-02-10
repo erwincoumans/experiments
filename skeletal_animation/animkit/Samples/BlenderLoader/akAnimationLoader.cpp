@@ -528,7 +528,22 @@ void akAnimationLoader::convertObject(akEntity* obj, Blender::Object* bobj, bool
 	// 2.5x
 	else
 	{
-		convert25AnimData(obj, bobj->adt, animfps);
+       /*!
+         astojilj - fixes renderring animation for common case when mesh is parented to armature 
+         and armature is animated. Note that in example Blue.blend both armature and mesh reference 
+         to armature are animated so animation is displayed correctly. However, in common case when
+         only armature is added to NLA editor this was not OK. Following code checks if object 
+         has animation, if not checks parent and if armature and if animated, it uses that one.
+        */
+#if 1
+        Blender::AnimData* adt = (bobj->adt && bobj->adt->action) 
+            ? bobj->adt 
+            : ((bobj->parent && bobj->parent->type == OB_ARMATURE) ? bobj->parent->adt : bobj->adt);
+        convert25AnimData(obj,adt, animfps);
+#else
+		convert25AnimData(obj,bobj->adt, animfps);
+		
+#endif
 	}
 	
 	// object data

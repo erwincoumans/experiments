@@ -50,7 +50,7 @@ protected:
 	Channels m_channels;
 
 public:
-	akAnimationClip() : m_length(0) {}
+	akAnimationClip();
 	~akAnimationClip();
 
 	void addChannel(akAnimationChannel* chan);

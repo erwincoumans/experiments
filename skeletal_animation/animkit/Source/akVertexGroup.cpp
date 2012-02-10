@@ -42,6 +42,7 @@ akVertexGroup::~akVertexGroup()
 
 void akVertexGroup::add(UTuint32 vertexIndex, akScalar weight)
 {
+//	printf("%d,%f\n",vertexIndex,weight);
 	m_indices.push_back(vertexIndex);
 	m_weights.push_back(weight);
 	m_size++;

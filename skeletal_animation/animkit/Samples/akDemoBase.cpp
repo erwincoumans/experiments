@@ -44,6 +44,7 @@ akDemoBase::akDemoBase() : m_frame(0), m_time(0), m_fpsLastTime(0), m_stepLastTi
 	m_drawSkeleton(true), m_windowx(800), m_windowy(800)
 {
 	m_camera = (akCamera*) btAlignedAlloc(sizeof(akCamera), 16);
+	m_camera->init();
 }
 
 akDemoBase::~akDemoBase()
@@ -119,15 +120,17 @@ void akDemoBase::start(void)
 	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
 	glEnable(GL_LIGHT1);
 }
-
+bool enable=true;
 void akDemoBase::step(akScalar time)
 {
 	unsigned int i;
+	if (enable)
 	for( i=0; i<m_objects.size(); i++)
 	{		
 		akEntity* object = m_objects.at(i);
 		object->step(time, m_dualQuatUse, m_normalMethod);
 	}
+	
 }
 
 void akDemoBase::drawString(float x, float y, const char *s)

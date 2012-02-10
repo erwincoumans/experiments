@@ -119,7 +119,7 @@ void akEntity::init(bool useVbo, akDemoBase* demo)
 	{
 		akSubMesh* sub = m_mesh->getSubMesh(i);
 		
-		if(sub->getMaterial().m_mode & akMaterial::MA_HASFACETEX)
+		if(sub->getMaterial().m_textures.size())//sub->>getMaterial(1)//sub->getMaterial().m_mode & akMaterial::MA_HASFACETEX)
 		{
 			const utString& texname = sub->getMaterial().m_textures.at(0).m_image;
 			GLuint tex = demo->getTexture(texname);

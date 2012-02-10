@@ -28,6 +28,12 @@
 #include "akSkeleton.h"
 #include "akSkeletonPose.h"
 
+akSkeleton::akSkeleton() 
+: m_localBindPose(0), m_modelBindPose(0) 
+{
+
+}
+
 akSkeleton::akSkeleton(UTuint32 numJoints) : m_localBindPose(0), m_modelBindPose(0)
 {
 	m_joints.resize(numJoints);

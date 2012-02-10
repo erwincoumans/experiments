@@ -40,6 +40,15 @@ class akEntity;
 
 typedef struct akCamera
 {
+	void init()
+	{
+		m_transform = m_transform.identity();
+		m_transform.loc = akVector3(7.4811316,-6.5076399,5.3436651);
+		m_transform.rot = akQuat(0.48170695,0.21292172,0.33425143,0.78159994);
+		m_fov = 49.134342;
+		m_clipStart = 0.1;
+		m_clipEnd = 100;
+	}
 	akTransformState m_transform;
 	akScalar m_fov;
 	akScalar m_clipStart, m_clipEnd;

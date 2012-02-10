@@ -343,19 +343,19 @@ class akSubMeshPair
 {
 public:
 	akSubMeshHashKey test;
-	akSubMesh*     item;
+	akSubMesh*     m_subMesh;
 	Blender::Mesh* m_bmesh;
 	utArray<UTuint32> idxmap; // store the old index (in the blender mesh) of the vertex
 	
 	utArray<utArray<UTuint32> >* smoothfacesarray;
 	utArray<btAlignedObjectArray<akVector3> >* shapekeysnormals;
 	
-	akSubMeshPair() : test(), item(0)
+	akSubMeshPair() : test(), m_subMesh(0)
 	{
 	}
 	
 	akSubMeshPair(akSubMesh* cur, Blender::Mesh* bmesh, utArray<utArray<UTuint32> >* smoothfaces, utArray<btAlignedObjectArray<akVector3> >* shapenorm)
-		: test(), item(cur), m_bmesh(bmesh), smoothfacesarray(smoothfaces), shapekeysnormals(shapenorm)
+		: test(), m_subMesh(cur), m_bmesh(bmesh), smoothfacesarray(smoothfaces), shapekeysnormals(shapenorm)
 	{
 	}
 
@@ -369,7 +369,7 @@ public:
 		if (this != &p)
 		{
 			test = akSubMeshHashKey(p.test);
-			item = p.item;
+			m_subMesh = p.m_subMesh;
 			idxmap = p.idxmap;
 			smoothfacesarray = p.smoothfacesarray;
 			shapekeysnormals = p.shapekeysnormals;
@@ -384,7 +384,7 @@ public:
 
 	unsigned int getVertexIndex(unsigned int fi, unsigned int bindex, const akMeshLoader::TempVert& ref)
 	{
-		UTsize size = item->getVertexCount();
+		UTsize size = m_subMesh->getVertexCount();
 		for(unsigned int i=0; i<size; i++)
 		{
 			if(idxmap[i] == bindex && vertEq(i,ref))
@@ -396,7 +396,7 @@ public:
 
 	bool vertEq(const unsigned int index, const akMeshLoader::TempVert& b)
 	{
-		const akBufferInfo* vbi = item->getVertexBuffer();
+		const akBufferInfo* vbi = m_subMesh->getVertexBuffer();
 		akVector3* co, *no;
 		UTuint32* vcol;
 		float* uvlayer;
@@ -423,7 +423,7 @@ public:
 				return false;
 		}
 		
-		for (unsigned int i = 0; i < item->getUVLayerCount(); i++)
+		for (unsigned int i = 0; i < m_subMesh->getUVLayerCount(); i++)
 		{
 			if(vbi->getElement(akBufferInfo::BI_DU_UV, akBufferInfo::VB_DT_2FLOAT32, i+1, (void**)&uvlayer, &uvlayers))
 			{
@@ -446,7 +446,7 @@ public:
 			uvs.push_back(ref.uv[j][0]);
 			uvs.push_back(ref.uv[j][1]);
 		}
-		UTuint32 id = item->addVertex(ref.co, ref.no, ref.vcol, uvs);
+		UTuint32 id = m_subMesh->addVertex(ref.co, ref.no, ref.vcol, uvs);
 		idxmap.push_back(bindex);
 		
 		// vgroups
@@ -456,9 +456,10 @@ public:
 			for(int j=0;j<dv.totweight;j++)
 			{
 				UTuint32 vgi = dv.dw[j].def_nr;
-				if( vgi < item->getNumVertexGroups() )
+				if( vgi < m_subMesh->getNumVertexGroups() )
 				{
-					akVertexGroup* vg = item->getVertexGroup(vgi);
+					//printf("vgi=%d\n",vgi);
+					akVertexGroup* vg = m_subMesh->getVertexGroup(vgi);
 					vg->add(id, dv.dw[j].weight);
 				}
 			}
@@ -482,8 +483,8 @@ public:
 					
 					if(basis)
 					{
-						//akMorphTarget* mt = item->getMorphTarget(bkb->name);
-						akMorphTarget* mt = item->getMorphTarget(mti);
+						//akMorphTarget* mt = m_subMesh->getMorphTarget(bkb->name);
+						akMorphTarget* mt = m_subMesh->getMorphTarget(mti);
 						
 						float* kpos = (float*)bkb->data;
 						float* bpos = (float*)basis->data;
@@ -558,9 +559,9 @@ void akMeshLoader::addTriangle(akSubMeshPair* subp,
 	idx1 = subp->getVertexIndex(fi, i0, v0);
 	idx2 = subp->getVertexIndex(fi, i1, v1);
 	idx3 = subp->getVertexIndex(fi, i2, v2);
-	subp->item->addIndex(idx1);
-	subp->item->addIndex(idx2);
-	subp->item->addIndex(idx3);
+	subp->m_subMesh->addIndex(idx1);
+	subp->m_subMesh->addIndex(idx2);
+	subp->m_subMesh->addIndex(idx3);
 }
 
 void akMeshLoader::convertIndexedTriangle(
@@ -631,13 +632,13 @@ unsigned int akMeshLoader::packColour(const Blender::MCol& col, bool opengl)
 
 void akMeshLoader::convertTextureFace(akSubMeshPair* subpair)
 {
-	akMaterial& ma = subpair->item->getMaterial();
+	akMaterial& ma = subpair->m_subMesh->getMaterial();
 	akSubMeshHashKey& hk = subpair->test;
 	Blender::Image** imas = subpair->test.m_images;
 	
 	ma.m_mode = hk.m_mode;
 
-	if (imas && ma.m_mode & akMaterial::MA_HASFACETEX)
+	if (imas)// && ma.m_mode & akMaterial::MA_HASFACETEX)
 	{
 //		ma.m_name = "TextureFace";
 		ma.m_totaltex = 0;
@@ -689,7 +690,7 @@ int akMeshLoader::findTextureLayer(Blender::MTex* te)
 
 void akMeshLoader::convertMaterial(Blender::Material* bma, akSubMeshPair* subpair)
 {
-	akMaterial& ma = subpair->item->getMaterial();
+	akMaterial& ma = subpair->m_subMesh->getMaterial();
 	akSubMeshHashKey& hk = subpair->test;
 	
 	ma.m_mode = hk.m_mode;
@@ -959,7 +960,9 @@ void akMeshLoader::convert(bool sortByMat, bool openglVertexColor)
 		}
 		if (arpos >= meshtable.size())
 		{
-			curSubMesh = new akSubMesh(akSubMesh::ME_TRIANGLES, true, true, totlayer);
+			bool hasNormals=false;
+			bool hasColors=false;
+			curSubMesh = new akSubMesh(akSubMesh::ME_TRIANGLES,hasNormals, hasColors, totlayer);
 			m_gmesh->addSubMesh(curSubMesh);
 			
 			curSubMeshPair = new akSubMeshPair(curSubMesh, m_bmesh, &smoothfacesarray, &shapekeysnormals);
@@ -984,7 +987,7 @@ void akMeshLoader::convert(bool sortByMat, bool openglVertexColor)
 		else
 		{
 			curSubMeshPair = meshtable.at(arpos);
-			curSubMesh = curSubMeshPair->item;
+			curSubMesh = curSubMeshPair->m_subMesh;
 		}
 
 		if (curSubMesh == 0 || curSubMeshPair == 0) continue;

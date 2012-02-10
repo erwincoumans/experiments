@@ -65,7 +65,7 @@ private:
 	btAlignedObjectArray<akMatrix4>      m_inverseBindPose;
 	
 public:
-	akSkeleton() : m_localBindPose(0), m_modelBindPose(0) {}
+	akSkeleton();
 	akSkeleton(UTuint32 numJoints);
 	~akSkeleton();
 		

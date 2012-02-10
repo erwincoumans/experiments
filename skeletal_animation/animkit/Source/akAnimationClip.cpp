@@ -31,6 +31,10 @@
 #include "akSkeletonPose.h"
 #include "akPose.h"
 
+akAnimationClip::akAnimationClip() : m_length(0) 
+{
+
+}
 
 akAnimationClip::~akAnimationClip()
 {
