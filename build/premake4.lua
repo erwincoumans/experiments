@@ -78,7 +78,11 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/3dGridBroadphase"
 	include "../opencl/global_atomics"
 	include "../opencl/broadphase_benchmark"
+	include "../opencl/gpu_rigidbody_pipeline"
+	include "../opencl/gpu_rigidbody_pipeline2"
 	
+	--include "../dynamics/profiler_test"
+	--include "../Lua"
 	
 	
 if _OPTIONS["with-pe"] then
@@ -100,10 +104,6 @@ end
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"
-	
-	include "../dynamics/CDTestFramework"
-	include "../dynamics/CDTestFramework/opcode"
-	include "../dynamics/CDTestFramework/AntTweakBar/src"
 	
 
 	
