@@ -1,4 +1,19 @@
 
+/*
+Copyright (c) 2012 Advanced Micro Devices, Inc.  
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose, 
+including commercial applications, and to alter it and redistribute it freely, 
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+*/
+//Originally written by Roman Ponomarev, Erwin Coumans
+
 #include "findPairsOpenCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 
@@ -23,7 +38,9 @@ void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id de
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(cxMainContext, device, broadphaseKernelString, &pErrNum ,"",GRID_BROADPHASE_PATH);
 
 	fpio.m_broadphaseBruteForceKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseKernel" ,&pErrNum,prog);
-	fpio.m_initializeGpuAabbsKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "initializeGpuAabbs" ,&pErrNum,prog);
+	fpio.m_initializeGpuAabbsKernelSimple = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "initializeGpuAabbsSimple" ,&pErrNum,prog);
+	fpio.m_initializeGpuAabbsKernelFull = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "initializeGpuAabbsFull" ,&pErrNum,prog);
+
 	fpio.m_broadphaseColorKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "broadphaseColorKernel" ,&pErrNum,prog);
 
 	fpio.m_setupBodiesKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "setupBodiesKernel" ,&pErrNum,prog);
@@ -51,7 +68,7 @@ void	findPairsOpenCLBruteForce(btFindPairsIO& fpio)
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
 
-void	setupGpuAabbs(btFindPairsIO& fpio)
+void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies)
 {
 
 			int ciErrNum = 0;
@@ -59,14 +76,35 @@ void	setupGpuAabbs(btFindPairsIO& fpio)
 			int numObjects = fpio.m_numObjects;
 			int offset = fpio.m_positionOffset;
 
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 0, sizeof(int), &offset);
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 1, sizeof(int), &numObjects);
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernel, 3, sizeof(cl_mem), (void*)&fpio.m_dAABB);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 3, sizeof(cl_mem), (void*)&bodies);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 4, sizeof(cl_mem), (void*)&fpio.m_dlocalShapeAABB);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 5, sizeof(cl_mem), (void*)&fpio.m_dAABB);
 				size_t workGroupSize = 64;
 			size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
 		
-			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernelFull, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+			oclCHECKERROR(ciErrNum, CL_SUCCESS);
+}
+
+void	setupGpuAabbsSimple(btFindPairsIO& fpio)
+{
+
+			int ciErrNum = 0;
+
+			int numObjects = fpio.m_numObjects;
+			int offset = fpio.m_positionOffset;
+
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelSimple, 0, sizeof(int), &offset);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelSimple, 1, sizeof(int), &numObjects);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelSimple, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelSimple, 3, sizeof(cl_mem), (void*)&fpio.m_dAABB);
+				size_t workGroupSize = 64;
+			size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
+		
+			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernelSimple, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
 
@@ -154,7 +192,8 @@ void	colorPairsOpenCL(btFindPairsIO&	fpio)
 
 void releaseFindPairs(btFindPairsIO& fpio)
 {
-	clReleaseKernel(fpio.m_initializeGpuAabbsKernel);
+	clReleaseKernel(fpio.m_initializeGpuAabbsKernelSimple);
+	clReleaseKernel(fpio.m_initializeGpuAabbsKernelFull);
 	clReleaseKernel(fpio.m_broadphaseColorKernel);
 	clReleaseKernel(fpio.m_broadphaseBruteForceKernel);
 	clReleaseKernel(fpio.m_setupBodiesKernel);

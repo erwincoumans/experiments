@@ -1,3 +1,17 @@
+/*
+Copyright (c) 2012 Advanced Micro Devices, Inc.  
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose, 
+including commercial applications, and to alter it and redistribute it freely, 
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+*/
+//Originally written by Erwin Coumans
 
 #include "OpenGLInclude.h"
 
@@ -57,6 +71,14 @@ cl_mem				gBodyTimes=0;
 
 adl::DeviceCL* g_deviceCL=0;
 
+struct  btAABBHost //keep this in sync with btAABBCL!
+{
+	float			fx;
+	float			fy;
+	float			fz;
+	unsigned int	uw;
+};
+
 struct InternalData
 {
 	adl::Buffer<btVector3>* m_linVelBuf;
@@ -64,6 +86,8 @@ struct InternalData
 	adl::Buffer<float>* m_bodyTimes;
 	bool	m_useInterop;
 	btGridBroadphaseCl* m_Broadphase;
+
+	adl::Buffer<btAABBHost>* m_localShapeAABB;
 
 	btVector3*	m_linVelHost;
 	btVector3*	m_angVelHost;
@@ -187,7 +211,25 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 
 	if (narrowphaseAndSolver)
 		shapeIndex = narrowphaseAndSolver->registerShape(s_convexHeightField);
-	
+
+	if (shapeIndex>=0)
+	{
+		btAABBHost aabbMin, aabbMax;
+		aabbMin.fx = s_convexHeightField->m_aabb.m_min.x;
+		aabbMin.fy = s_convexHeightField->m_aabb.m_min.y;
+		aabbMin.fz= s_convexHeightField->m_aabb.m_min.z;
+		aabbMin.uw = shapeIndex;
+
+		aabbMax.fx = s_convexHeightField->m_aabb.m_max.x;
+		aabbMax.fy = s_convexHeightField->m_aabb.m_max.y;
+		aabbMax.fz= s_convexHeightField->m_aabb.m_max.z;
+		aabbMax.uw = shapeIndex;
+
+		m_data->m_localShapeAABB->write(&aabbMin,1,shapeIndex*2);
+		m_data->m_localShapeAABB->write(&aabbMax,1,shapeIndex*2+1);
+		adl::DeviceUtils::waitForCompletion( g_deviceCL );
+	}
+
 	m_numCollisionShapes++;
 	delete[] eqn;
 	return shapeIndex;
@@ -241,6 +283,8 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	m_data->m_angVelBuf = new adl::Buffer<btVector3>(g_deviceCL,MAX_CONVEX_BODIES_CL);
 	m_data->m_bodyTimes = new adl::Buffer<float>(g_deviceCL,MAX_CONVEX_BODIES_CL);
 
+	m_data->m_localShapeAABB = new adl::Buffer<btAABBHost>(g_deviceCL,MAX_CONVEX_SHAPES_CL);
+	
 	gLinVelMem = (cl_mem)m_data->m_linVelBuf->m_ptr;
 	gAngVelMem = (cl_mem)m_data->m_angVelBuf->m_ptr;
 	gBodyTimes = (cl_mem)m_data->m_bodyTimes->m_ptr;
@@ -298,6 +342,7 @@ void	CLPhysicsDemo::cleanup()
 	delete m_data->m_linVelBuf;
 	delete m_data->m_angVelBuf;
 	delete m_data->m_bodyTimes;
+	delete m_data->m_localShapeAABB;
 
 	delete m_data->m_Broadphase;
 	delete m_data;
@@ -369,10 +414,11 @@ void	CLPhysicsDemo::stepSimulation()
 		gFpIO.m_positionOffset = SHAPE_VERTEX_BUFFER_SIZE/4;
 		gFpIO.m_clObjectsBuffer = clBuffer;
 		gFpIO.m_dAABB = m_data->m_Broadphase->m_dAABB;
+		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABB->m_ptr;
 		gFpIO.m_numOverlap = 0;
 		{
 			BT_PROFILE("setupGpuAabbs");
-			setupGpuAabbs(gFpIO);
+			setupGpuAabbsFull(gFpIO,narrowphaseAndSolver->getBodiesGpu() );
 		}
 		if (1)
 		{

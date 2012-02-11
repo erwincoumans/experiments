@@ -94,11 +94,11 @@ __kernel void
 		   __global float* pBodyTimes)
 {
 	int nodeID = get_global_id(0);
-	float timeStepPos = 0.00166666;
+	float timeStepPos = 0.000166666;
 	
 	float BT_GPU_ANGULAR_MOTION_THRESHOLD = (0.25f * 3.14159254f);
-	float mAmplitude = 66.f;
-	float timeStep = 0.00166666;
+	float mAmplitude = 166.f;
+	
 	
 	if( nodeID < numNodes )
 	{

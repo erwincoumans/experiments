@@ -1,3 +1,18 @@
+/*
+Copyright (c) 2012 Advanced Micro Devices, Inc.  
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose, 
+including commercial applications, and to alter it and redistribute it freely, 
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+*/
+//Originally written by Erwin Coumans
+
 //
 //#include "vld.h"
 #include <GL/glew.h>
@@ -13,11 +28,11 @@
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "ShapeData.h"
 
-int NUM_OBJECTS_X = 32;
-int NUM_OBJECTS_Y = 32;
-int NUM_OBJECTS_Z = 32;
+int NUM_OBJECTS_X = 48;
+int NUM_OBJECTS_Y = 48;
+int NUM_OBJECTS_Z = 48;
 
-float X_GAP = 2.f;
+float X_GAP = 15.f;
 float Y_GAP = 2.f;
 float Z_GAP = 2.f;
 
@@ -73,7 +88,7 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	}
 #endif
 
-	float cubeScaling[4] = {2,2,2,2};
+	float cubeScaling[4] = {2,2,2,1};
 	int cubeCollisionShapeIndex = physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0]);
 
 
@@ -118,9 +133,9 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 		color[0] = 1.f;
 		color[1] = 0.f;
 		color[2] = 0.f;
-		cubeScaling[0] = 1000.f;
+		cubeScaling[0] = 5000.f;
 		cubeScaling[1] = 0.01f;
-		cubeScaling[2] = 1000.f;
+		cubeScaling[2] = 5000.f;
 
 		renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
 	}

@@ -180,7 +180,7 @@ __kernel void
 
 
 __kernel void 
-  initializeGpuAabbs( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global btAABBCL* pAABB)
+  initializeGpuAabbsSimple( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global btAABBCL* pAABB)
 {
 	int nodeID = get_global_id(0);
 		
@@ -215,6 +215,47 @@ __kernel void
 		pAABB[nodeID*2+1].fy = position.y+extent.y;
 		pAABB[nodeID*2+1].fz = position.z+extent.z;
 		pAABB[nodeID*2+1].uw = nodeID;		
+	}
+}
+
+
+
+__kernel void 
+  initializeGpuAabbsFull( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global Body* gBodies, __global btAABBCL* plocalShapeAABB, __global btAABBCL* pAABB)
+{
+	int nodeID = get_global_id(0);
+		
+	if( nodeID < numNodes )
+	{
+		float4 position = g_vertexBuffer[nodeID + startOffset/4];
+		float4 orientation = g_vertexBuffer[nodeID + startOffset/4+numNodes];
+		float4 color = g_vertexBuffer[nodeID + startOffset/4+numNodes+numNodes];
+		
+		float4 green = (float4)(.4f,1.f,.4f,1.f);
+		g_vertexBuffer[nodeID + startOffset/4+numNodes+numNodes] = green;
+		
+		int shapeIndex = gBodies[nodeID].m_shapeIdx;
+		if (shapeIndex>=0)
+		{
+			btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
+			btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
+			
+			float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
+
+			Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
+			float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
+		
+
+			pAABB[nodeID*2].fx = position.x-extent.x;
+			pAABB[nodeID*2].fy = position.y-extent.y;
+			pAABB[nodeID*2].fz = position.z-extent.z;
+			pAABB[nodeID*2].uw = nodeID;
+
+			pAABB[nodeID*2+1].fx = position.x+extent.x;
+			pAABB[nodeID*2+1].fy = position.y+extent.y;
+			pAABB[nodeID*2+1].fz = position.z+extent.z;
+			pAABB[nodeID*2+1].uw = nodeID;		
+		}
 	}
 }
 
