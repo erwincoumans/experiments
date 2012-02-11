@@ -57,10 +57,10 @@ extern int gShapeIndex;
 
 
 btVector3 m_cameraPosition(80,30,142);
-btVector3 m_cameraTargetPosition(40,5,0);
-btScalar m_cameraDistance = 95;
+btVector3 m_cameraTargetPosition(20,-5,0);
+btScalar m_cameraDistance = 55;
 btVector3 m_cameraUp(0,1,0);
-float m_azi=45.f;
+float m_azi=55.f;
 float m_ele=5.f;
 
 

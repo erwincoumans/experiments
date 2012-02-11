@@ -68,15 +68,16 @@ end
 	
 if not _OPTIONS["with-nacl"] then
 
+	include "../opencl/basic_initialize"
+	include "../opencl/vector_add"
+	include "../opencl/gui_initialize"
 	include "../opencl/opengl_interop"
+	include "../opencl/global_atomics"
 	include "../opencl/integration"
 	include "../opencl/primitives/AdlTest"
 	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
-	include "../opencl/basic_initialize"
-	include "../opencl/gui_initialize"
 	include "../opencl/3dGridBroadphase"
-	include "../opencl/global_atomics"
 	include "../opencl/broadphase_benchmark"
 	include "../opencl/gpu_rigidbody_pipeline"
 	include "../opencl/gpu_rigidbody_pipeline2"

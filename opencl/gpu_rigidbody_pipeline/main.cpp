@@ -14,9 +14,9 @@ subject to the following restrictions:
 //Originally written by Erwin Coumans
 
 
-int NUM_OBJECTS_X = 36;
-int NUM_OBJECTS_Y = 36;
-int NUM_OBJECTS_Z = 36;
+int NUM_OBJECTS_X = 54;
+int NUM_OBJECTS_Y = 35;
+int NUM_OBJECTS_Z = 54;
 
 float X_GAP = 12.f;
 float Y_GAP = 2.f;
@@ -782,7 +782,7 @@ void InitShaders()
 			{
 				instance_positions_ptr[index*4]=(i*X_GAP-NUM_OBJECTS_X/2);
 				instance_positions_ptr[index*4+1]=(j*Y_GAP-NUM_OBJECTS_Y/2);
-				instance_positions_ptr[index*4+2]=(k*Z_GAP-NUM_OBJECTS_Z/2);
+				instance_positions_ptr[index*4+2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				
 				instance_positions_ptr[index*4+3]=1;
 

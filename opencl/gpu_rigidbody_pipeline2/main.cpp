@@ -28,11 +28,11 @@ subject to the following restrictions:
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "ShapeData.h"
 
-int NUM_OBJECTS_X = 48;
-int NUM_OBJECTS_Y = 48;
-int NUM_OBJECTS_Z = 48;
+int NUM_OBJECTS_X = 32;
+int NUM_OBJECTS_Y = 24;
+int NUM_OBJECTS_Z = 32;
 
-float X_GAP = 15.f;
+float X_GAP = 2.f;
 float Y_GAP = 2.f;
 float Z_GAP = 2.f;
 
@@ -50,7 +50,7 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	float orn[4] = {0,0,0,1};
 	float color[4] = {1,1,1,1};
 	int index=0;
-#if 1
+#if 0
 	{
 		int numVertices = sizeof(barrel_vertices)/strideInBytes;
 		int numIndices = sizeof(barrel_indices)/sizeof(int);
@@ -67,15 +67,15 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 
 	for (int i=0;i<NUM_OBJECTS_X;i++)
 	{
-		for (int j=NUM_OBJECTS_Y/2;j<NUM_OBJECTS_Y;j++)
+		for (int j=NUM_OBJECTS_Y/2;j<(NUM_OBJECTS_Y/2+NUM_OBJECTS_Y/4);j++)
 		{
 			for (int k=0;k<NUM_OBJECTS_Z;k++)
 			{
 				float mass = j? 1.f : 0.f;
 
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2);
+				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
 				position[1]=(j*Y_GAP-NUM_OBJECTS_Y/2);
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2);
+				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 1.f;
 				
 				renderer.registerGraphicsInstance(barrelShapeIndex,position,orn,color,barrelScaling);
@@ -106,9 +106,9 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 			{
 				float mass = 1.f;//j? 1.f : 0.f;
 
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2);
+				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
 				position[1]=(j*Y_GAP-NUM_OBJECTS_Y/2);
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2);
+				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 1.f;
 				
 				renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 	createScene(render, demo);
 		
 
-
+	printf("num objects = %d\n", NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z);
 
 
 	render.writeTransforms();
@@ -184,6 +184,7 @@ int main(int argc, char* argv[])
 		CProfileManager::Reset();
 		
 		demo.stepSimulation();
+
 
 		window->startRendering();
 		render.RenderScene();
