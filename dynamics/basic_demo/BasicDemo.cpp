@@ -46,7 +46,7 @@ cl_device_id		g_clDevice=0;
 ///scaling of the objects (0.1 = 20 centimeter boxes )
 #define SCALING 1.
 #define START_POS_X 0
-#define START_POS_Y 0
+#define START_POS_Y -0.8
 #define START_POS_Z 0
 
 #define BoxVtxCount 8
