@@ -27,12 +27,12 @@ void Stopwatch::init( const Device* deviceData )
 		{
 #if defined(ADL_ENABLE_CL)
 		case TYPE_CL:
-			m_impl = new StopwatchCL;
+			m_impl = new StopwatchHost;//StopwatchCL
 			break;
 #endif
 #if defined(ADL_ENABLE_DX11)
 		case TYPE_DX11:
-			m_impl = new StopwatchDX11;
+			m_impl = new StopwatchHost;//StopwatchDX11;
 			break;
 #endif
 		case TYPE_HOST:

@@ -228,10 +228,7 @@ struct HostBuffer : public Buffer<T>
 
 
 #include <Adl/AdlStopwatch.h>
-#include <Adl/CL/AdlStopwatchCL.inl>
-#if defined(ADL_ENABLE_DX11)
-	#include <Adl/DX11/AdlStopwatchDX11.inl>
-#endif
+
 #include <Adl/Host/AdlStopwatchHost.inl>
 #include <Adl/AdlStopwatch.inl>
 
