@@ -35,7 +35,7 @@ struct StopwatchCL : public StopwatchBase
 		__inline
 		void stop();
 		__inline
-		float getMs();
+		float getMs(int index=0);
 		__inline
 		void getMs( float* times, int capacity );
 
@@ -70,11 +70,11 @@ void StopwatchCL::stop()
 	split();
 }
 
-float StopwatchCL::getMs()
+float StopwatchCL::getMs(int index)
 {
 	LARGE_INTEGER m_frequency;
 	QueryPerformanceFrequency( &m_frequency );
-	return (float)(1000*(m_t[1].QuadPart - m_t[0].QuadPart))/m_frequency.QuadPart;
+	return (float)(1000*(m_t[index+1].QuadPart - m_t[index].QuadPart))/m_frequency.QuadPart;
 }
 
 void StopwatchCL::getMs( float* times, int capacity )

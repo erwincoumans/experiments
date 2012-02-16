@@ -38,7 +38,7 @@ struct StopwatchBase
 	__inline
 	virtual void stop() = 0;
 	__inline
-	virtual float getMs() = 0;
+	virtual float getMs(int index=0) = 0;
 	__inline
 	virtual void getMs( float* times, int capacity ) = 0;
 	__inline

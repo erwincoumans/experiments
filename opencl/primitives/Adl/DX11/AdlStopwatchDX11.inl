@@ -35,7 +35,7 @@ struct StopwatchDX11 : public StopwatchBase
 		__inline
 		void stop();
 		__inline
-		float getMs();
+		float getMs(int index=0);
 		__inline
 		void getMs( float* times, int capacity );
 
@@ -92,18 +92,18 @@ void StopwatchDX11::stop()
 	((const DeviceDX11*)m_device)->m_context->End( m_fQuery );
 }
 
-float StopwatchDX11::getMs()
+float StopwatchDX11::getMs(int index)
 {
 	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT d;
 //	m_deviceData->m_context->End( m_fQuery );
 	while( ((const DeviceDX11*)m_device)->m_context->GetData( m_fQuery, &d,sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT),0 ) == S_FALSE ) {}
 
-	while( ((const DeviceDX11*)m_device)->m_context->GetData( m_tQuery[0], &m_t[0],sizeof(UINT64),0 ) == S_FALSE ){}
-	while( ((const DeviceDX11*)m_device)->m_context->GetData( m_tQuery[1], &m_t[1],sizeof(UINT64),0 ) == S_FALSE ){}
+	while( ((const DeviceDX11*)m_device)->m_context->GetData( m_tQuery[0], &m_t[index],sizeof(UINT64),0 ) == S_FALSE ){}
+	while( ((const DeviceDX11*)m_device)->m_context->GetData( m_tQuery[1], &m_t[index+1],sizeof(UINT64),0 ) == S_FALSE ){}
 
 	ADLASSERT( d.Disjoint == false );
 
-	float elapsedMs = (m_t[1] - m_t[0])/(float)d.Frequency*1000;
+	float elapsedMs = (m_t[index+1] - m_t[index])/(float)d.Frequency*1000;
 	return elapsedMs;
 
 }

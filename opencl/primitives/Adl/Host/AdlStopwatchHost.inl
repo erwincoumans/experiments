@@ -13,7 +13,11 @@ subject to the following restrictions:
 */
 //Originally written by Takahiro Harada
 
-
+#ifdef _WIN32
+	#include <windows.h>
+#else
+	#include <sys/time.h>
+#endif
 
 namespace adl
 {
@@ -32,13 +36,18 @@ class StopwatchHost : public StopwatchBase
 		__inline
 		void stop();
 		__inline
-		float getMs();
+		float getMs(int index=0);
 		__inline
 		void getMs( float* times, int capacity );
 
 	private:
+#ifdef _WIN32
 		LARGE_INTEGER m_frequency;
 		LARGE_INTEGER m_t[CAPACITY];
+#else
+		struct timeval mStartTime;
+		timeval m_t[CAPACITY];
+#endif
 };
 
 __inline
@@ -51,20 +60,32 @@ __inline
 void StopwatchHost::init( const Device* deviceData )
 {
 	m_device = deviceData;
+#ifdef _WIN32
 	QueryPerformanceFrequency( &m_frequency );
+#else
+	gettimeofday(&mStartTime, 0);
+#endif
 }
 
 __inline
 void StopwatchHost::start()
 {
 	m_idx = 0;
+#ifdef _WIN32
 	QueryPerformanceCounter(&m_t[m_idx++]);
+#else
+	gettimeofday(&m_t[m_idx++], 0);
+#endif
 }
 
 __inline
 void StopwatchHost::split()
 {
+#ifdef _WIN32
 	QueryPerformanceCounter(&m_t[m_idx++]);
+#else
+	gettimeofday(&m_t[m_idx++], 0);
+#endif
 }
 
 __inline
@@ -74,9 +95,14 @@ void StopwatchHost::stop()
 }
 
 __inline
-float StopwatchHost::getMs()
+float StopwatchHost::getMs(int index)
 {
-	return (float)(1000*(m_t[1].QuadPart - m_t[0].QuadPart))/m_frequency.QuadPart;
+#ifdef _WIN32
+	return (float)(1000*(m_t[index+1].QuadPart - m_t[index].QuadPart))/m_frequency.QuadPart;
+#else
+		return (m_t[index+1].tv_sec - m_t[index].tv_sec) * 1000 + 
+			(m_t[index+1].tv_usec - m_t[index].tv_usec) / 1000;
+#endif
 }
 
 __inline
@@ -86,7 +112,7 @@ void StopwatchHost::getMs(float* times, int capacity)
 
 	for(int i=0; i<min(capacity, m_idx-1); i++)
 	{
-		times[i] = (float)(1000*(m_t[i+1].QuadPart - m_t[i].QuadPart))/m_frequency.QuadPart;
+		times[i] = getMs(i);
 	}
 }
 
