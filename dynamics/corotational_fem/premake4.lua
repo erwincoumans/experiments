@@ -21,29 +21,10 @@
 		"../testbed"
 		}
 
-		configuration {"MacOSX"}
-                links { "Carbon.framework","OpenGL.framework","AGL.framework","Glut.framework" }
-                configuration {"not Windows", "not MacOSX"}
-                links {"GL","GLU","glut"}
+		initOpenGL()
+		initGlut()
+		initGlew()
 
-		
-                configuration {"not Windows", "not MacOSX"}
-		links {
-                "GL", "GLU", "glut","GLEW"
-                }
-
-                configuration {"Windows"}
-		libdirs {"../../rendering/GlutGlewWindows"}
-		includedirs {
-		"../../rendering/GlutGlewWindows",
-		}
-		links {
-			"glut32",
-			"glew32",
-			"opengl32"
-		}
-
-		configuration {}
 
 		files {
 			"**.cpp",

@@ -12,15 +12,12 @@
 		kind "ConsoleApp"
 		targetdir "../../../bin"
 
-		libdirs {"..","../../../rendering/GlutGlewWindows"}
+		initOpenGL()
+		initGlut()
+		initGlew()
 
-		links {
-			"glut32",
-			"glew32",
-			"opengl32"
-		}
-			includedirs {
-		"../../../rendering/GlutGlewWindows",
+		includedirs {
+
 		"../../../rendering/BulletMath"
 		}
 		

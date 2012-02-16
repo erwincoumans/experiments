@@ -310,7 +310,7 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 	DWORD dwResult;
 
 #ifdef _WIN64
-		SetWindowTextW(hWnd, text);
+		SetWindowTextW(m_data->m_hWnd, text);
 #else
 		SendMessageTimeoutW(m_data->m_hWnd, WM_SETTEXT, 0,
 				reinterpret_cast<LPARAM>(text),

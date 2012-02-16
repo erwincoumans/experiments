@@ -11,15 +11,15 @@
 	
 	includedirs 
 	{
-		"../../GlutGlewWindows",
+	
 		".."
 	}
-	libdirs {"../../GlutGlewWindows"}
 
+	initOpenGL()
+	initGlew()
+			
 	links {
 		"gwen",
-		"glew32",
-		"opengl32"
 	}
 	
 	

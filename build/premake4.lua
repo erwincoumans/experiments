@@ -53,9 +53,14 @@ else
 	location("./nacl")
 end
 
+	
+
+	projectRootDir = os.getcwd() .. "/../"
+	print("Project root directroy: " .. projectRootDir);
 
 	dofile ("findOpenCL.lua")
 	dofile ("findDirectX11.lua")
+	dofile ("findOpenGLGlewGlut.lua")
 	
 	language "C++"
 	

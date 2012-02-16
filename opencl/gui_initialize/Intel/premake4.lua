@@ -22,18 +22,8 @@
 		
 
 	
-		configuration { "Windows" }
- 		links { "glut32","glew32","opengl32" }
-		includedirs{	"../../../rendering/GlutGlewWindows"	}
- 		libdirs {"../../../rendering/GlutGlewWindows"}
-
-
-		configuration {"MaxOSX"}
- 		linkoptions { "-framework Carbon -framework OpenGL -framework AGL -framework Glut" } 
-		configuration {"not Windows", "not MacOSX"}
-		links {"GL","GLU","glut"}
-	
-		configuration{}
+		initOpenGL()
+		initGlut()
 	
 		files {
 		"../main.cpp",

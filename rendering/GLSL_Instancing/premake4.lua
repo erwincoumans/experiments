@@ -7,18 +7,13 @@
 	
 	includedirs 
 	{
-		"../GlutGlewWindows",
 		"../BulletMath"
 	}
-	libdirs {"../GlutGlewWindows"}
 
-	links {
-		"glut32",
-		"glew32",
-		"opengl32"
-	}
-	
-	
+	initOpenGL()
+	initGlut()
+	initGlew()
+		
 	files {
 		"main.cpp"
 	}
