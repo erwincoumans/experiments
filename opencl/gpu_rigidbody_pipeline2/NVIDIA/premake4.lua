@@ -13,7 +13,6 @@
 		targetdir "../../../bin"
 
 		initOpenGL()
-		initGlut()
 		initGlew()
 
 

@@ -14,7 +14,6 @@
 
 
 		initOpenGL()
-		initGlut()
 		initGlew()
 
 		includedirs {
