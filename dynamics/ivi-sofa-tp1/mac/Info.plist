@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC
+        "-//Apple Computer//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+       <key>CFBundleName</key>
+        <string>gpugems-__DEVICE__-fem</string>
+        <key>CFBundleIconFile</key>
+        <string>gpugems-fem.icns</string>
+        <key>CFBundleExecutable</key>
+        <string>gpugems-__DEVICE__-fem-__MACHINE__</string>
+        <key>CFBundleIdentifier</key>
+        <string>org.sofa-framework.gpugems-__DEVICE__-fem-__MACHINE__</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleSignature</key>
+        <string>sofa-gpugems-__DEVICE__-fem-__MACHINE__</string>
+        <key>CFBundleVersion</key>
+        <string>0.1</string>
+        <key>CSResourcesFileMapped</key>
+        <true/>
+    </dict>
+</plist>
