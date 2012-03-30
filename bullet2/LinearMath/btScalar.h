@@ -28,7 +28,7 @@ subject to the following restrictions:
 #include <float.h>
 
 /* SVN $Revision$ on $Date$ from http://bullet.googlecode.com*/
-#define BT_BULLET_VERSION 279
+#define BT_BULLET_VERSION 280
 
 inline int	btGetVersion()
 {
@@ -519,4 +519,29 @@ struct btTypedObject
 		return m_objectType;
 	}
 };
+
+
+  
+///align a pointer to the provided alignment, upwards
+template <typename T>T* btAlignPointer(T* unalignedPtr, size_t alignment)
+{
+		
+	struct btConvertPointerSizeT
+	{
+		union 
+		{
+				T* ptr;
+				size_t integer;
+		};
+	};
+    btConvertPointerSizeT converter;
+    
+    
+	const size_t bit_mask = ~(alignment - 1);
+    converter.ptr = unalignedPtr;
+	converter.integer += alignment-1;
+	converter.integer &= bit_mask;
+	return converter.ptr;
+}
+
 #endif //BT_SCALAR_H

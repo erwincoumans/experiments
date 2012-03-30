@@ -13,7 +13,6 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #include "btDefaultCollisionConfiguration.h"
 
 #include "BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.h"

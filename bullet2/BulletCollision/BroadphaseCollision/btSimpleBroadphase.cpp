@@ -220,13 +220,19 @@ void	btSimpleBroadphase::calculateOverlappingPairs(btDispatcher* dispatcher)
 		for (i=0; i <= m_LastHandleIndex; i++)
 		{
 			btSimpleBroadphaseProxy* proxy0 = &m_pHandles[i];
-			
+			if(!proxy0->m_clientObject)
+			{
+				continue;
+			}
 			new_largest_index = i;
 			for (j=i+1; j <= m_LastHandleIndex; j++)
 			{
 				btSimpleBroadphaseProxy* proxy1 = &m_pHandles[j];
 				btAssert(proxy0 != proxy1);
-				
+				if(!proxy1->m_clientObject)
+				{
+					continue;
+				}
 
 				btSimpleBroadphaseProxy* p0 = getSimpleProxyFromProxy(proxy0);
 				btSimpleBroadphaseProxy* p1 = getSimpleProxyFromProxy(proxy1);

@@ -138,12 +138,12 @@ public:
 
 	virtual btBroadphasePair*	getOverlappingPairArrayPtr()
 	{
-		return m_overlappingPairArray.size()?&m_overlappingPairArray[0]:0;
+		return &m_overlappingPairArray[0];
 	}
 
 	const btBroadphasePair*	getOverlappingPairArrayPtr() const
 	{
-		return m_overlappingPairArray.size()?&m_overlappingPairArray[0]:0;
+		return &m_overlappingPairArray[0];
 	}
 
 	btBroadphasePairArray&	getOverlappingPairArray()

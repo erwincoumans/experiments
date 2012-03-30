@@ -36,7 +36,7 @@ btPolyhedralConvexShape::~btPolyhedralConvexShape()
 }
 
 
-bool	btPolyhedralConvexShape::initializePolyhedralFeatures(bool mergeCoplanarTriangles)
+bool	btPolyhedralConvexShape::initializePolyhedralFeatures()
 {
 
 	if (m_polyhedron)
@@ -188,7 +188,7 @@ bool	btPolyhedralConvexShape::initializePolyhedralFeatures(bool mergeCoplanarTri
 
 
 		bool did_merge = false;
-		if (mergeCoplanarTriangles && coplanarFaceGroup.size()>1)
+		if (coplanarFaceGroup.size()>1)
 		{
 			//do the merge: use Graham Scan 2d convex hull
 

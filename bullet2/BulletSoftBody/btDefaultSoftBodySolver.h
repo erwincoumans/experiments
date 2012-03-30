@@ -13,6 +13,7 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+
 #ifndef BT_SOFT_BODY_DEFAULT_SOLVER_H
 #define BT_SOFT_BODY_DEFAULT_SOLVER_H
 
@@ -46,7 +47,7 @@ public:
 
 	virtual void optimize( btAlignedObjectArray< btSoftBody * > &softBodies,bool forceUpdate=false );
 
-	virtual void copyBackToSoftBodies();
+	virtual void copyBackToSoftBodies(bool bMove = true);
 
 	virtual void solveConstraints( float solverdt );
 
