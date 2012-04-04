@@ -769,7 +769,7 @@ cl_kernel btOpenCLUtils_compileCLKernelFromString(cl_context clContext, cl_devic
 
 	if (!m_cpProgram)
 	{
-		m_cpProgram = btOpenCLUtils_compileCLProgramFromString(clContext,device,kernelSource,pErrNum, additionalMacros,"");
+		m_cpProgram = btOpenCLUtils_compileCLProgramFromString(clContext,device,kernelSource,pErrNum, additionalMacros,0);
 	}
 
 

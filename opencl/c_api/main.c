@@ -20,9 +20,21 @@ subject to the following restrictions:
 
 
 #include <stdio.h>
+#include "../vector_add/VectorAddKernels.h"
+#include "btbDeviceCL.h"
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
+
+/*
+btb //base
+btm //math
+btu //util
+btc //collisiojn
+bta //animation
+btp //physics
+btr //rendering
+*/
 
 
 
@@ -35,6 +47,7 @@ int main(int argc, char* argv[])
 	void* glCtx=0;
 	void* glDC = 0;
 	int numDev =0;
+	cl_mem cmMemObjs[3];            // OpenCL memory buffer objects:  3 for device
 
 	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
 	
@@ -82,6 +95,11 @@ int main(int argc, char* argv[])
 	for (i=0;i<numDev;i++)
 	{
 		cl_device_id		device;
+		cl_kernel kernel;
+		btbDevice clDevice;
+		btbBuffer sortData;
+		int numElements;
+
 		device = btOpenCLUtils_getDevice(g_cxMainContext,i);
 		btOpenCLUtils_printDeviceInfo(device);
 		// create a command-queue
@@ -89,6 +107,24 @@ int main(int argc, char* argv[])
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		//normally you would create and execute kernels using this command queue
 
+
+		kernel = btOpenCLUtils_compileCLKernelFromString( g_cxMainContext, device, vectorAddCL, "VectorAdd", &ciErrNum, 0,"");
+
+		//create 'device'?
+
+		clDevice = btbCreateDeviceCL(g_cxMainContext,device, g_cqCommandQue);
+		//create buffers
+		numElements = 10;
+		sortData = btbCreateSortDataBuffer(clDevice, numElements);
+
+		//compute
+		//get results
+		//compare results
+
+		btbReleaseBuffer(sortData);
+		btbReleaseDevice(clDevice);
+
+		clReleaseKernel(kernel);
 		clReleaseCommandQueue(g_cqCommandQue);
 	}
 

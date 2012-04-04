@@ -60,7 +60,7 @@ cl_context 	btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_
 
 #define BT_MAX_STRING_LENGTH 1024
 
-typedef struct btOpenCLDeviceInfo
+typedef struct
 {
 	char m_deviceName[BT_MAX_STRING_LENGTH];
 	char m_deviceVendor[BT_MAX_STRING_LENGTH];
@@ -101,7 +101,7 @@ typedef struct btOpenCLDeviceInfo
 
 } btOpenCLDeviceInfo;
 
-typedef struct btOpenCLPlatformInfo
+typedef struct
 {
 	char m_platformVendor[BT_MAX_STRING_LENGTH];
 	char m_platformName[BT_MAX_STRING_LENGTH];

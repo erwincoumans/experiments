@@ -29,7 +29,7 @@ struct DeviceCL : public Device
 
 
 	__inline
-	DeviceCL() : Device( TYPE_CL ), m_kernelManager(0){}
+	DeviceCL() : Device( TYPE_CL ), m_kernelManager(0),m_ownsContextAndQueue(0){}
 	__inline
 	void* getContext() const { return m_context; }
 	__inline
@@ -81,7 +81,10 @@ struct DeviceCL : public Device
 
 	cl_device_id m_deviceIdx;
 
+	int	m_ownsContextAndQueue;
+
 	KernelManager* m_kernelManager;
+	
 };
 
 //===
@@ -89,6 +92,7 @@ struct DeviceCL : public Device
 
 void DeviceCL::initialize(const Config& cfg)
 {
+	m_ownsContextAndQueue = 1;
 //	DeviceUtils::create( cfg, (DeviceCL*)this );
 	{
 //		dd = new DeviceCL();
@@ -222,9 +226,11 @@ USE_NV_GPU:
 
 void DeviceCL::release()
 {
-	clReleaseCommandQueue( m_commandQueue );
-	clReleaseContext( m_context );
-
+	if (m_ownsContextAndQueue)
+	{
+		clReleaseCommandQueue( m_commandQueue );
+		clReleaseContext( m_context );
+	}
 	if( m_kernelManager ) delete m_kernelManager;
 }
 
