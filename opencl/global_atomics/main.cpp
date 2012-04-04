@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 		cl_device_id		device;
 		device = btOpenCLUtils::getDevice(g_cxMainContext,deviceIndex);
 		btOpenCLDeviceInfo clInfo;
-		btOpenCLUtils::getDeviceInfo(device,clInfo);
+		btOpenCLUtils::getDeviceInfo(device,&clInfo);
 		btOpenCLUtils::printDeviceInfo(device);
 
 

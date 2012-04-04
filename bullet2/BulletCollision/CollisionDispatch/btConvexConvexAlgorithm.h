@@ -39,13 +39,17 @@ class btConvexPenetrationDepthSolver;
 ///This idea was described by Gino van den Bergen in this forum topic http://www.bulletphysics.com/Bullet/phpBB3/viewtopic.php?f=4&t=288&p=888#p888
 class btConvexConvexAlgorithm : public btActivatingCollisionAlgorithm
 {
+
+	protected:
+
 #ifdef USE_SEPDISTANCE_UTIL2
 	btConvexSeparatingDistanceUtil	m_sepDistance;
 #endif
 	btSimplexSolverInterface*		m_simplexSolver;
 	btConvexPenetrationDepthSolver* m_pdSolver;
 
-	
+
+
 	bool	m_ownManifold;
 	btPersistentManifold*	m_manifoldPtr;
 	bool			m_lowLevelOfDetail;

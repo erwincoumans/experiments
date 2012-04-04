@@ -146,8 +146,6 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 	if (numDev>0)
 	{
 		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
-		btOpenCLDeviceInfo clInfo;
-		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
 		btOpenCLUtils::printDeviceInfo(g_device);
 		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);

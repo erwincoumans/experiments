@@ -692,8 +692,6 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex)
 	if (numDev>0)
 	{
 		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
-		btOpenCLDeviceInfo clInfo;
-		btOpenCLUtils::getDeviceInfo(g_device,clInfo);
 		btOpenCLUtils::printDeviceInfo(g_device);
 		// create a command-queue
 		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);

@@ -73,6 +73,7 @@ end
 	
 if not _OPTIONS["with-nacl"] then
 
+	include "../opencl/c_api"
 	include "../opencl/basic_initialize"
 	include "../opencl/vector_add"
 	include "../opencl/gui_initialize"

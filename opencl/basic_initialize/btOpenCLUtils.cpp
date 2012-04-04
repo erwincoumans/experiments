@@ -19,6 +19,8 @@ subject to the following restrictions:
 #include <string.h>
 
 #include "btOpenCLUtils.h"
+//#include "btOpenCLInclude.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,10 +28,11 @@ subject to the following restrictions:
 
 #ifdef _WIN32
 #include <Windows.h>
-#include <assert.h>
-
-#define btAssert assert
 #endif
+
+#include <assert.h>
+#define btAssert assert
+
 
 //Set the preferred platform vendor using the OpenCL SDK
 static char* spPlatformVendor = 
@@ -51,7 +54,9 @@ static char* spPlatformVendor =
 #endif //_WIN32
 #endif
 
-int btOpenCLUtils::getNumPlatforms(cl_int* pErrNum)
+
+
+int btOpenCLUtils_getNumPlatforms(cl_int* pErrNum)
 {
 	cl_uint numPlatforms=0;
 	cl_int ciErrNum = clGetPlatformIDs(0, NULL, &numPlatforms);
@@ -64,21 +69,21 @@ int btOpenCLUtils::getNumPlatforms(cl_int* pErrNum)
 	return numPlatforms;
 }
 
-const char* btOpenCLUtils::getSdkVendorName()
+const char* btOpenCLUtils_getSdkVendorName()
 {
 	return spPlatformVendor;
 }
 
-cl_platform_id btOpenCLUtils::getPlatform(int platformIndex, cl_int* pErrNum)
+cl_platform_id btOpenCLUtils_getPlatform(int platformIndex0, cl_int* pErrNum)
 {
 	cl_platform_id platform = 0;
-
+	unsigned int platformIndex = (unsigned int )platformIndex0;
 	cl_uint numPlatforms;
 	cl_int ciErrNum = clGetPlatformIDs(0, NULL, &numPlatforms);
 	
 	if (platformIndex>=0 && platformIndex<numPlatforms)
 	{
-		cl_platform_id* platforms = new cl_platform_id[numPlatforms];
+		cl_platform_id* platforms = (cl_platform_id*) malloc (sizeof(cl_platform_id)*numPlatforms);
 		ciErrNum = clGetPlatformIDs(numPlatforms, platforms, NULL);
 		if(ciErrNum != CL_SUCCESS)
 		{
@@ -89,28 +94,43 @@ cl_platform_id btOpenCLUtils::getPlatform(int platformIndex, cl_int* pErrNum)
 
 		platform = platforms[platformIndex];
 
-		delete[] platforms;
+		free (platforms);
 	}
 
 	return platform;
 }
 
-void btOpenCLUtils::getPlatformInfo(cl_platform_id platform, btOpenCLPlatformInfo& platformInfo)
+void btOpenCLUtils::getPlatformInfo(cl_platform_id platform, btOpenCLPlatformInfo* platformInfo)
 {
 	cl_int ciErrNum;
-
-	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VENDOR,BT_MAX_STRING_LENGTH,platformInfo.m_platformVendor,NULL);
+	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VENDOR,BT_MAX_STRING_LENGTH,platformInfo->m_platformVendor,NULL);
 	oclCHECKERROR(ciErrNum,CL_SUCCESS);
-	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_NAME,BT_MAX_STRING_LENGTH,platformInfo.m_platformName,NULL);
+	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_NAME,BT_MAX_STRING_LENGTH,platformInfo->m_platformName,NULL);
 	oclCHECKERROR(ciErrNum,CL_SUCCESS);
-	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VERSION,BT_MAX_STRING_LENGTH,platformInfo.m_platformVersion,NULL);
+	ciErrNum = clGetPlatformInfo(	platform,CL_PLATFORM_VERSION,BT_MAX_STRING_LENGTH,platformInfo->m_platformVersion,NULL);
 	oclCHECKERROR(ciErrNum,CL_SUCCESS);
 }
 
-cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC, int preferredDeviceIndex, int preferredPlatformIndex)
+void btOpenCLUtils_printPlatformInfo(cl_platform_id platform)
+{
+	btOpenCLPlatformInfo platformInfo;
+	btOpenCLUtils::getPlatformInfo (platform, &platformInfo);
+	printf("Platform info:\n");
+	printf("  CL_PLATFORM_VENDOR: \t\t\t%s\n",platformInfo.m_platformVendor);
+	printf("  CL_PLATFORM_NAME: \t\t\t%s\n",platformInfo.m_platformName);
+	printf("  CL_PLATFORM_VERSION: \t\t\t%s\n",platformInfo.m_platformVersion);
+}
+
+
+
+cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC, int preferredDeviceIndex, int preferredPlatformIndex)
 {
 	cl_context retContext = 0;
 	cl_int ciErrNum=0;
+	cl_uint num_entries;
+	cl_device_id devices[BT_MAX_CL_DEVICES];
+	cl_uint num_devices;
+	cl_context_properties* cprops;
 
 	/*     
 	* If we could find our platform, use it. Otherwise pass a NULL and get whatever the     
@@ -127,10 +147,10 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
 		cps[5] = (cl_context_properties)pGLDC;
 	}
 
-	cl_uint num_entries = BT_MAX_CL_DEVICES;
- 	cl_device_id devices[BT_MAX_CL_DEVICES];
+	num_entries = BT_MAX_CL_DEVICES;
+ 	
 
-	cl_uint num_devices=-1;
+	num_devices=-1;
 
 	ciErrNum = clGetDeviceIDs(	
 		platform,
@@ -139,12 +159,13 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
  		devices,
  		&num_devices);
 
-	cl_context_properties* cprops = (NULL == platform) ? NULL : cps;
+	cprops = (NULL == platform) ? NULL : cps;
 
 	if (pGLContext)
 	{
 		//search for the GPU that relates to the OpenCL context
-		for (int i=0;i<num_devices;i++)
+		unsigned int i;
+		for (i=0;i<num_devices;i++)
 		{
 			retContext = clCreateContext(cprops,1,&devices[i],NULL,NULL,&ciErrNum);
 			if (ciErrNum==CL_SUCCESS)
@@ -153,7 +174,7 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
 	}
 	else
 	{
-		if (preferredDeviceIndex>=0 && preferredDeviceIndex<num_devices)
+		if (preferredDeviceIndex>=0 && (unsigned int)preferredDeviceIndex<num_devices)
 		{
 			//create a context of the preferred device index
 			retContext = clCreateContext(cprops,1,&devices[preferredDeviceIndex],NULL,NULL,&ciErrNum);
@@ -171,11 +192,12 @@ cl_context btOpenCLUtils::createContextFromPlatform(cl_platform_id platform, cl_
 	return retContext;
 }
 
-cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC , int preferredDeviceIndex, int preferredPlatformIndex)
+cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC , int preferredDeviceIndex, int preferredPlatformIndex)
 {
 	cl_uint numPlatforms;
 	cl_context retContext = 0;
-	
+	unsigned int i;
+
 	cl_int ciErrNum = clGetPlatformIDs(0, NULL, &numPlatforms);
 	if(ciErrNum != CL_SUCCESS)
 	{
@@ -184,14 +206,16 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 	}
 	if(numPlatforms > 0)     
 	{        
-		cl_platform_id* platforms = new cl_platform_id[numPlatforms];
+		cl_platform_id* platforms = (cl_platform_id*) malloc (sizeof(cl_platform_id)*numPlatforms);
 		ciErrNum = clGetPlatformIDs(numPlatforms, platforms, NULL);
 		if(ciErrNum != CL_SUCCESS)
 		{
-			if(pErrNum != NULL) *pErrNum = ciErrNum;
+			if(pErrNum != NULL) 
+				*pErrNum = ciErrNum;
+			free(platforms);
 			return NULL;
 		}
-		int i;
+		
 
 
 		for ( i = 0; i < numPlatforms; ++i)         
@@ -231,14 +255,14 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 			cl_platform_id platform = platforms[i];
 			assert(platform);
 
-			retContext = btOpenCLUtils::createContextFromPlatform(platform,deviceType,pErrNum,pGLContext,pGLDC,preferredDeviceIndex);
+			retContext = btOpenCLUtils_createContextFromPlatform(platform,deviceType,pErrNum,pGLContext,pGLDC,preferredDeviceIndex,preferredPlatformIndex);
 
 			if (retContext)
 			{
 //				printf("OpenCL platform details:\n");
 				btOpenCLPlatformInfo platformInfo;
 
-				btOpenCLUtils::getPlatformInfo(platform, platformInfo);
+				btOpenCLUtils::getPlatformInfo(platform, &platformInfo);
 
 				printf("  CL_PLATFORM_VENDOR: \t\t\t%s\n",platformInfo.m_platformVendor);
 				printf("  CL_PLATFORM_NAME: \t\t\t%s\n",platformInfo.m_platformName);
@@ -248,7 +272,7 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 			}
 		}
 
-		delete[] platforms;    
+		free (platforms);    
 	}
 	return retContext;
 }
@@ -261,15 +285,16 @@ cl_context btOpenCLUtils::createContextFromType(cl_device_type deviceType, cl_in
 //! @param cxMainContext         OpenCL context
 //! @param device_idx            index of the device of interest
 //////////////////////////////////////////////////////////////////////////////
-cl_device_id btOpenCLUtils::getDevice(cl_context cxMainContext, int deviceIndex)
+cl_device_id btOpenCLUtils_getDevice(cl_context cxMainContext, int deviceIndex)
 {
 	size_t szParmDataBytes;
 	cl_device_id* cdDevices;
+	cl_device_id device ;
 
 	// get the list of devices associated with context
 	clGetContextInfo(cxMainContext, CL_CONTEXT_DEVICES, 0, NULL, &szParmDataBytes);
 
-	if( szParmDataBytes / sizeof(cl_device_id) < deviceIndex ) {
+	if( szParmDataBytes / sizeof(cl_device_id) < (unsigned int)deviceIndex ) {
 		return (cl_device_id)-1;
 	}
 
@@ -277,24 +302,109 @@ cl_device_id btOpenCLUtils::getDevice(cl_context cxMainContext, int deviceIndex)
 
 	clGetContextInfo(cxMainContext, CL_CONTEXT_DEVICES, szParmDataBytes, cdDevices, NULL);
 
-	cl_device_id device = cdDevices[deviceIndex];
+	device = cdDevices[deviceIndex];
 	free(cdDevices);
 
 	return device;
 }
 
-int btOpenCLUtils::getNumDevices(cl_context cxMainContext)
+int btOpenCLUtils_getNumDevices(cl_context cxMainContext)
 {
 	size_t szParamDataBytes;
+	int device_count;
 	clGetContextInfo(cxMainContext, CL_CONTEXT_DEVICES, 0, NULL, &szParamDataBytes);
-	int device_count = (int) szParamDataBytes/ sizeof(cl_device_id);
+	device_count = (int) szParamDataBytes/ sizeof(cl_device_id);
 	return device_count;
 }
 
-void btOpenCLUtils::printDeviceInfo(cl_device_id device)
+
+
+void btOpenCLUtils::getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo* info)
+{
+	// CL_DEVICE_NAME
+	clGetDeviceInfo(device, CL_DEVICE_NAME, BT_MAX_STRING_LENGTH, &info->m_deviceName, NULL);
+
+	// CL_DEVICE_VENDOR
+	clGetDeviceInfo(device, CL_DEVICE_VENDOR, BT_MAX_STRING_LENGTH, &info->m_deviceVendor, NULL);
+
+	// CL_DRIVER_VERSION
+	clGetDeviceInfo(device, CL_DRIVER_VERSION, BT_MAX_STRING_LENGTH, &info->m_driverVersion, NULL);
+
+	// CL_DEVICE_INFO
+	clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(cl_device_type), &info->m_deviceType, NULL);
+
+	// CL_DEVICE_MAX_COMPUTE_UNITS
+	clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(info->m_computeUnits), &info->m_computeUnits, NULL);
+
+	// CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS
+	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(info->m_workitemDims), &info->m_workitemDims, NULL);
+
+	// CL_DEVICE_MAX_WORK_ITEM_SIZES
+	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(info->m_workItemSize), &info->m_workItemSize, NULL);
+
+	// CL_DEVICE_MAX_WORK_GROUP_SIZE
+	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(info->m_workgroupSize), &info->m_workgroupSize, NULL);
+
+	// CL_DEVICE_MAX_CLOCK_FREQUENCY
+	clGetDeviceInfo(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(info->m_clockFrequency), &info->m_clockFrequency, NULL);
+
+	// CL_DEVICE_ADDRESS_BITS
+	clGetDeviceInfo(device, CL_DEVICE_ADDRESS_BITS, sizeof(info->m_addressBits), &info->m_addressBits, NULL);
+
+	// CL_DEVICE_MAX_MEM_ALLOC_SIZE
+	clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(info->m_maxMemAllocSize), &info->m_maxMemAllocSize, NULL);
+
+	// CL_DEVICE_GLOBAL_MEM_SIZE
+	clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(info->m_globalMemSize), &info->m_globalMemSize, NULL);
+
+	// CL_DEVICE_ERROR_CORRECTION_SUPPORT
+	clGetDeviceInfo(device, CL_DEVICE_ERROR_CORRECTION_SUPPORT, sizeof(info->m_errorCorrectionSupport), &info->m_errorCorrectionSupport, NULL);
+
+	// CL_DEVICE_LOCAL_MEM_TYPE
+	clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_TYPE, sizeof(info->m_localMemType), &info->m_localMemType, NULL);
+
+	// CL_DEVICE_LOCAL_MEM_SIZE
+	clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(info->m_localMemSize), &info->m_localMemSize, NULL);
+
+	// CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE
+	clGetDeviceInfo(device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(info->m_constantBufferSize), &info->m_constantBufferSize, NULL);
+
+	// CL_DEVICE_QUEUE_PROPERTIES
+	clGetDeviceInfo(device, CL_DEVICE_QUEUE_PROPERTIES, sizeof(info->m_queueProperties), &info->m_queueProperties, NULL);
+
+	// CL_DEVICE_IMAGE_SUPPORT
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE_SUPPORT, sizeof(info->m_imageSupport), &info->m_imageSupport, NULL);
+
+	// CL_DEVICE_MAX_READ_IMAGE_ARGS
+	clGetDeviceInfo(device, CL_DEVICE_MAX_READ_IMAGE_ARGS, sizeof(info->m_maxReadImageArgs), &info->m_maxReadImageArgs, NULL);
+
+	// CL_DEVICE_MAX_WRITE_IMAGE_ARGS
+	clGetDeviceInfo(device, CL_DEVICE_MAX_WRITE_IMAGE_ARGS, sizeof(info->m_maxWriteImageArgs), &info->m_maxWriteImageArgs, NULL);
+
+	// CL_DEVICE_IMAGE2D_MAX_WIDTH, CL_DEVICE_IMAGE2D_MAX_HEIGHT, CL_DEVICE_IMAGE3D_MAX_WIDTH, CL_DEVICE_IMAGE3D_MAX_HEIGHT, CL_DEVICE_IMAGE3D_MAX_DEPTH
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t), &info->m_image2dMaxWidth, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t), &info->m_image2dMaxHeight, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_WIDTH, sizeof(size_t), &info->m_image3dMaxWidth, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_HEIGHT, sizeof(size_t), &info->m_image3dMaxHeight, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_DEPTH, sizeof(size_t), &info->m_image3dMaxDepth, NULL);
+
+	// CL_DEVICE_EXTENSIONS: get device extensions, and if any then parse & log the string onto separate lines
+	clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, BT_MAX_STRING_LENGTH, &info->m_deviceExtensions, NULL);
+
+	// CL_DEVICE_PREFERRED_VECTOR_WIDTH_<type>
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR, sizeof(cl_uint), &info->m_vecWidthChar, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT, sizeof(cl_uint), &info->m_vecWidthShort, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT, sizeof(cl_uint), &info->m_vecWidthInt, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG, sizeof(cl_uint), &info->m_vecWidthLong, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &info->m_vecWidthFloat, NULL);
+	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &info->m_vecWidthDouble, NULL);
+}
+
+
+void btOpenCLUtils_printDeviceInfo(cl_device_id device)
 {
 	btOpenCLDeviceInfo info;
-	getDeviceInfo(device,info);
+	btOpenCLUtils::getDeviceInfo(device,&info);
 
 	printf("  CL_DEVICE_NAME: \t\t\t%s\n", info.m_deviceName);
 	printf("  CL_DEVICE_VENDOR: \t\t\t%s\n", info.m_deviceVendor);
@@ -347,87 +457,6 @@ void btOpenCLUtils::printDeviceInfo(cl_device_id device)
 
 }
 
-void btOpenCLUtils::getDeviceInfo(cl_device_id device, btOpenCLDeviceInfo& info)
-{
-
-	// CL_DEVICE_NAME
-	clGetDeviceInfo(device, CL_DEVICE_NAME, BT_MAX_STRING_LENGTH, &info.m_deviceName, NULL);
-
-	// CL_DEVICE_VENDOR
-	clGetDeviceInfo(device, CL_DEVICE_VENDOR, BT_MAX_STRING_LENGTH, &info.m_deviceVendor, NULL);
-
-	// CL_DRIVER_VERSION
-	clGetDeviceInfo(device, CL_DRIVER_VERSION, BT_MAX_STRING_LENGTH, &info.m_driverVersion, NULL);
-
-	// CL_DEVICE_INFO
-	clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(cl_device_type), &info.m_deviceType, NULL);
-
-	// CL_DEVICE_MAX_COMPUTE_UNITS
-	clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(info.m_computeUnits), &info.m_computeUnits, NULL);
-
-	// CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS
-	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(info.m_workitemDims), &info.m_workitemDims, NULL);
-
-	// CL_DEVICE_MAX_WORK_ITEM_SIZES
-	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(info.m_workItemSize), &info.m_workItemSize, NULL);
-
-	// CL_DEVICE_MAX_WORK_GROUP_SIZE
-	clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(info.m_workgroupSize), &info.m_workgroupSize, NULL);
-
-	// CL_DEVICE_MAX_CLOCK_FREQUENCY
-	clGetDeviceInfo(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(info.m_clockFrequency), &info.m_clockFrequency, NULL);
-
-	// CL_DEVICE_ADDRESS_BITS
-	clGetDeviceInfo(device, CL_DEVICE_ADDRESS_BITS, sizeof(info.m_addressBits), &info.m_addressBits, NULL);
-
-	// CL_DEVICE_MAX_MEM_ALLOC_SIZE
-	clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(info.m_maxMemAllocSize), &info.m_maxMemAllocSize, NULL);
-
-	// CL_DEVICE_GLOBAL_MEM_SIZE
-	clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(info.m_globalMemSize), &info.m_globalMemSize, NULL);
-
-	// CL_DEVICE_ERROR_CORRECTION_SUPPORT
-	clGetDeviceInfo(device, CL_DEVICE_ERROR_CORRECTION_SUPPORT, sizeof(info.m_errorCorrectionSupport), &info.m_errorCorrectionSupport, NULL);
-
-	// CL_DEVICE_LOCAL_MEM_TYPE
-	clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_TYPE, sizeof(info.m_localMemType), &info.m_localMemType, NULL);
-
-	// CL_DEVICE_LOCAL_MEM_SIZE
-	clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(info.m_localMemSize), &info.m_localMemSize, NULL);
-
-	// CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE
-	clGetDeviceInfo(device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(info.m_constantBufferSize), &info.m_constantBufferSize, NULL);
-
-	// CL_DEVICE_QUEUE_PROPERTIES
-	clGetDeviceInfo(device, CL_DEVICE_QUEUE_PROPERTIES, sizeof(info.m_queueProperties), &info.m_queueProperties, NULL);
-
-	// CL_DEVICE_IMAGE_SUPPORT
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE_SUPPORT, sizeof(info.m_imageSupport), &info.m_imageSupport, NULL);
-
-	// CL_DEVICE_MAX_READ_IMAGE_ARGS
-	clGetDeviceInfo(device, CL_DEVICE_MAX_READ_IMAGE_ARGS, sizeof(info.m_maxReadImageArgs), &info.m_maxReadImageArgs, NULL);
-
-	// CL_DEVICE_MAX_WRITE_IMAGE_ARGS
-	clGetDeviceInfo(device, CL_DEVICE_MAX_WRITE_IMAGE_ARGS, sizeof(info.m_maxWriteImageArgs), &info.m_maxWriteImageArgs, NULL);
-
-	// CL_DEVICE_IMAGE2D_MAX_WIDTH, CL_DEVICE_IMAGE2D_MAX_HEIGHT, CL_DEVICE_IMAGE3D_MAX_WIDTH, CL_DEVICE_IMAGE3D_MAX_HEIGHT, CL_DEVICE_IMAGE3D_MAX_DEPTH
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(size_t), &info.m_image2dMaxWidth, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(size_t), &info.m_image2dMaxHeight, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_WIDTH, sizeof(size_t), &info.m_image3dMaxWidth, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_HEIGHT, sizeof(size_t), &info.m_image3dMaxHeight, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_IMAGE3D_MAX_DEPTH, sizeof(size_t), &info.m_image3dMaxDepth, NULL);
-
-	// CL_DEVICE_EXTENSIONS: get device extensions, and if any then parse & log the string onto separate lines
-	clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, BT_MAX_STRING_LENGTH, &info.m_deviceExtensions, NULL);
-
-	// CL_DEVICE_PREFERRED_VECTOR_WIDTH_<type>
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR, sizeof(cl_uint), &info.m_vecWidthChar, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT, sizeof(cl_uint), &info.m_vecWidthShort, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT, sizeof(cl_uint), &info.m_vecWidthInt, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG, sizeof(cl_uint), &info.m_vecWidthLong, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &info.m_vecWidthFloat, NULL);
-	clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &info.m_vecWidthDouble, NULL);
-}
 
 static const char* strip2(const char* name, const char* pattern)
 {
@@ -443,33 +472,43 @@ static const char* strip2(const char* name, const char* pattern)
 	  return oriptr;
 }
 
-cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSource, cl_int* pErrNum, const char* additionalMacros , const char* clFileNameForCaching)
+cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSource, cl_int* pErrNum, const char* additionalMacros , const char* clFileNameForCaching)
 {
 
 	cl_program m_cpProgram=0;
 	cl_int status;
-
-	char binaryFileName[522];
+	
+	char binaryFileName[BT_MAX_STRING_LENGTH];
+	char* bla=0;
 
 	if (clFileNameForCaching)
 	{
 		
 		char deviceName[256];
 		char driverVersion[256];
+		const char* strippedName;
+		int fileUpToDate = 0;
+		int binaryFileValid=0;
+		FILETIME modtimeBinary; 
+
 		clGetDeviceInfo(device, CL_DEVICE_NAME, 256, &deviceName, NULL);
 		clGetDeviceInfo(device, CL_DRIVER_VERSION, 256, &driverVersion, NULL);
 
 		
-		const char* strippedName = strip2(clFileNameForCaching,"\\");
+		strippedName = strip2(clFileNameForCaching,"\\");
 		strippedName = strip2(strippedName,"/");
 
-		sprintf_s(binaryFileName,"cache/%s.%s.%s.bin",strippedName, deviceName,driverVersion );
+#ifdef _WIN32
+		sprintf_s(binaryFileName,BT_MAX_STRING_LENGTH,"cache/%s.%s.%s.bin",strippedName, deviceName,driverVersion );
+#else
+		sprintf(binaryFileName,"cache/%s.%s.%s.bin",strippedName, deviceName,driverVersion );
+#endif
+		
+		
 		//printf("searching for %s\n", binaryFileName);
 
-		bool fileUpToDate = false;
-		bool binaryFileValid=false;
-
-		FILETIME modtimeBinary; 
+		
+		
 
 #ifdef _WIN32
 		CreateDirectory("cache",0);
@@ -506,7 +545,7 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 					printf("\nGetFileTime errorCode = %d\n", errorCode);
 				} else
 				{
-					binaryFileValid = true;
+					binaryFileValid = 1;
 				}
 				CloseHandle(binaryFileHandle);
 			}
@@ -526,7 +565,7 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 					if (  ( modtimeSrc.dwHighDateTime < modtimeBinary.dwHighDateTime)
 						||(( modtimeSrc.dwHighDateTime == modtimeBinary.dwHighDateTime)&&(modtimeSrc.dwLowDateTime <= modtimeBinary.dwLowDateTime)))
 					{
-						fileUpToDate=true;
+						fileUpToDate=1;
 					} else
 					{
 						printf("\nCached binary file out-of-date (%s)\n",binaryFileName);
@@ -570,13 +609,23 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 
 		if( fileUpToDate)
 		{
+#ifdef _WIN32
+			FILE* file;
+			if (fopen_s(&file,binaryFileName, "rb")!=0)
+				file=0;
+#else
 			FILE* file = fopen(binaryFileName, "rb");
+#endif
+
 			if (file)
 			{
+				size_t binarySize=0;
+				char* binary =0;
+
 				fseek( file, 0L, SEEK_END );
-				size_t binarySize = ftell( file );
+				binarySize = ftell( file );
 				rewind( file );
-				char* binary = new char[binarySize];
+				binary = (char*)malloc(sizeof(char)*binarySize);
 				fread( binary, sizeof(char), binarySize, file );
 				fclose( file );
 
@@ -590,15 +639,15 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 					char *build_log;
 					size_t ret_val_size;
 					clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
-					build_log = new char[ret_val_size+1];
+					build_log = (char*)malloc(sizeof(char)*(ret_val_size+1));
 					clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
 					build_log[ret_val_size] = '\0';
 					printf("%s\n", build_log);
-					delete build_log;
+					free (build_log);
 					btAssert(0);
 					m_cpProgram = 0;
 				}
-				delete[] binary;
+				free (binary);
 			}
 		}
 #endif //_WIN32
@@ -607,9 +656,18 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 	
 	if (!m_cpProgram)
 	{
-		cl_kernel kernel;
+
 		cl_int localErrNum;
+		char* compileFlags;
+		int flagsize;
 		size_t program_length = strlen(kernelSource);
+#ifdef MAC //or __APPLE__?
+		char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
+#else
+		//const char* flags = "-DGUID_ARG= -fno-alias";
+		const char* flags = "-DGUID_ARG= ";
+#endif
+
 
 		m_cpProgram = clCreateProgramWithSource(clContext, 1, (const char**)&kernelSource, &program_length, &localErrNum);
 		if (localErrNum!= CL_SUCCESS)
@@ -622,22 +680,21 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 		// Build the program with 'mad' Optimization option
 
 
-	#ifdef MAC
-		char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
-	#else
-		//const char* flags = "-DGUID_ARG= -fno-alias";
-		const char* flags = "-DGUID_ARG= ";
-	#endif
-
-		char* compileFlags = new char[strlen(additionalMacros) + strlen(flags) + 5];
+	
+		flagsize = sizeof(char)*(strlen(additionalMacros) + strlen(flags) + 5);
+		compileFlags = (char*) malloc(flagsize);
+#ifdef _WIN32
+		sprintf_s(compileFlags,flagsize, "%s %s", flags, additionalMacros);
+#else
 		sprintf(compileFlags, "%s %s", flags, additionalMacros);
+#endif
 		localErrNum = clBuildProgram(m_cpProgram, 1, &device, compileFlags, NULL, NULL);
 		if (localErrNum!= CL_SUCCESS)
 		{
 			char *build_log;
 			size_t ret_val_size;
 			clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
-			build_log = new char[ret_val_size+1];
+			build_log = (char*) malloc(sizeof(char)*(ret_val_size+1));
 			clGetProgramBuildInfo(m_cpProgram, device, CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
 
 			// to be carefully, terminate with \0
@@ -646,7 +703,7 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 
 
 			printf("Error in clBuildProgram, Line %u in file %s, Log: \n%s\n !!!\n\n", __LINE__, __FILE__, build_log);
-			delete[] build_log;
+			free (build_log);
 			if (pErrNum)
 				*pErrNum = localErrNum;
 			return 0;
@@ -662,16 +719,24 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 			{
 
 				size_t binarySize;
+				char* binary ;
+
 				status = clGetProgramInfo( m_cpProgram, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, 0 );
 				btAssert( status == CL_SUCCESS );
 
-				char* binary = new char[binarySize];
+				binary = (char*)malloc(sizeof(char)*binarySize);
 
 				status = clGetProgramInfo( m_cpProgram, CL_PROGRAM_BINARIES, sizeof(char*), &binary, 0 );
 				btAssert( status == CL_SUCCESS );
 
 				{
-					FILE* file = fopen(binaryFileName, "wb");
+					FILE* file=0;
+#ifdef _WIN32
+					if (fopen_s(&file,binaryFileName, "wb")!=0)
+						file=0;
+#else
+					file = fopen(binaryFileName, "wb");
+#endif
 					if (file)
 					{
 						fwrite( binary, sizeof(char), binarySize, file );
@@ -682,28 +747,29 @@ cl_program btOpenCLUtils::compileCLProgramFromString(cl_context clContext, cl_de
 					}
 				}
 
-				delete [] binary;
+				free (binary);
 			}
 		}
-		delete [] compileFlags;
+		free(compileFlags);
 	}
 
 	return m_cpProgram;
 }
 
 
-cl_kernel btOpenCLUtils::compileCLKernelFromString(cl_context clContext, cl_device_id device, const char* kernelSource, const char* kernelName, cl_int* pErrNum, cl_program prog, const char* additionalMacros )
+cl_kernel btOpenCLUtils_compileCLKernelFromString(cl_context clContext, cl_device_id device, const char* kernelSource, const char* kernelName, cl_int* pErrNum, cl_program prog, const char* additionalMacros )
 {
-	printf("compiling kernel %s ",kernelName);
+	
 	cl_kernel kernel;
 	cl_int localErrNum;
 	size_t program_length = strlen(kernelSource);
-
-
 	cl_program m_cpProgram = prog;
+
+	printf("compiling kernel %s ",kernelName);
+
 	if (!m_cpProgram)
 	{
-		m_cpProgram = compileCLProgramFromString(clContext,device,kernelSource,pErrNum, additionalMacros);
+		m_cpProgram = btOpenCLUtils_compileCLProgramFromString(clContext,device,kernelSource,pErrNum, additionalMacros,"");
 	}
 
 

@@ -111,7 +111,7 @@ public:
 			{
 				cl_platform_id platform = btOpenCLUtils::getPlatform(i);
 				btOpenCLPlatformInfo platformInfo;
-				btOpenCLUtils::getPlatformInfo(platform, platformInfo);
+				btOpenCLUtils::getPlatformInfo(platform, &platformInfo);
 				cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
 				cl_int errNum;
 				cl_context context = btOpenCLUtils::createContextFromPlatform(platform,deviceType,&errNum);
@@ -129,7 +129,7 @@ public:
 
 					cl_device_id device = btOpenCLUtils::getDevice(context,j);
 					btOpenCLDeviceInfo info;
-					btOpenCLUtils::getDeviceInfo(device,info);
+					btOpenCLUtils::getDeviceInfo(device,&info);
 
 					Gwen::Controls::TreeNode* node;
 					Gwen::UnicodeString strIn;
