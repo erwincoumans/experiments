@@ -21,8 +21,8 @@ void btbReleaseBuffer(btbBuffer b);
 int btbGetElementSizeInBytes(btbBuffer buffer);
 
 ///like memcpy destination comes first
-void btbCopyHostToBuffer(btbBuffer devDest, const char* hostSrc, int sizeInElements);
-void btbCopyBufferToHost(char* hostDest, const btbBuffer devSrc, int sizeInElements);
+void btbCopyHostToBuffer(btbBuffer devDest, const btbSortData2ui* hostSrc, int sizeInElements);
+void btbCopyBufferToHost(btbSortData2ui* hostDest, const btbBuffer devSrc, int sizeInElements);
 void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements);
 
 btbRadixSort btbCreateRadixSort(btbDevice d, int maxNumElements);

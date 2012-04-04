@@ -22,9 +22,10 @@ subject to the following restrictions:
 #include <stdio.h>
 #include "../vector_add/VectorAddKernels.h"
 #include "btbDeviceCL.h"
+#include <malloc.h>
 
-cl_context			g_cxMainContext;
-cl_command_queue	g_cqCommandQue;
+
+int ciErrNum = 0;
 
 /*
 btb //base
@@ -37,17 +38,78 @@ btr //rendering
 */
 
 
+int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
+{
+	int success = 1;
+
+	btbDevice clDevice;
+	btbBuffer sortData;
+	int numElements,i;
+	//cl_kernel kernel;
+	btbRadixSort s;
+	btbSortData2ui* sortDataHost =0;
+
+	//kernel = btOpenCLUtils_compileCLKernelFromString( ctx, dev, vectorAddCL, "VectorAdd", &ciErrNum, 0,"");
+
+	//create 'device'?
+
+	clDevice = btbCreateDeviceCL(ctx,dev, queue);
+	//create buffers
+	numElements = 256;
+	sortData = btbCreateSortDataBuffer(clDevice, numElements);
+	s = btbCreateRadixSort(clDevice,numElements);
+	//compute
+	sortDataHost = (btbSortData2ui*)malloc (sizeof(btbSortData2ui)*numElements);
+	for (i=0;i<numElements;i++)
+	{
+		sortDataHost[i].m_key = numElements-i;
+		sortDataHost[i].m_value= numElements-i;
+	}
+	
+	btbCopyHostToBuffer(sortData, sortDataHost, numElements);
+		
+	btbSort(s,sortData,numElements);
+	
+	//get results
+	btbCopyBufferToHost(sortDataHost, sortData, numElements);
+
+	btbWaitForCompletion(clDevice);
+	
+	//compare results
+	for (i=0;i<numElements-1;i++)
+	{
+		if (sortDataHost[i].m_value > sortDataHost[i+1].m_value)
+		{
+			success = 0;
+		}
+	}
+
+	free(sortDataHost);	
+	btbReleaseBuffer(sortData);
+	btbReleaseDevice(clDevice);
+
+	//clReleaseKernel(kernel);
+
+	return success;
+}
+
+
+
 
 int main(int argc, char* argv[])
 {
-	int ciErrNum = 0;
+	
+	cl_context			g_cxMainContext=0;
+cl_command_queue	g_cqCommandQueue=0;
+cl_device_id		g_device=0;
+
 	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
 	const char* vendorSDK = btOpenCLUtils_getSdkVendorName();
 	int numPlatforms,i;
 	void* glCtx=0;
 	void* glDC = 0;
 	int numDev =0;
-	cl_mem cmMemObjs[3];            // OpenCL memory buffer objects:  3 for device
+	
 
 	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
 	
@@ -94,38 +156,22 @@ int main(int argc, char* argv[])
 
 	for (i=0;i<numDev;i++)
 	{
-		cl_device_id		device;
-		cl_kernel kernel;
-		btbDevice clDevice;
-		btbBuffer sortData;
-		int numElements;
+		
+	
 
-		device = btOpenCLUtils_getDevice(g_cxMainContext,i);
-		btOpenCLUtils_printDeviceInfo(device);
+		g_device = btOpenCLUtils_getDevice(g_cxMainContext,i);
+		btOpenCLUtils_printDeviceInfo(g_device);
 		// create a command-queue
-		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, device, 0, &ciErrNum);
+		g_cqCommandQueue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		//normally you would create and execute kernels using this command queue
 
 
-		kernel = btOpenCLUtils_compileCLKernelFromString( g_cxMainContext, device, vectorAddCL, "VectorAdd", &ciErrNum, 0,"");
+		test_RadixSort(g_cxMainContext,g_cqCommandQueue,g_device);
+	
 
-		//create 'device'?
-
-		clDevice = btbCreateDeviceCL(g_cxMainContext,device, g_cqCommandQue);
-		//create buffers
-		numElements = 10;
-		sortData = btbCreateSortDataBuffer(clDevice, numElements);
-
-		//compute
-		//get results
-		//compare results
-
-		btbReleaseBuffer(sortData);
-		btbReleaseDevice(clDevice);
-
-		clReleaseKernel(kernel);
-		clReleaseCommandQueue(g_cqCommandQue);
+		
+		clReleaseCommandQueue(g_cqCommandQueue);
 	}
 
 	clReleaseContext(g_cxMainContext);
