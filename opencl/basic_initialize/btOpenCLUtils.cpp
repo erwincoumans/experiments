@@ -35,7 +35,7 @@ subject to the following restrictions:
 
 
 //Set the preferred platform vendor using the OpenCL SDK
-static char* spPlatformVendor = 
+static const char* spPlatformVendor = 
 #if defined(CL_PLATFORM_MINI_CL)
 "MiniCL, SCEA";
 #elif defined(CL_PLATFORM_AMD)
@@ -139,6 +139,7 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 	cl_context_properties cps[7] = {0,0,0,0,0,0,0};
 	cps[0] = CL_CONTEXT_PLATFORM;
 	cps[1] = (cl_context_properties)platform;
+#ifdef _WIN32
 	if (pGLContext && pGLDC)
 	{
 		cps[2] = CL_GL_CONTEXT_KHR;
@@ -146,7 +147,7 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 		cps[4] = CL_WGL_HDC_KHR;
 		cps[5] = (cl_context_properties)pGLDC;
 	}
-
+#endif //_WIN32
 	num_entries = BT_MAX_CL_DEVICES;
  	
 
@@ -478,6 +479,7 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 	cl_program m_cpProgram=0;
 	cl_int status;
 	
+#ifdef _WIN32
 	char binaryFileName[BT_MAX_STRING_LENGTH];
 	char* bla=0;
 
@@ -510,7 +512,6 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 		
 		
 
-#ifdef _WIN32
 		CreateDirectory("cache",0);
 		{
 			
@@ -650,9 +651,9 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 				free (binary);
 			}
 		}
-#endif //_WIN32
 		
 	}
+#endif //_WIN32
 	
 	if (!m_cpProgram)
 	{
@@ -681,7 +682,7 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 
 
 	
-		flagsize = sizeof(char)*(strlen(additionalMacros) + strlen(flags) + 5);
+        		flagsize = sizeof(char)*(strlen(additionalMacros) + strlen(flags) + 5);
 		compileFlags = (char*) malloc(flagsize);
 #ifdef _WIN32
 		sprintf_s(compileFlags,flagsize, "%s %s", flags, additionalMacros);
@@ -708,6 +709,8 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 				*pErrNum = localErrNum;
 			return 0;
 		}
+
+#ifdef _WIN32
 
 		if( clFileNameForCaching )
 		{	//	write to binary
@@ -750,9 +753,11 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 				free (binary);
 			}
 		}
-		free(compileFlags);
-	}
+#endif //_WIN32
 
+		free(compileFlags);
+
+	}
 	return m_cpProgram;
 }
 

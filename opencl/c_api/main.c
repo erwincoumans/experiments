@@ -21,8 +21,10 @@ subject to the following restrictions:
 
 #include <stdio.h>
 #include "../vector_add/VectorAddKernels.h"
-#include "btbDeviceCL.h"
-#include <malloc.h>
+//#include "btbDeviceCL.h"
+#include "stdlib.h"
+
+//#include <malloc.h>
 
 
 int ciErrNum = 0;
@@ -37,11 +39,10 @@ btp //physics
 btr //rendering
 */
 
-
 int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 {
 	int success = 1;
-
+#if 0
 	btbDevice clDevice;
 	btbBuffer sortData;
 	int numElements,i;
@@ -89,7 +90,7 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	btbReleaseDevice(clDevice);
 
 	//clReleaseKernel(kernel);
-
+#endif
 	return success;
 }
 

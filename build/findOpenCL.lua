@@ -1,5 +1,14 @@
 	-- todo: add Apple OpenCL environment vars
+	
+	function findOpenCL_Apple()
+		if os.is("macosx") then
+			return true	
+		else
+			return false
+		end
+	end
 
+	
 	function findOpenCL_AMD()
 		local amdopenclpath = os.getenv("AMDAPPSDKROOT")
 		if (amdopenclpath) then
@@ -23,7 +32,19 @@
 		end
 		return false
 	end
-			
+		
+	function initOpenCL_Apple()
+		configuration{}
+		includedirs {
+			"/System/Library/Frameworks/OpenCL.framework"
+		}
+		libdirs "/System/Library/Frameworks/OpenCL.framework"
+		links
+		{
+			"OpenCL.framework"
+		}
+	end
+	
 	function initOpenCL_AMD()
 		configuration {}
 		local amdopenclpath = os.getenv("AMDAPPSDKROOT")
