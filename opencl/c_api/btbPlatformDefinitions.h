@@ -1,6 +1,9 @@
 #ifndef BTB_BASE_H
 #define BTB_BASE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif//__cplusplus
 
 #define BTB_DECLARE_HANDLE(name) typedef struct name##__ { int unused; } *name
 
@@ -25,8 +28,19 @@ typedef struct
 	unsigned int m_value;
 } btbSortData2ui;
 
+enum btbScalarType
+{
+	BTB_SIGNED_INT8=12,
+	BTB_SIGNED_INT16,
+	BTB_SIGNED_INT32,
+};
+
 BTB_DECLARE_HANDLE(btbRadixSort);
 
+
+#ifdef __cplusplus
+}
+#endif//__cplusplus
 
 
 #endif //BTB_BASE_H

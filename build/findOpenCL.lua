@@ -1,5 +1,4 @@
-	-- todo: add Apple OpenCL environment vars
-	
+
 	function findOpenCL_Apple()
 		if os.is("macosx") then
 			return true	

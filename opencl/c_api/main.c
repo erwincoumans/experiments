@@ -21,11 +21,13 @@ subject to the following restrictions:
 
 #include <stdio.h>
 #include "../vector_add/VectorAddKernels.h"
-//#include "btbDeviceCL.h"
+#ifdef _WIN32
+#include "btbDeviceCL.h"
+#endif //_WIN32
+
 #include "stdlib.h"
-
-//#include <malloc.h>
-
+#include "btcFindPairs.h"
+#include "Test_FindPairs.h"
 
 int ciErrNum = 0;
 
@@ -42,7 +44,7 @@ btr //rendering
 int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 {
 	int success = 1;
-#if 0
+#if _WIN32
 	btbDevice clDevice;
 	btbBuffer sortData;
 	int numElements,i;
@@ -119,6 +121,7 @@ cl_device_id		g_device=0;
 
 	
 
+	if (0)
 	for (i=0;i<numPlatforms;i++)
 	{
 		cl_platform_id platform = btOpenCLUtils_getPlatform(i,&ciErrNum);
@@ -146,18 +149,19 @@ cl_device_id		g_device=0;
 	}
 
 	///Easier method to initialize OpenCL using createContextFromType for a GPU
+	//deviceType = CL_DEVICE_TYPE_GPU;
 	deviceType = CL_DEVICE_TYPE_GPU;
 	
 
 	printf("Initialize OpenCL using btOpenCLUtils_createContextFromType for CL_DEVICE_TYPE_GPU\n");
-	g_cxMainContext = btOpenCLUtils_createContextFromType(deviceType, &ciErrNum, glCtx, glDC,-1,-1);
+	g_cxMainContext = btOpenCLUtils_createContextFromType(deviceType, &ciErrNum, glCtx, glDC,1,1);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
 	numDev = btOpenCLUtils_getNumDevices(g_cxMainContext);
 
 	for (i=0;i<numDev;i++)
 	{
-		
+		int result;
 	
 
 		g_device = btOpenCLUtils_getDevice(g_cxMainContext,i);
@@ -168,8 +172,18 @@ cl_device_id		g_device=0;
 		//normally you would create and execute kernels using this command queue
 
 
-		test_RadixSort(g_cxMainContext,g_cqCommandQueue,g_device);
+		
+		if (test_RadixSort(g_cxMainContext,g_cqCommandQueue,g_device))
+		{
+			printf("----------------------\n");
+			printf("sorting successful\n");
+		} else
+		{
+		printf("----------------------\n");
+			printf("sorting failed\n");
+		}
 	
+		result = testFindPairs();
 
 		
 		clReleaseCommandQueue(g_cqCommandQueue);

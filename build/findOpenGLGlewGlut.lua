@@ -1,4 +1,3 @@
-	-- todo: add Apple OpenCL environment vars
 
 	function initOpenGL()
 		configuration {}
