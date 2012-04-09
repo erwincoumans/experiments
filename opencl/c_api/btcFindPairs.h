@@ -31,8 +31,6 @@ class btbAabbSpaceInterface
 public:
 
 	virtual ~btbAabbSpaceInterface(){}
-	virtual btcAabbSpace plCreateBruteforceSpace(int maxNumAabbs, int maxNumPairs)=0;
-	virtual void	plDestroySpace(btcAabbSpace bp)=0;
 	virtual btcAabbProxy btcCreateAabbProxy(btcAabbSpace bp, void* clientData, float minX,float minY,float minZ, float maxX,float maxY, float maxZ)=0;
 	virtual void btcDestroyAabbProxy(btcAabbSpace bp, btcAabbProxy proxyHandle)=0;
 	virtual void btcSetAabb(btcAabbSpace bp, btcAabbProxy aabbHandle, float minX,float minY,float minZ, float maxX,float maxY, float maxZ)=0;

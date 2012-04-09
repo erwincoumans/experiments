@@ -159,10 +159,7 @@ void	btSimpleBroadphase::rayTest(const btVector3& rayFrom,const btVector3& rayTo
 	for (int i=0; i <= m_LastHandleIndex; i++)
 	{
 		btSimpleBroadphaseProxy* proxy = &m_pHandles[i];
-		if(!proxy->m_clientObject)
-		{
-			continue;
-		}
+		
 		rayCallback.process(proxy);
 	}
 }
@@ -173,10 +170,7 @@ void	btSimpleBroadphase::aabbTest(const btVector3& aabbMin, const btVector3& aab
 	for (int i=0; i <= m_LastHandleIndex; i++)
 	{
 		btSimpleBroadphaseProxy* proxy = &m_pHandles[i];
-		if(!proxy->m_clientObject)
-		{
-			continue;
-		}
+		
 		if (TestAabbAgainstAabb2(aabbMin,aabbMax,proxy->m_aabbMin,proxy->m_aabbMax))
 		{
 			callback.process(proxy);
@@ -220,19 +214,13 @@ void	btSimpleBroadphase::calculateOverlappingPairs(btDispatcher* dispatcher)
 		for (i=0; i <= m_LastHandleIndex; i++)
 		{
 			btSimpleBroadphaseProxy* proxy0 = &m_pHandles[i];
-			if(!proxy0->m_clientObject)
-			{
-				continue;
-			}
+			
 			new_largest_index = i;
 			for (j=i+1; j <= m_LastHandleIndex; j++)
 			{
 				btSimpleBroadphaseProxy* proxy1 = &m_pHandles[j];
 				btAssert(proxy0 != proxy1);
-				if(!proxy1->m_clientObject)
-				{
-					continue;
-				}
+				
 
 				btSimpleBroadphaseProxy* p0 = getSimpleProxyFromProxy(proxy0);
 				btSimpleBroadphaseProxy* p1 = getSimpleProxyFromProxy(proxy1);

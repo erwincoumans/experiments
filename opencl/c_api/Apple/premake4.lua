@@ -1,22 +1,14 @@
 	
-	hasCL = findOpenCL_AMD()
+	hasCL = findOpenCL_Apple()
 	
 	if (hasCL) then
 
 		project "OpenCL_C_API_Test"
 
-		initOpenCL_AMD()
+		initOpenCL_Apple()
 	
 		kind "ConsoleApp"
 		targetdir "../../../bin"
-
-		includedirs 
-		{
-			projectRootDir .. "bullet2",
-			projectRootDir .. "opencl/primitives"
-		}
-		
-		links {"bullet2"}
 
 		language "C"
 		files {
@@ -34,6 +26,7 @@
 			"../btcFindPairs.h",
 			"../Test_FindPairs.cpp",
 			"../Test_FindPairs.h"
+			
 		}
 		
 	end
