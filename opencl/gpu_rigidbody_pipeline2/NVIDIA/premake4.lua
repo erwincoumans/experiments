@@ -12,11 +12,11 @@
 		kind "ConsoleApp"
 		targetdir "../../../bin"
 
+
 		initOpenGL()
 		initGlew()
 
-
-			includedirs {
+		includedirs {
 		"../../primitives",
 		"../../../bullet2"
 		}
