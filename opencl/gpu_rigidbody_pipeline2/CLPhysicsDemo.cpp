@@ -98,6 +98,12 @@ struct InternalData
 		m_linVelHost= new btVector3[MAX_CONVEX_BODIES_CL];
 		m_angVelHost = new btVector3[MAX_CONVEX_BODIES_CL];
 		m_bodyTimesHost = new float[MAX_CONVEX_BODIES_CL];
+		for (int i=0;i<MAX_CONVEX_BODIES_CL;i++)
+		{
+			m_linVelHost[i].setZero();
+			m_angVelHost[i].setZero();
+			m_bodyTimesHost[i] = 0.f;
+		}
 	}
 	~InternalData()
 	{
@@ -280,14 +286,14 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	m_data->m_linVelBuf = new adl::Buffer<btVector3>(g_deviceCL,MAX_CONVEX_BODIES_CL);
 	m_data->m_angVelBuf = new adl::Buffer<btVector3>(g_deviceCL,MAX_CONVEX_BODIES_CL);
 	m_data->m_bodyTimes = new adl::Buffer<float>(g_deviceCL,MAX_CONVEX_BODIES_CL);
-
+	
 	m_data->m_localShapeAABB = new adl::Buffer<btAABBHost>(g_deviceCL,MAX_CONVEX_SHAPES_CL);
 	
 	gLinVelMem = (cl_mem)m_data->m_linVelBuf->m_ptr;
 	gAngVelMem = (cl_mem)m_data->m_angVelBuf->m_ptr;
 	gBodyTimes = (cl_mem)m_data->m_bodyTimes->m_ptr;
 
-	
+	writeVelocitiesToGpu();
 
 
 	narrowphaseAndSolver = new btGpuNarrowphaseAndSolver(g_deviceCL);

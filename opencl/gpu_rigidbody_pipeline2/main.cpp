@@ -165,9 +165,9 @@ int main(int argc, char* argv[])
 	bool useInterop = true;
 	demo.init(-1,-1,useInterop);
 
-		render.InitShaders();
+	render.InitShaders();
 
-		if (useInterop)
+	if (useInterop)
 		demo.setupInterop();
 
 	createScene(render, demo);

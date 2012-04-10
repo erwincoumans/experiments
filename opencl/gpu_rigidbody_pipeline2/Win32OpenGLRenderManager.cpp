@@ -68,7 +68,7 @@ void Win32OpenGLWindow::enableOpenGL()
 	pfd.nVersion = 1;
 	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
 	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 24;
+	pfd.cColorBits = 32;
 	pfd.cDepthBits = 16;
 	pfd.cStencilBits = 1;
 	pfd.iLayerType = PFD_MAIN_PLANE;
