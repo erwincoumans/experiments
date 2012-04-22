@@ -140,20 +140,18 @@ public:
 		btAssert( status == CL_SUCCESS );
 	}
 
-	void copyFromArray(const btAlignedObjectArray<T>& srcArray, bool waitForCompletion=true)
+	void copyFromHost(const btAlignedObjectArray<T>& srcArray, bool waitForCompletion=true)
 	{
 		int newSize = srcArray.size();
 		
 		bool copyOldContents = false;
 		resize (newSize,copyOldContents);
 
-		copyFromHost(0,newSize,&srcArray[0]);
+		copyFromHost(0,newSize,&srcArray[0],waitForCompletion);
 
-		if (waitForCompletion)
-			clFinish(m_commandQueue);
 	}
 
-	void copyFromHost(int firstElem, int lastElem, const T* src)
+	void copyFromHost(int firstElem, int lastElem, const T* src, bool waitForCompletion=true)
 	{
 		cl_int status = 0;
 		int numElems = lastElem - firstElem;
@@ -162,26 +160,30 @@ public:
 		status = clEnqueueWriteBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*firstElem, sizeInBytes,
 		src, 0,0,0 );
 		btAssert(status == CL_SUCCESS );
+		if (waitForCompletion)
+			clFinish(m_commandQueue);
+
 	}
 	
 
-	void copyToArray(btAlignedObjectArray<T>& destArray, bool waitForCompletion=true) const
+	void copyToHost(btAlignedObjectArray<T>& destArray, bool waitForCompletion=true) const
 	{
 		destArray.resize(this->size());
 
-		copyToHost(0,size(),&destArray[0]);
+		copyToHost(0,size(),&destArray[0],waitForCompletion);
 		
-		if (waitForCompletion)
-			clFinish(m_commandQueue);
 	}
 
-	void copyToHost(int firstElem, int lastElem, T* destPtr) const
+	void copyToHost(int firstElem, int lastElem, T* destPtr,bool waitForCompletion=true) const
 	{
 		int nElems = lastElem-firstElem;
 		cl_int status = 0;
 		status = clEnqueueReadBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*firstElem, sizeof(T)*nElems,
 		destPtr, 0,0,0 );
 		btAssert( status==CL_SUCCESS );
+
+		if (waitForCompletion)
+			clFinish(m_commandQueue);
 	}
 	
 	void copyFromOpenCLArray(const btOpenCLArray& src)

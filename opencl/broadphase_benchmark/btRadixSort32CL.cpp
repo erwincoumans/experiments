@@ -50,24 +50,31 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	int originalSize = keyValuesInOut.size();
 	int workingSize = originalSize;
 	
-	int safeSize = orgSize;
+	int safeSize = originalSize;
 		
 	int dataAlignment = DATA_ALIGNMENT;
 
 	if (workingSize%dataAlignment)
 	{
 		workingSize += dataAlignment-(workingSize%dataAlignment);
+		safeSize = workingSize;
 		keyValuesInOut.resize(workingSize);
-		keyValuesInOut.
-
+		//fill the remaining bits (very slow way, todo: fill on GPU/OpenCL side)
+		btSortData src;
+		src.m_key = 0xffffffff;
+		for (int i=originalSize; i<workingSize;i++)
+		{
+			keyValuesInOut.copyFromHost(i, i+1, &src);
+		}
+//		keyValuesInOut.
 	}
 	
-
+	
 	btAssert( workingSize%DATA_ALIGNMENT == 0 );
 	
 	int minCap = 256*1024;
 
-	if (orgSize<minCap)
+	if (safeSize<minCap)
 	{
 		safeSize = minCap;
 	}
