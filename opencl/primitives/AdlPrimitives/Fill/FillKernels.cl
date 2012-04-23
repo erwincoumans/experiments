@@ -33,7 +33,11 @@ typedef unsigned int u32;
 
 typedef struct
 {
-	int4 m_data;
+	union
+	{
+		int4 m_data;
+		uint4 m_unsignedData;
+	};
 	int m_offset;
 	int m_n;
 	int m_padding[2];
@@ -50,6 +54,19 @@ void FillIntKernel(__global int* dstInt,
 	if( gIdx < cb.m_n )
 	{
 		dstInt[ cb.m_offset+gIdx ] = cb.m_data.x;
+	}
+}
+
+__kernel
+__attribute__((reqd_work_group_size(64,1,1)))
+void FillUnsignedIntKernel(__global unsigned int* dstInt, 
+					ConstBuffer cb)
+{
+	int gIdx = GET_GLOBAL_IDX;
+
+	if( gIdx < cb.m_n )
+	{
+		dstInt[ cb.m_offset+gIdx ] = cb.m_unsignedData.x;
 	}
 }
 

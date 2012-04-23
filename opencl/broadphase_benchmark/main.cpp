@@ -1468,6 +1468,14 @@ void ShutdownRC(void)
 	glDeleteVertexArrays(1, &cube_vao);
 }
 
+//#define TEST_BULLET_ADL_OPENCL_HOST_CODE
+
+#ifdef TEST_BULLET_ADL_OPENCL_HOST_CODE
+#include "btRadixSort32CL.h"
+#include "btFillCL.h"
+#include "btPrefixScanCL.h"
+#endif //TEST_BULLET_ADL_OPENCL_HOST_CODE
+
 int main(int argc, char* argv[])
 {
 	srand(0);
@@ -1503,6 +1511,49 @@ int main(int argc, char* argv[])
 
 	InitCL();
 	
+	//test sorting
+#ifdef TEST_BULLET_ADL_OPENCL_HOST_CODE
+	btRadixSort32CL sort(g_cxMainContext,g_device, g_cqCommandQue);
+	btOpenCLArray<btSortData> keyValuesInOut(g_cxMainContext,g_cqCommandQue);
+
+	btAlignedObjectArray<btSortData> hostData;
+	btSortData key; key.m_key = 2; key.m_value = 2;
+	hostData.push_back(key); key.m_key = 1; key.m_value = 1;
+	hostData.push_back(key);
+
+	keyValuesInOut.copyFromHost(hostData);
+	sort.execute(keyValuesInOut);
+	keyValuesInOut.copyToHost(hostData);
+//	keyValuesInOut.copyToHost(0,keyValuesInOut.size(), &hostData[0]);
+	
+	btFillCL filler(g_cxMainContext,g_device, g_cqCommandQue);
+	btInt2 value;
+	value.x = 5;
+	value.y = 5;
+	btOpenCLArray<btInt2> testArray(g_cxMainContext,g_cqCommandQue);
+	testArray.resize(1024);
+	filler.execute(testArray,value, testArray.size());
+	btAlignedObjectArray<btInt2> hostInt2Array;
+	testArray.copyToHost(hostInt2Array);
+
+
+	btPrefixScanCL scan(g_cxMainContext,g_device, g_cqCommandQue);
+
+	unsigned int sum;
+	btOpenCLArray<unsigned int>src(g_cxMainContext,g_cqCommandQue);
+
+	src.resize(16);
+
+	filler.execute(src,2, src.size());
+
+	btAlignedObjectArray<unsigned int>hostSrc;
+	src.copyToHost(hostSrc);
+
+
+	btOpenCLArray<unsigned int>dest(g_cxMainContext,g_cqCommandQue);
+	scan.execute(src,dest,src.size(),&sum);
+	dest.copyToHost(hostSrc);
+#endif //TEST_BULLET_ADL_OPENCL_HOST_CODE
 
 #define CUSTOM_CL_INITIALIZATION
 #ifdef CUSTOM_CL_INITIALIZATION

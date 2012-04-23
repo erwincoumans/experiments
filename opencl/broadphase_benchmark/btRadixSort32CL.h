@@ -11,8 +11,29 @@ struct btSortData
 };
 #include "btBufferInfoCL.h"
 
-struct btRadixSort32CL
+class  btRadixSort32CL
 {
+
+		btOpenCLArray<unsigned int>* m_workBuffer1;
+		
+		btOpenCLArray<btSortData>*	m_workBuffer3;
+
+		cl_command_queue	m_commandQueue;
+
+		cl_kernel m_streamCountSortDataKernel;
+		cl_kernel m_prefixScanKernel;
+		cl_kernel m_sortAndScatterSortDataKernel;
+
+		int m_maxSize;//??
+
+public:
+	struct btConstData
+		{
+			int m_n;
+			int m_nWGs;
+			int m_startBit;
+			int m_nBlocksPerWG;
+		};
 	enum
 		{
 			DATA_ALIGNMENT = 256,
@@ -27,32 +48,14 @@ struct btRadixSort32CL
 		};
 
 
-		struct btConstData
-		{
-			int m_n;
-			int m_nWGs;
-			int m_startBit;
-			int m_nBlocksPerWG;
-		};
-
-		btOpenCLArray<unsigned int>* m_workBuffer1;
+private:
 		
-		btOpenCLArray<btSortData>*	m_workBuffer3;
 
-		cl_command_queue	m_commandQueue;
-
-		cl_kernel m_streamCountSortDataKernel;
-		cl_kernel m_prefixScanKernel;
-		cl_kernel m_sortAndScatterSortDataKernel;
-
-		int m_maxSize;//??
-
-		btOpenCLArray<btConstData>* m_constBuffer[32/BITS_PER_PASS];
+public:
 
 		btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command_queue queue, int initialCapacity =0);
 
 		virtual ~btRadixSort32CL();
-
 
 		void execute(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits  = 32 );
 

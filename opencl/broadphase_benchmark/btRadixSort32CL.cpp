@@ -40,7 +40,9 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 
 btRadixSort32CL::~btRadixSort32CL()
 {
-
+	clReleaseKernel(m_streamCountSortDataKernel);
+	clReleaseKernel(m_sortAndScatterSortDataKernel);
+	clReleaseKernel(m_prefixScanKernel);
 }
 
 
@@ -123,7 +125,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			btLauncherCL launcher(m_commandQueue, m_streamCountSortDataKernel);
 
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( *m_constBuffer[ib/4], cdata );
+			launcher.setConst(  cdata );
 			
 			launcher.launch1D( NUM_WGS*WG_SIZE, WG_SIZE );
 		}
@@ -132,14 +134,14 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( histogramBuffer->getBufferCL() ) };
 			btLauncherCL launcher( m_commandQueue, m_prefixScanKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( *m_constBuffer[ib/4], cdata );
+			launcher.setConst(  cdata );
 			launcher.launch1D( 128, 128 );
 		}
 		{//	local sort and distribute
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( histogramBuffer->getBufferCL(), true ), btBufferInfoCL( dst->getBufferCL() )};
 			btLauncherCL launcher( m_commandQueue, m_sortAndScatterSortDataKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( *m_constBuffer[ib/4], cdata );
+			launcher.setConst(  cdata );
 			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
 		}
 		

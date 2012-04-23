@@ -31,7 +31,7 @@ class btLauncherCL
 			}
 		}
 		template<typename T>
-		inline void setConst( btOpenCLArray<T>& constBuff, const T& consts )
+		inline void setConst( const T& consts )
 		{
 			
 			int sz=sizeof(T);
@@ -39,7 +39,7 @@ class btLauncherCL
 			btAssert( status == CL_SUCCESS );
 		}
 
-		inline void launch1D( int numThreads, int localSize )
+		inline void launch1D( int numThreads, int localSize = 64)
 		{
 			launch2D( numThreads, 1, localSize, 1 );
 		}
