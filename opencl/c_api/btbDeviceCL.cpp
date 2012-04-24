@@ -83,7 +83,8 @@ void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements)
 void btbTestPrimitives(btbDevice d)
 {
 	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
-		btRadixSort32CL sort(dev->m_ctx,dev->m_device, dev->m_queue);
+	
+	btRadixSort32CL sort(dev->m_ctx,dev->m_device, dev->m_queue);
 	btOpenCLArray<btSortData> keyValuesInOut(dev->m_ctx,dev->m_queue);
 
 	btAlignedObjectArray<btSortData> hostData;

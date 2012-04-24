@@ -72,14 +72,13 @@ void FillUnsignedIntKernel(__global unsigned int* dstInt,
 
 __kernel
 __attribute__((reqd_work_group_size(64,1,1)))
-void FillInt2Kernel(__global int2* dstInt2, 
-					ConstBuffer cb)
+void FillInt2Kernel(__global int2* dstInt2, 	const int num, const int2 value)//, const int offset
 {
 	int gIdx = GET_GLOBAL_IDX;
 
-	if( gIdx < cb.m_n )
+	if( gIdx < num )
 	{
-		dstInt2[ cb.m_offset+gIdx ] = make_int2( cb.m_data.x, cb.m_data.y );
+		dstInt2[ gIdx ] = make_int2( value.x, value.y );
 	}
 }
 
