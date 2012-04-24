@@ -48,6 +48,83 @@ btRadixSort32CL::~btRadixSort32CL()
 	clReleaseKernel(m_prefixScanKernel);
 }
 
+void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
+{
+	int n = keyValuesInOut.size();
+	const int BITS_PER_PASS = 8;
+	const int NUM_TABLES = (1<<BITS_PER_PASS);
+
+	btAlignedObjectArray<btSortData> inout;
+	keyValuesInOut.copyToHost(inout);
+
+	int tables[NUM_TABLES];
+	int counter[NUM_TABLES];
+
+	btSortData* src = &inout[0];
+	btAlignedObjectArray<btSortData> workbuffer;
+	workbuffer.resize(inout.size());
+	btSortData* dst = &workbuffer[0];
+
+	int count=0;
+	for(int startBit=0; startBit<sortBits; startBit+=BITS_PER_PASS)
+	{
+		for(int i=0; i<NUM_TABLES; i++)
+		{
+			tables[i] = 0;
+		}
+
+		for(int i=0; i<n; i++)
+		{
+			int tableIdx = (src[i].m_key >> startBit) & (NUM_TABLES-1);
+			tables[tableIdx]++;
+		}
+#ifdef TEST
+		printf("histogram size=%d\n",NUM_TABLES);
+		for (int i=0;i<NUM_TABLES;i++)
+		{
+			if (tables[i]!=0)
+			{
+				printf("tables[%d]=%d]\n",i,tables[i]);
+			}
+
+		}
+#endif //TEST
+		//	prefix scan
+		int sum = 0;
+		for(int i=0; i<NUM_TABLES; i++)
+		{
+			int iData = tables[i];
+			tables[i] = sum;
+			sum += iData;
+			counter[i] = 0;
+		}
+
+		//	distribute
+		for(int i=0; i<n; i++)
+		{
+			int tableIdx = (src[i].m_key >> startBit) & (NUM_TABLES-1);
+			
+			dst[tables[tableIdx] + counter[tableIdx]] = src[i];
+			counter[tableIdx] ++;
+		}
+
+		btSwap( src, dst );
+		count++;
+	}
+
+	{
+		if (count&1)
+		//if( src != inout.m_ptr )
+		{
+			//memcpy( dst, src, sizeof(btSortData)*n );
+			keyValuesInOut.copyFromHost(0,n,src);
+		} else
+		{
+			keyValuesInOut.copyFromHost(0,n,dst);
+		}
+	}
+
+}
 
 void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
 {
@@ -76,13 +153,16 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	
 	
 	btAssert( workingSize%DATA_ALIGNMENT == 0 );
-	
+//#define NVIDIA_WORKAROUND
+#ifdef NVIDIA_WORKAROUND
 	int minCap = 256*1024;
 
 	if (safeSize<minCap)
 	{
 		safeSize = minCap;
 	}
+#endif //NVIDIA_WORKAROUND
+
 	int n = workingSize;
 
 	m_workBuffer1->resize(safeSize);
@@ -132,6 +212,15 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			
 			launcher.launch1D( NUM_WGS*WG_SIZE, WG_SIZE );
 		}
+
+		btAlignedObjectArray<unsigned int> testHist;
+		histogramBuffer->copyToHost(testHist);
+		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
+		for (int i=0;i<testHist.size();i++)
+		{
+			if (testHist[i]!=0)
+				printf("testHist[%d]=%d\n",i,testHist[i]);
+		}
 		
 		{//	prefix scan group histogram
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( histogramBuffer->getBufferCL() ) };
@@ -158,7 +247,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		btAssert(0);//need to copy from workbuffer to keyValuesInOut
 	}
 
-	if (originalSize<minCap)
+	if (originalSize!=keyValuesInOut.size())
 	{
 		keyValuesInOut.resize(originalSize);
 	}
