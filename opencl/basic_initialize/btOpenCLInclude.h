@@ -22,6 +22,7 @@ subject to the following restrictions:
 #include <MiniCL/cl.h>
 #else
 #include <OpenCL/cl.h>
+#include <OpenCL/cl_ext.h> //clLogMessagesToStderrAPPLE
 #endif
 #else
 #ifdef USE_MINICL

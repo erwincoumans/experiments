@@ -19,6 +19,7 @@ solution "0MySolution"
 	configuration "Release"
 		flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "FloatFast"}
 	configuration "Debug"
+		defines {"_DEBUG=1"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 		
 	platforms {"x32", "x64"}

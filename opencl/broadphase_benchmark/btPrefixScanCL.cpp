@@ -1,7 +1,10 @@
 #include "btPrefixScanCL.h"
 #include "btFillCL.h"
-
+#ifdef _WIN32
 #define BT_PREFIXSCAN_PROG_PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Scan\\PrefixScanKernels.cl"
+#else
+#define BT_PREFIXSCAN_PROG_PATH "../opencl/primitives/AdlPrimitives/Scan/PrefixScanKernels.cl"
+#endif
 
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
@@ -47,7 +50,7 @@ void btPrefixScanCL::execute(btOpenCLArray<unsigned int>& src, btOpenCLArray<uns
 {
 	
 //	btAssert( data->m_option == EXCLUSIVE );
-	const unsigned int numBlocks = unsigned int( (n+BLOCK_SIZE*2-1)/(BLOCK_SIZE*2) );
+	const unsigned int numBlocks = (const unsigned int)( (n+BLOCK_SIZE*2-1)/(BLOCK_SIZE*2) );
 
 	dst.resize(src.size());
 	m_workBuffer->resize(src.size());
