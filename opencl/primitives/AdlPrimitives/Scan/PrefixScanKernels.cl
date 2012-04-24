@@ -23,15 +23,18 @@ typedef unsigned int u32;
 
 // takahiro end
 #define WG_SIZE 128
+#define m_numElems x
+#define m_numBlocks y
+#define m_numScanBlocks z
 
-typedef struct
+/*typedef struct
 {
 	uint m_numElems;
 	uint m_numBlocks;
 	uint m_numScanBlocks;
 	uint m_padding[1];
 } ConstBuffer;
-
+*/
 
 u32 ScanExclusive(__local u32* data, u32 n, int lIdx, int lSize)
 {
@@ -80,7 +83,7 @@ u32 ScanExclusive(__local u32* data, u32 n, int lIdx, int lSize)
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 __kernel
 void LocalScanKernel(__global u32* dst, __global u32 *src, __global u32 *sumBuffer,
-		ConstBuffer cb)
+		uint4 cb)
 {
 	__local u32 ldsData[WG_SIZE*2];
 
@@ -106,7 +109,7 @@ void LocalScanKernel(__global u32* dst, __global u32 *src, __global u32 *sumBuff
 
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 __kernel
-void AddOffsetKernel(__global u32 *dst, __global u32 *blockSum, ConstBuffer cb)
+void AddOffsetKernel(__global u32 *dst, __global u32 *blockSum, uint4 cb)
 {
 	const u32 blockSize = WG_SIZE*2;
 
@@ -125,7 +128,7 @@ void AddOffsetKernel(__global u32 *dst, __global u32 *blockSum, ConstBuffer cb)
 
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 __kernel
-void TopLevelScanKernel(__global u32* dst, ConstBuffer cb)
+void TopLevelScanKernel(__global u32* dst, uint4 cb)
 {
 	__local u32 ldsData[2048];
 	int gIdx = GET_GLOBAL_IDX;
