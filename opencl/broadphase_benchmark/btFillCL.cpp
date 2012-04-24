@@ -3,7 +3,11 @@
 #include "btBufferInfoCL.h"
 #include "btLauncherCL.h"
 
+#ifdef _WIN32
 #define FILL_CL_PROGRAM_PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Fill\\FillKernels.cl"
+#else
+#define FILL_CL_PROGRAM_PATH "../opencl/primitives/AdlPrimitives/Fill/FillKernels.cl"
+#endif
 
 btFillCL::btFillCL(cl_context ctx, cl_device_id device, cl_command_queue queue)
 :m_commandQueue(queue)
