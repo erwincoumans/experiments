@@ -3,6 +3,9 @@
 #include "btbDeviceCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
 #include "../broadphase_benchmark/btRadixSort32CL.h"
+#include "../broadphase_benchmark/btFillCL.h"
+#include "../broadphase_benchmark/btPrefixScanCL.h"
+
 
 typedef struct
 {
@@ -77,9 +80,50 @@ void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements)
 
 */
 
-void btbFillInt2Buffer(btbDevice d, btbBuffer dst,int v0, int v1)
+void btbTestPrimitives(btbDevice d)
 {
-    
+	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
+		btRadixSort32CL sort(dev->m_ctx,dev->m_device, dev->m_queue);
+	btOpenCLArray<btSortData> keyValuesInOut(dev->m_ctx,dev->m_queue);
+
+	btAlignedObjectArray<btSortData> hostData;
+	btSortData key; key.m_key = 2; key.m_value = 2;
+	hostData.push_back(key); key.m_key = 1; key.m_value = 1;
+	hostData.push_back(key);
+
+	keyValuesInOut.copyFromHost(hostData);
+	sort.execute(keyValuesInOut);
+	keyValuesInOut.copyToHost(hostData);
+//	keyValuesInOut.copyToHost(0,keyValuesInOut.size(), &hostData[0]);
+	
+	btFillCL filler(dev->m_ctx,dev->m_device, dev->m_queue);
+	btInt2 value;
+	value.x = 5;
+	value.y = 5;
+	btOpenCLArray<btInt2> testArray(dev->m_ctx,dev->m_queue);
+	testArray.resize(1024);
+	filler.execute(testArray,value, testArray.size());
+	btAlignedObjectArray<btInt2> hostInt2Array;
+	testArray.copyToHost(hostInt2Array);
+
+
+	btPrefixScanCL scan(dev->m_ctx,dev->m_device, dev->m_queue);
+
+	unsigned int sum;
+	btOpenCLArray<unsigned int>src(dev->m_ctx,dev->m_queue);
+
+	src.resize(16);
+
+	filler.execute(src,2, src.size());
+
+	btAlignedObjectArray<unsigned int>hostSrc;
+	src.copyToHost(hostSrc);
+
+
+	btOpenCLArray<unsigned int>dest(dev->m_ctx,dev->m_queue);
+	scan.execute(src,dest,src.size(),&sum);
+	dest.copyToHost(hostSrc);
+
 
 }
 

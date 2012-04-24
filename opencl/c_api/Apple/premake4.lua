@@ -20,6 +20,8 @@
 
 		language "C++"
 		files {
+			"../../broadphase_benchmark/btFillCL.cpp",
+			"../../broadphase_benchmark/btPrefixScanCL.cpp",
 			"../../broadphase_benchmark/btRadixSort32CL.cpp",
 			"../../basic_initialize/btOpenCLUtils.cpp",
 			"../../basic_initialize/btOpenCLUtils.h",

@@ -56,6 +56,9 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	//create 'device'?
 
 	clDevice = btbCreateDeviceCL(ctx,dev, queue);
+
+	btbTestPrimitives(clDevice);
+
 	//create buffers
 	numElements = 256;
 	sortData = btbCreateSortDataBuffer(clDevice, numElements);

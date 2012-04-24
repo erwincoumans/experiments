@@ -12,6 +12,8 @@ extern "C" {
 btbDevice btbCreateDeviceCL(cl_context ctx, cl_device_id dev, cl_command_queue q);
 void btbReleaseDevice(btbDevice d);
 
+void btbTestPrimitives(btbDevice d);
+
 cl_int btbGetLastErrorCL(btbDevice d);
 void btbWaitForCompletion(btbDevice d);
 
