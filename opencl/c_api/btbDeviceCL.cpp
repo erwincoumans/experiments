@@ -83,7 +83,7 @@ void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements)
 void btbTestPrimitives(btbDevice d)
 {
 	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
-	/*
+	
 	btRadixSort32CL sort(dev->m_ctx,dev->m_device, dev->m_queue);
 	btOpenCLArray<btSortData> keyValuesInOut(dev->m_ctx,dev->m_queue);
 
@@ -96,7 +96,7 @@ void btbTestPrimitives(btbDevice d)
 	sort.execute(keyValuesInOut);
 	keyValuesInOut.copyToHost(hostData);
 //	keyValuesInOut.copyToHost(0,keyValuesInOut.size(), &hostData[0]);
-	*/
+	
 	btFillCL filler(dev->m_ctx,dev->m_device, dev->m_queue);
 	btInt2 value;
 	value.x = 4;

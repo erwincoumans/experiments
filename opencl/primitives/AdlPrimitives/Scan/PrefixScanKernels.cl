@@ -22,7 +22,7 @@ typedef unsigned int u32;
 #define GROUP_LDS_BARRIER barrier(CLK_LOCAL_MEM_FENCE)
 
 // takahiro end
-#define WG_SIZE 128
+#define WG_SIZE 128 
 #define m_numElems x
 #define m_numBlocks y
 #define m_numScanBlocks z
@@ -79,7 +79,6 @@ u32 ScanExclusive(__local u32* data, u32 n, int lIdx, int lSize)
 	return blocksum;
 }
 
-
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 __kernel
 void LocalScanKernel(__global u32* dst, __global u32 *src, __global u32 *sumBuffer,
@@ -124,7 +123,6 @@ void AddOffsetKernel(__global u32 *dst, __global u32 *blockSum, uint4 cb)
 		dst[i] += iBlockSum;
 	}
 }
-
 
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 __kernel

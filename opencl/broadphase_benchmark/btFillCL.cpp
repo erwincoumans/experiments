@@ -65,19 +65,14 @@ void btFillCL::execute(btOpenCLArray<int>& src, const int& value, int n, int off
 void btFillCL::execute(btOpenCLArray<unsigned int>& src, const unsigned int& value, int n, int offset)
 {
 	btAssert( n>0 );
-	btConstData constBuffer;
-	{
-		constBuffer.m_offset = offset;
-		constBuffer.m_n = n;
-		constBuffer.m_data = btMakeInt4( value,value,value,value );
-	}
 
 	{
 		btBufferInfoCL bInfo[] = { btBufferInfoCL( src.getBufferCL() ) };
 
-		btLauncherCL launcher( m_commandQueue, m_fillIntKernel );
+		btLauncherCL launcher( m_commandQueue, m_fillUnsignedIntKernel );
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst( constBuffer );
+		launcher.setConst( n );
+        launcher.setConst(value);
 		launcher.launch1D( n );
 	}
 }

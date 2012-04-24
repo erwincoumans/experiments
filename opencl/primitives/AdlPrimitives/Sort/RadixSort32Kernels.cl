@@ -56,7 +56,12 @@ typedef uchar u8;
 //	Cayman
 //#define nPerWI 20
 
+#define m_n x
+#define m_nWGs y
+#define m_startBit z
+#define m_nBlocksPerWG w
 
+/*
 typedef struct
 {
 	int m_n;
@@ -64,6 +69,7 @@ typedef struct
 	int m_startBit;
 	int m_nBlocksPerWG;
 } ConstBuffer;
+*/
 
 typedef struct
 {
@@ -199,7 +205,7 @@ u32 bit8Scan(u32 v)
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void StreamCountKernel( __global u32* gSrc, __global u32* histogramOut, ConstBuffer cb )
+void StreamCountKernel( __global u32* gSrc, __global u32* histogramOut, int4 cb )
 {
 	__local u32 localHistogramMat[NUM_BUCKET*WG_SIZE];
 
@@ -262,7 +268,7 @@ void StreamCountKernel( __global u32* gSrc, __global u32* histogramOut, ConstBuf
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void StreamCountSortDataKernel( __global SortDataCL* gSrc, __global u32* histogramOut, ConstBuffer cb )
+void StreamCountSortDataKernel( __global SortDataCL* gSrc, __global u32* histogramOut, int4  cb )
 {
 	__local u32 localHistogramMat[NUM_BUCKET*WG_SIZE];
 
@@ -328,7 +334,7 @@ void StreamCountSortDataKernel( __global SortDataCL* gSrc, __global u32* histogr
 //	NUM_BUCKET*nWGs < 128*nPerWI
 __kernel
 __attribute__((reqd_work_group_size(128,1,1)))
-void PrefixScanKernel( __global u32* wHistogram1, ConstBuffer cb )
+void PrefixScanKernel( __global u32* wHistogram1, int4  cb )
 {
 	__local u32 ldsTopScanData[128*2];
 
@@ -538,7 +544,7 @@ void sort4Bits1(u32 sortData[4], int startBit, int lIdx, __local u32* ldsSortDat
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void SortAndScatterKernel( __global const u32* restrict gSrc, __global const u32* rHistogram, __global u32* restrict gDst, ConstBuffer cb )
+void SortAndScatterKernel( __global const u32* restrict gSrc, __global const u32* rHistogram, __global u32* restrict gDst, int4  cb )
 {
 	__local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
 	__local u32 localHistogramToCarry[NUM_BUCKET];
@@ -785,7 +791,7 @@ void sort4Bits1KeyValue(u32 sortData[4], int sortVal[4], int startBit, int lIdx,
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global const int* restrict gSrcVal, __global const u32* rHistogram, __global u32* restrict gDst, __global int* restrict gDstVal, ConstBuffer cb)
+void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global const int* restrict gSrcVal, __global const u32* rHistogram, __global u32* restrict gDst, __global int* restrict gDstVal, int4  cb)
 {
 	__local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
 	__local int ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
@@ -945,7 +951,7 @@ void SortAndScatterKeyValueKernel( __global const u32* restrict gSrc, __global c
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void SortAndScatterSortDataKernel( __global const SortDataCL* restrict gSrc, __global const u32* rHistogram, __global SortDataCL* restrict gDst, ConstBuffer cb)
+void SortAndScatterSortDataKernel( __global const SortDataCL* restrict gSrc, __global const u32* rHistogram, __global SortDataCL* restrict gDst, int4 cb)
 {
 	__local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
 	__local int ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];

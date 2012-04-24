@@ -59,14 +59,13 @@ void FillIntKernel(__global int* dstInt,
 
 __kernel
 __attribute__((reqd_work_group_size(64,1,1)))
-void FillUnsignedIntKernel(__global unsigned int* dstInt, 
-					ConstBuffer cb)
+void FillUnsignedIntKernel(__global unsigned int* dstInt, const int num, const unsigned int value)
 {
 	int gIdx = GET_GLOBAL_IDX;
 
-	if( gIdx < cb.m_n )
+	if( gIdx < num )
 	{
-		dstInt[ cb.m_offset+gIdx ] = cb.m_unsignedData.x;
+		dstInt[ gIdx ] = value;
 	}
 }
 
