@@ -10,6 +10,9 @@
 		kind "ConsoleApp"
 		targetdir "../../../bin"
 
+		includedirs {"../../../bullet2"}
+		links {"bullet2"}
+
 		language "C"
 		files {
 			"../main.c",
@@ -17,6 +20,7 @@
 
 		language "C++"
 		files {
+			"../../broadphase_benchmark/btRadixSort32CL.cpp",
 			"../../basic_initialize/btOpenCLUtils.cpp",
 			"../../basic_initialize/btOpenCLUtils.h",
 			"../btbDeviceCL.cpp",

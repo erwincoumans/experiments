@@ -28,6 +28,8 @@ void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements);
 btbRadixSort btbCreateRadixSort(btbDevice d, int maxNumElements);
 void btbSort(btbRadixSort s, btbBuffer buf, int numElements);
 
+void btbFillInt2Buffer(btbDevice d, btbBuffer dst,int v0, int v1);
+                       
 #ifdef __cplusplus
 }
 #endif//__cplusplus

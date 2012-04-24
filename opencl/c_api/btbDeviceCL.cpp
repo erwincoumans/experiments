@@ -1,26 +1,29 @@
 
-#include "Adl/Adl.h"
+
 #include "btbDeviceCL.h"
-#include "AdlPrimitives/Sort/SortData.h"
-#include "AdlPrimitives/Sort/RadixSort32.h"
+#include "../broadphase_benchmark/btOpenCLArray.h"
+#include "../broadphase_benchmark/btRadixSort32CL.h"
+
+typedef struct
+{
+    cl_context m_ctx;
+    cl_device_id m_device;
+    cl_command_queue m_queue;
+} btbMyDeviceCL;
 
 btbDevice btbCreateDeviceCL(cl_context ctx, cl_device_id dev, cl_command_queue q)
 {
-	adl::DeviceCL* clDev = new adl::DeviceCL();
-	clDev->m_deviceIdx = dev;
-	clDev->m_context = ctx;
-	clDev->m_commandQueue = q;
-	clDev->m_kernelManager = new adl::KernelManager;
-	
-	
+    btbMyDeviceCL* clDev = (btbMyDeviceCL*)malloc(sizeof(btbMyDeviceCL));
+    clDev->m_ctx = ctx;
+    clDev->m_device = dev;
+    clDev->m_queue = q;
 	return (btbDevice) clDev;
 }
 
 void btbReleaseDevice(btbDevice d)
 {
-	adl::Device* dev = (adl::Device*)d;
+	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
 	btbAssert(dev);
-	dev->release();
 	delete dev;
 }
 
@@ -31,49 +34,37 @@ cl_int btbGetLastErrorCL(btbDevice d)
 
 void btbWaitForCompletion(btbDevice d)
 {
-	adl::Device* dev = (adl::Device*)d;
-	dev->waitForCompletion();
+	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
+    clFinish(dev->m_queue);
 }
 
 btbBuffer btbCreateSortDataBuffer(btbDevice d, int numElements)
 {
-	adl::Device* dev = (adl::Device*) d;
-	adl::Buffer<adl::SortData>* buf = new adl::Buffer<adl::SortData>(dev, numElements);
+	btbMyDeviceCL* dev = (btbMyDeviceCL*) d;
+    btOpenCLArray<btSortData>* buf = new btOpenCLArray<btSortData>(dev->m_ctx,dev->m_queue);
+    buf->resize(numElements);
 	return (btbBuffer)buf;
 }
 
 void btbReleaseBuffer(btbBuffer b)
 {
-	adl::BufferBase* buf = (adl::BufferBase*) b;
+	btOpenCLArray<btSortData>* buf = (btOpenCLArray<btSortData>*) b;
 	delete buf;
 }
 
 ///like memcpy destination comes first
 void btbCopyHostToBuffer(btbBuffer devDest, const btbSortData2ui* hostSrc, int sizeInElements)
 {
-	
-	adl::Buffer<adl::SortData>* devBuf = (adl::Buffer<adl::SortData>*)devDest;
-	//adl::DeviceHost::allocate
-	adl::DeviceHost devHost;
-	adl::HostBuffer<adl::SortData> hostBuf;
-	hostBuf.m_ptr = (adl::SortData*)hostSrc;
-	hostBuf.m_device = &devHost;
-	hostBuf.m_size = sizeInElements;
-	hostBuf.m_allocated = false;
-	devBuf->write(hostBuf,sizeInElements);
+    const btSortData* hostPtr = (const btSortData*)hostSrc;
+	btOpenCLArray<btSortData>* devBuf = (btOpenCLArray<btSortData>*)devDest;
+	devBuf->copyFromHost(0,sizeInElements,hostPtr);
 }
+
 void btbCopyBufferToHost(btbSortData2ui* hostDest, const btbBuffer devSrc, int sizeInElements)
 {
-	adl::HostBuffer<adl::SortData> hostBuf;
-	adl::DeviceHost devHost;
-	hostBuf.m_ptr = (adl::SortData*)hostDest;
-	hostBuf.m_size = sizeInElements;
-	hostBuf.m_device = &devHost;
-	hostBuf.m_allocated = false;
-
-	adl::Buffer<adl::SortData>* devBufSrc = (adl::Buffer<adl::SortData>*)devSrc;
-	devBufSrc->read(hostBuf,sizeInElements);
-
+    btSortData* hostPtr = (btSortData*)hostDest;
+	btOpenCLArray<btSortData>* devBuf = (btOpenCLArray<btSortData>*)devSrc;
+	devBuf->copyToHost(0,sizeInElements,hostPtr);
 }
 
 
@@ -86,15 +77,21 @@ void btbCopyBuffer(btbBuffer dst, const btbBuffer src, int sizeInElements)
 
 */
 
+void btbFillInt2Buffer(btbDevice d, btbBuffer dst,int v0, int v1)
+{
+    
+
+}
+
 btbRadixSort btbCreateRadixSort(btbDevice d, int maxNumElements)
 {
-	adl::Device* dev = (adl::Device*)d;
-	adl::RadixSort32<adl::TYPE_CL>::Data* dataC = adl::RadixSort32<adl::TYPE_CL>::allocate( dev, maxNumElements);
-	return (btbRadixSort)dataC;
+	btbMyDeviceCL* dev = (btbMyDeviceCL*)d;
+    btRadixSort32CL* radix = new btRadixSort32CL(dev->m_ctx,dev->m_device,dev->m_queue);
+	return (btbRadixSort)radix;
 }
 void btbSort(btbRadixSort s, btbBuffer b, int numElements)
 {
-	adl::RadixSort32<adl::TYPE_CL>::Data* dataC = (adl::RadixSort32<adl::TYPE_CL>::Data*)s;
-	adl::Buffer<adl::SortData>* buf = (adl::Buffer<adl::SortData>*)b;
-	adl::RadixSort32<adl::TYPE_CL>::execute( dataC, *buf, numElements);
+	btRadixSort32CL* radix = (btRadixSort32CL*)s;
+	btOpenCLArray<btSortData>* buf = (btOpenCLArray<btSortData>*)b;
+	radix->execute( *buf);
 }

@@ -3,8 +3,11 @@
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 
-#define RADIXSORT32_PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Sort\\RadixSort32Kernels.cl"
-//#define PREFIXSCAN_PATH "..\\..\\opencl\\primitives\\AdlPrimitives\\Scan\\PrefixScanKernels.cl"
+#ifdef _WIN32
+#define RADIXSORT32_PATH "../../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl"
+#else
+#define RADIXSORT32_PATH "../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl"
+#endif
 
 
 btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command_queue queue, int initialCapacity)

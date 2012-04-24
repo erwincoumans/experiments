@@ -19,6 +19,7 @@ subject to the following restrictions:
 ///original author: Erwin Coumans
 
 
+
 #include <stdio.h>
 #include "../vector_add/VectorAddKernels.h"
 #ifdef _WIN32
@@ -27,7 +28,6 @@ subject to the following restrictions:
 
 #include "stdlib.h"
 #include "btcFindPairs.h"
-#include "Test_FindPairs.h"
 
 int ciErrNum = 0;
 
@@ -44,7 +44,6 @@ btr //rendering
 int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 {
 	int success = 1;
-#if _WIN32
 	btbDevice clDevice;
 	btbBuffer sortData;
 	int numElements,i;
@@ -65,8 +64,8 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	sortDataHost = (btbSortData2ui*)malloc (sizeof(btbSortData2ui)*numElements);
 	for (i=0;i<numElements;i++)
 	{
-		sortDataHost[i].m_key = numElements-i;
-		sortDataHost[i].m_value= numElements-i;
+		sortDataHost[i].m_key = 1024-i;
+		sortDataHost[i].m_value= 1024-i;
 	}
 	
 	btbCopyHostToBuffer(sortData, sortDataHost, numElements);
@@ -92,19 +91,19 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	btbReleaseDevice(clDevice);
 
 	//clReleaseKernel(kernel);
-#endif
 	return success;
 }
 
 
 
+#define MAX_NUM_PARTS_IN_BITS 10
 
 int main(int argc, char* argv[])
 {
 	
 	cl_context			g_cxMainContext=0;
-cl_command_queue	g_cqCommandQueue=0;
-cl_device_id		g_device=0;
+    cl_command_queue	g_cqCommandQueue=0;
+    cl_device_id		g_device=0;
 
 	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
 	const char* vendorSDK = btOpenCLUtils_getSdkVendorName();
@@ -113,6 +112,14 @@ cl_device_id		g_device=0;
 	void* glDC = 0;
 	int numDev =0;
 	
+    unsigned x = 0;
+    unsigned y;
+    y = (~(x&0))<<(31-MAX_NUM_PARTS_IN_BITS);
+    
+    
+        // Get only the lower bits where the triangle index is stored
+//      return (m_escapeIndexOrTriangleIndex&~((~(x&0))<<(31-MAX_NUM_PARTS_IN_BITS)));
+    
 
 	printf("This program was compiled using the %s OpenCL SDK\n",vendorSDK);
 	
@@ -183,7 +190,7 @@ cl_device_id		g_device=0;
 			printf("sorting failed\n");
 		}
 	
-		result = testFindPairs();
+		result = 0;//testFindPairs();
 
 		
 		clReleaseCommandQueue(g_cqCommandQueue);
