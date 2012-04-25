@@ -2,6 +2,7 @@
 #include "btRadixSort32CL.h"
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
+#include "btPrefixScanCL.h"
 
 #ifdef _WIN32
 #define RADIXSORT32_PATH "../../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl"
@@ -14,13 +15,17 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 :m_commandQueue(queue)
 {
 	m_workBuffer1 = new btOpenCLArray<unsigned int>(ctx,queue);
+	m_workBuffer2 = new btOpenCLArray<unsigned int>(ctx,queue);
 	m_workBuffer3 = new btOpenCLArray<btSortData>(ctx,queue);
+
 
 	if (initialCapacity>0)
 	{
 		m_workBuffer1->resize(initialCapacity);
 		m_workBuffer3->resize(initialCapacity);
 	}
+
+	m_scan = new btPrefixScanCL(ctx,device,queue);
 
 	
 	const char* additionalMacros = "";
@@ -43,6 +48,11 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 
 btRadixSort32CL::~btRadixSort32CL()
 {
+	delete m_scan;
+	delete m_workBuffer1;
+	delete m_workBuffer2;
+	delete m_workBuffer3;
+
 	clReleaseKernel(m_streamCountSortDataKernel);
 	clReleaseKernel(m_sortAndScatterSortDataKernel);
 	clReleaseKernel(m_prefixScanKernel);
@@ -175,7 +185,8 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	btOpenCLArray<btSortData>* src = &keyValuesInOut;
 	btOpenCLArray<btSortData>* dst = m_workBuffer3;
 
-	btOpenCLArray<unsigned int>* histogramBuffer = m_workBuffer1;
+	btOpenCLArray<unsigned int>* srcHisto = m_workBuffer1;
+	btOpenCLArray<unsigned int>* destHisto = m_workBuffer2;
 
 
 	int nWGs = NUM_WGS;
@@ -200,7 +211,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		cdata.m_startBit = ib;
 		
 		{
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( histogramBuffer->getBufferCL() ) };
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( srcHisto->getBufferCL() ) };
 			btLauncherCL launcher(m_commandQueue, m_streamCountSortDataKernel);
 
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
@@ -209,8 +220,10 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			int num = NUM_WGS*WG_SIZE;
 			launcher.launch1D( num, WG_SIZE );
 		}
+//#define DEBUG_RADIXSORT
 #ifdef DEBUG_RADIXSORT
-		histogramBuffer->copyToHost(testHist);
+		btAlignedObjectArray<unsigned int> testHist;
+		srcHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
 		for (int i=0;i<testHist.size();i++)
 		{
@@ -219,17 +232,23 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		}
 #endif //DEBUG_RADIXSORT
 	
-		
+		unsigned int sum;
 
+		if (0)
 		{//	prefix scan group histogram
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( histogramBuffer->getBufferCL() ) };
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( srcHisto->getBufferCL() ) };
 			btLauncherCL launcher( m_commandQueue, m_prefixScanKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst(  cdata );
 			launcher.launch1D( 128, 128 );
+		}else
+		{
+			m_scan->execute(*srcHisto,*destHisto,srcHisto->size(),&sum);
 		}
+
+
 #ifdef DEBUG_RADIXSORT
-		histogramBuffer->copyToHost(testHist);
+		destHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
 		for (int i=0;i<testHist.size();i++)
 		{
@@ -238,14 +257,14 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		}
 #endif //DEBUG_RADIXSORT
 		{//	local sort and distribute
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( histogramBuffer->getBufferCL(), true ), btBufferInfoCL( dst->getBufferCL() )};
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( destHisto->getBufferCL(), true ), btBufferInfoCL( dst->getBufferCL() )};
 			btLauncherCL launcher( m_commandQueue, m_sortAndScatterSortDataKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst(  cdata );
 			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
 		}
 #ifdef DEBUG_RADIXSORT
-		histogramBuffer->copyToHost(testHist);
+		destHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
 		for (int i=0;i<testHist.size();i++)
 		{
@@ -254,6 +273,8 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		}
 #endif //DEBUG_RADIXSORT
 		btSwap(src, dst );
+		btSwap(srcHisto,destHisto);
+
 		count++;
 	}
 	

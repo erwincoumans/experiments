@@ -15,6 +15,7 @@ class  btRadixSort32CL
 {
 
 		btOpenCLArray<unsigned int>* m_workBuffer1;
+		btOpenCLArray<unsigned int>* m_workBuffer2;
 		
 		btOpenCLArray<btSortData>*	m_workBuffer3;
 
@@ -25,6 +26,8 @@ class  btRadixSort32CL
 		cl_kernel m_sortAndScatterSortDataKernel;
 
 		int m_maxSize;//??
+
+		class btPrefixScanCL* m_scan;
 
 public:
 	struct btConstData
