@@ -60,7 +60,7 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	btbTestPrimitives(clDevice);
 
 	//create buffers
-	numElements = 5;
+	numElements = 16384;
 	sortData = btbCreateSortDataBuffer(clDevice, numElements);
 	s = btbCreateRadixSort(clDevice,numElements);
 	//compute

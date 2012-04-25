@@ -161,7 +161,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		safeSize = workingSize;
 		keyValuesInOut.resize(workingSize);
 		btSortData fillValue;
-		fillValue.m_key = UINT_MAX;//0xffffffff;
+		fillValue.m_key = 0xffffffff;
 
 #define USE_BTFILL
 #ifdef USE_BTFILL
@@ -252,7 +252,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 
 //fast prefix scan is not working properly on Mac OSX yet
 #ifdef _WIN32
-	bool fastScan=true;
+	bool fastScan=false;
 #else
 	bool fastScan=false;
 #endif

@@ -232,7 +232,7 @@ void TimedSort(
 	gpuData.copyFromHost(hostData);
 	sorter.execute(gpuData);
 	gpuData.copyToHost(hostData);
-
+clFinish(g_cqCommandQueue);
 
 	{
 		//printf("Key-values, %d iterations, %d elements", iterations, num_elements);
@@ -647,7 +647,7 @@ int main( int argc, char** argv)
 	//srand(time(NULL));	
 	srand(0);				// presently deterministic
 
-    unsigned int num_elements 					= 1024*1024*12;//16*1024;//8*524288;//2048;//512;//524288;
+    unsigned int num_elements 					= 16384;//1024*1024*2;//16*1024;//8*524288;//2048;//512;//524288;
     unsigned int iterations  					= 10;
     bool keys_only;
 

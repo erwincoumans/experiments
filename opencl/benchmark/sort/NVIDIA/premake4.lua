@@ -4,7 +4,7 @@
 	
 	if (hasCL) then
 
-		project "OpenCL_DX11_radixsort_benchmark_NVIDIA"
+		project "OpenCL_radixsort_benchmark_NVIDIA"
 
 		initOpenCL_NVIDIA()
 
@@ -16,13 +16,18 @@
 				
 		kind "ConsoleApp"
 		targetdir "../../../../bin"
-		includedirs {"..","../.."}
+		includedirs {"..",projectRootDir .. "bullet2"}
 		
 		links {
-		"OpenCL"
+			"OpenCL","bullet2"
 		}
 		
 		files {
+			"../../../basic_initialize/btOpenCLUtils.cpp",
+			"../../../basic_initialize/btOpenCLUtils.h",
+			"../../../broadphase_benchmark/btFillCL.cpp",
+			"../../../broadphase_benchmark/btPrefixScanCL.cpp",
+			"../../../broadphase_benchmark/btRadixSort32CL.cpp",
 			"../test_large_problem_sorting.cpp"
 		}
 		
