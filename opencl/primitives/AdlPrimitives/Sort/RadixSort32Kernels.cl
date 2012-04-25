@@ -411,7 +411,9 @@ void PrefixScanKernel( __global u32* wHistogram1, int4  cb )
 
 	for(int i=0; i<nPerWI; i++)
 	{
-		wHistogram1[nPerWI*lIdx+i] = data[i];
+		int index = nPerWI*lIdx+i;
+		if (index < NUM_BUCKET*nWGs)
+			wHistogram1[nPerWI*lIdx+i] = data[i];
 	}
 }
 

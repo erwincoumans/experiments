@@ -40,7 +40,7 @@ public:
 			WG_SIZE = 64,
 			ELEMENTS_PER_WORK_ITEM = (256/WG_SIZE),
 			BITS_PER_PASS = 4,
-
+			NUM_BUCKET=(1<<BITS_PER_PASS),
 			//	if you change this, change nPerWI in kernel as well
 			NUM_WGS = 20*6,	//	cypress
 //			NUM_WGS = 24*6,	//	cayman
