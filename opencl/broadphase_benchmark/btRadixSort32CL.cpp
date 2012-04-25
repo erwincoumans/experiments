@@ -40,7 +40,11 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 
 	m_streamCountSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "StreamCountSortDataKernel", &pErrNum, sortProg,additionalMacros );
 	btAssert(m_streamCountSortDataKernel );
+#ifdef _WIN32
 	m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernel", &pErrNum, sortProg,additionalMacros );
+#else
+    m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernelSerial", &pErrNum, sortProg,additionalMacros );
+#endif
 	btAssert(m_sortAndScatterSortDataKernel);
 	m_prefixScanKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "PrefixScanKernel", &pErrNum, sortProg,additionalMacros );
 	btAssert(m_prefixScanKernel);
@@ -90,6 +94,7 @@ void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int
 			int tableIdx = (src[i].m_key >> startBit) & (NUM_TABLES-1);
 			tables[tableIdx]++;
 		}
+//#define TEST
 #ifdef TEST
 		printf("histogram size=%d\n",NUM_TABLES);
 		for (int i=0;i<NUM_TABLES;i++)
@@ -144,6 +149,9 @@ void btRadixSort32CL::execute(btOpenCLArray<unsigned int>& keysIn, btOpenCLArray
 
 }
 
+//#define DEBUG_RADIXSORT
+//#define DEBUG_RADIXSORT2
+
 
 void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
 {
@@ -151,19 +159,29 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	int originalSize = keyValuesInOut.size();
 	int workingSize = originalSize;
 	
-	int safeSize = originalSize;
-		
+			
 	int dataAlignment = DATA_ALIGNMENT;
 
+#ifdef DEBUG_RADIXSORT2
+    btAlignedObjectArray<btSortData>   test2;
+    keyValuesInOut.copyToHost(test2);
+    printf("numElem = %d\n",test2.size());
+    for (int i=0;i<test2.size();i++)
+    {
+        printf("test2[%d].m_key=%d\n",i,test2[i].m_key);
+        printf("test2[%d].m_value=%d\n",i,test2[i].m_value);
+    }
+#endif //DEBUG_RADIXSORT2
+    
 	if (workingSize%dataAlignment)
 	{
 		workingSize += dataAlignment-(workingSize%dataAlignment);
-		safeSize = workingSize;
 		keyValuesInOut.resize(workingSize);
 		btSortData fillValue;
 		fillValue.m_key = 0xffffffff;
+		fillValue.m_value = 0xffffffff;
 
-#define USE_BTFILL
+//#define USE_BTFILL
 #ifdef USE_BTFILL
 		m_fill->execute((btOpenCLArray<btInt2>&)keyValuesInOut,(btInt2&)fillValue,workingSize-originalSize,originalSize);
 #else
@@ -176,19 +194,14 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 #endif//USE_BTFILL
 
 	}
-	
-	
+		
 	btAssert( workingSize%DATA_ALIGNMENT == 0 );
 	int minCap = NUM_BUCKET*NUM_WGS;
 
-	if (safeSize<minCap)
-	{
-		safeSize = minCap;
-	}
 
 	int n = workingSize;
 
-	m_workBuffer1->resize(safeSize);
+	m_workBuffer1->resize(minCap);
 	m_workBuffer3->resize(workingSize);
 	
 
@@ -209,7 +222,8 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	btConstData cdata;
 
 	{
-		int nBlocks = (n+ELEMENTS_PER_WORK_ITEM*WG_SIZE-1)/(ELEMENTS_PER_WORK_ITEM*WG_SIZE);
+        int blockSize = ELEMENTS_PER_WORK_ITEM*WG_SIZE;//set at 256
+     	int nBlocks = (n+blockSize-1)/(blockSize);
 		cdata.m_n = n;
 		cdata.m_nWGs = NUM_WGS;
 		cdata.m_startBit = 0;
@@ -224,6 +238,19 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	int count=0;
 	for(int ib=0; ib<sortBits; ib+=4)
 	{
+#ifdef DEBUG_RADIXSORT2
+        keyValuesInOut.copyToHost(test2);
+        printf("numElem = %d\n",test2.size());
+        for (int i=0;i<test2.size();i++)
+        {
+            if (test2[i].m_key != test2[i].m_value)
+            {
+                printf("test2[%d].m_key=%d\n",i,test2[i].m_key);
+                printf("test2[%d].m_value=%d\n",i,test2[i].m_value);
+            }
+        }
+#endif //DEBUG_RADIXSORT2
+        
 		cdata.m_startBit = ib;
 		
 		{
@@ -236,9 +263,11 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			int num = NUM_WGS*WG_SIZE;
 			launcher.launch1D( num, WG_SIZE );
 		}
-//#define DEBUG_RADIXSORT
+
+        btAlignedObjectArray<unsigned int> testHist;
+        
 #ifdef DEBUG_RADIXSORT
-		btAlignedObjectArray<unsigned int> testHist;
+		
 		srcHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
 		for (int i=0;i<testHist.size();i++)
@@ -252,7 +281,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 
 //fast prefix scan is not working properly on Mac OSX yet
 #ifdef _WIN32
-	bool fastScan=false;
+	bool fastScan=true;
 #else
 	bool fastScan=false;
 #endif
@@ -267,7 +296,9 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			destHisto = srcHisto;
 		}else
 		{
-			m_scan->execute(*srcHisto,*destHisto,srcHisto->size(),&sum);
+            m_scan->execute(*srcHisto,*destHisto,1920,0);//,&sum);
+
+            //			m_scan->execute(*srcHisto,*destHisto,srcHisto->size(),&sum);
 		}
 
 
@@ -279,14 +310,159 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			if (testHist[i]!=0)
 				printf("testHist[%d]=%d\n",i,testHist[i]);
 		}
+        
+        for (int i=0;i<testHist.size();i+=NUM_WGS)
+		{
+				printf("testHist[%d]=%d\n",i/NUM_WGS,testHist[i]);
+		}
+
 #endif //DEBUG_RADIXSORT
+
+#define USE_GPU
+#ifdef USE_GPU
+        
 		{//	local sort and distribute
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( destHisto->getBufferCL(), true ), btBufferInfoCL( dst->getBufferCL() )};
 			btLauncherCL launcher( m_commandQueue, m_sortAndScatterSortDataKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst(  cdata );
 			launcher.launch1D( nWGs*WG_SIZE, WG_SIZE );
+            
 		}
+#else
+        {
+#define NUM_TABLES 16
+//#define SEQUENTIAL
+#ifdef SEQUENTIAL
+            int counter2[NUM_TABLES]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            int tables[NUM_TABLES];
+            int startBit = ib;
+            
+            destHisto->copyToHost(testHist);
+            btAlignedObjectArray<btSortData> srcHost;
+            btAlignedObjectArray<btSortData> dstHost;
+            dstHost.resize(src->size());
+            
+            src->copyToHost(srcHost);
+            
+            for (int i=0;i<NUM_TABLES;i++)
+            {
+                tables[i] = testHist[i*NUM_WGS];
+            }
+            
+            //	distribute
+            for(int i=0; i<n; i++)
+            {
+                int tableIdx = (srcHost[i].m_key >> startBit) & (NUM_TABLES-1);
+                
+                dstHost[tables[tableIdx] + counter2[tableIdx]] = srcHost[i];
+                counter2[tableIdx] ++;
+            }
+            
+            
+#else
+          
+            int counter2[NUM_TABLES]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            
+            int tables[NUM_TABLES];
+             btAlignedObjectArray<btSortData> dstHostOK;
+            dstHostOK.resize(src->size());
+
+            destHisto->copyToHost(testHist);
+            btAlignedObjectArray<btSortData> srcHost;
+            src->copyToHost(srcHost);
+        
+            int blockSize = 256;
+            int nBlocksPerWG = cdata.m_nBlocksPerWG;
+            int startBit = ib;
+
+            {
+                for (int i=0;i<NUM_TABLES;i++)
+                {
+                    tables[i] = testHist[i*NUM_WGS];
+                }
+                
+                //	distribute
+                for(int i=0; i<n; i++)
+                {
+                    int tableIdx = (srcHost[i].m_key >> startBit) & (NUM_TABLES-1);
+                    
+                    dstHostOK[tables[tableIdx] + counter2[tableIdx]] = srcHost[i];
+                    counter2[tableIdx] ++;
+                }
+
+            
+            }
+            
+            
+            btAlignedObjectArray<btSortData> dstHost;
+            dstHost.resize(src->size());
+            
+            
+            int counter[NUM_TABLES]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            
+            
+            
+            for (int wgIdx=0;wgIdx<NUM_WGS;wgIdx++)
+            {
+              int counter[NUM_TABLES]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+              int nBlocks = (n)/blockSize - nBlocksPerWG*wgIdx;
+                
+              for(int iblock=0; iblock<btMin(cdata.m_nBlocksPerWG, nBlocks); iblock++)
+              {
+                for (int lIdx = 0;lIdx < 64;lIdx++)
+                {
+                    int addr = iblock*blockSize + blockSize*cdata.m_nBlocksPerWG*wgIdx + ELEMENTS_PER_WORK_ITEM*lIdx;
+                    
+                    //	MY_HISTOGRAM( localKeys.x ) ++ is much expensive than atomic add as it requires read and write while atomics can just add on AMD
+                    //	Using registers didn't perform well. It seems like use localKeys to address requires a lot of alu ops
+                    //	AMD: AtomInc performs better while NV prefers ++
+                    for(int j=0; j<ELEMENTS_PER_WORK_ITEM; j++)
+                    {
+                        if( addr+j < n )
+                        {
+                          //  printf ("addr+j=%d\n", addr+j);
+                            
+                            int i = addr+j;
+                            
+                            int tableIdx = (srcHost[i].m_key >> startBit) & (NUM_TABLES-1);
+                            
+                            int destIndex = testHist[tableIdx*NUM_WGS+wgIdx] + counter[tableIdx];
+                            
+                            btSortData ok = dstHostOK[destIndex];
+                                                    
+                            if (ok.m_key != srcHost[i].m_key)
+                            {
+                                printf("ok.m_key = %d, srcHost[i].m_key = %d\n", ok.m_key,srcHost[i].m_key );
+                                printf("(ok.m_value = %d, srcHost[i].m_value = %d)\n", ok.m_value,srcHost[i].m_value );
+                            }
+                            if (ok.m_value != srcHost[i].m_value)
+                            {
+                                
+                               printf("ok.m_value = %d, srcHost[i].m_value = %d\n", ok.m_value,srcHost[i].m_value );
+                                printf("(ok.m_key = %d, srcHost[i].m_key = %d)\n", ok.m_key,srcHost[i].m_key );
+
+                            }
+                   
+                            dstHost[destIndex] = srcHost[i];
+                            counter[tableIdx] ++;
+                            
+                        }
+                    }
+                }
+              }
+            }
+            
+         
+#endif //SEQUENTIAL
+            
+            dst->copyFromHost(dstHost);
+        }
+#endif//USE_GPU
+        
+        
+        
 #ifdef DEBUG_RADIXSORT
 		destHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
@@ -299,14 +475,40 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		btSwap(src, dst );
 		btSwap(srcHisto,destHisto);
 
-		count++;
+#ifdef DEBUG_RADIXSORT2
+        keyValuesInOut.copyToHost(test2);
+        printf("numElem = %d\n",test2.size());
+        for (int i=0;i<test2.size();i++)
+        {
+            if (test2[i].m_key != test2[i].m_value)
+            {
+                printf("test2[%d].m_key=%d\n",i,test2[i].m_key);
+                printf("test2[%d].m_value=%d\n",i,test2[i].m_value);
+            }
+        }
+#endif //DEBUG_RADIXSORT2
+        
+        count++;
+                
+        
 	}
 	
+   
+    
 	if (count&1)
 	{
 		btAssert(0);//need to copy from workbuffer to keyValuesInOut
 	}
-
+#ifdef DEBUG_RADIXSORT
+    keyValuesInOut.copyToHost(test2);
+   
+    printf("numElem = %d\n",test2.size());
+    for (int i=0;i<test2.size();i++)
+    {
+        printf("test2[%d].m_key=%d\n",i,test2[i].m_key);
+        printf("test2[%d].m_value=%d\n",i,test2[i].m_value);
+    }
+#endif    
 	if (originalSize!=keyValuesInOut.size())
 	{
 		keyValuesInOut.resize(originalSize);

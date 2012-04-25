@@ -55,7 +55,6 @@
 #include <algorithm>
 #include <string>
 
-#define BUFFERSIZE_WORKAROUND
 
 //#include <iostream>
 #include <sstream>
@@ -113,10 +112,6 @@ void TimedSort(
 
 	int max_elements = num_elements;
 
-#ifdef BUFFERSIZE_WORKAROUND
-	if (max_elements < 1024*256)
-		max_elements = 1024*256;
-#endif
 	
 	// Allocate device storage
 	Device* deviceData = NULL;
@@ -230,8 +225,19 @@ void TimedSort(
 
 	btOpenCLArray<btSortData> gpuData(g_cxMainContext,g_cqCommandQueue);
 	gpuData.copyFromHost(hostData);
-	sorter.execute(gpuData);
-	gpuData.copyToHost(hostData);
+	//sorter.executeHost(gpuData);
+    sorter.execute(gpuData);
+    
+	btAlignedObjectArray<btSortData> hostDataSorted;
+	gpuData.copyToHost(hostDataSorted);
+#if 0
+    for (int i=0;i<num_elements;i++)
+	{
+		printf("hostData[%d].m_key = %d\n",i, hostDataSorted[i].m_key);
+        printf("hostData[%d].m_value = %d\n",i,hostDataSorted[i].m_value);
+	}
+#endif
+    
 clFinish(g_cqCommandQueue);
 
 	{
@@ -466,7 +472,8 @@ void TestSort(
 	// Use random bits
 	for (unsigned int i = 0; i < num_elements; ++i) {
 		RandomBits<K>(h_keys[i], 0);
-		//h_keys[i] = 0xffffffffu-i;
+		//h_keys[i] = num_elements-i;
+        //h_keys[i] = 0xffffffffu-i;
 		if (!keys_only)
 			h_values[i] = h_keys[i];//0xffffffffu-i;
 
@@ -647,7 +654,7 @@ int main( int argc, char** argv)
 	//srand(time(NULL));	
 	srand(0);				// presently deterministic
 
-    unsigned int num_elements 					= 16384;//1024*1024*2;//16*1024;//8*524288;//2048;//512;//524288;
+    unsigned int num_elements 					= 4*1024*1024;//4*1024*1024;//257;//8*524288;//2048;//512;//524288;
     unsigned int iterations  					= 10;
     bool keys_only;
 
