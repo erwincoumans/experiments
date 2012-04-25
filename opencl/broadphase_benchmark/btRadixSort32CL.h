@@ -28,6 +28,7 @@ class  btRadixSort32CL
 		int m_maxSize;//??
 
 		class btPrefixScanCL* m_scan;
+		class btFillCL*	m_fill;
 
 public:
 	struct btConstData
@@ -59,6 +60,9 @@ public:
 		btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command_queue queue, int initialCapacity =0);
 
 		virtual ~btRadixSort32CL();
+
+		void execute(btOpenCLArray<unsigned int>& keysIn, btOpenCLArray<unsigned int>& keysOut, btOpenCLArray<unsigned int>& valuesIn, 
+								btOpenCLArray<unsigned int>& valuesOut, int n, int sortBits = 32);
 
 		void execute(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits  = 32 );
 		void executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits = 32);

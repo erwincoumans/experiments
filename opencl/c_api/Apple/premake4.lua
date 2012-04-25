@@ -10,7 +10,8 @@
 		kind "ConsoleApp"
 		targetdir "../../../bin"
 
-		includedirs {"../../../bullet2"}
+		includedirs {projectRootDir .. "bullet2"}
+		
 		links {"bullet2"}
 
 		language "C"

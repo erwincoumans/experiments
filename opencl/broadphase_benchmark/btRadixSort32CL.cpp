@@ -3,6 +3,7 @@
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 #include "btPrefixScanCL.h"
+#include "btFillCL.h"
 
 #ifdef _WIN32
 #define RADIXSORT32_PATH "../../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl"
@@ -26,7 +27,7 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 	}
 
 	m_scan = new btPrefixScanCL(ctx,device,queue);
-
+	m_fill = new btFillCL(ctx,device,queue);
 	
 	const char* additionalMacros = "";
 	const char* srcFileNameForCaching="";
@@ -49,6 +50,7 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 btRadixSort32CL::~btRadixSort32CL()
 {
 	delete m_scan;
+	delete m_fill;
 	delete m_workBuffer1;
 	delete m_workBuffer2;
 	delete m_workBuffer3;
@@ -136,6 +138,13 @@ void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int
 
 }
 
+void btRadixSort32CL::execute(btOpenCLArray<unsigned int>& keysIn, btOpenCLArray<unsigned int>& keysOut, btOpenCLArray<unsigned int>& valuesIn, 
+								btOpenCLArray<unsigned int>& valuesOut, int n, int sortBits)
+{
+
+}
+
+
 void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
 {
 	
@@ -151,14 +160,21 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		workingSize += dataAlignment-(workingSize%dataAlignment);
 		safeSize = workingSize;
 		keyValuesInOut.resize(workingSize);
+		btSortData fillValue;
+		fillValue.m_key = UINT_MAX;//0xffffffff;
+
+#define USE_BTFILL
+#ifdef USE_BTFILL
+		m_fill->execute((btOpenCLArray<btInt2>&)keyValuesInOut,(btInt2&)fillValue,workingSize-originalSize,originalSize);
+#else
 		//fill the remaining bits (very slow way, todo: fill on GPU/OpenCL side)
-		btSortData src;
-		src.m_key = 0xffffffff;
+		
 		for (int i=originalSize; i<workingSize;i++)
 		{
-			keyValuesInOut.copyFromHost(i, i+1, &src);
+			keyValuesInOut.copyFromHost(i, i+1, &fillValue);
 		}
-//		keyValuesInOut.
+#endif//USE_BTFILL
+
 	}
 	
 	
@@ -234,13 +250,21 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	
 		unsigned int sum;
 
-		if (0)
+//fast prefix scan is not working properly on Mac OSX yet
+#ifdef _WIN32
+	bool fastScan=true;
+#else
+	bool fastScan=false;
+#endif
+
+		if (fastScan)
 		{//	prefix scan group histogram
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( srcHisto->getBufferCL() ) };
 			btLauncherCL launcher( m_commandQueue, m_prefixScanKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst(  cdata );
 			launcher.launch1D( 128, 128 );
+			destHisto = srcHisto;
 		}else
 		{
 			m_scan->execute(*srcHisto,*destHisto,srcHisto->size(),&sum);

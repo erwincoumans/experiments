@@ -60,15 +60,15 @@ int	test_RadixSort(cl_context ctx, cl_command_queue queue, cl_device_id dev)
 	btbTestPrimitives(clDevice);
 
 	//create buffers
-	numElements = 256;
+	numElements = 5;
 	sortData = btbCreateSortDataBuffer(clDevice, numElements);
 	s = btbCreateRadixSort(clDevice,numElements);
 	//compute
 	sortDataHost = (btbSortData2ui*)malloc (sizeof(btbSortData2ui)*numElements);
 	for (i=0;i<numElements;i++)
 	{
-		sortDataHost[i].m_key = 1024-i;
-		sortDataHost[i].m_value= 1024-i;
+		sortDataHost[i].m_key = numElements-i;
+		sortDataHost[i].m_value= numElements-i;
 	}
 	
 	btbCopyHostToBuffer(sortData, sortDataHost, numElements);

@@ -81,8 +81,10 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/opengl_interop"
 	include "../opencl/global_atomics"
 	include "../opencl/integration"
-	include "../opencl/primitives/AdlTest"
-	include "../opencl/primitives/benchmark"
+--	include "../opencl/primitives/AdlTest"
+
+	include "../opencl/benchmark/sort"
+--	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
 	include "../opencl/3dGridBroadphase"
 	include "../opencl/broadphase_benchmark"

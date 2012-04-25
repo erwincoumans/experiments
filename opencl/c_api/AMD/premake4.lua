@@ -13,7 +13,6 @@
 		includedirs 
 		{
 			projectRootDir .. "bullet2",
-			projectRootDir .. "opencl/primitives"
 		}
 		
 		links {"bullet2"}
@@ -25,6 +24,11 @@
 
 		language "C++"
 		files {
+			"../../basic_initialize/btOpenCLUtils.cpp",
+			"../../basic_initialize/btOpenCLUtils.h",
+			"../../broadphase_benchmark/btFillCL.cpp",
+			"../../broadphase_benchmark/btPrefixScanCL.cpp",
+			"../../broadphase_benchmark/btRadixSort32CL.cpp",
 			"../../basic_initialize/btOpenCLUtils.cpp",
 			"../../basic_initialize/btOpenCLUtils.h",
 			"../btbDeviceCL.cpp",
