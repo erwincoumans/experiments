@@ -183,7 +183,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		fillValue.m_key = 0xffffffff;
 		fillValue.m_value = 0xffffffff;
 
-//#define USE_BTFILL
+#define USE_BTFILL
 #ifdef USE_BTFILL
 		m_fill->execute((btOpenCLArray<btInt2>&)keyValuesInOut,(btInt2&)fillValue,workingSize-originalSize,originalSize);
 #else

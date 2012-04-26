@@ -94,6 +94,8 @@ void btFillCL::execute(btOpenCLArray<btInt2> &src, const btInt2 &value, int n, i
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 		launcher.setConst(n);
 		launcher.setConst(value);
+		launcher.setConst(offset);
+
 		//( constBuffer );
 		launcher.launch1D( n );
 	}
