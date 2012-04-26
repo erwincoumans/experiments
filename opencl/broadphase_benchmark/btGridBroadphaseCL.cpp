@@ -17,20 +17,18 @@ subject to the following restrictions:
 #ifdef RELEASE_ME
 #define COMPUTE_AABB_KERNEL_PATH "computeAabbKernelOCL.cl"
 #else
-#define COMPUTE_AABB_KERNEL_PATH "..\\..\\opencl\\broadphase_benchmark\\computeAabbKernelOCL"
+#define COMPUTE_AABB_KERNEL_PATH "../../opencl/broadphase_benchmark/computeAabbKernelOCL.cl"
 #endif
 
 
 #include "btGridBroadphaseCl.h"
 #include "LinearMath/btQuickprof.h"
-#include "Adl/Adl.h"
-#include "AdlPrimitives/Math/Math.h"
-
-#include "Adl/AdlKernel.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 #define MSTRINGIFY(A) #A
 static const char* spComputeAabbSource= 
 #include "computeAabbKernelOCL.cl"
+
+#include <string.h>//memset
 
 struct  btTmpAabb
 {
@@ -55,21 +53,30 @@ btGridBroadphaseCl::btGridBroadphaseCl(	btOverlappingPairCache* overlappingPairC
 							int maxSmallProxiesPerCell,
 							cl_context context,
 							cl_device_id device,
-							cl_command_queue queue,
-							adl::DeviceCL* deviceCL)
+							cl_command_queue queue)
 :bt3dGridBroadphaseOCL(overlappingPairCache,cellSize,
 				gridSizeX, gridSizeY, gridSizeZ, 
 						maxSmallProxies, maxLargeProxies, maxPairsPerSmallProxy,
 						maxSmallProxySize,maxSmallProxiesPerCell,
-						context,device,queue,deviceCL)			
+						context,device,queue)			
 {
-	m_computeAabbKernel = m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"computeAabb","",spComputeAabbSource);
 
-	m_countOverlappingPairs = m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"countOverlappingpairs","",spComputeAabbSource);
+	cl_int pErrNum;
+	const char* additionalMacros = "";
 
-	m_squeezePairCaches = m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"squeezePairCaches","",spComputeAabbSource);
+	cl_program computeAabbProg = btOpenCLUtils::compileCLProgramFromString( context, device, spComputeAabbSource, &pErrNum,additionalMacros, COMPUTE_AABB_KERNEL_PATH);
+	btAssert(computeAabbProg);
 
-	m_aabbConstBuffer = new adl::Buffer<MyAabbConstData >(m_deviceCL,1,adl::BufferBase::BUFFER_CONST);
+	m_computeAabbKernel  = btOpenCLUtils::compileCLKernelFromString( context, device, spComputeAabbSource, "computeAabb", &pErrNum, computeAabbProg,additionalMacros );
+	btAssert(m_computeAabbKernel );
+	//m_computeAabbKernel = m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"computeAabb","",spComputeAabbSource);
+
+	m_countOverlappingPairs =  btOpenCLUtils::compileCLKernelFromString( context, device, spComputeAabbSource, "countOverlappingpairs", &pErrNum, computeAabbProg,additionalMacros );
+	//m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"countOverlappingpairs","",spComputeAabbSource);
+
+	 m_squeezePairCaches  = btOpenCLUtils::compileCLKernelFromString( context, device, spComputeAabbSource, "squeezePairCaches", &pErrNum, computeAabbProg,additionalMacros );
+//	m_squeezePairCaches = m_deviceCL->getKernel(COMPUTE_AABB_KERNEL_PATH,"squeezePairCaches","",spComputeAabbSource);
+
 
 	size_t memSize = m_maxHandles * m_maxPairsPerBody * sizeof(unsigned int)*2;
 	cl_int ciErrNum=0;
@@ -90,7 +97,6 @@ btGridBroadphaseCl::~btGridBroadphaseCl()
 {
 	clReleaseMemObject(m_dAllOverlappingPairs);
 	
-	delete m_aabbConstBuffer;
 
 }
 
@@ -173,18 +179,18 @@ void btGridBroadphaseCl::calculateOverlappingPairs(float* positions, int numObje
 #else
 		int ciErrNum=0;
 
-		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs->m_kernel, 0, sizeof(int), (void*)&numObjects);
-		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs->m_kernel, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
-		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs->m_kernel, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
-		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs->m_kernel, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
-		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs->m_kernel, 4, sizeof(cl_mem),(void*)&m_dAABB);
+		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs, 0, sizeof(int), (void*)&numObjects);
+		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
+		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
+		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
+		ciErrNum=clSetKernelArg((cl_kernel)m_countOverlappingPairs, 4, sizeof(cl_mem),(void*)&m_dAABB);
 
 
 		size_t localWorkSize=64;
 		size_t numWorkItems = localWorkSize*((numObjects+ (localWorkSize)) / localWorkSize);
 
 	
-		ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, (cl_kernel)m_countOverlappingPairs->m_kernel, 1, NULL, &numWorkItems, &localWorkSize, 0,0,0 );
+		ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, (cl_kernel)m_countOverlappingPairs, 1, NULL, &numWorkItems, &localWorkSize, 0,0,0 );
 oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		ciErrNum = clFlush(m_cqCommandQue);
 #endif
@@ -204,18 +210,18 @@ oclCHECKERROR(ciErrNum, CL_SUCCESS);
 #else
 		//squeezeOverlappingPairBuff();
 		int ciErrNum = 0;
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 0, sizeof(int), (void*)&numObjects);
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 4, sizeof(cl_mem),(void*)&m_dAllOverlappingPairs);
-		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches->m_kernel, 5, sizeof(cl_mem),(void*)&m_dAABB);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 0, sizeof(int), (void*)&numObjects);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 1, sizeof(cl_mem),(void*)&m_dPairBuff);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 2, sizeof(cl_mem),(void*)&m_dPairBuffStartCurr);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 3, sizeof(cl_mem),(void*)&m_dPairScanChanged);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 4, sizeof(cl_mem),(void*)&m_dAllOverlappingPairs);
+		ciErrNum=clSetKernelArg((cl_kernel)m_squeezePairCaches, 5, sizeof(cl_mem),(void*)&m_dAABB);
 
 		size_t workGroupSize = 64;
 		size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
 
 	
-		ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, (cl_kernel)m_squeezePairCaches->m_kernel, 1, NULL, &numWorkItems, &workGroupSize, 0,0,0 );
+		ciErrNum = clEnqueueNDRangeKernel(m_cqCommandQue, (cl_kernel)m_squeezePairCaches, 1, NULL, &numWorkItems, &workGroupSize, 0,0,0 );
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 		
 

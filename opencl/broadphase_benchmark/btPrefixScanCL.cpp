@@ -95,7 +95,7 @@ void btPrefixScanCL::execute(btOpenCLArray<unsigned int>& src, btOpenCLArray<uns
 	if( sum )
 	{
 		clFinish(m_commandQueue);
-		dstNative->copyToHost(n-1,n,sum,true);
+		dstNative->copyToHostPointer(sum,1,n-1,true);
 	}
 
 }

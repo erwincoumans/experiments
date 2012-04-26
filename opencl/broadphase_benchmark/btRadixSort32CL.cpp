@@ -18,12 +18,15 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 	m_workBuffer1 = new btOpenCLArray<unsigned int>(ctx,queue);
 	m_workBuffer2 = new btOpenCLArray<unsigned int>(ctx,queue);
 	m_workBuffer3 = new btOpenCLArray<btSortData>(ctx,queue);
+	m_workBuffer4 = new btOpenCLArray<btSortData>(ctx,queue);
+	
 
 
 	if (initialCapacity>0)
 	{
 		m_workBuffer1->resize(initialCapacity);
 		m_workBuffer3->resize(initialCapacity);
+		m_workBuffer4->resize(initialCapacity);
 	}
 
 	m_scan = new btPrefixScanCL(ctx,device,queue);
@@ -60,6 +63,7 @@ btRadixSort32CL::~btRadixSort32CL()
 	delete m_workBuffer1;
 	delete m_workBuffer2;
 	delete m_workBuffer3;
+	delete m_workBuffer4;
 
 	clReleaseKernel(m_streamCountSortDataKernel);
 	clReleaseKernel(m_sortAndScatterSortDataKernel);
@@ -135,11 +139,10 @@ void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int
 		if (count&1)
 		//if( src != inout.m_ptr )
 		{
-			//memcpy( dst, src, sizeof(btSortData)*n );
-			keyValuesInOut.copyFromHost(0,n,src);
+			keyValuesInOut.copyFromHostPointer(src,n);
 		} else
 		{
-			keyValuesInOut.copyFromHost(0,n,dst);
+			keyValuesInOut.copyFromHostPointer(dst, n);
 		}
 	}
 
@@ -175,26 +178,34 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
     }
 #endif //DEBUG_RADIXSORT2
     
+	btOpenCLArray<btSortData>* src = 0;
+
 	if (workingSize%dataAlignment)
 	{
 		workingSize += dataAlignment-(workingSize%dataAlignment);
-		keyValuesInOut.resize(workingSize);
+		m_workBuffer4->copyFromOpenCLArray(keyValuesInOut);
+		m_workBuffer4->resize(workingSize);
 		btSortData fillValue;
 		fillValue.m_key = 0xffffffff;
 		fillValue.m_value = 0xffffffff;
 
 #define USE_BTFILL
 #ifdef USE_BTFILL
-		m_fill->execute((btOpenCLArray<btInt2>&)keyValuesInOut,(btInt2&)fillValue,workingSize-originalSize,originalSize);
+		m_fill->execute((btOpenCLArray<btInt2>&)*m_workBuffer4,(btInt2&)fillValue,workingSize-originalSize,originalSize);
 #else
 		//fill the remaining bits (very slow way, todo: fill on GPU/OpenCL side)
 		
 		for (int i=originalSize; i<workingSize;i++)
 		{
-			keyValuesInOut.copyFromHost(i, i+1, &fillValue);
+			m_workBuffer4->copyFromHostPointer(&fillValue,1,i);
 		}
 #endif//USE_BTFILL
 
+		src = m_workBuffer4;
+	} else
+	{
+		src = &keyValuesInOut;
+		m_workBuffer4->resize(0);
 	}
 		
 	btAssert( workingSize%DATA_ALIGNMENT == 0 );
@@ -213,7 +224,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	btAssert( (sortBits&0x3) == 0 );
 
 	
-	btOpenCLArray<btSortData>* src = &keyValuesInOut;
+	
 	btOpenCLArray<btSortData>* dst = m_workBuffer3;
 
 	btOpenCLArray<unsigned int>* srcHisto = m_workBuffer1;
@@ -279,7 +290,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 		}
 #endif //DEBUG_RADIXSORT
 	
-		unsigned int sum;
+	
 
 //fast prefix scan is not working properly on Mac OSX yet
 #ifdef _WIN32
@@ -298,9 +309,8 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			destHisto = srcHisto;
 		}else
 		{
+			//unsigned int sum; //for debugging
             m_scan->execute(*srcHisto,*destHisto,1920,0);//,&sum);
-
-            //			m_scan->execute(*srcHisto,*destHisto,srcHisto->size(),&sum);
 		}
 
 
@@ -501,6 +511,14 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 	{
 		btAssert(0);//need to copy from workbuffer to keyValuesInOut
 	}
+
+	if (m_workBuffer4->size())
+	{
+		m_workBuffer4->resize(originalSize);
+		keyValuesInOut.copyFromOpenCLArray(*m_workBuffer4);
+	}
+
+
 #ifdef DEBUG_RADIXSORT
     keyValuesInOut.copyToHost(test2);
    
@@ -511,8 +529,5 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
         printf("test2[%d].m_value=%d\n",i,test2[i].m_value);
     }
 #endif    
-	if (originalSize!=keyValuesInOut.size())
-	{
-		keyValuesInOut.resize(originalSize);
-	}
+	
 }

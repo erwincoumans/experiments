@@ -130,14 +130,6 @@ btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_sineWaveKernel;
 
 
-
-////for Adl
-#include <Adl/Adl.h>
-
-adl::DeviceCL* g_deviceCL=0;
-
-
-
 bool useCPU = false;
 bool printStats = false;
 bool runOpenCLKernels = true;
@@ -1524,7 +1516,6 @@ int main(int argc, char* argv[])
 	keyValuesInOut.copyFromHost(hostData);
 	sort.execute(keyValuesInOut);
 	keyValuesInOut.copyToHost(hostData);
-//	keyValuesInOut.copyToHost(0,keyValuesInOut.size(), &hostData[0]);
 	
 	btFillCL filler(g_cxMainContext,g_device, g_cqCommandQue);
 	btInt2 value;
@@ -1555,27 +1546,18 @@ int main(int argc, char* argv[])
 	dest.copyToHost(hostSrc);
 #endif //TEST_BULLET_ADL_OPENCL_HOST_CODE
 
-#define CUSTOM_CL_INITIALIZATION
-#ifdef CUSTOM_CL_INITIALIZATION
-	g_deviceCL = new adl::DeviceCL();
-	g_deviceCL->m_deviceIdx = g_device;
-	g_deviceCL->m_context = g_cxMainContext;
-	g_deviceCL->m_commandQueue = g_cqCommandQue;
 
-#else
-	DeviceUtils::Config cfg;
-	cfg.m_type = DeviceUtils::Config::DEVICE_CPU;
-	g_deviceCL = DeviceUtils::allocate( TYPE_CL, cfg );
-#endif
 
 	int size = NUM_OBJECTS;
-	adl::Buffer<btVector3> linvelBuf( g_deviceCL, size );
-	adl::Buffer<btVector3> angvelBuf( g_deviceCL, size );
-	adl::Buffer<float>		bodyTimes(g_deviceCL,size);
+	btOpenCLArray<btVector3> linvelBuf( g_cxMainContext,g_cqCommandQue,size,false );
+	btOpenCLArray<btVector3> angvelBuf( g_cxMainContext,g_cqCommandQue,size,false );
+	btOpenCLArray<float>		bodyTimes(g_cxMainContext,g_cqCommandQue,size,false );
 
-	gLinVelMem = (cl_mem)linvelBuf.m_ptr;
-	gAngVelMem = (cl_mem)angvelBuf.m_ptr;
-	gBodyTimes = (cl_mem)bodyTimes.m_ptr;
+
+
+	gLinVelMem = (cl_mem)linvelBuf.getBufferCL();
+	gAngVelMem = (cl_mem)angvelBuf.getBufferCL();
+	gBodyTimes = (cl_mem)bodyTimes.getBufferCL();
 
 	btVector3* linVelHost= new btVector3[size];
 	btVector3* angVelHost = new btVector3[size];
@@ -1588,11 +1570,11 @@ int main(int argc, char* argv[])
 		bodyTimesHost[i] = i*(1024.f/NUM_OBJECTS);//double(randrange(0x2fffffff))/double(0x2fffffff)*float(1024);//NUM_OBJECTS);
 	}
 
-	linvelBuf.write(linVelHost,NUM_OBJECTS);
-	angvelBuf.write(angVelHost,NUM_OBJECTS);
-	bodyTimes.write(bodyTimesHost,NUM_OBJECTS);
+	linvelBuf.copyFromHostPointer(linVelHost,NUM_OBJECTS);
+	angvelBuf.copyFromHostPointer(angVelHost,NUM_OBJECTS);
+	bodyTimes.copyFromHostPointer(bodyTimesHost,NUM_OBJECTS);
 
-	adl::DeviceUtils::waitForCompletion( g_deviceCL );
+	clFinish(g_cqCommandQue);
 
 
 	InitShaders();

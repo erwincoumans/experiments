@@ -95,9 +95,6 @@ protected:
 	cl_mem					m_dPairsContiguous;
 	cl_mem					m_dBpParams;
 
-	adl::Device*			m_deviceHost;
-	adl::DeviceCL*			m_deviceCL;
-	bool					m_ownsDevice;
 
 
 public:

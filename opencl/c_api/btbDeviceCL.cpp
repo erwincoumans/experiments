@@ -60,14 +60,14 @@ void btbCopyHostToBuffer(btbBuffer devDest, const btbSortData2ui* hostSrc, int s
 {
     const btSortData* hostPtr = (const btSortData*)hostSrc;
 	btOpenCLArray<btSortData>* devBuf = (btOpenCLArray<btSortData>*)devDest;
-	devBuf->copyFromHost(0,sizeInElements,hostPtr);
+	devBuf->copyFromHostPointer(hostPtr,sizeInElements);
 }
 
 void btbCopyBufferToHost(btbSortData2ui* hostDest, const btbBuffer devSrc, int sizeInElements)
 {
     btSortData* hostPtr = (btSortData*)hostDest;
 	btOpenCLArray<btSortData>* devBuf = (btOpenCLArray<btSortData>*)devSrc;
-	devBuf->copyToHost(0,sizeInElements,hostPtr);
+	devBuf->copyToHostPointer(hostPtr,sizeInElements);
 }
 
 
@@ -95,7 +95,6 @@ void btbTestPrimitives(btbDevice d)
 	keyValuesInOut.copyFromHost(hostData);
 	sort.execute(keyValuesInOut);
 	keyValuesInOut.copyToHost(hostData);
-//	keyValuesInOut.copyToHost(0,keyValuesInOut.size(), &hostData[0]);
 */
 
 	btFillCL filler(dev->m_ctx,dev->m_device, dev->m_queue);

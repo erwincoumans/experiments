@@ -18,6 +18,8 @@ class  btRadixSort32CL
 		btOpenCLArray<unsigned int>* m_workBuffer2;
 		
 		btOpenCLArray<btSortData>*	m_workBuffer3;
+		btOpenCLArray<btSortData>*	m_workBuffer4;
+
 
 		cl_command_queue	m_commandQueue;
 

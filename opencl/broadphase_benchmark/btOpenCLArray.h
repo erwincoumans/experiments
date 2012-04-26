@@ -14,25 +14,46 @@ class btOpenCLArray
 	cl_context		 m_clContext;
 	cl_command_queue m_commandQueue;
 
+	bool	m_ownsMemory;
+
+	bool	m_allowGrowingCapacity;
+
 	void deallocate()
 	{
-		if (m_clBuffer)
+		if (m_clBuffer && m_ownsMemory)
 		{
 			clReleaseMemObject(m_clBuffer);
-			m_clBuffer = 0;
 		}
+		m_clBuffer = 0;
+		m_capacity=0;
 	}
 
 	btOpenCLArray<T>& operator=(const btOpenCLArray<T>& src);
 
 public:
 
-	btOpenCLArray(cl_context ctx, cl_command_queue queue)
-	:m_size(0), m_capacity(0),m_clBuffer(0),m_clContext(ctx),m_commandQueue(queue)
+	btOpenCLArray(cl_context ctx, cl_command_queue queue, int initialCapacity=0, bool allowGrowingCapacity=true)
+	:m_size(0),  m_capacity(0),m_clBuffer(0),
+	m_clContext(ctx),m_commandQueue(queue),
+	m_ownsMemory(true),m_allowGrowingCapacity(true)
 	{
+		if (initialCapacity)
+		{
+			reserve(initialCapacity);
+		}
+		m_allowGrowingCapacity = allowGrowingCapacity;
 	}
 
-	
+	///this is an error-prone method with no error checking, be careful!
+	void setFromOpenCLBuffer(cl_mem buffer, int sizeInElements)
+	{
+		deallocate();
+		m_ownsMemory = false;
+		m_allowGrowingCapacity = false;
+		m_clBuffer = buffer;
+		m_size = sizeInElements;
+		m_capacity = sizeInElements;
+	}
 	
 // we could enable this assignment, but need to make sure to avoid accidental deep copies
 //	btOpenCLArray<T>& operator=(const btAlignedObjectArray<T>& src) 
@@ -93,28 +114,35 @@ public:
 		if (capacity() < _Count)
 		{	// not enough room, reallocate
 
-			cl_int ciErrNum;
-			//create a new OpenCL buffer
-			int memSizeInBytes = sizeof(T)*_Count;
-			cl_mem buf = clCreateBuffer(m_clContext, CL_MEM_READ_WRITE, memSizeInBytes, NULL, &ciErrNum);
-			btAssert(ciErrNum==CL_SUCCESS);
+			if (m_allowGrowingCapacity)
+			{
+				cl_int ciErrNum;
+				//create a new OpenCL buffer
+				int memSizeInBytes = sizeof(T)*_Count;
+				cl_mem buf = clCreateBuffer(m_clContext, CL_MEM_READ_WRITE, memSizeInBytes, NULL, &ciErrNum);
+				btAssert(ciErrNum==CL_SUCCESS);
 
-			if (copyOldContents)
-				copy(0, size(), buf);
+				if (copyOldContents)
+					copyToCL(buf, size());
 
-			//deallocate the old buffer
-			deallocate();
+				//deallocate the old buffer
+				deallocate();
 
-			m_clBuffer = buf;
+				m_clBuffer = buf;
 			
-			m_capacity = _Count;
+				m_capacity = _Count;
+			} else
+			{
+				//fail: assert and
+				btAssert(0);
+				deallocate();
+			}
 		}
 	}
 
 
-	void copy(int beginElement, int endElement, cl_mem destination, int dstOffsetBytes=0) const
+	void copyToCL(cl_mem destination, int numElements, int firstElem=0, int dstOffsetInElems=0) const
 	{
-		int numElements = endElement-beginElement;
 		if (numElements<=0)
 			return;
 
@@ -124,7 +152,7 @@ public:
 		//likely some error, destination is same as source
 		btAssert(m_clBuffer != destination);
 
-		btAssert(endElement<=m_size);
+		btAssert((firstElem+numElements)<=m_size);
 		
 		cl_int status = 0;
 		
@@ -132,10 +160,11 @@ public:
 		btAssert(numElements>0);
 		btAssert(numElements<=m_size);
 
-		int srcOffsetBytes = sizeof(T)*beginElement;
-		
+		int srcOffsetBytes = sizeof(T)*firstElem;
+		int dstOffsetInBytes = sizeof(T)*dstOffsetInElems;
+
 		status = clEnqueueCopyBuffer( m_commandQueue, m_clBuffer, destination, 
-			srcOffsetBytes, dstOffsetBytes, sizeof(T)*numElements, 0, 0, 0 );
+			srcOffsetBytes, dstOffsetInBytes, sizeof(T)*numElements, 0, 0, 0 );
 
 		btAssert( status == CL_SUCCESS );
 	}
@@ -147,17 +176,16 @@ public:
 		bool copyOldContents = false;
 		resize (newSize,copyOldContents);
 
-		copyFromHost(0,newSize,&srcArray[0],waitForCompletion);
+		copyFromHostPointer(&srcArray[0],newSize,0,waitForCompletion);
 
 	}
 
-	void copyFromHost(int firstElem, int lastElem, const T* src, bool waitForCompletion=true)
+	void copyFromHostPointer(const T* src, int numElems, int destFirstElem= 0, bool waitForCompletion=true)
 	{
 		cl_int status = 0;
-		int numElems = lastElem - firstElem;
 
 		int sizeInBytes=sizeof(T)*numElems;
-		status = clEnqueueWriteBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*firstElem, sizeInBytes,
+		status = clEnqueueWriteBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*destFirstElem, sizeInBytes,
 		src, 0,0,0 );
 		btAssert(status == CL_SUCCESS );
 		if (waitForCompletion)
@@ -170,15 +198,14 @@ public:
 	{
 		destArray.resize(this->size());
 
-		copyToHost(0,size(),&destArray[0],waitForCompletion);
+		copyToHostPointer(&destArray[0], size(),0,waitForCompletion);
 		
 	}
 
-	void copyToHost(int firstElem, int lastElem, T* destPtr,bool waitForCompletion=true) const
+	void copyToHostPointer(T* destPtr, int numElem, int srcFirstElem=0, bool waitForCompletion=true) const
 	{
-		int nElems = lastElem-firstElem;
 		cl_int status = 0;
-		status = clEnqueueReadBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*firstElem, sizeof(T)*nElems,
+		status = clEnqueueReadBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*srcFirstElem, sizeof(T)*numElem,
 		destPtr, 0,0,0 );
 		btAssert( status==CL_SUCCESS );
 
@@ -192,9 +219,8 @@ public:
 		resize(newSize);
 		if (size())
 		{
-			src.copy(0,size(),this->m_clBuffer);
+			src.copyToCL(m_clBuffer,size());
 		}
-
 	}
 
 };

@@ -23,10 +23,6 @@ subject to the following restrictions:
 
 #include <stdio.h>
 #include <string.h>
-#include "Adl/Adl.h"
-#include <AdlPrimitives/Scan/PrefixScan.h>
-#include <AdlPrimitives/Sort/RadixSort32.h>
-#include <AdlPrimitives/Sort/RadixSort.h>
 
 #define ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 
@@ -38,8 +34,11 @@ subject to the following restrictions:
 static const char* spProgramSource = 
 #include "bt3dGridBroadphaseOCL.cl"
 
-adl::PrefixScan<adl::TYPE_CL>::Data* gData1=0;
-adl::Buffer<unsigned int>* m_srcClBuffer=0;
+#include "../../broadphase_benchmark/btPrefixScanCL.h"
+#include "../../broadphase_benchmark/btRadixSort32CL.h"
+#include "../../broadphase_benchmark/btOpenCLArray.h"
+
+
 
 struct MySortData
 {
@@ -47,8 +46,9 @@ struct MySortData
 	int value;
 };
 
-adl::RadixSort32<adl::TYPE_CL>::Data* dataC = 0;
-adl::RadixSort<adl::TYPE_HOST>::Data* dataHost = 0;
+btPrefixScanCL*		gPrefixScan = 0;
+btRadixSort32CL*	gRadixSort= 0;
+btOpenCLArray<unsigned int>* m_srcClBuffer=0;
 
 
 static unsigned int infElem = 0x2fffffff;
@@ -79,35 +79,18 @@ bt3dGridBroadphaseOCL::bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappin
 
 	//create an Adl device host and OpenCL device
 
-	adl::DeviceUtils::Config cfg;
-	m_deviceHost = adl::DeviceUtils::allocate( adl::TYPE_HOST, cfg );
-	m_ownsDevice = false;
-	if (!deviceCL)
-	{
-		m_ownsDevice = true;
-		deviceCL = new adl::DeviceCL;
-		deviceCL->m_context = context;
-		deviceCL->m_deviceIdx = device;
-		deviceCL->m_commandQueue = queue;
-		deviceCL->m_kernelManager = new adl::KernelManager;
-	}
-
-	m_deviceCL = deviceCL;
-
 	int minSize = 256*1024;
 	int maxSortBuffer = maxSmallProxies < minSize ? minSize :maxSmallProxies;
 
-	m_srcClBuffer = new adl::Buffer<unsigned int> (m_deviceCL,maxSmallProxies+2);
-	m_srcClBuffer->write(&zeroEl,1,0);
+	m_srcClBuffer = new btOpenCLArray<unsigned int> (context,queue,maxSmallProxies+2, false);
+	m_srcClBuffer->copyFromHostPointer(&zeroEl,1);
 
 	//m_srcClBuffer->write(&infElem,maxSmallProxies,0);
-	m_srcClBuffer->write(&infElem,1,maxSmallProxies);
-	m_srcClBuffer->write(&zeroEl,1,maxSmallProxies+1);
-	m_deviceCL->waitForCompletion();
+	m_srcClBuffer->copyFromHostPointer(&infElem,1,maxSmallProxies);
+	m_srcClBuffer->copyFromHostPointer(&zeroEl,1,maxSmallProxies+1);
 	
-	gData1 = adl::PrefixScan<adl::TYPE_CL>::allocate( m_deviceCL, maxSortBuffer+2,adl::PrefixScanBase::EXCLUSIVE );
-	dataHost = adl::RadixSort<adl::TYPE_HOST>::allocate( m_deviceHost, maxSmallProxies+2 );
-	dataC = adl::RadixSort32<adl::TYPE_CL>::allocate( m_deviceCL, maxSortBuffer+2 );
+	gPrefixScan = new btPrefixScanCL(context,device,queue);	
+	gRadixSort = new btRadixSort32CL(context,device,queue,maxSortBuffer+2);
 	
 }
 
@@ -117,16 +100,13 @@ bt3dGridBroadphaseOCL::~bt3dGridBroadphaseOCL()
 {
 	//btSimpleBroadphase will free memory of btSortedOverlappingPairCache, because m_ownsPairCache
 	assert(m_bInitialized);
-	adl::RadixSort<adl::TYPE_HOST>::deallocate(dataHost);
-	adl::PrefixScan<adl::TYPE_CL>::deallocate(gData1);
-	adl::RadixSort32<adl::TYPE_CL>::deallocate(dataC);
-	adl::DeviceUtils::deallocate(m_deviceHost);
 	delete m_srcClBuffer;
-	if (m_ownsDevice)
-	{
-		delete m_deviceCL->m_kernelManager;
-		delete m_deviceCL;
-	}
+	delete gPrefixScan;
+	gPrefixScan = 0;
+	delete gRadixSort;
+	gRadixSort = 0;
+
+	
 }
 
 #ifdef CL_PLATFORM_MINI_CL
@@ -454,19 +434,13 @@ void bt3dGridBroadphaseOCL::sortHash()
 	{
 	clFinish(m_cqCommandQue);
 	BT_PROFILE("RadixSort32::execute");
-	adl::Buffer<adl::SortData> inout;
-	inout.m_device = this->m_deviceCL;
-	inout.m_size = m_numHandles;
-	inout.m_ptr = (adl::SortData*)m_dBodiesHash;
-	int actualHandles = m_numHandles;
-	int dataAlignment = adl::RadixSort32<adl::TYPE_CL>::DATA_ALIGNMENT;
+	
+	btOpenCLArray<btSortData> inout(m_cxMainContext, m_cqCommandQue);
+	
+	inout.setFromOpenCLBuffer(m_dBodiesHash,m_numHandles);
 
-	if (actualHandles%dataAlignment)
-	{
-		actualHandles += dataAlignment-(actualHandles%dataAlignment);
-	}
+	gRadixSort->execute(inout);
 
-	adl::RadixSort32<adl::TYPE_CL>::execute(dataC,inout, actualHandles);
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif //ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
@@ -595,15 +569,20 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff(bool copyToCpu)
 	//	copyArrayFromDevice(m_hPairScanChanged, m_dPairScanChanged, sizeof(unsigned int)*(m_numHandles + 2)); 
 	//	btGpu3DGridBroadphase::scanOverlappingPairBuff();
 
-		adl::Buffer<unsigned int> destBuffer;
-		
+		btOpenCLArray<unsigned int> destBuffer(m_cxMainContext, m_cqCommandQue);
+		destBuffer.setFromOpenCLBuffer(m_dPairScanChanged,m_numHandles+2);
+
 		{
 			BT_PROFILE("copy GPU->GPU");
 		
+			m_srcClBuffer->copyFromOpenCLArray(destBuffer);
+
+		/*	m_srcClBuffer->copyToCL(m_dPairScanChanged,
 			destBuffer.m_ptr = (unsigned int*)m_dPairScanChanged;
 			destBuffer.m_device = m_deviceCL;
 			destBuffer.m_size =  sizeof(unsigned int)*(m_numHandles+2);
 			m_deviceCL->copy(m_srcClBuffer, &destBuffer,m_numHandles,1,1);
+			*/
 
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
@@ -614,8 +593,9 @@ void bt3dGridBroadphaseOCL::scanOverlappingPairBuff(bool copyToCpu)
 		{
 			BT_PROFILE("PrefixScan");
 			
-			adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&m_numPrefixSum);
-			
+			//adl::PrefixScan<adl::TYPE_CL>::execute(gData1,*m_srcClBuffer,destBuffer, m_numHandles+2,&m_numPrefixSum);
+			gPrefixScan->execute(*m_srcClBuffer,destBuffer,m_numHandles+2,&m_numPrefixSum);
+
 #ifdef ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 	clFinish(m_cqCommandQue);
 #endif

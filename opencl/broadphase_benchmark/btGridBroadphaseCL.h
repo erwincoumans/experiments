@@ -18,10 +18,7 @@ subject to the following restrictions:
 #define GRID_BROADPHASE_CL_H
 
 #include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
-
-#include "Adl/Adl.h"
-#include "Adl/AdlKernel.h"
-
+#include "../broadphase_benchmark/btOpenCLArray.h"
 
 struct MyAabbConstData 
 {
@@ -35,12 +32,12 @@ class btGridBroadphaseCl : public bt3dGridBroadphaseOCL
 {
 protected:
 
-	adl::Kernel*			m_computeAabbKernel;
-	adl::Kernel*			m_countOverlappingPairs;
-	adl::Kernel*			m_squeezePairCaches;
+	cl_kernel			m_computeAabbKernel;
+	cl_kernel			m_countOverlappingPairs;
+	cl_kernel			m_squeezePairCaches;
 
 
-	adl::Buffer<MyAabbConstData>*	m_aabbConstBuffer;
+	btOpenCLArray<MyAabbConstData>*	m_aabbConstBuffer;
 
 
 	public:
@@ -53,11 +50,10 @@ protected:
 							int gridSizeX, int gridSizeY, int gridSizeZ, 
 							int maxSmallProxies, int maxLargeProxies, int maxPairsPerSmallProxy,
 							btScalar maxSmallProxySize,
-							int maxSmallProxiesPerCell = 4,
-							cl_context context = NULL,
-							cl_device_id device = NULL,
-							cl_command_queue queue = NULL,
-							adl::DeviceCL* deviceCL=0
+							int maxSmallProxiesPerCell,
+							cl_context context,
+							cl_device_id device,
+							cl_command_queue queue
 							);
 		
 		virtual void prepareAABB(float* positions, int numObjects);
