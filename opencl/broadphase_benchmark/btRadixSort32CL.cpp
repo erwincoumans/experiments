@@ -40,7 +40,9 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 
 	m_streamCountSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "StreamCountSortDataKernel", &pErrNum, sortProg,additionalMacros );
 	btAssert(m_streamCountSortDataKernel );
-#ifdef _WIN32
+//this kernel doesn't work on Apple, use a slower serial fallback for now
+//
+#ifndef __APPLE__
 	m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernel", &pErrNum, sortProg,additionalMacros );
 #else
     m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernelSerial", &pErrNum, sortProg,additionalMacros );
