@@ -41,6 +41,13 @@ struct	CustomDispatchData;
 
 #include "../basic_initialize/btOpenCLInclude.h"
 
+enum
+{
+	BT_SOLVER_N_SPLIT = 16,
+	BT_SOLVER_N_BATCHES = 4,
+	BT_SOLVER_N_OBJ_PER_SPLIT = 10,
+	BT_SOLVER_N_TASKS_PER_BATCH = BT_SOLVER_N_SPLIT*BT_SOLVER_N_SPLIT,
+};
 
 class btGpuNarrowphaseAndSolver
 {
@@ -50,8 +57,16 @@ protected:
 	int m_acceleratedCompanionShapeIndex;
 	int m_planeBodyIndex;
 
+	cl_context m_context;
+	cl_device_id m_device;
+	cl_command_queue m_queue;
+
 public:
-	btGpuNarrowphaseAndSolver(adl::DeviceCL* deviceCL);
+
+	
+
+
+	btGpuNarrowphaseAndSolver(cl_context vtx, cl_device_id dev, cl_command_queue q);
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 

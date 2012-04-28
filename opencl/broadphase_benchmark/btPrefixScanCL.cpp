@@ -9,14 +9,14 @@
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 
-btPrefixScanCL::btPrefixScanCL(cl_context ctx, cl_device_id device, cl_command_queue queue)
+btPrefixScanCL::btPrefixScanCL(cl_context ctx, cl_device_id device, cl_command_queue queue, int size)
 :m_commandQueue(queue)
 {
 	char* kernelSource = 0;
 	cl_int pErrNum;
 	char* additionalMacros=0;
 
-	m_workBuffer = new btOpenCLArray<unsigned int>(ctx,queue);
+	m_workBuffer = new btOpenCLArray<unsigned int>(ctx,queue,size);
 	cl_program scanProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, BT_PREFIXSCAN_PROG_PATH);
 	btAssert(scanProg);
 

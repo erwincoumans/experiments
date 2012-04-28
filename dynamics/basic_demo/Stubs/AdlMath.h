@@ -168,7 +168,7 @@ float4 randRange(const float4& minV, const float4& maxV)
 	return (minV + r*range);
 }
 
-
+/*
 struct SortData
 {
 	union
@@ -183,7 +183,7 @@ struct SortData
 		return a.m_key < b.m_key;
 	}
 };
-
+*/
 
 
 template<typename T>

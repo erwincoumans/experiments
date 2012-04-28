@@ -17,16 +17,9 @@ subject to the following restrictions:
 #ifndef ADL_CONTACT4_H
 #define ADL_CONTACT4_H
 
-#ifdef CL_PLATFORM_AMD
-#include "AdlConstraint4.h"
-#include "Adl/Adl.h"
 
-typedef adl::Buffer<Constraint4>* SolverData;
-#else
-typedef void* SolverData;
-#endif
 
-typedef void* ShapeDataType;
+
 
 
 struct Contact4
@@ -47,9 +40,9 @@ struct Contact4
 	//	todo. make it safer
 	int& getBatchIdx() { return m_batchIdx; }
 	float getRestituitionCoeff() const { return ((float)m_restituitionCoeffCmp/(float)0xffff); }
-	void setRestituitionCoeff( float c ) { ADLASSERT( c >= 0.f && c <= 1.f ); m_restituitionCoeffCmp = (u16)(c*0xffff); }
+	void setRestituitionCoeff( float c ) { btAssert( c >= 0.f && c <= 1.f ); m_restituitionCoeffCmp = (u16)(c*0xffff); }
 	float getFrictionCoeff() const { return ((float)m_frictionCoeffCmp/(float)0xffff); }
-	void setFrictionCoeff( float c ) { ADLASSERT( c >= 0.f && c <= 1.f ); m_frictionCoeffCmp = (u16)(c*0xffff); }
+	void setFrictionCoeff( float c ) { btAssert( c >= 0.f && c <= 1.f ); m_frictionCoeffCmp = (u16)(c*0xffff); }
 
 	float& getNPoints() { return m_worldNormal.w; }
 	float getNPoints() const { return m_worldNormal.w; }

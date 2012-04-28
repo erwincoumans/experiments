@@ -17,11 +17,12 @@ subject to the following restrictions:
 #ifndef ADL_CONSTRAINT4_H
 #define ADL_CONSTRAINT4_H
 
+#include "LinearMath/btScalar.h"
+#include "AdlMath.h"
 
-
-struct Constraint4
+ATTRIBUTE_ALIGNED16(struct) Constraint4
 		{
-			_MEM_ALIGNED_ALLOCATOR16;
+			BT_DECLARE_ALIGNED_ALLOCATOR();
 
 			float4 m_linear;
 			float4 m_worldPos[4];

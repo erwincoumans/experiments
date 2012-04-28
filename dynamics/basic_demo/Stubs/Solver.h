@@ -14,17 +14,13 @@ subject to the following restrictions:
 //Originally written by Takahiro Harada
 
 
-#pragma once
 #ifndef __ADL_SOLVER_H
 #define __ADL_SOLVER_H
 
+#include "../../../opencl/broadphase_benchmark/btOpenCLArray.h"
+#include "AdlConstraint4.h"
+typedef btOpenCLArray<Constraint4>* SolverData;
 
-#include <Adl/Adl.h>
-#include <AdlPrimitives/Math/Math.h>
-#include <AdlPrimitives/Search/BoundSearch.h>
-#include <AdlPrimitives/Sort/RadixSort.h>
-#include <AdlPrimitives/Scan/PrefixScan.h>
-#include <AdlPrimitives/Sort/RadixSort32.h>
 
 //#include <AdlPhysics/TypeDefinition.h>
 #include "AdlRigidBody.h"
@@ -40,9 +36,14 @@ subject to the following restrictions:
 //#define MAKE_MYF4 make_float4sse
 
 #include "AdlConstraint4.h"
+#include "../../../opencl/broadphase_benchmark/btPrefixScanCL.h"
+#include "../../../opencl/broadphase_benchmark/btRadixSort32CL.h"
+#include "../../../opencl/broadphase_benchmark/btBoundSearchCL.h"
 
-namespace adl
-{
+#include "../../../opencl/basic_initialize/btOpenCLUtils.h"
+
+
+
 class SolverBase
 {
 	public:
@@ -79,40 +80,7 @@ class SolverBase
 			int m_staticIdx;
 		};
 
-		static
-		__inline
-		Buffer<Contact4>* allocateContact4( const Device* device, int capacity )
-		{
-			return new Buffer<Contact4>( device, capacity );	
-		}
-
-		static
-		__inline
-		void deallocateContact4( Buffer<Contact4>* data ) { delete data; }
-
-		static
-		__inline
-		SolverData allocateConstraint4( const Device* device, int capacity )
-		{
-			return new Buffer<Constraint4>( device, capacity );
-		}
-
-		static
-		__inline
-		void deallocateConstraint4( SolverData data ) { delete (Buffer<Constraint4>*)data; }
-
-		static
-		__inline
-		void* allocateFrictionConstraint( const Device* device, int capacity, u32 type = 0 )
-		{
-			return 0;
-		}
-
-		static
-		__inline
-		void deallocateFrictionConstraint( void* data ) 
-		{
-		}
+		
 
 		enum
 		{
@@ -123,79 +91,70 @@ class SolverBase
 		};
 };
 
-template<DeviceType TYPE>
 class Solver : public SolverBase
 {
 	public:
-		typedef Launcher::BufferInfo BufferInfo;
 
-		struct Data
-		{
-			Data() : m_nIterations(4){}
+		cl_context m_context;
+		cl_device_id m_device;
+		cl_command_queue m_queue;
+				
 
-			const Device* m_device;
-			void* m_parallelSolveData;
-			int m_nIterations;
-			Kernel* m_batchingKernel;
-			Kernel* m_batchSolveKernel;
-			Kernel* m_contactToConstraintKernel;
-			Kernel* m_setSortDataKernel;
-			Kernel* m_reorderContactKernel;
-			Kernel* m_copyConstraintKernel;
-			//typename RadixSort<TYPE>::Data* m_sort;
-			typename RadixSort32<TYPE>::Data* m_sort32;
-			typename BoundSearch<TYPE>::Data* m_search;
-			typename PrefixScan<TYPE>::Data* m_scan;
-			Buffer<SortData>* m_sortDataBuffer;
-			Buffer<Contact4>* m_contactBuffer;
-		};
+		btOpenCLArray<u32>* m_numConstraints;
+		btOpenCLArray<u32>* m_offsets;
+		
+		
+		int m_nIterations;
+		cl_kernel m_batchingKernel;
+		cl_kernel m_batchSolveKernel;
+		cl_kernel m_contactToConstraintKernel;
+		cl_kernel m_setSortDataKernel;
+		cl_kernel m_reorderContactKernel;
+		cl_kernel m_copyConstraintKernel;
+
+		class btRadixSort32CL*	m_sort32;
+		class btBoundSearchCL*	m_search;
+		class btPrefixScanCL*	m_scan;
+
+		btOpenCLArray<btSortData>* m_sortDataBuffer;
+		btOpenCLArray<Contact4>* m_contactBuffer;
 
 		enum
 		{
 			DYNAMIC_CONTACT_ALLOCATION_THRESHOLD = 2000000,
 		};
 
-		static
-		Data* allocate( const Device* device, int pairCapacity );
+		
 
-		static
-		void deallocate( Data* data );
+		
+		Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int pairCapacity);
 
-		static
-		void reorderConvertToConstraints( Data* data, const Buffer<RigidBodyBase::Body>* bodyBuf, 
-		const Buffer<RigidBodyBase::Inertia>* shapeBuf, 
-			Buffer<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
+		virtual ~Solver();
+		
+		void reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+		const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
+			btOpenCLArray<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
-		static
-		void solveContactConstraint( Data* data, const Buffer<RigidBodyBase::Body>* bodyBuf, const Buffer<RigidBodyBase::Inertia>* inertiaBuf, 
+		
+		void solveContactConstraint( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<RigidBodyBase::Inertia>* inertiaBuf, 
 			SolverData constraint, void* additionalData, int n );
 
-//		static
-//		int createSolveTasks( int batchIdx, Data* data, const Buffer<RigidBodyBase::Body>* bodyBuf, const Buffer<RigidBodyBase::Inertia>* shapeBuf, 
-//			SolverData constraint, int n, ThreadPool::Task* tasksOut[], int taskCapacity );
 
 
-		//private:
-		static
-		void convertToConstraints( Data* data, const Buffer<RigidBodyBase::Body>* bodyBuf, 
-			const Buffer<RigidBodyBase::Inertia>* shapeBuf, 
-			Buffer<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
+		void convertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+			const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
+			btOpenCLArray<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
-		static
-		void sortContacts( Data* data, const Buffer<RigidBodyBase::Body>* bodyBuf, 
-			Buffer<Contact4>* contactsIn, void* additionalData, 
+		void sortContacts( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+			btOpenCLArray<Contact4>* contactsIn, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
-		static
-		void batchContacts( Data* data, Buffer<Contact4>* contacts, int nContacts, Buffer<u32>* n, Buffer<u32>* offsets, int staticIdx );
+		void batchContacts( btOpenCLArray<Contact4>* contacts, int nContacts, btOpenCLArray<u32>* n, btOpenCLArray<u32>* offsets, int staticIdx );
 
 };
 
-#include "Solver.inl"
-#include "SolverHost.inl"
-};
 
 #undef MYF4
 #undef MAKE_MYF4

@@ -25,7 +25,7 @@ class btPrefixScanCL
 
 	public:
 		
-	btPrefixScanCL(cl_context ctx, cl_device_id device, cl_command_queue queue);
+	btPrefixScanCL(cl_context ctx, cl_device_id device, cl_command_queue queue,int size=0);
 
 	virtual ~btPrefixScanCL();
 

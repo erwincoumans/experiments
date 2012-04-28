@@ -13,11 +13,10 @@ subject to the following restrictions:
 */
 //Originally written by Takahiro Harada
 
+#ifndef CH_NARROW_PHASE_H
+#define CH_NARROW_PHASE_H
 
-#pragma once
 
-#include <Adl/Adl.h>
-//#include <Common/Base/SyncObjects.h>
 
 #include "AdlMath.h"
 #include "AdlContact4.h"
@@ -25,12 +24,9 @@ subject to the following restrictions:
 
 #include "../ConvexHeightFieldShape.h"
 
-//#include "TypeDefinition.h"
-//#include "RigidBody.h"
-//#include "ConvexHeightFieldShape.h"
 
-namespace adl
-{
+#include "../../../opencl/broadphase_benchmark/btOpenCLArray.h"
+
 class ShapeBase;
 
 class ChNarrowphaseBase
@@ -40,36 +36,24 @@ class ChNarrowphaseBase
 		{
 			float m_collisionMargin;
 		};
-/*
-		typedef struct
-		{
-			//	m_normal.w == height in u8
-			float4 m_normal[HEIGHT_RES*HEIGHT_RES*6];
-			u32 m_height4[HEIGHT_RES*HEIGHT_RES*6];
 
-			float m_scale;
-			float m_padding0;
-			float m_padding1;
-			float m_padding2;
-		} ShapeData;
-*/
 };
 
-template<DeviceType TYPE>
 class ChNarrowphase : public ChNarrowphaseBase
 {
 	public:
-		typedef Launcher::BufferInfo BufferInfo;
 
-		struct Data
-		{
-			const Device* m_device;
-			Kernel* m_supportCullingKernel;
-			Kernel* m_narrowphaseKernel;
-			Kernel* m_narrowphaseWithPlaneKernel;
+		cl_kernel	m_supportCullingKernel;
+		cl_kernel	m_narrowphaseKernel;
+		cl_kernel	m_narrowphaseWithPlaneKernel;
 
-			Buffer<u32>* m_counterBuffer;
-		};
+		btOpenCLArray<unsigned int>* m_counterBuffer;
+
+
+		cl_context m_context;
+		cl_device_id m_device;
+		cl_command_queue m_queue;
+
 
 		enum
 		{
@@ -97,58 +81,36 @@ class ChNarrowphase : public ChNarrowphaseBase
 			int m_paddings[1];
 		};
 		
-		static
-		Data* allocate( const Device* device );
+		ChNarrowphase(cl_context ctx, cl_device_id device, cl_command_queue queue);
+		virtual ~ChNarrowphase();
 
-		static
-		void deallocate( Data* data );
-/*
-		static
-		Buffer<ShapeData>* allocateShapeBuffer( const Device* device, int capacity );
 
-		static
-		void deallocateShapeBuffer( Buffer<ShapeData>* shapeBuf );
-
-		static
-		void setShape( Buffer<ShapeData>* shapeBuf, ShapeBase* shape, int idx, float collisionMargin );
-*/
-		static
-		ShapeDataType allocateShapeBuffer( const Device* device, int capacity );
-
-		static
-		void deallocateShapeBuffer( ShapeDataType shapeBuf );
-
-		static
-		void setShape( ShapeDataType shapeBuf, ShapeBase* shape, int idx, float collisionMargin = 0.f );
+		void setShape( btOpenCLArray<ShapeData>* shapeBuf, ShapeBase* shape, int idx, float collisionMargin = 0.f );
 		
-		static
-		void setShape( ShapeDataType shapeBuf, ConvexHeightField* cvxShape, int idx, float collisionMargin = 0.f );
+		void setShape( btOpenCLArray<ShapeData>* shapeBuf, ConvexHeightField* cvxShape, int idx, float collisionMargin = 0.f );
 
 		// Run NarrowphaseKernel
 		//template<bool USE_OMP>
-		static
-		void execute( Data* data, const Buffer<int2>* pairs, int nPairs, 
-			const Buffer<RigidBodyBase::Body>* bodyBuf, const ShapeDataType shapeBuf,
-			Buffer<Contact4>* contactOut, int& nContacts, const Config& cfg );
+
+		void execute( const btOpenCLArray<int2>* pairs, int nPairs, 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ShapeData>* shapeBuf,
+			btOpenCLArray<Contact4>* contactOut, int& nContacts, const Config& cfg );
 
 		// Run NarrowphaseWithPlaneKernel
 		//template<bool USE_OMP>
-		static
-		void execute( Data* data, const Buffer<int2>* pairs, int nPairs, 
-			const Buffer<RigidBodyBase::Body>* bodyBuf, const ShapeDataType shapeBuf,
-			const Buffer<float4>* vtxBuf, const Buffer<int4>* idxBuf,
-			Buffer<Contact4>* contactOut, int& nContacts, const Config& cfg );
+
+		void execute( const btOpenCLArray<int2>* pairs, int nPairs, 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ShapeData>* shapeBuf,
+			const btOpenCLArray<float4>* vtxBuf, const btOpenCLArray<int4>* idxBuf,
+			btOpenCLArray<Contact4>* contactOut, int& nContacts, const Config& cfg );
 
 		// Run SupportCullingKernel
 		//template<bool USE_OMP>
-		static
-		int culling( Data* data, const Buffer<int2>* pairs, int nPairs, const Buffer<RigidBodyBase::Body>* bodyBuf,
-			const ShapeDataType shapeBuf, const Buffer<int2>* pairsOut, const Config& cfg );
+
+		int culling( const btOpenCLArray<int2>* pairs, int nPairs, const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
+			const btOpenCLArray<ShapeData>* shapeBuf, const btOpenCLArray<int2>* pairsOut, const Config& cfg );
 };
 
-//#include <AdlPhysics/Narrowphase/ChNarrowphase.inl>
-//#include <AdlPhysics/Narrowphase/ChNarrowphaseHost.inl>
 
-#include "ChNarrowphase.inl"
 
-};
+#endif //CH_NARROW_PHASE_H

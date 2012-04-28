@@ -63,7 +63,7 @@ public:
 //	}
 
 
-	cl_mem	getBufferCL()
+	cl_mem	getBufferCL() const
 	{
 		return m_clBuffer;
 	}
@@ -182,8 +182,9 @@ public:
 
 	void copyFromHostPointer(const T* src, int numElems, int destFirstElem= 0, bool waitForCompletion=true)
 	{
-		cl_int status = 0;
+		btAssert(numElems+destFirstElem <= capacity());
 
+		cl_int status = 0;
 		int sizeInBytes=sizeof(T)*numElems;
 		status = clEnqueueWriteBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*destFirstElem, sizeInBytes,
 		src, 0,0,0 );
@@ -204,6 +205,8 @@ public:
 
 	void copyToHostPointer(T* destPtr, int numElem, int srcFirstElem=0, bool waitForCompletion=true) const
 	{
+		btAssert(numElem+srcFirstElem <= capacity());
+
 		cl_int status = 0;
 		status = clEnqueueReadBuffer( m_commandQueue, m_clBuffer, 0, sizeof(T)*srcFirstElem, sizeof(T)*numElem,
 		destPtr, 0,0,0 );
