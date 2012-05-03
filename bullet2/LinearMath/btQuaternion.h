@@ -365,7 +365,7 @@ length(const btQuaternion& q)
 
 /**@brief Return the angle between two quaternions*/
 SIMD_FORCE_INLINE btScalar
-angle(const btQuaternion& q1, const btQuaternion& q2) 
+btAngle(const btQuaternion& q1, const btQuaternion& q2) 
 { 
 	return q1.angle(q2); 
 }

@@ -58,8 +58,12 @@ static const char* spPlatformVendor =
 
 int btOpenCLUtils_getNumPlatforms(cl_int* pErrNum)
 {
-	cl_uint numPlatforms=0;
-	cl_int ciErrNum = clGetPlatformIDs(0, NULL, &numPlatforms);
+
+	cl_platform_id pPlatforms[10] = { 0 };
+    	
+    cl_uint numPlatforms = 0;
+    cl_int ciErrNum = clGetPlatformIDs(10, pPlatforms, &numPlatforms);
+	//cl_int ciErrNum = clGetPlatformIDs(0, NULL, &numPlatforms);
 
 	if(ciErrNum != CL_SUCCESS)
 	{
@@ -67,6 +71,7 @@ int btOpenCLUtils_getNumPlatforms(cl_int* pErrNum)
 			*pErrNum = ciErrNum;
 	}
 	return numPlatforms;
+
 }
 
 const char* btOpenCLUtils_getSdkVendorName()

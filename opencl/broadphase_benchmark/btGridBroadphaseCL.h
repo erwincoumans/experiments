@@ -26,7 +26,13 @@ struct MyAabbConstData
 	int numElem;
 };
 
-
+struct  btAABBHost //keep this in sync with btAABBCL!
+{
+	float			fx;
+	float			fy;
+	float			fz;
+	unsigned int	uw;
+};
 
 class btGridBroadphaseCl : public bt3dGridBroadphaseOCL
 {

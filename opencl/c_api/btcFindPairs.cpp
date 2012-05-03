@@ -146,4 +146,6 @@ void btcMapPairBuffer(btcAabbSpace aabbSpace, int* numPairs, unsigned char** pro
 }
 void btcUnmapBuffer(btcAabbSpace aabbSpace)
 {
+	btbAabbSpaceInterface* space = (btbAabbSpaceInterface*)aabbSpace;
+	space->btcUnmapBuffer(aabbSpace);
 }

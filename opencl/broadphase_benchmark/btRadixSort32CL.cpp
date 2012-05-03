@@ -45,7 +45,8 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 	btAssert(m_streamCountSortDataKernel );
 //this kernel doesn't work on Apple, use a slower serial fallback for now
 //
-#ifndef __APPLE__
+//todo: detect this at runtime or fix the kernel to work cross-platform
+#if !defined(__APPLE__) && !defined(CL_PLATFORM_INTEL)
 	m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernel", &pErrNum, sortProg,additionalMacros );
 #else
     m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernelSerial", &pErrNum, sortProg,additionalMacros );
@@ -277,10 +278,10 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 			launcher.launch1D( num, WG_SIZE );
 		}
 
-        btAlignedObjectArray<unsigned int> testHist;
+        
         
 #ifdef DEBUG_RADIXSORT
-		
+		btAlignedObjectArray<unsigned int> testHist;
 		srcHisto->copyToHost(testHist);
 		printf("ib = %d, testHist size = %d, non zero elements:\n",ib, testHist.size());
 		for (int i=0;i<testHist.size();i++)

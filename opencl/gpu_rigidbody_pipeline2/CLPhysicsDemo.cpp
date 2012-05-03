@@ -65,13 +65,7 @@ cl_device_id		g_device;
 
 
 
-struct  btAABBHost //keep this in sync with btAABBCL!
-{
-	float			fx;
-	float			fy;
-	float			fz;
-	unsigned int	uw;
-};
+
 
 struct InternalData
 {

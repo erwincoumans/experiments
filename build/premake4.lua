@@ -24,15 +24,17 @@ solution "0MySolution"
 		
 	platforms {"x32", "x64"}
 
+	configuration {"x32"}
+		targetsuffix ("_" .. _ACTION)
 	configuration "x64"		
-		targetsuffix "_64"
+		targetsuffix ("_" .. _ACTION .. "_64" )
 	configuration {"x64", "debug"}
-		targetsuffix "_x64_debug"
+		targetsuffix ("_" .. _ACTION .. "_x64_debug")
 	configuration {"x64", "release"}
-		targetsuffix "_x64"
+		targetsuffix ("_" .. _ACTION .. "_x64_release" )
 	configuration {"x32", "debug"}
-		targetsuffix "_debug"
-
+		targetsuffix ("_" .. _ACTION .. "_debug" )
+	
 	configuration{}
 
 if not _OPTIONS["with-nacl"] then
@@ -90,7 +92,7 @@ if not _OPTIONS["with-nacl"] then
 --	include "../opencl/gpu_rigidbody_pipeline"
 	include "../opencl/gpu_rigidbody_pipeline2"
 	
-	--include "../dynamics/profiler_test"
+	include "../dynamics/profiler_test"
 	--include "../Lua"
 	
 	

@@ -14,36 +14,44 @@ subject to the following restrictions:
 */
 //Originally written by Erwin Coumans
 
-//starts crashing when more than 32700 objects on my Geforce 260, unless _USE_SUB_DATA is defined (still unstable though)
-//runs fine with fewer objects
 
 #define NUM_OBJECTS_X 42
-//327
 #define NUM_OBJECTS_Y 42
 #define NUM_OBJECTS_Z 42
-//#define NUM_OBJECTS_Z 20
 
-//#define _USE_SUB_DATA
-
-//#define NUM_OBJECTS_X 100
-//#define NUM_OBJECTS_Y 100
-//#define NUM_OBJECTS_Z 100
-
-///RECREATE_CL_AND_SHADERS_ON_RESIZE will delete and re-create OpenCL and GLSL shaders/buffers at each resize
-//#define RECREATE_CL_AND_SHADERS_ON_RESIZE
+#define MAX_PAIRS_PER_SMALL_BODY 64
 
 ///
-/// OpenCL - OpenGL interop example. Updating transforms of many cubes on GPU, without going through main memory/using the PCIe bus
-/// Create all OpenGL resources AFTER create OpenCL context!
-///
-
-
+#include "LinearMath/btAabbUtil2.h"
+#include "LinearMath/btQuickprof.h"
 #include <GL/glew.h>
 #include <stdio.h>
 
 #include "btGlutInclude.h"
 #include "../opengl_interop/btStopwatch.h"
+#include "btRadixSort32CL.h"
 
+
+
+btRadixSort32CL* sorter=0;
+btVector3 minCoord(1e30,1e30,1e30);
+btVector3 maxCoord(1e30,1e30,1e30);
+//http://stereopsis.com/radix.html
+
+
+static inline unsigned int FloatFlip(float fl)
+{
+	unsigned int f = *(unsigned int*)&fl;
+	unsigned int mask = -(int)(f >> 31) | 0x80000000;
+	return f ^ mask;
+}
+
+static inline float IFloatFlip(unsigned int f)
+{
+	unsigned int mask = ((f >> 31) - 1) | 0x80000000;
+	unsigned int fl = f ^ mask;
+	return *(float*)&fl;
+}
 
 #include "btVector3.h"
 #include "btQuaternion.h"
@@ -60,8 +68,42 @@ static float angle(0);
 #include <math.h>
 #include "../3dGridBroadphase/Shared/btGpu3DGridBroadphase.h"
 #include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
-#include "btGridBroadphaseCl.h"
+#include "btFillCL.h"//for btInt2
 
+#include "btGridBroadphaseCl.h"
+#include "btLauncherCL.h"
+
+struct btAabb2Host
+{
+	union
+	{
+		float m_min[4];
+		int m_minIndices[4];
+	};
+	union
+	{
+		float m_max[4];
+		int m_maxIndices[4];
+	};
+};
+
+class aabbCompare
+{
+	public:
+				
+		int m_axis;
+
+		bool operator() ( const btAabb2Host& a1, const btAabb2Host& b1 ) const
+		{
+			int a1min = a1.m_maxIndices[3];
+			int b1min = b1.m_maxIndices[3];
+			return a1min < b1min;
+		}
+};
+
+
+btAlignedObjectArray<btAabb2Host> sortedHostAabbs;
+btAlignedObjectArray<btSortData> hostData;
 #define USE_NEW
 #ifdef USE_NEW
 btGridBroadphaseCl* sBroadphase=0;
@@ -128,6 +170,11 @@ float m_ele=0.f;
 
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_sineWaveKernel;
+cl_program sapProg;
+cl_kernel g_sapKernel;
+cl_kernel g_flipFloatKernel;
+cl_kernel g_scatterKernel;
+
 
 
 bool useCPU = false;
@@ -644,11 +691,7 @@ void InitCL()
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-#ifdef CL_PLATFORM_INTEL
-	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
-#else
 	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
-#endif
 
 
 	g_cxMainContext = btOpenCLUtils::createContextFromType(deviceType, &ciErrNum, glCtx, glDC);
@@ -697,7 +740,7 @@ void InitShaders()
 	
 	btOverlappingPairCache* overlappingPairCache=0;
 #ifdef	USE_NEW
-	sBroadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(3.f, 3.f, 3.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16,
+	sBroadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(3.f, 3.f, 3.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, MAX_PAIRS_PER_SMALL_BODY, 100.f, 16,
 		g_cxMainContext ,g_device,g_cqCommandQue);
 #else
 	sBroadphase = new btGpu3DGridBroadphase(btVector3(10.f, 10.f, 10.f), 32, 32, 32,NUM_OBJECTS, NUM_OBJECTS, 64, 100.f, 16);
@@ -1208,6 +1251,39 @@ void cpuBroadphase()
 	glFlush();
 }
 
+
+
+void myQuantize(unsigned int* out, const btVector3& point,int isMax, const btVector3& bvhAabbMin, const btVector3& bvhAabbMax) 
+{
+
+	btVector3 aabbSize = bvhAabbMax - bvhAabbMin;
+	btVector3 bvhQuantization = btVector3(btScalar(0xffffffff),btScalar(0xffffffff),btScalar(0xffffffff)) / aabbSize;
+
+	btAssert(point.getX() <= bvhAabbMax.getX());
+	btAssert(point.getY() <= bvhAabbMax.getY());
+	btAssert(point.getZ() <= bvhAabbMax.getZ());
+
+	btAssert(point.getX() >= bvhAabbMin.getX());
+	btAssert(point.getY() >= bvhAabbMin.getY());
+	btAssert(point.getZ() >= bvhAabbMin.getZ());
+
+	btVector3 v = (point - bvhAabbMin) * bvhQuantization;
+	///Make sure rounding is done in a way that unQuantize(quantizeWithClamp(...)) is conservative
+	///end-points always set the first bit, so that they are sorted properly (so that neighbouring AABBs overlap properly)
+	///@todo: double-check this
+	if (isMax)
+	{
+		out[0] = (unsigned int) (((unsigned int)(v.getX()+btScalar(1.)) | 1));
+		out[1] = (unsigned int) (((unsigned int)(v.getY()+btScalar(1.)) | 1));
+		out[2] = (unsigned int) (((unsigned int)(v.getZ()+btScalar(1.)) | 1));
+	} else
+	{
+		out[0] = (unsigned int) (((unsigned int)(v.getX()) & 0xfffffffe));
+		out[1] = (unsigned int) (((unsigned int)(v.getY()) & 0xfffffffe));
+		out[2] = (unsigned int) (((unsigned int)(v.getZ()) & 0xfffffffe));
+	}
+}
+
 void	broadphase()
 {
 	if (useCPU)
@@ -1239,7 +1315,345 @@ void	broadphase()
 			gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
 			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
+#define VALIDATE_BROADPHASE
+#ifdef VALIDATE_BROADPHASE
+			
+
+			{
+			BT_PROFILE("validate");
+			//check if results are valid
+			//btAlignedObjectArray<btInt2> hostPairs;
+			btOpenCLArray<btInt2> gpuPairs(g_cxMainContext, g_cqCommandQue);
+			gpuPairs.setFromOpenCLBuffer(sBroadphase->m_dAllOverlappingPairs,sBroadphase->m_numPrefixSum);
+			//gpuPairs.copyToHost(hostPairs);
+			
+			
+			btOpenCLArray<btAabb2Host> gpuUnsortedAabbs(g_cxMainContext, g_cqCommandQue);
+			gpuUnsortedAabbs.setFromOpenCLBuffer(gFpIO.m_dAABB,gFpIO.m_numObjects);
+			
+			
+			
+			clFinish(g_cqCommandQue);
+
+			btOpenCLArray<btAabb2Host> gpuSortedAabbs(g_cxMainContext, g_cqCommandQue);
+
+//#define FLIP_AT_HOST
+//#define SORT_HOST
+#if defined (SORT_HOST) || defined (FLIP_AT_HOST)
+			btAlignedObjectArray<btAabb2Host> hostAabbs;
+			gpuUnsortedAabbs.copyToHost(hostAabbs);
+#endif//SORT_HOST
+
+			//printf("-----------------------------------------------\n");
+			//printf("Validating:\n");
+			int axis = 0;
+			{
+				BT_PROFILE("find axis\n");
+				//E Find the axis along which all rigid bodies are most widely positioned
+	
+				
+						
+				//minCoord.setMin(minAabb);
+				//maxCoord.setMax(maxAabb);
+				int axis = 0;
+#if 0
+				if (0)
+				{
+					btVector3 s(0,0,0), s2(0,0,0);
+
+					for(int i=0;i<gFpIO.m_numObjects;i++) {
+						btVector3& minAabb = (btVector3&)hostAabbs[i].m_min;
+						btVector3& maxAabb = (btVector3& )hostAabbs[i].m_max;
+						
+
+						btVector3 c = (maxAabb+minAabb)*0.5;
+						s += c;
+						s2 += c*c;
+					}
+					btVector3 v = s2 - s*s / (float)gFpIO.m_numObjects;
+					if(v[1] > v[0]) axis = 1;
+					if(v[2] > v[axis]) axis = 2;
+				}
+#endif
+
+				
+
+			}
+
+
+
+			//sort on the axis
+			
+
+#ifdef SORT_HOST
+			
+
+			{
+				BT_PROFILE("float->int\n");
+				for(int i=0;i<gFpIO.m_numObjects;i++) 
+				{
+					bool isMax = false;
+					unsigned int quantizedCoord[3];
+					//myQuantize(quantizedCoord, (btVector3&)hostAabbs[i].m_min,isMax,minCoord,maxCoord);
+					hostAabbs[i].m_maxIndices[3] = int(hostAabbs[i].m_min[axis]);
+
+				}
+			}
+			{
+				BT_PROFILE("sort axis\n");
+				aabbCompare comp;
+				comp.m_axis = axis;
+
+				//hostAabbs.heapSort(comp);
+				hostAabbs.quickSort(comp);
+			}
+			
+			gpuSortedAabbs.copyFromHost(hostAabbs);
+			
+#else //SORT_HOST
+			
+			
+			clFinish(g_cqCommandQue);
+			{
+				BT_PROFILE("GPU_RADIX SORT");
+				
+				btOpenCLArray<btSortData> gpuSortData(g_cxMainContext, g_cqCommandQue);
+
+
+#ifdef FLIP_AT_HOST
+
+				{
+					BT_PROFILE("resize\n");
+					hostData.resize(gFpIO.m_numObjects);
+				}
+		
+				{
+					BT_PROFILE("FloatFlip\n");
+					for (int i=0;i<gFpIO.m_numObjects;i++)
+					{
+						/*
+						float test = hostAabbs[i].m_min[axis];
+						unsigned int testui = FloatFlip(test);
+						float test2 = IFloatFlip(testui);
+						btAssert(test2);
+						if (test != test2)
+						{
+							printf("diff!\n");
+						}
+						*/
+
+						hostData[i].m_key = FloatFlip(hostAabbs[i].m_min[axis]);
+						hostData[i].m_value = i;
+					}
+				}
+
+
+				
+				
+				{
+					BT_PROFILE("copyFromHost");
+					gpuSortData.copyFromHost(hostData);
+					clFinish(g_cqCommandQue);
+				}
+#else//FLIP_AT_HOST
+				gpuSortData.resize(gFpIO.m_numObjects);
+					
+				
+				//__kernel void   flipFloat( __global const btAabbCL* aabbs, volatile __global int2* sortData, int numObjects, int axis)
+				{
+					BT_PROFILE("flipFloatKernel");
+					btBufferInfoCL bInfo[] = { btBufferInfoCL( gpuUnsortedAabbs.getBufferCL(), true ), btBufferInfoCL( gpuSortData.getBufferCL())};
+					btLauncherCL launcher(g_cqCommandQue, g_flipFloatKernel );
+					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+					launcher.setConst( gFpIO.m_numObjects  );
+					launcher.setConst( axis  );
+					
+					int num = gFpIO.m_numObjects;
+					launcher.launch1D( num);
+					clFinish(g_cqCommandQue);
+				}
+
+#endif//FLIP_AT_HOST
+				
+				{
+					BT_PROFILE("actual sort\n");
+					sorter->execute(gpuSortData);
+					clFinish(g_cqCommandQue);
+				}
+				
+#ifdef 	FLIP_AT_HOST
+				{
+					BT_PROFILE("copyToHost\n");
+					if (gpuSortData.size())
+					{
+						gpuSortData.copyToHost(hostData);
+					}
+					clFinish(g_cqCommandQue);
+				}
+
+				if (0)//not necessary, only for debugging
+				{
+					BT_PROFILE("IFloatFlip\n");
+					for (int i=0;i<hostData.size();i++)
+						hostData[i].m_key = IFloatFlip(hostData[i].m_key);
+				}
+				{
+					BT_PROFILE("resize2\n");
+					sortedHostAabbs.resize(gFpIO.m_numObjects);
+				}
+
+				btAlignedObjectArray<btAabb2Host> hostAabbs;
+			gpuUnsortedAabbs.copyToHost(hostAabbs);
+
+				{
+					BT_PROFILE("scatter\n");
+					for (int i=0;i<gFpIO.m_numObjects;i++)
+					{
+						sortedHostAabbs[i] = hostAabbs[hostData[i].m_value];
+					}
+					clFinish(g_cqCommandQue);
+				}
+				
+				gpuSortedAabbs.copyFromHost(sortedHostAabbs);
+
+				
+
+#else //FLIP_AT_HOST
+
+				gpuSortedAabbs.resize(gFpIO.m_numObjects);
+				{
+					BT_PROFILE("scatterKernel");
+					btBufferInfoCL bInfo[] = { btBufferInfoCL( gpuUnsortedAabbs.getBufferCL(), true ), btBufferInfoCL( gpuSortData.getBufferCL(),true),btBufferInfoCL(gpuSortedAabbs.getBufferCL())};
+					btLauncherCL launcher(g_cqCommandQue, g_scatterKernel );
+					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+					launcher.setConst( gFpIO.m_numObjects  );
+					int num = gFpIO.m_numObjects;
+					launcher.launch1D( num);
+					clFinish(g_cqCommandQue);
+					
+				}
+
+			//gpuSortedAabbs.resize(gFpIO.m_numObjects);
+#endif//FLIP_AT_HOST
+			}
+			
+			
+			
+
+#endif //SORT_HOST
+			int validatedNumPairs = -1;
+
+
+//#define VALIDATE_HOST
+#ifdef VALIDATE_HOST
+			{
+				btAlignedObjectArray<btInt2> bruteForcePairs;
+
+				BT_PROFILE("sweep axis\n");
+
+				for (int i=0;i<gFpIO.m_numObjects;i++)
+				{
+					for (int j=i+1;j<gFpIO.m_numObjects;j++)
+					{
+						if(hostAabbs[i].m_max[axis] < hostAabbs[j].m_min[axis]) 
+						{
+							break;
+						}
+
+						if (TestAabbAgainstAabb2(hostAabbs[i].m_min, hostAabbs[i].m_max,hostAabbs[j].m_min,hostAabbs[j].m_max))
+						{
+							btInt2 pair;
+							pair.x = i;
+							pair.y = j;
+							bruteForcePairs.push_back(pair);
+						}
+					}
+				}
+				validatedNumPairs = bruteForcePairs.size();
+			}
 			colorPairsOpenCL(gFpIO);
+#else
+			//g_sapKernel
+
+			int maxPairs = MAX_PAIRS_PER_SMALL_BODY * NUM_OBJECTS;//256*1024;
+
+		
+			btOpenCLArray<btInt2> newPairs(g_cxMainContext, g_cqCommandQue);
+			newPairs.resize(maxPairs);
+			//newPairs.setFromOpenCLBuffer(gFpIO.m_dAllOverlappingPairs,maxPairs);
+			
+			//newPairs.resize(maxPairs);
+
+			
+
+			btAlignedObjectArray<int> hostPairCount;
+			hostPairCount.push_back(0);
+			btOpenCLArray<int> pairCount(g_cxMainContext, g_cqCommandQue);
+			{
+			pairCount.copyFromHost(hostPairCount);
+			}
+			{
+				BT_PROFILE("g_sapKernel");
+				btBufferInfoCL bInfo[] = { btBufferInfoCL( gpuSortedAabbs.getBufferCL(), true ), btBufferInfoCL( newPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
+				btLauncherCL launcher(g_cqCommandQue, g_sapKernel);
+				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+				launcher.setConst( gFpIO.m_numObjects  );
+				launcher.setConst( axis  );
+				launcher.setConst( maxPairs  );
+
+			
+				int num = gFpIO.m_numObjects;
+				launcher.launch1D( num);
+				clFinish(g_cqCommandQue);
+			}
+			
+			pairCount.copyToHost(hostPairCount);
+			btAssert(hostPairCount.size()==1);
+			btAssert(hostPairCount[0] >=0);
+			btAssert(hostPairCount[0] <maxPairs);
+			
+			if (hostPairCount[0])
+			{
+				//btAlignedObjectArray<btInt2> myHostPairs;
+				newPairs.resize(hostPairCount[0]);
+				//newPairs.copyToHost(myHostPairs);
+				//btAssert(gFpIO.m_numOverlap == newPairs.size());
+
+				gFpIO.m_dAllOverlappingPairs = newPairs.getBufferCL();
+				gFpIO.m_numOverlap = newPairs.size();
+				colorPairsOpenCL(gFpIO);
+				gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
+				gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
+
+				validatedNumPairs = newPairs.size();
+			}
+#endif //VALIDATE_HOST
+
+			{
+				BT_PROFILE("printf");
+				static int numFailures = 0;
+				if (validatedNumPairs != gFpIO.m_numOverlap)
+				{
+					printf("FAIL: different # pairs, sap = %d, grid = %d\n", validatedNumPairs,gFpIO.m_numOverlap);
+					numFailures++;
+					//btAssert(0);
+				} else
+				{
+					printf("CORRECT: same # pairs: %d\n", validatedNumPairs);
+				}
+				printf("numFailures = %d\n",numFailures);
+			}
+			//sort arrays
+			//compare arrays
+			//gFpIO.m_numOverlap = hostPairCount[0];			
+			}
+
+			
+#else
+		colorPairsOpenCL(gFpIO);
+#endif //VALIDATE_BROADPHASE
+			
+			
 
 		}
 	
@@ -1257,6 +1671,8 @@ void	broadphase()
 
 void RenderScene(void)
 {
+	  CProfileManager::Reset();
+
 
 #if 0
 	float modelview[20]={0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
@@ -1379,6 +1795,13 @@ void RenderScene(void)
 
 	GLint err = glGetError();
 	assert(err==GL_NO_ERROR);
+
+	 CProfileManager::Increment_Frame_Counter();
+	  
+
+        if (printStats)
+            CProfileManager::dumpAll();    
+
 }
 
 
@@ -1586,8 +2009,21 @@ int main(int argc, char* argv[])
 	g_sineWaveKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "sineWaveKernel" );
 	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, NUM_OBJECTS);
 
+	char* src = 0;
+	cl_int errNum=0;
+
+	sapProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,src,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
+	btAssert(errNum==CL_SUCCESS);
+
+	g_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "computePairsKernel",&errNum,sapProg );
+	btAssert(errNum==CL_SUCCESS);
+
+	g_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
+
+	g_scatterKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "scatterKernel",&errNum,sapProg );
 	
 
+	sorter = new btRadixSort32CL(g_cxMainContext,g_device, g_cqCommandQue);
 
 	glutMainLoop();
 	ShutdownRC();

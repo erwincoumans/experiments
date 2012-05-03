@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 			printf("sorting failed\n");
 		}
 	
-		result = 0;//testFindPairs();
+		result = testFindPairs();
 
 		
 		clReleaseCommandQueue(g_cqCommandQueue);
