@@ -1315,7 +1315,7 @@ void	broadphase()
 			gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
 			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
-#define VALIDATE_BROADPHASE
+//#define VALIDATE_BROADPHASE
 #ifdef VALIDATE_BROADPHASE
 			
 
@@ -1634,14 +1634,23 @@ void	broadphase()
 				static int numFailures = 0;
 				if (validatedNumPairs != gFpIO.m_numOverlap)
 				{
-					printf("FAIL: different # pairs, sap = %d, grid = %d\n", validatedNumPairs,gFpIO.m_numOverlap);
+					if (printStats)
+					{
+						printf("FAIL: different # pairs, sap = %d, grid = %d\n", validatedNumPairs,gFpIO.m_numOverlap);
+					}
 					numFailures++;
 					//btAssert(0);
 				} else
 				{
-					printf("CORRECT: same # pairs: %d\n", validatedNumPairs);
+					if (printStats)
+					{
+						printf("CORRECT: same # pairs: %d\n", validatedNumPairs);
+					}
 				}
-				printf("numFailures = %d\n",numFailures);
+				if (printStats)
+				{
+					printf("numFailures = %d\n",numFailures);
+				}
 			}
 			//sort arrays
 			//compare arrays

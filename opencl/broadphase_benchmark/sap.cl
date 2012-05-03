@@ -1,4 +1,5 @@
 
+#define USE_LOCAL_MEMORY
 typedef struct 
 {
 	union
@@ -17,7 +18,16 @@ typedef struct
 
 
 /// conservative test for overlap between two aabbs
-bool TestAabbAgainstAabb2(__local const btAabbCL* aabb1, __global const btAabbCL* aabb2)
+bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2)
+{
+	bool overlap = true;
+	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
+	overlap = (aabb1->m_min.z > aabb2->m_max.z || aabb1->m_max.z < aabb2->m_min.z) ? false : overlap;
+	overlap = (aabb1->m_min.y > aabb2->m_max.y || aabb1->m_max.y < aabb2->m_min.y) ? false : overlap;
+	return overlap;
+}
+
+bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2)
 {
 	bool overlap = true;
 	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
@@ -37,7 +47,7 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	int i = get_global_id(0);
 	
 	__local btAabbCL localAabbs[128];// = aabbs[i];
-	
+	btAabbCL myAabb;
 	
 	int2 myPairs[128];// = aabbs[i];
 	
@@ -49,23 +59,60 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	int curMyPairs=0;
 	
 	
+	myAabb = aabbs[i];
 	
-	localAabbs[localId] = aabbs[i];
-	const float testVal = (localAabbs[localId].m_maxElems[axis]);
+	const float testVal = myAabb.m_maxElems[axis];
+	int localCount=0;
+	int block=0;
 	
-	for (int j=i+1;j<numObjects;j++)
+	
+#ifdef USE_LOCAL_MEMORY
+	if ((i+block)<numObjects)
+			localAabbs[localId] = aabbs[i+block];
+	if ((i+64+block)<numObjects)
+			localAabbs[localId+64] = aabbs[i+block+64];
+	barrier(CLK_LOCAL_MEM_FENCE);
+#endif//USE_LOCAL_MEMORY
+				
+	for (;(i+1+localCount+block)<numObjects;localCount++)
 	{
-	  
-	  
-		if(testVal < (aabbs[j].m_minElems[axis])) 
+	
+		if (localCount==64)
+		{
+			localCount = 0;
+			block+=64;			
+#ifdef USE_LOCAL_MEMORY
+			if ((i+block)<numObjects)
+				localAabbs[localId] = aabbs[i+block];
+			if ((i+64+block)<numObjects)
+				localAabbs[localId+64] = aabbs[i+block+64];
+			barrier(CLK_LOCAL_MEM_FENCE);
+#endif //USE_LOCAL_MEMORY				
+		}  
+
+		
+				  
+#ifdef USE_LOCAL_MEMORY
+		if(testVal < (localAabbs[localCount+localId+1].m_minElems[axis])) 
+#else//USE_LOCAL_MEMORY
+	  if(testVal < (aabbs[i+1+localCount+block].m_minElems[axis])) 
+#endif//USE_LOCAL_MEMORY
 		{
 			break;
 		}
 
-		if (TestAabbAgainstAabb2(&localAabbs[localId],&aabbs[j]))
+#ifdef USE_LOCAL_MEMORY
+		if (TestAabbAgainstAabb2(&myAabb,&localAabbs[localCount+localId+1]))
+#else	//USE_LOCAL_MEMORY
+		if (TestAabbAgainstAabb2Global(&myAabb,&aabbs[i+1+localCount+block]))
+#endif //USE_LOCAL_MEMORY
 		{
-			myPairs[curMyPairs].x = aabbs[i].m_minIndices[3];
-			myPairs[curMyPairs].y = aabbs[j].m_minIndices[3];
+			myPairs[curMyPairs].x = myAabb.m_minIndices[3];
+#ifdef USE_LOCAL_MEMORY
+			myPairs[curMyPairs].y = localAabbs[localCount+localId+1].m_minIndices[3];
+#else //USE_LOCAL_MEMORY			
+			myPairs[curMyPairs].y = aabbs[i+1+localCount+block].m_minIndices[3];
+#endif//USE_LOCAL_MEMORY			
 			
 			curMyPairs++;
 		
@@ -80,6 +127,7 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 				curMyPairs=0;
 			}
 		}
+		
 	}
 	
 	 //flush remainder to main memory

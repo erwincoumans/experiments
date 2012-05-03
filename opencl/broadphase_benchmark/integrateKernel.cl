@@ -107,6 +107,12 @@ __kernel void
 		position.x = native_cos(pBodyTimes[nodeID]*2.17f)*mAmplitude + native_sin(pBodyTimes[nodeID])*mAmplitude*0.5f;
 		position.y = native_cos(pBodyTimes[nodeID]*1.38f)*mAmplitude + native_sin(pBodyTimes[nodeID]*mAmplitude);
 		position.z = native_cos(pBodyTimes[nodeID]*2.17f)*mAmplitude + native_sin(pBodyTimes[nodeID]*0.777f)*mAmplitude;
+
+		//position.x = (int)position.x;
+		//position.y = (int)position.y;
+		//position.z = (int)position.z;
+
+
 		g_vertexBuffer[nodeID + startOffset/4] = position;
 	}
 }
