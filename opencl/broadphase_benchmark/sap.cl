@@ -47,36 +47,105 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	int i = get_global_id(0);
 	
 	__local btAabbCL localAabbs[128];// = aabbs[i];
-	btAabbCL myAabb;
+#ifdef USE_LOCAL_MEMORY
+	__local numActiveWgItems[1];
+	__local breakRequest[1];
+#endif //USE_LOCAL_MEMORY
 	
 	int2 myPairs[128];// = aabbs[i];
-	
+		btAabbCL myAabb;
 	
 	if (i>=numObjects)
 		return;
 	
+#ifdef USE_LOCAL_MEMORY
+	if (localId==0)
+	{
+		numActiveWgItems[0] = 0;
+		breakRequest[0] = 0;
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+	atomic_inc(numActiveWgItems);
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+#endif//USE_LOCAL_MEMORY	
 	
 	int curMyPairs=0;
-	
+	barrier(CLK_LOCAL_MEM_FENCE);
 	
 	myAabb = aabbs[i];
 	
 	const float testVal = myAabb.m_maxElems[axis];
 	int localCount=0;
 	int block=0;
-	
+	int localBreak = 0;
 	
 #ifdef USE_LOCAL_MEMORY
-	if ((i+block)<numObjects)
-			localAabbs[localId] = aabbs[i+block];
-	if ((i+64+block)<numObjects)
-			localAabbs[localId+64] = aabbs[i+block+64];
+	localAabbs[localId] = aabbs[i+block];
+	localAabbs[localId+64] = aabbs[i+block+64];
 	barrier(CLK_LOCAL_MEM_FENCE);
 #endif//USE_LOCAL_MEMORY
-				
-	for (;(i+1+localCount+block)<numObjects;localCount++)
+	int2 prevPair;
+ 	prevPair.x=-1;
+ 	prevPair.y=-1;
+ 	
+	for (;(i+1+localCount+block)<numObjects;)
 	{
 	
+		if (!localBreak)
+		{
+				  
+#ifdef USE_LOCAL_MEMORY
+			if(testVal < (localAabbs[localCount+localId+1].m_minElems[axis])) 
+#else//USE_LOCAL_MEMORY
+	  	if(testVal < (aabbs[i+1+localCount+block].m_minElems[axis])) 
+#endif//USE_LOCAL_MEMORY
+			{
+#ifdef USE_LOCAL_MEMORY	
+				localBreak = 1;
+				atomic_inc(breakRequest);
+#else
+				break;
+#endif
+			}
+
+#ifdef USE_LOCAL_MEMORY
+			if (TestAabbAgainstAabb2(&myAabb,&localAabbs[localCount+localId+1]))
+#else	//USE_LOCAL_MEMORY
+			if (TestAabbAgainstAabb2Global(&myAabb,&aabbs[i+1+localCount+block]))
+#endif //USE_LOCAL_MEMORY
+			{
+			
+				
+				myPairs[curMyPairs].x = myAabb.m_minIndices[3];
+			
+#ifdef USE_LOCAL_MEMORY
+				myPairs[curMyPairs].y = localAabbs[localCount+localId+1].m_minIndices[3];
+#else //USE_LOCAL_MEMORY			
+				myPairs[curMyPairs].y = aabbs[i+1+localCount+block].m_minIndices[3];
+#endif//USE_LOCAL_MEMORY			
+				
+				if (1)//!((myPairs[curMyPairs].x == prevPair.x) && (myPairs[curMyPairs].y == prevPair.y)))
+				{
+					prevPair = myPairs[curMyPairs];
+					curMyPairs++;
+					
+				
+					//flush to main memory
+					if (curMyPairs==64)
+					{
+						int curPair = atomic_add (pairCount,curMyPairs);
+						for (int p=0;p<curMyPairs;p++)
+						{
+							pairsOut[curPair+p] = myPairs[p];
+						}
+						curMyPairs=0;
+					}
+				}
+			}
+		}
+		
+		localCount++;
 		if (localCount==64)
 		{
 			localCount = 0;
@@ -85,55 +154,22 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 			if ((i+block)<numObjects)
 				localAabbs[localId] = aabbs[i+block];
 			if ((i+64+block)<numObjects)
-				localAabbs[localId+64] = aabbs[i+block+64];
-			barrier(CLK_LOCAL_MEM_FENCE);
-#endif //USE_LOCAL_MEMORY				
+				localAabbs[localId+64] = aabbs[i+block+64];			
+#endif //USE_LOCAL_MEMORY			
+
+		
+#ifdef USE_LOCAL_MEMORY
+			if (breakRequest[0]==numActiveWgItems[0])
+				break;
+#endif
 		}  
-
-		
-				  
-#ifdef USE_LOCAL_MEMORY
-		if(testVal < (localAabbs[localCount+localId+1].m_minElems[axis])) 
-#else//USE_LOCAL_MEMORY
-	  if(testVal < (aabbs[i+1+localCount+block].m_minElems[axis])) 
-#endif//USE_LOCAL_MEMORY
-		{
-			break;
-		}
-
-#ifdef USE_LOCAL_MEMORY
-		if (TestAabbAgainstAabb2(&myAabb,&localAabbs[localCount+localId+1]))
-#else	//USE_LOCAL_MEMORY
-		if (TestAabbAgainstAabb2Global(&myAabb,&aabbs[i+1+localCount+block]))
-#endif //USE_LOCAL_MEMORY
-		{
-			myPairs[curMyPairs].x = myAabb.m_minIndices[3];
-#ifdef USE_LOCAL_MEMORY
-			myPairs[curMyPairs].y = localAabbs[localCount+localId+1].m_minIndices[3];
-#else //USE_LOCAL_MEMORY			
-			myPairs[curMyPairs].y = aabbs[i+1+localCount+block].m_minIndices[3];
-#endif//USE_LOCAL_MEMORY			
-			
-			curMyPairs++;
-		
-			//flush to main memory
-			if (curMyPairs==64)
-			{
-				int curPair = atomic_add (pairCount,curMyPairs);
-				for (int p=0;p<curMyPairs;p++)
-				{
-					pairsOut[curPair+p] = myPairs[p];
-				}
-				curMyPairs=0;
-			}
-		}
-		
+	barrier(CLK_LOCAL_MEM_FENCE);
 	}
 	
 	 //flush remainder to main memory
 	if (curMyPairs>0)
 	 {
-	 		int curPair = atomic_add (pairCount,curMyPairs);
+	 	 int curPair = atomic_add (pairCount,curMyPairs);
 	 		for (int p=0;p<curMyPairs;p++)
 	 		{
 				pairsOut[curPair+p] = myPairs[p];

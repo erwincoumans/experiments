@@ -71,14 +71,12 @@ btRadixSort32CL::~btRadixSort32CL()
 	clReleaseKernel(m_prefixScanKernel);
 }
 
-void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
+void btRadixSort32CL::executeHost(btAlignedObjectArray<btSortData>& inout, int sortBits /* = 32 */)
 {
-	int n = keyValuesInOut.size();
+	int n = inout.size();
 	const int BITS_PER_PASS = 8;
 	const int NUM_TABLES = (1<<BITS_PER_PASS);
 
-	btAlignedObjectArray<btSortData> inout;
-	keyValuesInOut.copyToHost(inout);
 
 	int tables[NUM_TABLES];
 	int counter[NUM_TABLES];
@@ -136,17 +134,22 @@ void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int
 		count++;
 	}
 
+	if (count&1)
 	{
-		if (count&1)
-		//if( src != inout.m_ptr )
-		{
-			keyValuesInOut.copyFromHostPointer(src,n);
-		} else
-		{
-			keyValuesInOut.copyFromHostPointer(dst, n);
-		}
-	}
+		btAssert(0);//need to copy 
 
+	}
+}
+
+void btRadixSort32CL::executeHost(btOpenCLArray<btSortData>& keyValuesInOut, int sortBits /* = 32 */)
+{
+
+	btAlignedObjectArray<btSortData> inout;
+	keyValuesInOut.copyToHost(inout);
+
+	executeHost(inout,sortBits);
+
+	keyValuesInOut.copyFromHost(inout);
 }
 
 void btRadixSort32CL::execute(btOpenCLArray<unsigned int>& keysIn, btOpenCLArray<unsigned int>& keysOut, btOpenCLArray<unsigned int>& valuesIn, 

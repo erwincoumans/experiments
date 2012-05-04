@@ -83,7 +83,9 @@ struct btAabb2Host
 	union
 	{
 		float m_max[4];
-		int m_maxIndices[4];
+		int m_signedMaxIndices[4];
+		unsigned int m_unsignedMaxIndices[4];
+
 	};
 };
 
@@ -95,8 +97,11 @@ class aabbCompare
 
 		bool operator() ( const btAabb2Host& a1, const btAabb2Host& b1 ) const
 		{
-			int a1min = a1.m_maxIndices[3];
-			int b1min = b1.m_maxIndices[3];
+			//float a1min = a1.m_min[m_axis];
+			//float b1min = b1.m_min[m_axis];
+			
+			unsigned int a1min = a1.m_unsignedMaxIndices[3];
+			unsigned int b1min = b1.m_unsignedMaxIndices[3];
 			return a1min < b1min;
 		}
 };
@@ -1284,6 +1289,166 @@ void myQuantize(unsigned int* out, const btVector3& point,int isMax, const btVec
 	}
 }
 
+void checkPairArrays(btAlignedObjectArray<btInt2>& sapPairsHost,btAlignedObjectArray<btInt2>& gridPairsHost, btAlignedObjectArray<btAabb2Host>& hostAabbs)
+{
+	{
+		for (int i=0;i<sapPairsHost.size();i++)
+		{
+			if (sapPairsHost[i].x>sapPairsHost[i].y)
+				btSwap(sapPairsHost[i].x,sapPairsHost[i].y);
+		}
+				
+		for (int i=0;i<gridPairsHost.size();i++)
+		{
+			if (gridPairsHost[i].x>gridPairsHost[i].y)
+				btSwap(gridPairsHost[i].x,gridPairsHost[i].y);
+		}
+
+		sorter->executeHost((btAlignedObjectArray<btSortData>&)sapPairsHost);
+		sorter->executeHost((btAlignedObjectArray<btSortData>&)gridPairsHost);
+
+		for (int i=0;i<sapPairsHost.size();i++)
+		{
+			btSwap(sapPairsHost[i].x,sapPairsHost[i].y);
+		}
+				
+		for (int i=0;i<gridPairsHost.size();i++)
+		{
+			btSwap(gridPairsHost[i].x,gridPairsHost[i].y);
+		}
+
+		sorter->executeHost((btAlignedObjectArray<btSortData>&)sapPairsHost);
+		sorter->executeHost((btAlignedObjectArray<btSortData>&)gridPairsHost);
+	}	
+	int maxSize = gridPairsHost.size()>sapPairsHost.size()?gridPairsHost.size():sapPairsHost.size();
+
+
+	int i=0;
+	int j=0;
+	i=0;
+
+	for (;i<maxSize;)
+	{
+		if (i<sapPairsHost.size() && j<gridPairsHost.size())
+		{
+			if ((sapPairsHost[i].x != gridPairsHost[j].x) ||
+				(sapPairsHost[i].y != gridPairsHost[j].y))
+			{
+				printf("diff at %d, %d:", i,j);
+				if (sapPairsHost[i].x == gridPairsHost[j].x)
+				{
+					if (sapPairsHost[i].y < gridPairsHost[j].y)
+					{
+						printf("sapPairsHost[%d] = %d,%d\n",i,sapPairsHost[i].x,sapPairsHost[i].y);
+						btAabb2Host a = hostAabbs[sapPairsHost[i].x];
+						btAabb2Host b = hostAabbs[sapPairsHost[i].y];
+						printf("a.m_min=(%f,%f,%f),a.m_max(%f,%f,%f)\n",
+							a.m_min[0],a.m_min[1],a.m_min[2],
+							a.m_max[0],a.m_max[1],a.m_max[2]);
+						printf("b.m_min=(%f,%f,%f),b.m_max(%f,%f,%f)\n",
+							b.m_min[0],b.m_min[1],b.m_min[2],
+							b.m_max[0],b.m_max[1],b.m_max[2]);
+
+						if (TestAabbAgainstAabb2((btVector3&)a.m_min,(btVector3&)a.m_max,(btVector3&)b.m_min,(btVector3&)b.m_max))
+						{
+							printf("indeed overlapping\n");
+						} else
+						{
+							printf("false overlapping\n");
+						}
+						i++;
+					} else
+					{
+						printf("gridPairsHost[%d] = %d,%d\n",j,gridPairsHost[j].x,gridPairsHost[j].y);
+						btAabb2Host a = hostAabbs[gridPairsHost[i].x];
+						btAabb2Host b = hostAabbs[gridPairsHost[i].y];
+						printf("a.m_min=(%f,%f,%f),a.m_max(%f,%f,%f)\n",
+							a.m_min[0],a.m_min[1],a.m_min[2],
+							a.m_max[0],a.m_max[1],a.m_max[2]);
+						printf("b.m_min=(%f,%f,%f),b.m_max(%f,%f,%f)\n",
+							b.m_min[0],b.m_min[1],b.m_min[2],
+							b.m_max[0],b.m_max[1],b.m_max[2]);
+
+						if (TestAabbAgainstAabb2((btVector3&)a.m_min,(btVector3&)a.m_max,(btVector3&)b.m_min,(btVector3&)b.m_max))
+						{
+							printf("indeed overlapping\n");
+						} else
+						{
+							printf("false overlapping\n");
+						}
+						j++;
+					}
+				} else
+				{
+					if (sapPairsHost[i].x < gridPairsHost[j].x)
+					{
+						printf("sapPairsHost[%d] = %d,%d\n",i,sapPairsHost[i].x,sapPairsHost[i].y);
+						btAabb2Host a = hostAabbs[sapPairsHost[i].x];
+						btAabb2Host b = hostAabbs[sapPairsHost[i].y];
+						printf("a.m_min=(%f,%f,%f),a.m_max(%f,%f,%f)\n",
+							a.m_min[0],a.m_min[1],a.m_min[2],
+							a.m_max[0],a.m_max[1],a.m_max[2]);
+						printf("b.m_min=(%f,%f,%f),b.m_max(%f,%f,%f)\n",
+							b.m_min[0],b.m_min[1],b.m_min[2],
+							b.m_max[0],b.m_max[1],b.m_max[2]);
+
+						if (TestAabbAgainstAabb2((btVector3&)a.m_min,(btVector3&)a.m_max,(btVector3&)b.m_min,(btVector3&)b.m_max))
+						{
+							printf("indeed overlapping\n");
+						} else
+						{
+							printf("false overlapping\n");
+						}
+						i++;
+					} else
+					{
+						printf("gridPairsHost[%d] = %d,%d\n",j,gridPairsHost[j].x,gridPairsHost[j].y);
+						btAabb2Host a = hostAabbs[gridPairsHost[i].x];
+						btAabb2Host b = hostAabbs[gridPairsHost[i].y];
+						printf("a.m_min=(%f,%f,%f),a.m_max(%f,%f,%f)\n",
+							a.m_min[0],a.m_min[1],a.m_min[2],
+							a.m_max[0],a.m_max[1],a.m_max[2]);
+						printf("b.m_min=(%f,%f,%f),b.m_max(%f,%f,%f)\n",
+							b.m_min[0],b.m_min[1],b.m_min[2],
+							b.m_max[0],b.m_max[1],b.m_max[2]);
+						if (TestAabbAgainstAabb2((btVector3&)a.m_min,(btVector3&)a.m_max,(btVector3&)b.m_min,(btVector3&)b.m_max))
+						{
+							printf("indeed overlapping\n");
+						} else
+						{
+							printf("false overlapping\n");
+						}
+						j++;
+					}
+				}
+							
+			} else
+			{
+				i++;
+				j++;
+			}
+		} else
+		{
+			j++;
+			i++;
+			if (i<sapPairsHost.size())
+			{
+				printf("sapPairsHost[i] = %d,%d\n",i,sapPairsHost[i].x,sapPairsHost[i].y);
+				btAabb2Host a = hostAabbs[sapPairsHost[i].x];
+				btAabb2Host b = hostAabbs[sapPairsHost[i].y];
+			}
+
+			if (i<gridPairsHost.size())
+			{
+				printf("gridPairsHost[i] = %d,%d\n",i,gridPairsHost[i].x,gridPairsHost[i].y);
+				btAabb2Host a = hostAabbs[gridPairsHost[i].x];
+				btAabb2Host b = hostAabbs[gridPairsHost[i].y];
+			}
+		}
+	}
+
+
+}
 void	broadphase()
 {
 	if (useCPU)
@@ -1317,19 +1482,106 @@ void	broadphase()
 
 //#define VALIDATE_BROADPHASE
 #ifdef VALIDATE_BROADPHASE
+
+			int axis = 0;
+			int validatedNumPairs = -1;
+			int goldValidatedPairs = -1;
+			btOpenCLArray<btAabb2Host> gpuUnsortedAabbs(g_cxMainContext, g_cqCommandQue);
+			gpuUnsortedAabbs.setFromOpenCLBuffer(gFpIO.m_dAABB,gFpIO.m_numObjects);
+
+			btAlignedObjectArray<btAabb2Host> unsortedHostAabbs;
+			gpuUnsortedAabbs.copyToHost(unsortedHostAabbs);
+
+//#define VALIDATE_HOST_NOW
+#ifdef VALIDATE_HOST_NOW
 			
+			{
+				BT_PROFILE("resize\n");
+				hostData.resize(gFpIO.m_numObjects);
+			}
+		
+			btAlignedObjectArray<btAabb2Host> hostAabbs;
+			gpuUnsortedAabbs.copyToHost(hostAabbs);
+
+			{
+				BT_PROFILE("FloatFlip\n");
+				for (int i=0;i<gFpIO.m_numObjects;i++)
+				{
+					hostAabbs[i].m_minIndices[3] = i;//original index
+					hostAabbs[i].m_unsignedMaxIndices[3] = FloatFlip(hostAabbs[i].m_min[axis]);
+					hostData[i].m_key = FloatFlip(hostAabbs[i].m_min[axis]);
+					hostData[i].m_value = i;
+				}
+			}
+
+
+
+			{
+				BT_PROFILE("sort axis\n");
+				aabbCompare comp;
+				comp.m_axis = axis;
+
+				//hostAabbs.heapSort(comp);
+				hostAabbs.quickSort(comp);
+			}
+
+			btAlignedObjectArray<btInt2> bruteForcePairs;
+			{
+				
+
+				BT_PROFILE("sweep axis\n");
+
+				for (int i=0;i<gFpIO.m_numObjects;i++)
+				{
+/*					if (i==1611)
+					{
+						printf("catch me\n");
+					}
+					*/
+
+					//int referenceMin = FloatFlip(hostAabbs[i].m_max[axis])+2;
+					float reference = hostAabbs[i].m_max[axis];
+
+					for (int j=i+1;j<gFpIO.m_numObjects;j++)
+					{
+/*						if(j==3259)
+						{
+							printf("catch me\n");
+						}
+	*/
+						if( reference < hostAabbs[j].m_min[axis])
+						//if( reference < hostAabbs[j].m_maxIndices[3]) 
+						{
+							break;
+						}
+						
+
+						
+						
+						if (TestAabbAgainstAabb2((btVector3&)hostAabbs[i].m_min, (btVector3&)hostAabbs[i].m_max,
+							(btVector3&)hostAabbs[j].m_min,(btVector3&)hostAabbs[j].m_max))
+						{
+							btInt2 pair;
+							pair.x = hostAabbs[i].m_minIndices[3];//store the original index in the unsorted aabb array
+							pair.y = hostAabbs[j].m_minIndices[3];
+							bruteForcePairs.push_back(pair);
+						}
+					}
+				}
+				goldValidatedPairs = bruteForcePairs.size();
+			}
+#endif //VALIDATE_HOST_NOW
+
+			btOpenCLArray<btInt2> gpuPairs(g_cxMainContext, g_cqCommandQue);
+			gpuPairs.setFromOpenCLBuffer(sBroadphase->m_dAllOverlappingPairs,sBroadphase->m_numPrefixSum);
 
 			{
 			BT_PROFILE("validate");
 			//check if results are valid
 			//btAlignedObjectArray<btInt2> hostPairs;
-			btOpenCLArray<btInt2> gpuPairs(g_cxMainContext, g_cqCommandQue);
-			gpuPairs.setFromOpenCLBuffer(sBroadphase->m_dAllOverlappingPairs,sBroadphase->m_numPrefixSum);
 			//gpuPairs.copyToHost(hostPairs);
 			
 			
-			btOpenCLArray<btAabb2Host> gpuUnsortedAabbs(g_cxMainContext, g_cqCommandQue);
-			gpuUnsortedAabbs.setFromOpenCLBuffer(gFpIO.m_dAABB,gFpIO.m_numObjects);
 			
 			
 			
@@ -1339,14 +1591,14 @@ void	broadphase()
 
 //#define FLIP_AT_HOST
 //#define SORT_HOST
+			
 #if defined (SORT_HOST) || defined (FLIP_AT_HOST)
-			btAlignedObjectArray<btAabb2Host> hostAabbs;
-			gpuUnsortedAabbs.copyToHost(hostAabbs);
+			
 #endif//SORT_HOST
 
 			//printf("-----------------------------------------------\n");
 			//printf("Validating:\n");
-			int axis = 0;
+		
 			{
 				BT_PROFILE("find axis\n");
 				//E Find the axis along which all rigid bodies are most widely positioned
@@ -1355,7 +1607,7 @@ void	broadphase()
 						
 				//minCoord.setMin(minAabb);
 				//maxCoord.setMax(maxAabb);
-				int axis = 0;
+				
 #if 0
 				if (0)
 				{
@@ -1388,25 +1640,8 @@ void	broadphase()
 #ifdef SORT_HOST
 			
 
-			{
-				BT_PROFILE("float->int\n");
-				for(int i=0;i<gFpIO.m_numObjects;i++) 
-				{
-					bool isMax = false;
-					unsigned int quantizedCoord[3];
-					//myQuantize(quantizedCoord, (btVector3&)hostAabbs[i].m_min,isMax,minCoord,maxCoord);
-					hostAabbs[i].m_maxIndices[3] = int(hostAabbs[i].m_min[axis]);
-
-				}
-			}
-			{
-				BT_PROFILE("sort axis\n");
-				aabbCompare comp;
-				comp.m_axis = axis;
-
-				//hostAabbs.heapSort(comp);
-				hostAabbs.quickSort(comp);
-			}
+			
+			
 			
 			gpuSortedAabbs.copyFromHost(hostAabbs);
 			
@@ -1422,30 +1657,7 @@ void	broadphase()
 
 #ifdef FLIP_AT_HOST
 
-				{
-					BT_PROFILE("resize\n");
-					hostData.resize(gFpIO.m_numObjects);
-				}
-		
-				{
-					BT_PROFILE("FloatFlip\n");
-					for (int i=0;i<gFpIO.m_numObjects;i++)
-					{
-						/*
-						float test = hostAabbs[i].m_min[axis];
-						unsigned int testui = FloatFlip(test);
-						float test2 = IFloatFlip(testui);
-						btAssert(test2);
-						if (test != test2)
-						{
-							printf("diff!\n");
-						}
-						*/
-
-						hostData[i].m_key = FloatFlip(hostAabbs[i].m_min[axis]);
-						hostData[i].m_value = i;
-					}
-				}
+				
 
 
 				
@@ -1541,38 +1753,8 @@ void	broadphase()
 			
 
 #endif //SORT_HOST
-			int validatedNumPairs = -1;
 
 
-//#define VALIDATE_HOST
-#ifdef VALIDATE_HOST
-			{
-				btAlignedObjectArray<btInt2> bruteForcePairs;
-
-				BT_PROFILE("sweep axis\n");
-
-				for (int i=0;i<gFpIO.m_numObjects;i++)
-				{
-					for (int j=i+1;j<gFpIO.m_numObjects;j++)
-					{
-						if(hostAabbs[i].m_max[axis] < hostAabbs[j].m_min[axis]) 
-						{
-							break;
-						}
-
-						if (TestAabbAgainstAabb2(hostAabbs[i].m_min, hostAabbs[i].m_max,hostAabbs[j].m_min,hostAabbs[j].m_max))
-						{
-							btInt2 pair;
-							pair.x = i;
-							pair.y = j;
-							bruteForcePairs.push_back(pair);
-						}
-					}
-				}
-				validatedNumPairs = bruteForcePairs.size();
-			}
-			colorPairsOpenCL(gFpIO);
-#else
 			//g_sapKernel
 
 			int maxPairs = MAX_PAIRS_PER_SMALL_BODY * NUM_OBJECTS;//256*1024;
@@ -1626,32 +1808,59 @@ void	broadphase()
 				gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
 				validatedNumPairs = newPairs.size();
+				btAlignedObjectArray<btInt2> sapPairsHost;
+				btAlignedObjectArray<btInt2> gridPairsHost;
+
+				newPairs.copyToHost(sapPairsHost);
+				gpuPairs.copyToHost(gridPairsHost);
+
+
+#ifdef VALIDATE_HOST_NOW				
+				checkPairArrays(bruteForcePairs,gridPairsHost,unsortedHostAabbs);
+				//checkPairArrays(sapPairsHost,bruteForcePairs,unsortedHostAabbs);
+#endif
+
+				checkPairArrays(sapPairsHost,gridPairsHost,unsortedHostAabbs);
+				
+
 			}
-#endif //VALIDATE_HOST
+
 
 			{
 				BT_PROFILE("printf");
 				static int numFailures = 0;
 				if (validatedNumPairs != gFpIO.m_numOverlap)
 				{
-					if (printStats)
+					if (1)//printStats)
 					{
 						printf("FAIL: different # pairs, sap = %d, grid = %d\n", validatedNumPairs,gFpIO.m_numOverlap);
+						printf("----------------------------------------------------\n");
+
 					}
+
+					//compare the results
+					
+
 					numFailures++;
 					//btAssert(0);
 				} else
 				{
-					if (printStats)
+					if (1)//printStats)
 					{
 						printf("CORRECT: same # pairs: %d\n", validatedNumPairs);
+						printf("----------------------------------------------------\n");
+
 					}
 				}
-				if (printStats)
+				if (1)//printStats)
 				{
-					printf("numFailures = %d\n",numFailures);
+					printf("num diffs= %d\n",numFailures);
+					printf("----------------------------------------------------\n");
 				}
 			}
+
+				
+			
 			//sort arrays
 			//compare arrays
 			//gFpIO.m_numOverlap = hostPairCount[0];			
