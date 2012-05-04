@@ -1474,13 +1474,13 @@ void	broadphase()
 			gFpIO.m_dAABB = sBroadphase->m_dAABB;
 			setupGpuAabbsSimple(gFpIO);
 
-			sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
+			//sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
 
 
 			gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
 			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
 
-//#define VALIDATE_BROADPHASE
+#define VALIDATE_BROADPHASE
 #ifdef VALIDATE_BROADPHASE
 
 			int axis = 0;
@@ -1572,8 +1572,8 @@ void	broadphase()
 			}
 #endif //VALIDATE_HOST_NOW
 
-			btOpenCLArray<btInt2> gpuPairs(g_cxMainContext, g_cqCommandQue);
-			gpuPairs.setFromOpenCLBuffer(sBroadphase->m_dAllOverlappingPairs,sBroadphase->m_numPrefixSum);
+			//btOpenCLArray<btInt2> gpuPairs(g_cxMainContext, g_cqCommandQue);
+			//gpuPairs.setFromOpenCLBuffer(sBroadphase->m_dAllOverlappingPairs,sBroadphase->m_numPrefixSum);
 
 			{
 			BT_PROFILE("validate");
@@ -1812,7 +1812,7 @@ void	broadphase()
 				btAlignedObjectArray<btInt2> gridPairsHost;
 
 				newPairs.copyToHost(sapPairsHost);
-				gpuPairs.copyToHost(gridPairsHost);
+				//gpuPairs.copyToHost(gridPairsHost);
 
 
 #ifdef VALIDATE_HOST_NOW				
@@ -1820,12 +1820,12 @@ void	broadphase()
 				//checkPairArrays(sapPairsHost,bruteForcePairs,unsortedHostAabbs);
 #endif
 
-				checkPairArrays(sapPairsHost,gridPairsHost,unsortedHostAabbs);
+				//checkPairArrays(sapPairsHost,gridPairsHost,unsortedHostAabbs);
 				
 
 			}
 
-
+			if (0)
 			{
 				BT_PROFILE("printf");
 				static int numFailures = 0;
