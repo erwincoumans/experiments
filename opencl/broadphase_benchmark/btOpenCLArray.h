@@ -30,6 +30,11 @@ class btOpenCLArray
 
 	btOpenCLArray<T>& operator=(const btOpenCLArray<T>& src);
 
+	SIMD_FORCE_INLINE	int	allocSize(int size)
+		{
+			return (size ? size*2 : 1);
+		}
+
 public:
 
 	btOpenCLArray(cl_context ctx, cl_command_queue queue, int initialCapacity=0, bool allowGrowingCapacity=true)
@@ -76,7 +81,24 @@ public:
 		m_capacity=0;
 	}
 	
-
+	SIMD_FORCE_INLINE	void push_back(const T& _Val,bool waitForCompletion=true)
+	{	
+		int sz = size();
+		if( sz == capacity() )
+		{
+			reserve( allocSize(size()) );
+		}
+		copyFromHostPointer(&_Val, 1, sz, waitForCompletion);
+		m_size++;
+	}
+	SIMD_FORCE_INLINE T at(int n) const
+	{
+		btAssert(n>=0);
+		btAssert(n<size());
+		T elem;
+		copyToHostPointer(&elem,1,n,true);
+		return elem;
+	}
 
 	SIMD_FORCE_INLINE	void	resize(int newsize, bool copyOldContents=true)
 	{

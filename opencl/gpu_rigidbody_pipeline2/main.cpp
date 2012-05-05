@@ -24,7 +24,7 @@ subject to the following restrictions:
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 #include "Win32OpenGLRenderManager.h"
 #include "CLPhysicsDemo.h"
-#include "../broadphase_benchmark/btGridBroadphaseCl.h"
+
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "ShapeData.h"
 

@@ -96,9 +96,21 @@ protected:
 	cl_mem					m_dBpParams;
 
 
+	unsigned int			m_numPrefixSum;
 
 public:
-	unsigned int			m_numPrefixSum;
+
+	cl_mem	getAabbBuffer()
+		{
+			return m_dAABB;
+		}
+	virtual int	getNumOverlap() const
+	{
+		return m_numPrefixSum;
+	}
+	
+
+	
 
 	bt3dGridBroadphaseOCL(	btOverlappingPairCache* overlappingPairCache,
 							const btVector3& cellSize, 

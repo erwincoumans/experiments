@@ -1477,8 +1477,8 @@ void	broadphase()
 			//sBroadphase->calculateOverlappingPairs(0, NUM_OBJECTS);
 
 
-			gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
-			gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
+			gFpIO.m_dAllOverlappingPairs = sBroadphase->getOverlappingPairBuffer();
+			gFpIO.m_numOverlap = sBroadphase->getNumOverlap();
 
 #define VALIDATE_BROADPHASE
 #ifdef VALIDATE_BROADPHASE
@@ -1492,7 +1492,7 @@ void	broadphase()
 			btAlignedObjectArray<btAabb2Host> unsortedHostAabbs;
 			gpuUnsortedAabbs.copyToHost(unsortedHostAabbs);
 
-//#define VALIDATE_HOST_NOW
+#define VALIDATE_HOST_NOW
 #ifdef VALIDATE_HOST_NOW
 			
 			{
@@ -1805,7 +1805,7 @@ void	broadphase()
 				gFpIO.m_numOverlap = newPairs.size();
 				colorPairsOpenCL(gFpIO);
 				gFpIO.m_dAllOverlappingPairs = sBroadphase->m_dAllOverlappingPairs;
-				gFpIO.m_numOverlap = sBroadphase->m_numPrefixSum;
+				gFpIO.m_numOverlap = sBroadphase->getNumOverlap();
 
 				validatedNumPairs = newPairs.size();
 				btAlignedObjectArray<btInt2> sapPairsHost;
@@ -2017,8 +2017,12 @@ void RenderScene(void)
 	 CProfileManager::Increment_Frame_Counter();
 	  
 
-        if (printStats)
-            CProfileManager::dumpAll();    
+	static int firstStats = 10;
+    if (printStats || firstStats==1)
+	{
+        CProfileManager::dumpAll();    
+	}
+	firstStats--;
 
 }
 

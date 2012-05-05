@@ -132,8 +132,10 @@ void btGridBroadphaseCl::calcHashAABB()
 }
 
 
-void btGridBroadphaseCl::calculateOverlappingPairs(float* positions, int numObjects)
+void btGridBroadphaseCl::calculateOverlappingPairs(float* positions, int numObjects1)
 {
+	int numObjects = m_numHandles;
+
 	btDispatcher* dispatcher=0;
 
 	// update constants
@@ -145,7 +147,7 @@ void btGridBroadphaseCl::calculateOverlappingPairs(float* positions, int numObje
 	// prepare AABB array
 	{
 		BT_PROFILE("prepareAABB");
-		prepareAABB(positions, numObjects);
+		prepareAABB(positions, numObjects1);
 	}
 	// calculate hash
 	{

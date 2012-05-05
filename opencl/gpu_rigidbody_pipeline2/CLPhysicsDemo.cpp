@@ -27,7 +27,14 @@ subject to the following restrictions:
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../../dynamics/basic_demo/ConvexHeightFieldShape.h"
+//#define USE_GRID_BROADPHASE
+#ifdef USE_GRID_BROADPHASE
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
+#else
+#include "btGpuSapBroadphase.h"
+#endif //USE_GRID_BROADPHASE
+
+#include "../broadphase_benchmark/btAabbHost.h"
 #include "LinearMath/btQuickprof.h"
 
 
@@ -73,7 +80,11 @@ struct InternalData
 	btOpenCLArray<btVector3>* m_angVelBuf;
 	btOpenCLArray<float>* m_bodyTimes;
 	bool	m_useInterop;
+#ifdef USE_GRID_BROADPHASE
 	btGridBroadphaseCl* m_Broadphase;
+#else
+	btGpuSapBroadphase* m_Broadphase;
+#endif //USE_GRID_BROADPHASE
 
 	btOpenCLArray<btAABBHost>* m_localShapeAABB;
 
@@ -236,7 +247,8 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 
 	if (collisionShapeIndex>=0)
 	{
-		btBroadphaseProxy* proxy = m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1,0,0);//m_dispatcher);
+		//btBroadphaseProxy* proxy = m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1,0,0);//m_dispatcher);
+		m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
 	}
 			
 	bool writeToGpu = false;
@@ -274,11 +286,17 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	
 	int maxObjects = btMax(256,MAX_CONVEX_BODIES_CL);
 	int maxPairsSmallProxy = 32;
-	btOverlappingPairCache* overlappingPairCache=0;
+	
 
+#ifdef USE_GRID_BROADPHASE
+	btOverlappingPairCache* overlappingPairCache=0;
 	m_data->m_Broadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
 		g_cxMainContext ,g_device,g_cqCommandQue);
-
+#else //USE_GRID_BROADPHASE
+	m_data->m_Broadphase = new btGpuSapBroadphase(g_cxMainContext ,g_device,g_cqCommandQue);//overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
+		//g_cxMainContext ,g_device,g_cqCommandQue);
+	
+#endif//USE_GRID_BROADPHASE
 	
 
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
@@ -385,7 +403,7 @@ void	CLPhysicsDemo::stepSimulation()
 		gFpIO.m_numObjects = m_numPhysicsInstances;
 		gFpIO.m_positionOffset = SHAPE_VERTEX_BUFFER_SIZE/4;
 		gFpIO.m_clObjectsBuffer = clBuffer;
-		gFpIO.m_dAABB = m_data->m_Broadphase->m_dAABB;
+		gFpIO.m_dAABB = m_data->m_Broadphase->getAabbBuffer();
 		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABB->getBufferCL();
 		gFpIO.m_numOverlap = 0;
 		{
@@ -395,9 +413,9 @@ void	CLPhysicsDemo::stepSimulation()
 		if (1)
 		{
 			BT_PROFILE("calculateOverlappingPairs");
-			m_data->m_Broadphase->calculateOverlappingPairs(0, m_numPhysicsInstances);
-			gFpIO.m_dAllOverlappingPairs = m_data->m_Broadphase->m_dAllOverlappingPairs;
-			gFpIO.m_numOverlap = m_data->m_Broadphase->m_numPrefixSum;
+			m_data->m_Broadphase->calculateOverlappingPairs();
+			gFpIO.m_dAllOverlappingPairs = m_data->m_Broadphase->getOverlappingPairBuffer();
+			gFpIO.m_numOverlap = m_data->m_Broadphase->getNumOverlap();
 		}
 		
 		//printf("gFpIO.m_numOverlap = %d\n",gFpIO.m_numOverlap );

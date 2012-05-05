@@ -92,7 +92,7 @@ protected:
 	unsigned int	m_numOverflows;
 // 
 public:
-	virtual int getNumOverlap()
+	virtual int getNumOverlap() const
 	{
 		return m_hPairScanChanged[m_numHandles+1];
 	}
@@ -115,7 +115,7 @@ public:
 	virtual ~btGpu3DGridBroadphase();
 	virtual void	calculateOverlappingPairs(btDispatcher* dispatcher);
 
-	virtual btBroadphaseProxy*	createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask, btDispatcher* dispatcher,void* multiSapProxy);
+	virtual btBroadphaseProxy*	createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask, btDispatcher* dispatcher=0,void* multiSapProxy=0);
 	virtual void	destroyProxy(btBroadphaseProxy* proxy,btDispatcher* dispatcher);
 	virtual void	rayTest(const btVector3& rayFrom,const btVector3& rayTo, btBroadphaseRayCallback& rayCallback);
 	virtual void	resetPool(btDispatcher* dispatcher);

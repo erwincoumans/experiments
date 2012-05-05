@@ -19,6 +19,7 @@ subject to the following restrictions:
 
 #include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
+#include "btAabbHost.h"
 
 struct MyAabbConstData 
 {
@@ -26,13 +27,7 @@ struct MyAabbConstData
 	int numElem;
 };
 
-struct  btAABBHost //keep this in sync with btAABBCL!
-{
-	float			fx;
-	float			fy;
-	float			fz;
-	unsigned int	uw;
-};
+
 
 class btGridBroadphaseCl : public bt3dGridBroadphaseOCL
 {
@@ -50,6 +45,11 @@ protected:
 
 		cl_mem					m_dAllOverlappingPairs;
 
+		cl_mem	getOverlappingPairBuffer()
+		{
+			return m_dAllOverlappingPairs;
+		}
+
 		
 		btGridBroadphaseCl(	btOverlappingPairCache* overlappingPairCache,
 							const btVector3& cellSize, 
@@ -65,10 +65,11 @@ protected:
 		virtual void prepareAABB(float* positions, int numObjects);
 		virtual void calcHashAABB();
 
-		void calculateOverlappingPairs(float* positions, int numObjects);
+		void calculateOverlappingPairs(float* positions=0, int numObjects=0);
 		
 		virtual ~btGridBroadphaseCl();							
 	
+		
 };
 
 #endif //GRID_BROADPHASE_CL_H
