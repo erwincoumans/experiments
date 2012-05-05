@@ -521,7 +521,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 		if (1)
 		{
 			BT_PROFILE("GPU solveContactConstraint");
-			//m_internalData->m_solverDataGPU->m_nIterations = 5;
+			m_internalData->m_solverGPU->m_nIterations = 4;//10
 			m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, 
 				m_internalData->m_inertiaBufferGPU, 
 				m_internalData->m_contactCGPU,

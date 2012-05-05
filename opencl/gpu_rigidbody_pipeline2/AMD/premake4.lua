@@ -23,6 +23,8 @@
 		
 		files {
 			"../main.cpp",
+			"../btGpuSapBroadphase.cpp",
+			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
 			"../CLPhysicsDemo.h",
 			"../GLInstancingRenderer.cpp",

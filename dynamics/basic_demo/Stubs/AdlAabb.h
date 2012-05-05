@@ -70,8 +70,8 @@ struct Aabb
 
 void Aabb::setEmpty()
 {
-	m_max = make_float4( -FLT_MAX );
-	m_min = make_float4( FLT_MAX );
+	m_max = make_float4( -FLT_MAX,-FLT_MAX,-FLT_MAX,0.f );
+	m_min = make_float4( FLT_MAX,FLT_MAX,FLT_MAX,0.f );
 }
 
 void Aabb::includeVolume(const Aabb& aabb)

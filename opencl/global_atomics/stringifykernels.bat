@@ -1,4 +1,4 @@
-stringify.py global_atomics.cl globalAtomicsKernelString >globalAtomicsKernel.h
+..\stringify.py global_atomics.cl globalAtomicsKernelString >globalAtomicsKernel.h
 
 
 

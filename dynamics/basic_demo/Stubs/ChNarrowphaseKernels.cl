@@ -361,7 +361,7 @@ Matrix3x3 qtGetRotationMatrix(Quaternion quat)
 
 
 #define WG_SIZE 64
-#define HEIGHT_RES 4
+#define HEIGHT_RES 4 //keep this in sync with ConvexHeightFieldShape.h
 #define SHAPE_CONVEX_HEIGHT_FIELD 1//keep this in sync with AdlCollisionShape.h!
 
 typedef struct

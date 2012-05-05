@@ -85,7 +85,10 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 		}
 	}
 
-	m_overlappingPairs.copyFromHost(hostPairs);
+	if (hostPairs.size())
+	{
+		m_overlappingPairs.copyFromHost(hostPairs);
+	}
 #else
 	{
 		BT_PROFILE("GPU SAP");

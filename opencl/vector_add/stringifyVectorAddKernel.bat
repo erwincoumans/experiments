@@ -1,4 +1,4 @@
-stringify.py VectorAddKernels.cl vectorAddCL >VectorAddKernels.h
+..\stringify.py VectorAddKernels.cl vectorAddCL >VectorAddKernels.h
 
 
 

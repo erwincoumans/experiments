@@ -110,7 +110,7 @@ void ChNarrowphase::setShape( ShapeDataType shapeBuf, ShapeBase* shape, int idx,
 void ChNarrowphase::setShape( btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf, ConvexHeightField* cvxShape, int idx, float collisionMargin )
 {
 	btOpenCLArray<ShapeData>* dst = (btOpenCLArray<ShapeData>*)shapeBuf;
-	cvxShape->m_aabb.expandBy( make_float4( collisionMargin ) );
+	cvxShape->m_aabb.expandBy( make_float4( collisionMargin,collisionMargin,collisionMargin,0.f ) );
 	{
 		ShapeData s;
 		{

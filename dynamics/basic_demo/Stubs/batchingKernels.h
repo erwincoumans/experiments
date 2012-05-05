@@ -1,20 +1,19 @@
-/*
-Copyright (c) 2012 Advanced Micro Devices, Inc.  
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
-subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-3. This notice may not be removed or altered from any source distribution.
-*/
-//Originally written by Takahiro Harada
-
-
 static const char* batchingKernelsCL= \
+"/*\n"
+"Copyright (c) 2012 Advanced Micro Devices, Inc.  \n"
+"\n"
+"This software is provided 'as-is', without any express or implied warranty.\n"
+"In no event will the authors be held liable for any damages arising from the use of this software.\n"
+"Permission is granted to anyone to use this software for any purpose, \n"
+"including commercial applications, and to alter it and redistribute it freely, \n"
+"subject to the following restrictions:\n"
+"\n"
+"1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.\n"
+"2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.\n"
+"3. This notice may not be removed or altered from any source distribution.\n"
+"*/\n"
+"//Originally written by Takahiro Harada\n"
+"\n"
 "\n"
 "#pragma OPENCL EXTENSION cl_amd_printf : enable\n"
 "#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable\n"
@@ -128,39 +127,9 @@ static const char* batchingKernelsCL= \
 "	return ((ans >> bitIdx)&1) == 0;\n"
 "}\n"
 "\n"
-"typedef struct \n"
-"{\n"
-"	int m_valInt0;\n"
-"	int m_valInt1;\n"
-"	int m_valInt2;\n"
-"	int m_valInt3;\n"
-"\n"
-"	int m_valInt4;\n"
-"	int m_valInt5;\n"
-"	int m_valInt6;\n"
-"	int m_valInt7;\n"
-"\n"
-"	int m_valInt8;\n"
-"	int m_valInt9;\n"
-"	int m_valInt10;\n"
-"	int m_valInt11;\n"
-"	\n"
-"	int	m_valInt12;\n"
-"	int	m_valInt13;\n"
-"	int	m_valInt14;\n"
-"	int	m_valInt15;\n"
-"\n"
-"\n"
-"	float m_fval0;\n"
-"	float m_fval1;\n"
-"	float m_fval2;\n"
-"	float m_fval3;\n"
-"} SolverDebugInfo;\n"
-"\n"
 "//	batching on the GPU\n"
-"__kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4* gConstraintsOut, //__global u32* gRes, \n"
+"__kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4* gConstraintsOut,\n"
 "		__global u32* gN, __global u32* gStart, \n"
-"//		__global SolverDebugInfo* debugInfo, \n"
 "		ConstBuffer cb )\n"
 "{\n"
 "	__local u32 ldsStackIdx[STACK_SIZE];\n"

@@ -16,7 +16,7 @@ subject to the following restrictions:
 //
 //#include "vld.h"
 #include <GL/glew.h>
-#include "btBulletDynamicsCommon.h"
+
 #include "GLInstancingRenderer.h"
 
 
@@ -24,13 +24,15 @@ subject to the following restrictions:
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 #include "Win32OpenGLRenderManager.h"
 #include "CLPhysicsDemo.h"
-
-#include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
+#include "../broadphase_benchmark/btGridBroadphaseCl.h"
+#include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "ShapeData.h"
+#include "LinearMath/btQuickprof.h"
 
 int NUM_OBJECTS_X = 32;
 int NUM_OBJECTS_Y = 24;
 int NUM_OBJECTS_Z = 32;
+
 
 float X_GAP = 2.f;
 float Y_GAP = 2.f;
@@ -50,7 +52,7 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	float orn[4] = {0,0,0,1};
 	float color[4] = {1,1,1,1};
 	int index=0;
-#if 0
+#if 1
 	{
 		int numVertices = sizeof(barrel_vertices)/strideInBytes;
 		int numIndices = sizeof(barrel_indices)/sizeof(int);
@@ -58,7 +60,7 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	}
 
 
-	float barrelScaling[4] = {2,2,2,2};
+	float barrelScaling[4] = {2,2,2,1};
 
 
 	int barrelCollisionShapeIndex = physicsSim.registerCollisionShape(&barrel_vertices[0],strideInBytes, sizeof(barrel_vertices)/strideInBytes,&barrelScaling[0]);
@@ -67,15 +69,15 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 
 	for (int i=0;i<NUM_OBJECTS_X;i++)
 	{
-		for (int j=NUM_OBJECTS_Y/2;j<(NUM_OBJECTS_Y/2+NUM_OBJECTS_Y/4);j++)
+		for (int j=0;j<(NUM_OBJECTS_Y/2);j++)
 		{
 			for (int k=0;k<NUM_OBJECTS_Z;k++)
 			{
 				float mass = j? 1.f : 0.f;
 
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
-				position[1]=(j*Y_GAP-NUM_OBJECTS_Y/2);
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
+				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+5;
+				position[1]=(j*Y_GAP*2-NUM_OBJECTS_Y/2);
+				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)-NUM_OBJECTS_Z*3;
 				position[3] = 1.f;
 				
 				renderer.registerGraphicsInstance(barrelShapeIndex,position,orn,color,barrelScaling);
@@ -165,15 +167,15 @@ int main(int argc, char* argv[])
 	bool useInterop = true;
 	demo.init(-1,-1,useInterop);
 
-	render.InitShaders();
+		render.InitShaders();
 
-	if (useInterop)
+		if (useInterop)
 		demo.setupInterop();
 
 	createScene(render, demo);
 		
 
-	printf("num objects = %d\n", NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z);
+	printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
 
 
 	render.writeTransforms();

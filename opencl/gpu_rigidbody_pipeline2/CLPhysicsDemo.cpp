@@ -242,8 +242,8 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 {
 	btVector3 aabbMin(position[0],position[0],position[0]);
 	btVector3 aabbMax = aabbMin;
-	aabbMin -= btVector3(1.f,1.f,1.f);
-	aabbMax += btVector3(1.f,1.f,1.f);
+	aabbMin -= btVector3(1.f,1.f,1.f)*0.1f;
+	aabbMax += btVector3(1.f,1.f,1.f)*0.1f;
 
 	if (collisionShapeIndex>=0)
 	{
@@ -430,7 +430,7 @@ void	CLPhysicsDemo::stepSimulation()
 					if (narrowphaseAndSolver)
 						setupBodies(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getBodyInertiasGpu());
 				}
-				if (gFpIO.m_numOverlap)
+				
 				{
 					BT_PROFILE("computeContactsAndSolver");
 					if (narrowphaseAndSolver)

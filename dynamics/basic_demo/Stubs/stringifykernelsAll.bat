@@ -1,10 +1,5 @@
-stringify.py ChNarrowphaseKernels.cl narrowphaseKernelsCL >ChNarrowphaseKernels.h
-stringify.py SolverKernels.cl solverKernelsCL >SolverKernels.h
-stringify.py batchingKernels.cl batchingKernelsCL >batchingKernels.h
+..\..\..\opencl\stringify.py ChNarrowphaseKernels.cl narrowphaseKernelsCL >ChNarrowphaseKernels.h
+..\..\..\opencl\stringify.py SolverKernels.cl solverKernelsCL >SolverKernels.h
+..\..\..\opencl\stringify.py batchingKernels.cl batchingKernelsCL >batchingKernels.h
 
-
-
-
-@echo Warning:
-@echo You might still need to find/replace for \\n (due to macros) and replace #include statements by their content
 pause

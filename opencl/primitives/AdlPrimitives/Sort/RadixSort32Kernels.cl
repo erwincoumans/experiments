@@ -73,8 +73,8 @@ typedef struct
 
 typedef struct
 {
-	int m_key;
-	int m_value;
+	unsigned int m_key;
+	unsigned int m_value;
 } SortDataCL;
 
 

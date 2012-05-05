@@ -9,5 +9,7 @@ fh = open(arg)
 print 'static const char* '+sys.argv[2]+'= \\'
 for line in fh.readlines():
 	a = line.strip('\n')
-	print '"'+a+'\\n"'
+	a = a+'\\n'
+	a = a.replace('\\\\n','')
+	print '"'+a+'"'
 print ';'
