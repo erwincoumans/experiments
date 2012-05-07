@@ -18,14 +18,11 @@ subject to the following restrictions:
 #define _BT_CONVEX_UTILITY_H
 
 #include "LinearMath/btAlignedObjectArray.h"
-#include "LinearMath/btVector3.h"
+#include "LinearMath/btTransform.h"
 
-struct btFace
-{
-	btAlignedObjectArray<int>	m_indices;
-//	btAlignedObjectArray<int>	m_connectedFaces;
-	btScalar	m_plane[4];
-};
+#include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
+
+
 
 class btConvexUtility
 {
@@ -33,9 +30,27 @@ class btConvexUtility
 		
 	btAlignedObjectArray<btVector3>	m_vertices;
 	btAlignedObjectArray<btFace>	m_faces;
-	
+	btAlignedObjectArray<btVector3> m_uniqueEdges;
+
+	btVector3		m_localCenter;
+	btVector3		m_extents;
+	btScalar		m_radius;
+	btVector3		mC;
+	btVector3		mE;
+
+		
+	btConvexUtility()
+	{
+	}
+	virtual ~btConvexUtility();
+
 	bool	initializePolyhedralFeatures(const btAlignedObjectArray<btVector3>& orgVertices, bool mergeCoplanarTriangles);
 		
+	void	initialize();
+	bool testContainment() const;
+
+
+
 };
 #endif
 	

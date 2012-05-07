@@ -33,6 +33,8 @@
 			"../GlutRenderer.h",
 			"../Win32OpenGLRenderManager.cpp",
 			"../Win32OpenGLRenderManager.h",	
+			"../ConvexHullContact.cpp",
+			"../ConvexHullContact.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
 			"../../broadphase_benchmark/btPrefixScanCL.h",
 			"../../broadphase_benchmark/btRadixSort32CL.cpp",

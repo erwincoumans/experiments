@@ -192,18 +192,18 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 		verts.push_back(btVector3(vertex[0]*scaling[0],vertex[1]*scaling[1],vertex[2]*scaling[2]));
 	}
 
-	btConvexUtility util;
+	btConvexUtility* utilPtr = new btConvexUtility();
 	bool merge = true;
-	util.initializePolyhedralFeatures(verts,merge);
+	utilPtr->initializePolyhedralFeatures(verts,merge);
 
-	int numFaces= util.m_faces.size();
+	int numFaces= utilPtr->m_faces.size();
 	float4* eqn = new float4[numFaces];
 	for (int i=0;i<numFaces;i++)
 	{
-		eqn[i].x = util.m_faces[i].m_plane[0];
-		eqn[i].y = util.m_faces[i].m_plane[1];
-		eqn[i].z = util.m_faces[i].m_plane[2];
-		eqn[i].w = util.m_faces[i].m_plane[3];
+		eqn[i].x = utilPtr->m_faces[i].m_plane[0];
+		eqn[i].y = utilPtr->m_faces[i].m_plane[1];
+		eqn[i].z = utilPtr->m_faces[i].m_plane[2];
+		eqn[i].w = utilPtr->m_faces[i].m_plane[3];
 	}
 	printf("numFaces = %d\n", numFaces);
 
@@ -213,7 +213,7 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 	int shapeIndex=-1;
 
 	if (narrowphaseAndSolver)
-		shapeIndex = narrowphaseAndSolver->registerShape(s_convexHeightField);
+		shapeIndex = narrowphaseAndSolver->registerShape(s_convexHeightField,utilPtr);
 
 	if (shapeIndex>=0)
 	{

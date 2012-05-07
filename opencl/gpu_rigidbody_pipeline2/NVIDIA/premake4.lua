@@ -31,6 +31,8 @@
 			"../GLInstancingRenderer.h",
 			"../GlutRenderer.cpp",
 			"../GlutRenderer.h",
+			"../ConvexHullContact.cpp",
+			"../ConvexHullContact.h",
 			"../Win32OpenGLRenderManager.cpp",
 			"../Win32OpenGLRenderManager.h",	
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",

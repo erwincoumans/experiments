@@ -70,7 +70,7 @@ public:
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
-	int registerShape(class ConvexHeightField* convexShape);
+	int registerShape(class ConvexHeightField* convexShape,class btConvexUtility* convexPtr);
 	int registerRigidBody(int shapeIndex, float mass, const float* position, const float* orientation, bool writeToGpu = true);
 	void	writeAllBodiesToGpu();
 	
