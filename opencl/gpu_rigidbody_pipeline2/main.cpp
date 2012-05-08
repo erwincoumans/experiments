@@ -29,9 +29,9 @@ subject to the following restrictions:
 #include "ShapeData.h"
 #include "LinearMath/btQuickprof.h"
 
-int NUM_OBJECTS_X = 32;
-int NUM_OBJECTS_Y = 24;
-int NUM_OBJECTS_Z = 32;
+int NUM_OBJECTS_X = 16;
+int NUM_OBJECTS_Y = 16;
+int NUM_OBJECTS_Z = 16;
 
 
 float X_GAP = 2.f;

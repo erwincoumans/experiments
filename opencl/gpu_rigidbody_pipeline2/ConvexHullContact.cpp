@@ -80,12 +80,12 @@ static void clipFace(const btVertexArray& pVtxIn, btVertexArray& ppVtxOut, const
 }
 
 
-static bool TestSepAxis(const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, const btTransform& transA,const btTransform& transB, const btVector3& sep_axis, btScalar& depth)
+static bool TestSepAxis(const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, const btTransform& transA,const btTransform& transB, const btVector3& sep_axis, const btAlignedObjectArray<btVector3> vertices,btScalar& depth)
 {
 	btScalar Min0,Max0;
 	btScalar Min1,Max1;
-	hullA.project(transA,sep_axis, Min0, Max0);
-	hullB.project(transB, sep_axis, Min1, Max1);
+	hullA.project(transA,sep_axis,vertices, Min0, Max0);
+	hullB.project(transB, sep_axis,vertices, Min1, Max1);
 
 	if(Max0<Min1 || Max1<Min0)
 		return false;
@@ -167,7 +167,13 @@ static bool TestInternalObjects( const btTransform& trans0, const btTransform& t
 #endif //TEST_INTERNAL_OBJECTS
 
 
-static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, const btTransform& transA,const btTransform& transB, btVector3& sep)
+static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, 
+	const btTransform& transA,const btTransform& transB, 
+	const btAlignedObjectArray<btVector3>& vertices, 
+	const btAlignedObjectArray<btVector3>& uniqueEdges, 
+	const btAlignedObjectArray<btGpuFace>& faces,
+	const btAlignedObjectArray<int>& indices,
+	btVector3& sep)
 {
 	BT_PROFILE("findSeparatingAxis");
 	gActualSATPairTests++;
@@ -181,11 +187,11 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 	btScalar dmin = FLT_MAX;
 	int curPlaneTests=0;
 
-	int numFacesA = hullA.m_faces.size();
+	int numFacesA = hullA.m_numFaces;
 	// Test normals from hullA
 	for(int i=0;i<numFacesA;i++)
 	{
-		const btVector3 Normal(hullA.m_faces[i].m_plane[0], hullA.m_faces[i].m_plane[1], hullA.m_faces[i].m_plane[2]);
+		const btVector3 Normal(faces[hullA.m_faceOffset+i].m_plane[0], faces[hullA.m_faceOffset+i].m_plane[1], faces[hullA.m_faceOffset+i].m_plane[2]);
 		const btVector3 faceANormalWS = transA.getBasis() * Normal;
 		if (DeltaC2.dot(faceANormalWS)<0)
 			continue;
@@ -199,7 +205,7 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 #endif
 
 		btScalar d;
-		if(!TestSepAxis( hullA, hullB, transA,transB, faceANormalWS, d))
+		if(!TestSepAxis( hullA, hullB, transA,transB, faceANormalWS, vertices,d))
 			return false;
 
 		if(d<dmin)
@@ -209,11 +215,11 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 		}
 	}
 
-	int numFacesB = hullB.m_faces.size();
+	int numFacesB = hullB.m_numFaces;
 	// Test normals from hullB
 	for(int i=0;i<numFacesB;i++)
 	{
-		const btVector3 Normal(hullB.m_faces[i].m_plane[0], hullB.m_faces[i].m_plane[1], hullB.m_faces[i].m_plane[2]);
+		const btVector3 Normal(faces[hullB.m_faceOffset+i].m_plane[0], faces[hullB.m_faceOffset+i].m_plane[1], faces[hullB.m_faceOffset+i].m_plane[2]);
 		const btVector3 WorldNormal = transB.getBasis() * Normal;
 		if (DeltaC2.dot(WorldNormal)<0)
 			continue;
@@ -227,7 +233,7 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 #endif
 
 		btScalar d;
-		if(!TestSepAxis(hullA, hullB,transA,transB, WorldNormal,d))
+		if(!TestSepAxis(hullA, hullB,transA,transB, WorldNormal,vertices,d))
 			return false;
 
 		if(d<dmin)
@@ -241,13 +247,13 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 
 	int curEdgeEdge = 0;
 	// Test edges
-	for(int e0=0;e0<hullA.m_uniqueEdges.size();e0++)
+	for(int e0=0;e0<hullA.m_numUniqueEdges;e0++)
 	{
-		const btVector3 edge0 = hullA.m_uniqueEdges[e0];
+		const btVector3 edge0 = uniqueEdges[hullA.m_uniqueEdgesOffset+e0];
 		const btVector3 WorldEdge0 = transA.getBasis() * edge0;
-		for(int e1=0;e1<hullB.m_uniqueEdges.size();e1++)
+		for(int e1=0;e1<hullB.m_numUniqueEdges;e1++)
 		{
-			const btVector3 edge1 = hullB.m_uniqueEdges[e1];
+			const btVector3 edge1 = uniqueEdges[hullB.m_uniqueEdgesOffset+e1];
 			const btVector3 WorldEdge1 = transB.getBasis() * edge1;
 
 			btVector3 Cross = WorldEdge0.cross(WorldEdge1);
@@ -267,7 +273,7 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 #endif
 
 				btScalar dist;
-				if(!TestSepAxis( hullA, hullB, transA,transB, Cross, dist))
+				if(!TestSepAxis( hullA, hullB, transA,transB, Cross, vertices,dist))
 					return false;
 
 				if(dist<dmin)
@@ -287,7 +293,13 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 	return true;
 }
 
-static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexPolyhedronCL& hullA,  const btTransform& transA, btVertexArray& worldVertsB1, const btScalar minDist, btScalar maxDist,ContactResult& resultOut)
+static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexPolyhedronCL& hullA,  
+	const btTransform& transA, btVertexArray& worldVertsB1, 
+	const btScalar minDist, btScalar maxDist,
+	const btAlignedObjectArray<btVector3>& vertices,
+	const btAlignedObjectArray<btGpuFace>& faces,
+	const btAlignedObjectArray<int>& indices,
+	ContactResult& resultOut)
 {
 
 	btVertexArray worldVertsB2;
@@ -298,9 +310,12 @@ static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexP
 	int closestFaceA=-1;
 	{
 		btScalar dmin = FLT_MAX;
-		for(int face=0;face<hullA.m_faces.size();face++)
+		for(int face=0;face<hullA.m_numFaces;face++)
 		{
-			const btVector3 Normal(hullA.m_faces[face].m_plane[0], hullA.m_faces[face].m_plane[1], hullA.m_faces[face].m_plane[2]);
+			const btVector3 Normal(
+				faces[hullA.m_faceOffset+face].m_plane[0], 
+				faces[hullA.m_faceOffset+face].m_plane[1], 
+				faces[hullA.m_faceOffset+face].m_plane[2]);
 			const btVector3 faceANormalWS = transA.getBasis() * Normal;
 		
 			btScalar d = faceANormalWS.dot(separatingNormal);
@@ -314,15 +329,15 @@ static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexP
 	if (closestFaceA<0)
 		return;
 
-	const btFace& polyA = hullA.m_faces[closestFaceA];
+	const btGpuFace& polyA = faces[hullA.m_faceOffset+closestFaceA];
 
 		// clip polygon to back of planes of all faces of hull A that are adjacent to witness face
 	int numContacts = pVtxIn->size();
-	int numVerticesA = polyA.m_indices.size();
+	int numVerticesA = polyA.m_numIndices;
 	for(int e0=0;e0<numVerticesA;e0++)
 	{
-		const btVector3& a = hullA.m_vertices[polyA.m_indices[e0]];
-		const btVector3& b = hullA.m_vertices[polyA.m_indices[(e0+1)%numVerticesA]];
+		const btVector3& a = vertices[hullA.m_vertexOffset+indices[polyA.m_indexOffset+e0]];
+		const btVector3& b = vertices[hullA.m_vertexOffset+indices[polyA.m_indexOffset+((e0+1)%numVerticesA)]];
 		const btVector3 edge0 = a - b;
 		const btVector3 WorldEdge0 = transA.getBasis() * edge0;
 		btVector3 worldPlaneAnormal1 = transA.getBasis()* btVector3(polyA.m_plane[0],polyA.m_plane[1],polyA.m_plane[2]);
@@ -402,7 +417,15 @@ static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexP
 }
 
 
-static void	clipHullAgainstHull(const btVector3& separatingNormal1, const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, const btTransform& transA,const btTransform& transB, const btScalar minDist, btScalar maxDist,ContactResult& resultOut)
+static void	clipHullAgainstHull(const btVector3& separatingNormal1, 
+	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, 
+	const btTransform& transA,const btTransform& transB, const btScalar minDist, btScalar maxDist,
+	const btAlignedObjectArray<btVector3>& vertices,
+	const btAlignedObjectArray<btGpuFace>& faces,
+	const btAlignedObjectArray<int>& indices,
+
+
+	ContactResult& resultOut)
 {
 	BT_PROFILE("clipHullAgainstHull");
 	btVector3 separatingNormal = separatingNormal1.normalized();
@@ -415,9 +438,9 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1, const Convex
 	int closestFaceB=-1;
 	btScalar dmax = -FLT_MAX;
 	{
-		for(int face=0;face<hullB.m_faces.size();face++)
+		for(int face=0;face<hullB.m_numFaces;face++)
 		{
-			const btVector3 Normal(hullB.m_faces[face].m_plane[0], hullB.m_faces[face].m_plane[1], hullB.m_faces[face].m_plane[2]);
+			const btVector3 Normal(faces[hullB.m_faceOffset+face].m_plane[0], faces[hullB.m_faceOffset+face].m_plane[1], faces[hullB.m_faceOffset+face].m_plane[2]);
 			const btVector3 WorldNormal = transB.getBasis() * Normal;
 			btScalar d = WorldNormal.dot(separatingNormal);
 			if (d > dmax)
@@ -430,18 +453,18 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1, const Convex
 
 	btVertexArray worldVertsB1;
 	{
-		const btFace& polyB = hullB.m_faces[closestFaceB];
-		const int numVertices = polyB.m_indices.size();
+		const btGpuFace& polyB = faces[hullB.m_faceOffset+closestFaceB];
+		const int numVertices = polyB.m_numIndices;
 		for(int e0=0;e0<numVertices;e0++)
 		{
-			const btVector3& b = hullB.m_vertices[polyB.m_indices[e0]];
+			const btVector3& b = vertices[hullB.m_vertexOffset+indices[polyB.m_indexOffset+e0]];
 			worldVertsB1.push_back(transB*b);
 		}
 	}
 
 	
 	if (closestFaceB>=0)
-		clipFaceAgainstHull(separatingNormal, hullA, transA,worldVertsB1, minDist, maxDist,resultOut);
+		clipFaceAgainstHull(separatingNormal, hullA, transA,worldVertsB1, minDist, maxDist,vertices,faces,indices,resultOut);
 
 }
 
@@ -591,19 +614,27 @@ struct ContactAccumulator: public ContactResult
 		}
 };
 
+btAlignedObjectArray<Contact4> hostContactOut;
+btAlignedObjectArray<int2> hostPairs;
+
 void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , const btAlignedObjectArray<ConvexPolyhedronCL>* hostConvexData)
+			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btAlignedObjectArray<ConvexPolyhedronCL>* hostConvexData,
+			const btAlignedObjectArray<btVector3>& vertices,
+			const btAlignedObjectArray<btVector3>& uniqueEdges,
+			const btAlignedObjectArray<btGpuFace>& faces,
+			const btAlignedObjectArray<int>& indices)
 {
 	
 	BT_PROFILE("computeConvexConvexContactsHost");
-	btAlignedObjectArray<int2> hostPairs;
+
 	
 	{
 		BT_PROFILE("copyToHost(hostPairs)");
 		pairs->copyToHost(hostPairs);
 	}
-	btAlignedObjectArray<Contact4> hostContactOut;
+	
 	if (contactOut->size())
 	{
 		BT_PROFILE("copyToHost(hostContactOut");
@@ -642,17 +673,22 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 
 		
 		btVector3 sepNormalWorldSpace;
-		bool foundSepAxis = findSeparatingAxis(
+		bool foundSepAxis =false;
+
+		{
+			BT_PROFILE("findSeparatingAxis");
+			foundSepAxis = findSeparatingAxis(
 						hostConvexData->at(shapeA), 
 						hostConvexData->at(shapeB),
 						trA,
-						trB,
-						sepNormalWorldSpace);
-
+						trB,vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
+		}
 		ContactAccumulator resultOut;
 
 		if (foundSepAxis)
 		{
+			BT_PROFILE("clipHullAgainstHull");
+	
 			btScalar minDist = -1;
 			btScalar maxDist = 0.1;
 
@@ -662,14 +698,14 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 				hostConvexData->at(shapeA), 
 				hostConvexData->at(shapeA),
 							trA,
-							trB,minDist, maxDist,resultOut);
+							trB,minDist, maxDist,vertices,faces,indices,resultOut);
 			
 		}
 		bool overlap = resultOut.m_closestPointInBs.size()>0;
 		if (overlap)
 		{
 
-		
+			BT_PROFILE("overlap");
 			float4 centerOut;
 			int contactIdx[4]={-1,-1,-1,-1};
 

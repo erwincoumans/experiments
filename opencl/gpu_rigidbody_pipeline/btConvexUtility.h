@@ -23,6 +23,11 @@ subject to the following restrictions:
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 
 
+struct btFace
+{
+	btAlignedObjectArray<int>	m_indices;
+	btScalar	m_plane[4];
+};
 
 class btConvexUtility
 {
