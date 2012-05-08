@@ -29,9 +29,9 @@ subject to the following restrictions:
 #include "ShapeData.h"
 #include "LinearMath/btQuickprof.h"
 
-int NUM_OBJECTS_X = 16;
-int NUM_OBJECTS_Y = 16;
-int NUM_OBJECTS_Z = 16;
+int NUM_OBJECTS_X = 22;
+int NUM_OBJECTS_Y = 22;
+int NUM_OBJECTS_Z = 22;
 
 
 float X_GAP = 2.f;
@@ -202,10 +202,11 @@ int main(int argc, char* argv[])
 			count--;
 			if (count<0)
 			{
+				count = 10;
 				CProfileManager::dumpAll();
 				//printf("total broadphase pairs= %d\n", gFpIO.m_numOverlap);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);
-				printStats  = false;
+				//printStats  = false;
 			}
 		 }
 

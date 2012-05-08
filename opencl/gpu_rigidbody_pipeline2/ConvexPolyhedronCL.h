@@ -12,8 +12,13 @@ struct btGpuFace
 	btScalar	m_plane[4];
 };
 
-struct ConvexPolyhedronCL
+ATTRIBUTE_ALIGNED16(struct) ConvexPolyhedronCL
 {
+	btVector3		m_localCenter;
+	btVector3		m_extents;
+	btVector3		mC;
+	btVector3		mE;
+	btScalar		m_radius;
 
 	int	m_faceOffset;
 	int m_numFaces;
@@ -25,12 +30,9 @@ struct ConvexPolyhedronCL
 
 	int	m_uniqueEdgesOffset;
 	int	m_numUniqueEdges;
+	
+	
 
-	btVector3		m_localCenter;
-	btVector3		m_extents;
-	btScalar		m_radius;
-	btVector3		mC;
-	btVector3		mE;
 
 	inline void project(const btTransform& trans, const btVector3& dir, const btAlignedObjectArray<btVector3>& vertices, btScalar& min, btScalar& max) const
 	{

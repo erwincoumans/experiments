@@ -65,7 +65,7 @@ struct	CustomDispatchData
 	btAlignedObjectArray<btGpuFace> m_convexFaces;
 	btAlignedObjectArray<int> m_convexIndices;
 
-
+	GpuSatCollision*	m_gpuSatCollision;
 	
 
 
@@ -109,7 +109,7 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 	memset(m_internalData,0,sizeof(CustomDispatchData));
 
 	
-
+	m_internalData->m_gpuSatCollision = new GpuSatCollision(ctx,device,queue);
 	m_internalData->m_pBufPairsCPU = new btAlignedObjectArray<int2>;
 	m_internalData->m_pBufPairsCPU->resize(MAX_BROADPHASE_COLLISION_CL);
 	
@@ -347,7 +347,7 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_solverGPU;
 		delete m_internalData->m_bodyBufferCPU;
 		delete m_internalData->m_narrowPhase;
-
+		delete m_internalData->m_gpuSatCollision;
 		delete m_internalData;
 
 	}
@@ -426,7 +426,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 #ifdef USE_CONVEX_CONVEX_HOST
 			m_internalData->m_convexPairsOutGPU->resize(numPairsOut);
 			m_internalData->m_pBufContactOutGPU->resize(nContactOut);
-			computeConvexConvexContactsHost(
+			
+			m_internalData->m_gpuSatCollision->computeConvexConvexContactsHost(
 				m_internalData->m_convexPairsOutGPU,
 				numPairsOut, 
 				m_internalData->m_bodyBufferGPU, 

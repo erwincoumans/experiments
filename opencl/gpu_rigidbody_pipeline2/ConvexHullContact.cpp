@@ -26,6 +26,30 @@ typedef btAlignedObjectArray<btVector3> btVertexArray;
 #include "LinearMath/btQuickprof.h"
 
 #include <float.h> //for FLT_MAX
+#include "../basic_initialize/btOpenCLUtils.h"
+#include "../broadphase_benchmark/btLauncherCL.h"
+	
+GpuSatCollision::GpuSatCollision(cl_context ctx,cl_device_id device, cl_command_queue  q )
+:m_context(ctx),
+m_device(device),
+m_queue(q)
+{
+	char* src = 0;
+	cl_int errNum=0;
+
+	cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/sat.cl");
+	btAssert(errNum==CL_SUCCESS);
+
+	m_findSeparatingAxisKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findSeparatingAxisKernel",&errNum,satProg );
+	btAssert(errNum==CL_SUCCESS);
+
+
+}
+
+GpuSatCollision::~GpuSatCollision()
+{
+	clReleaseKernel(m_findSeparatingAxisKernel);
+}
 
 int gExpectedNbTests=0;
 int gActualNbTests = 0;
@@ -614,10 +638,9 @@ struct ContactAccumulator: public ContactResult
 		}
 };
 
-btAlignedObjectArray<Contact4> hostContactOut;
-btAlignedObjectArray<int2> hostPairs;
 
-void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
+
+void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btAlignedObjectArray<ConvexPolyhedronCL>* hostConvexData,
@@ -631,14 +654,14 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 
 	
 	{
-		BT_PROFILE("copyToHost(hostPairs)");
-		pairs->copyToHost(hostPairs);
+		BT_PROFILE("copyToHost(m_hostPairs)");
+		pairs->copyToHost(m_hostPairs);
 	}
 	
 	if (contactOut->size())
 	{
-		BT_PROFILE("copyToHost(hostContactOut");
-		contactOut->copyToHost(hostContactOut);
+		BT_PROFILE("copyToHost(m_hostContactOut");
+		contactOut->copyToHost(m_hostContactOut);
 	}
 	btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
 	{
@@ -653,12 +676,46 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 
 
 
-	btAssert(hostPairs.size() == nPairs);
+	btAssert(m_hostPairs.size() == nPairs);
+	m_hostContactOut.reserve(nPairs);
+	ContactAccumulator resultOut;
+
+	{
+		btOpenCLArray<int> contactCount(m_context, m_queue);
+		btOpenCLArray<float4> sepNormals(m_context,m_queue);
+		sepNormals.resize(nPairs);
+		
+
+		contactCount.push_back(0);
+		btOpenCLArray<ConvexPolyhedronCL> convexData(m_context,m_queue);
+		convexData.copyFromHost(*hostConvexData);
+		//work-in-progress
+
+		{
+			BT_PROFILE("findSeparatingAxisKernel");
+			btBufferInfoCL bInfo[] = { 
+				btBufferInfoCL( pairs->getBufferCL(), true ), 
+				btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+				btBufferInfoCL( convexData.getBufferCL(),true),
+				btBufferInfoCL( sepNormals.getBufferCL())};
+			btLauncherCL launcher(m_queue, m_findSeparatingAxisKernel);
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst( nPairs  );
+			int num = nPairs;
+			launcher.launch1D( num);
+			clFinish(m_queue);
+		}
+		btAlignedObjectArray<float4> hostNormals;
+		sepNormals.copyToHost(hostNormals);
+		//printf("hostNormals.size()=%d\n",hostNormals.size());
+//		int numPairs = pairCount.at(0);
+		
+	}
 
 	for (int i=0;i<nPairs;i++)
 	{
-		int indexA = hostPairs[i].x;
-		int indexB = hostPairs[i].y;
+		int indexA = m_hostPairs[i].x;
+		int indexB = m_hostPairs[i].y;
 		int shapeA = hostBodyBuf[indexA].m_shapeIdx;
 		int shapeB = hostBodyBuf[indexB].m_shapeIdx;
 
@@ -683,7 +740,7 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 						trA,
 						trB,vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
 		}
-		ContactAccumulator resultOut;
+	
 
 		if (foundSepAxis)
 		{
@@ -692,7 +749,10 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 			btScalar minDist = -1;
 			btScalar maxDist = 0.1;
 
+			resultOut.m_closestPointInBs.resize(0);
+			resultOut.m_distances.resize(0);
 			
+
 
 			clipHullAgainstHull(sepNormalWorldSpace, 
 				hostConvexData->at(shapeA), 
@@ -716,11 +776,11 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 				numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
 			}
 
-			hostContactOut.resize(hostContactOut.size()+1);
-			Contact4& contact = hostContactOut[nContacts];
+			m_hostContactOut.resize(m_hostContactOut.size()+1);
+			Contact4& contact = m_hostContactOut[nContacts];
 			contact.m_batchIdx = i;
-			contact.m_bodyAPtr = hostPairs[i].x;
-			contact.m_bodyBPtr = hostPairs[i].y;
+			contact.m_bodyAPtr = m_hostPairs[i].x;
+			contact.m_bodyBPtr = m_hostPairs[i].y;
 			contact.m_frictionCoeffCmp = 45874;
 			contact.m_restituitionCoeffCmp = 0;
 			
@@ -737,9 +797,9 @@ void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPai
 
 	
 
-	nContacts = hostContactOut.size();
+	nContacts = m_hostContactOut.size();
 	{
-		BT_PROFILE("copyFromHost(hostContactOut");
-		contactOut->copyFromHost(hostContactOut);
+		BT_PROFILE("copyFromHost(m_hostContactOut");
+		contactOut->copyFromHost(m_hostContactOut);
 	}
 }
