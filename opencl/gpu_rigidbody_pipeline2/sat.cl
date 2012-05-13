@@ -1,3 +1,6 @@
+
+
+
 typedef unsigned int u32;
 
 typedef struct
@@ -35,49 +38,285 @@ typedef struct
 
 } ConvexPolyhedronCL;
 
-/*	inline void project(const btTransform& trans, const btVector3& dir, const btAlignedObjectArray<btVector3>& vertices, btScalar& min, btScalar& max) const
-	{
-		min = FLT_MAX;
-		max = -FLT_MAX;
-		int numVerts = m_numVertices;
-		for(int i=0;i<numVerts;i++)
-		{
-			btVector3 pt = trans * vertices[m_vertexOffset+i];
-			btScalar dp = pt.dot(dir);
-			if(dp < min)	min = dp;
-			if(dp > max)	max = dp;
-		}
-		if(min>max)
-		{
-			btScalar tmp = min;
-			min = max;
-			max = tmp;
-		}
-	}
-*/
-
-/*
-
-static bool TestSepAxis(const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, const btTransform& transA,const btTransform& transB, const btVector3& sep_axis, const btAlignedObjectArray<btVector3> vertices,btScalar& depth)
+typedef struct
 {
-	btScalar Min0,Max0;
-	btScalar Min1,Max1;
-	hullA.project(transA,sep_axis,vertices, Min0, Max0);
-	hullB.project(transB, sep_axis,vertices, Min1, Max1);
+	float4 m_plane;
+	int m_indexOffset;
+	int m_numIndices;
+} btGpuFace;
+
+#define make_float4 (float4)
+
+__inline
+float4 cross3(float4 a, float4 b)
+{
+	return cross(a,b);
+}
+
+__inline
+float dot3F4(float4 a, float4 b)
+{
+	float4 a1 = make_float4(a.xyz,0.f);
+	float4 b1 = make_float4(b.xyz,0.f);
+	return dot(a1, b1);
+}
+
+__inline
+float4 fastNormalize4(float4 v)
+{
+	return fast_normalize(v);
+}
+
+
+///////////////////////////////////////
+//	Quaternion
+///////////////////////////////////////
+
+typedef float4 Quaternion;
+
+__inline
+Quaternion qtMul(Quaternion a, Quaternion b);
+
+__inline
+Quaternion qtNormalize(Quaternion in);
+
+__inline
+float4 qtRotate(Quaternion q, float4 vec);
+
+__inline
+Quaternion qtInvert(Quaternion q);
+
+
+
+
+__inline
+Quaternion qtMul(Quaternion a, Quaternion b)
+{
+	Quaternion ans;
+	ans = cross3( a, b );
+	ans += a.w*b+b.w*a;
+//	ans.w = a.w*b.w - (a.x*b.x+a.y*b.y+a.z*b.z);
+	ans.w = a.w*b.w - dot3F4(a, b);
+	return ans;
+}
+
+__inline
+Quaternion qtNormalize(Quaternion in)
+{
+	return fastNormalize4(in);
+//	in /= length( in );
+//	return in;
+}
+__inline
+float4 qtRotate(Quaternion q, float4 vec)
+{
+	Quaternion qInv = qtInvert( q );
+	float4 vcpy = vec;
+	vcpy.w = 0.f;
+	float4 out = qtMul(qtMul(q,vcpy),qInv);
+	return out;
+}
+
+__inline
+Quaternion qtInvert(Quaternion q)
+{
+	return (Quaternion)(-q.xyz, q.w);
+}
+
+__inline
+float4 qtInvRotate(const Quaternion q, float4 vec)
+{
+	return qtRotate( qtInvert( q ), vec );
+}
+
+__inline
+float4 transform(const float4* p, const float4* translation, const Quaternion* orientation)
+{
+	return qtRotate( *orientation, *p ) + (*translation);
+}
+
+
+
+__inline
+float4 normalize3(const float4 a)
+{
+	float4 n = make_float4(a.x, a.y, a.z, 0.f);
+	return fastNormalize4( n );
+}
+
+inline void project(__global const ConvexPolyhedronCL* hull,  const float4 pos, const float4 orn, 
+const float4* dir, __global const float4* vertices, float* min, float* max)
+{
+	min[0] = FLT_MAX;
+	max[0] = -FLT_MAX;
+	int numVerts = hull->m_numVertices;
+
+	const float4 localDir = qtInvRotate(orn,*dir);
+	float offset = dot(pos,*dir);
+	for(int i=0;i<numVerts;i++)
+	{
+		float dp = dot(vertices[hull->m_vertexOffset+i],localDir);
+		if(dp < min[0])	
+			min[0] = dp;
+		if(dp > max[0])	
+			max[0] = dp;
+	}
+	if(min[0]>max[0])
+	{
+		float tmp = min[0];
+		min[0] = max[0];
+		max[0] = tmp;
+	}
+	min[0] += offset;
+	max[0] += offset;
+}
+
+
+inline bool TestSepAxis(__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
+	const float4 posA,const float4 ornA,
+	const float4 posB,const float4 ornB,
+	float4* sep_axis, __global const float4* vertices,float* depth)
+{
+	float Min0,Max0;
+	float Min1,Max1;
+	project(hullA,posA,ornA,sep_axis,vertices, &Min0, &Max0);
+	project(hullB,posB,ornB, sep_axis,vertices, &Min1, &Max1);
 
 	if(Max0<Min1 || Max1<Min0)
 		return false;
 
-	btScalar d0 = Max0 - Min1;
-	assert(d0>=0.0f);
-	btScalar d1 = Max1 - Min0;
-	assert(d1>=0.0f);
-	depth = d0<d1 ? d0:d1;
+	float d0 = Max0 - Min1;
+	float d1 = Max1 - Min0;
+	*depth = d0<d1 ? d0:d1;
 	return true;
 }
-*/
 
 
+
+inline bool IsAlmostZero(const float4 v)
+{
+	if(fabs(v.x)>1e-6f || fabs(v.y)>1e-6f || fabs(v.z)>1e-6f)	
+		return false;
+	return true;
+}
+
+
+bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
+	const float4 posA1,
+	const float4 ornA,
+	const float4 posB1,
+	const float4 ornB,
+	__global const float4* vertices, 
+	__global const float4* uniqueEdges, 
+	__global const btGpuFace* faces,
+	__global const int*  indices,
+	__global volatile float4* sep)
+{
+	int i = get_global_id(0);
+
+	float4 posA = posA1;
+	posA.w = 0.f;
+	float4 posB = posB1;
+	posB.w = 0.f;
+	float4 c0local = hullA->m_localCenter;
+	float4 c0 = transform(&c0local, &posA, &ornA);
+	float4 c1local = hullB->m_localCenter;
+	float4 c1 = transform(&c1local,&posB,&ornB);
+	const float4 DeltaC2 = c0 - c1;
+
+	float dmin = FLT_MAX;
+	int curPlaneTests=0;
+
+	int numFacesA = hullA->m_numFaces;
+	// Test normals from hullA
+	for(int i=0;i<numFacesA;i++)
+	{
+		const float4 normal = faces[hullA->m_faceOffset+i].m_plane;
+		float4 faceANormalWS = qtRotate(ornA,normal);
+
+		if (dot3F4(DeltaC2,faceANormalWS)<0)
+			continue;
+
+		curPlaneTests++;
+
+		float d;
+		if(!TestSepAxis( hullA, hullB, posA,ornA,posB,ornB,&faceANormalWS, vertices,&d))
+			return false;
+
+		if(d<dmin)
+		{
+			dmin = d;
+			*sep = faceANormalWS;
+		}
+	}
+
+	int numFacesB = hullB->m_numFaces;
+	// Test normals from hullB
+	for(int i=0;i<numFacesB;i++)
+	{
+		float4 normal = faces[hullB->m_faceOffset+i].m_plane;
+		const float4 WorldNormal = qtRotate(ornB, normal);
+
+		if (dot3F4(DeltaC2,WorldNormal)<0)
+			continue;
+
+		curPlaneTests++;
+
+		float d;
+		if(!TestSepAxis(hullA, hullB,posA,ornA,posB,ornB,&WorldNormal,vertices,&d))
+			return false;
+
+		if(d<dmin)
+		{
+			dmin = d;
+			*sep = WorldNormal;
+		}
+	}
+
+
+	int curEdgeEdge = 0;
+	// Test edges
+	for(int e0=0;e0<hullA->m_numUniqueEdges;e0++)
+	{
+		const float4 edge0 = uniqueEdges[hullA->m_uniqueEdgesOffset+e0];
+		float4 edge0World = qtRotate(ornA,edge0);
+
+		for(int e1=0;e1<hullB->m_numUniqueEdges;e1++)
+		{
+			const float4 edge1 = uniqueEdges[hullB->m_uniqueEdgesOffset+e1];
+			float4 edge1World = qtRotate(ornB,edge1);
+
+
+			float4 crossje = cross3(edge0World,edge1World);
+
+			curEdgeEdge++;
+			if(!IsAlmostZero(crossje))
+			{
+				crossje = normalize3(crossje);
+				if (dot3F4(DeltaC2,crossje)<0)
+					continue;
+
+				float dist;
+				if(!TestSepAxis( hullA, hullB, posA,ornA,posB,ornB,&crossje, vertices,&dist))
+					return false;
+
+				if(dist<dmin)
+				{
+					dmin = dist;
+					*sep = crossje;
+				}
+			}
+		}
+
+	}
+
+	const float4 deltaC = posB - posA;
+	if((dot3F4(deltaC,*sep))>0.0f)
+	{
+		*sep = -(*sep);
+	}
+	return true;
+}
 
 
 
@@ -85,150 +324,40 @@ static bool TestSepAxis(const ConvexPolyhedronCL& hullA, const ConvexPolyhedronC
 __kernel void   findSeparatingAxisKernel( __global const int2* pairs, 
 																					__global const BodyData* rigidBodies, 
 																					__global const ConvexPolyhedronCL* convexShapes, 
-																					__global volatile float4* separatingNormals, 
+																					__global const float4* vertices,
+																					__global const float4* uniqueEdges,
+																					__global const btGpuFace* faces,
+																					__global const int* indices,
+																					__global volatile float4* separatingNormals,
+																					__global volatile int* hasSeparatingAxis,
 																					int numPairs)
 {
-		
+
 	int i = get_global_id(0);
 	if (i<numPairs)
 	{
-		int shapeIndexA = rigidBodies[pairs[i].x].m_shapeIdx;
+		int bodyIndexA = pairs[i].x;
+		int bodyIndexB = pairs[i].y;
+		int shapeIndexA = rigidBodies[bodyIndexA].m_shapeIdx;
+		int shapeIndexB = rigidBodies[bodyIndexB].m_shapeIdx;
+
 		int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+
+
+		hasSeparatingAxis[i] = findSeparatingAxis(	&convexShapes[shapeIndexA], 
+																								&convexShapes[shapeIndexB],
+																								rigidBodies[bodyIndexA].m_pos,
+																								rigidBodies[bodyIndexA].m_quat,
+																								rigidBodies[bodyIndexB].m_pos,
+																								rigidBodies[bodyIndexB].m_quat,
+																								vertices,
+																								uniqueEdges,
+																								faces,
+																								indices,
+																								&separatingNormals[i]);
+
 	 
-		separatingNormals[i] = (float4)((float)pairs[i].x,(float)pairs[i].y,(float)numFacesA,(float)i);
+
 	}
 }
 
-
-/*
-
-static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, 
-	const btTransform& transA,const btTransform& transB, 
-	const btAlignedObjectArray<btVector3>& vertices, 
-	const btAlignedObjectArray<btVector3>& uniqueEdges, 
-	const btAlignedObjectArray<btGpuFace>& faces,
-	const btAlignedObjectArray<int>& indices,
-	btVector3& sep)
-{
-
-
-//@todo: we could still enable this, even without internal object
-#ifdef TEST_INTERNAL_OBJECTS
-	const btVector3 c0 = transA * hullA.m_localCenter;
-	const btVector3 c1 = transB * hullB.m_localCenter;
-	const btVector3 DeltaC2 = c0 - c1;
-#endif
-
-	btScalar dmin = FLT_MAX;
-	int curPlaneTests=0;
-
-	int numFacesA = hullA.m_numFaces;
-	// Test normals from hullA
-	for(int i=0;i<numFacesA;i++)
-	{
-		const btVector3 Normal(faces[hullA.m_faceOffset+i].m_plane[0], faces[hullA.m_faceOffset+i].m_plane[1], faces[hullA.m_faceOffset+i].m_plane[2]);
-		const btVector3 faceANormalWS = transA.getBasis() * Normal;
-#ifdef TEST_INTERNAL_OBJECTS
-		if (DeltaC2.dot(faceANormalWS)<0)
-			continue;
-#endif //TEST_INTERNAL_OBJECTS
-
-		curPlaneTests++;
-#ifdef TEST_INTERNAL_OBJECTS
-		gExpectedNbTests++;
-		if(gUseInternalObject && !TestInternalObjects(transA,transB, DeltaC2, faceANormalWS, hullA, hullB, dmin))
-			continue;
-		gActualNbTests++;
-#endif
-
-		btScalar d;
-		if(!TestSepAxis( hullA, hullB, transA,transB, faceANormalWS, vertices,d))
-			return false;
-
-		if(d<dmin)
-		{
-			dmin = d;
-			sep = faceANormalWS;
-		}
-	}
-
-	int numFacesB = hullB.m_numFaces;
-	// Test normals from hullB
-	for(int i=0;i<numFacesB;i++)
-	{
-		const btVector3 Normal(faces[hullB.m_faceOffset+i].m_plane[0], faces[hullB.m_faceOffset+i].m_plane[1], faces[hullB.m_faceOffset+i].m_plane[2]);
-		const btVector3 WorldNormal = transB.getBasis() * Normal;
-#ifdef TEST_INTERNAL_OBJECTS
-		if (DeltaC2.dot(WorldNormal)<0)
-			continue;
-#endif
-
-		curPlaneTests++;
-#ifdef TEST_INTERNAL_OBJECTS
-		gExpectedNbTests++;
-		if(gUseInternalObject && !TestInternalObjects(transA,transB,DeltaC2, WorldNormal, hullA, hullB, dmin))
-			continue;
-		gActualNbTests++;
-#endif
-
-		btScalar d;
-		if(!TestSepAxis(hullA, hullB,transA,transB, WorldNormal,vertices,d))
-			return false;
-
-		if(d<dmin)
-		{
-			dmin = d;
-			sep = WorldNormal;
-		}
-	}
-
-	btVector3 edgeAstart,edgeAend,edgeBstart,edgeBend;
-
-	int curEdgeEdge = 0;
-	// Test edges
-	for(int e0=0;e0<hullA.m_numUniqueEdges;e0++)
-	{
-		const btVector3 edge0 = uniqueEdges[hullA.m_uniqueEdgesOffset+e0];
-		const btVector3 WorldEdge0 = transA.getBasis() * edge0;
-		for(int e1=0;e1<hullB.m_numUniqueEdges;e1++)
-		{
-			const btVector3 edge1 = uniqueEdges[hullB.m_uniqueEdgesOffset+e1];
-			const btVector3 WorldEdge1 = transB.getBasis() * edge1;
-
-			btVector3 Cross = WorldEdge0.cross(WorldEdge1);
-			curEdgeEdge++;
-			if(!IsAlmostZero(Cross))
-			{
-				Cross = Cross.normalize();
-				if (DeltaC2.dot(Cross)<0)
-					continue;
-
-
-#ifdef TEST_INTERNAL_OBJECTS
-				gExpectedNbTests++;
-				if(gUseInternalObject && !TestInternalObjects(transA,transB,DeltaC2, Cross, hullA, hullB, dmin))
-					continue;
-				gActualNbTests++;
-#endif
-
-				btScalar dist;
-				if(!TestSepAxis( hullA, hullB, transA,transB, Cross, vertices,dist))
-					return false;
-
-				if(dist<dmin)
-				{
-					dmin = dist;
-					sep = Cross;
-				}
-			}
-		}
-
-	}
-
-	const btVector3 deltaC = transB.getOrigin() - transA.getOrigin();
-	if((deltaC.dot(sep))>0.0f)
-		sep = -sep;
-
-	return true;
-}
-*/

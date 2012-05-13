@@ -28,15 +28,16 @@ subject to the following restrictions:
 #include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "ShapeData.h"
 #include "LinearMath/btQuickprof.h"
+#include "LinearMath/btQuaternion.h"
 
-int NUM_OBJECTS_X = 22;
-int NUM_OBJECTS_Y = 22;
-int NUM_OBJECTS_Z = 22;
+int NUM_OBJECTS_X = 12;
+int NUM_OBJECTS_Y = 12;
+int NUM_OBJECTS_Z = 12;
 
 
-float X_GAP = 2.f;
-float Y_GAP = 2.f;
-float Z_GAP = 2.f;
+float X_GAP = 2.5f;
+float Y_GAP = 2.5f;
+float Z_GAP = 2.5f;
 
 extern int numPairsOut;
 
@@ -49,7 +50,11 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	int cubeShapeIndex = -1;
 
 	float position[4]={0,0,0,0};
+	btQuaternion born(btVector3(1,0,0),SIMD_PI*0.25*0.5);
+
 	float orn[4] = {0,0,0,1};
+	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//{0,0,0,1};
+
 	float color[4] = {1,1,1,1};
 	int index=0;
 #if 1
@@ -80,9 +85,9 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)-NUM_OBJECTS_Z*3;
 				position[3] = 1.f;
 				
-				renderer.registerGraphicsInstance(barrelShapeIndex,position,orn,color,barrelScaling);
+				renderer.registerGraphicsInstance(barrelShapeIndex,position,rotOrn,color,barrelScaling);
 				void* ptr = (void*) index;
-				physicsSim.registerPhysicsInstance(mass,  position, orn, barrelCollisionShapeIndex,ptr);
+				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, barrelCollisionShapeIndex,ptr);
 				
 				index++;
 			}
@@ -113,9 +118,9 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 1.f;
 				
-				renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
+				renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);
 				void* ptr = (void*) index;
-				physicsSim.registerPhysicsInstance(mass,  position, orn, cubeCollisionShapeIndex,ptr);
+				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, cubeCollisionShapeIndex,ptr);
 				
 				index++;
 			}
@@ -202,7 +207,7 @@ int main(int argc, char* argv[])
 			count--;
 			if (count<0)
 			{
-				count = 10;
+				count = 100;
 				CProfileManager::dumpAll();
 				//printf("total broadphase pairs= %d\n", gFpIO.m_numOverlap);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);

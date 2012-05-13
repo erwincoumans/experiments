@@ -189,10 +189,10 @@ int btGpuNarrowphaseAndSolver::registerShape(ConvexHeightField* convexShape,btCo
 	m_internalData->m_convexFaces.resize(faceOffset+convex.m_numFaces);
 	for (i=0;i<convexPtr->m_faces.size();i++)
 	{
-		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane[0] = convexPtr->m_faces[i].m_plane[0];
-		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane[1] = convexPtr->m_faces[i].m_plane[1];
-		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane[2] = convexPtr->m_faces[i].m_plane[2];
-		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane[3] = convexPtr->m_faces[i].m_plane[3];
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.x = convexPtr->m_faces[i].m_plane[0];
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.y = convexPtr->m_faces[i].m_plane[1];
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.z = convexPtr->m_faces[i].m_plane[2];
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.w = convexPtr->m_faces[i].m_plane[3];
 		int indexOffset = m_internalData->m_convexIndices.size();
 		int numIndices = convexPtr->m_faces[i].m_indices.size();
 		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_numIndices = numIndices;
@@ -427,6 +427,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 			m_internalData->m_convexPairsOutGPU->resize(numPairsOut);
 			m_internalData->m_pBufContactOutGPU->resize(nContactOut);
 			
+
 			m_internalData->m_gpuSatCollision->computeConvexConvexContactsHost(
 				m_internalData->m_convexPairsOutGPU,
 				numPairsOut, 

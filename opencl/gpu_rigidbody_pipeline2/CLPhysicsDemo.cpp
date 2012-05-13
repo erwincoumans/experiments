@@ -27,7 +27,7 @@ subject to the following restrictions:
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../../dynamics/basic_demo/ConvexHeightFieldShape.h"
-//#define USE_GRID_BROADPHASE
+#define USE_GRID_BROADPHASE
 #ifdef USE_GRID_BROADPHASE
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
 #else
