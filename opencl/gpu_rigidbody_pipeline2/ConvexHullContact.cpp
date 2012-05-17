@@ -497,7 +497,7 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 
 	ContactResult& resultOut)
 {
-	BT_PROFILE("clipHullAgainstHull");
+	//BT_PROFILE("clipHullAgainstHull");
 	btVector3 separatingNormal = separatingNormal1.normalized();
 	const btVector3 c0 = transA * hullA.m_localCenter;
 	const btVector3 c1 = transB * hullB.m_localCenter;
@@ -831,7 +831,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 
 		if (hostHasSep[i])
 		{
-			BT_PROFILE("clipHullAgainstHull");
+//			BT_PROFILE("clipHullAgainstHull");
 	
 			btScalar minDist = -1;
 			btScalar maxDist = 0.1;
@@ -861,14 +861,14 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		if (overlap)
 		{
 
-			BT_PROFILE("overlap");
+//			BT_PROFILE("overlap");
 			float4 centerOut;
 			int contactIdx[4]={-1,-1,-1,-1};
 
 			int numPoints = 0;
 			
 			{
-				BT_PROFILE("extractManifold");
+	//			BT_PROFILE("extractManifold");
 				numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
 			}
 

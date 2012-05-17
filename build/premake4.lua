@@ -117,6 +117,7 @@ end
 --	include "../dynamics/basic_demo"
 	
 
+	include "../dynamics/exact-ccd"
 	
 --	include "../dynamics/corotational_fem"
 	--include "../dynamics/nncg_test"

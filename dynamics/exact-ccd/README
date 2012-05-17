@@ -1,0 +1,14 @@
+Exact CCD: Efficient Geometrically Exact Continuous Collision Detection
+
+Released into the public domain by Tyson Brochu and Robert Bridson, 2012.
+
+To make the library, edit the Makefile if needed and then run make; a static library file will be created.  This together with header file "rootparitycollisiontest.h" provides C++ access to the CCD routines.  
+
+To use, create a RootParityCollisionTest object by specifying the vertex positions at the time step beginning and end times, and whether the test should be edge-vs-edge or vertex-vs-triangle, then call run_test() on the object.
+
+IMPORTANT NOTE: Compiler optimizations may cause incorrect behaviour by assuming properties of floating-point arithmetic which do not actually hold, or by using 80-bit extended-precision registers. It has been tested with GCC 4.2.1 on Mac OS X with the -O2 flag set.
+
+=================================================
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+

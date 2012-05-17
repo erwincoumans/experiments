@@ -30,14 +30,14 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
 
-int NUM_OBJECTS_X = 12;
-int NUM_OBJECTS_Y = 12;
-int NUM_OBJECTS_Z = 12;
+int NUM_OBJECTS_X = 25;
+int NUM_OBJECTS_Y = 25;
+int NUM_OBJECTS_Z = 25;
 
 
-float X_GAP = 2.5f;
-float Y_GAP = 2.5f;
-float Z_GAP = 2.5f;
+float X_GAP = 2.f;
+float Y_GAP = 2.f;
+float Z_GAP = 2.f;
 
 extern int numPairsOut;
 
@@ -53,11 +53,13 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	btQuaternion born(btVector3(1,0,0),SIMD_PI*0.25*0.5);
 
 	float orn[4] = {0,0,0,1};
-	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//{0,0,0,1};
+//	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
+	float rotOrn[4] ={0,0,0,1};
+	
 
 	float color[4] = {1,1,1,1};
 	int index=0;
-#if 1
+#if 0
 	{
 		int numVertices = sizeof(barrel_vertices)/strideInBytes;
 		int numIndices = sizeof(barrel_indices)/sizeof(int);
@@ -119,7 +121,8 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 				position[3] = 1.f;
 				
 				renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);
-				void* ptr = (void*) index;
+				int index1 = index;
+				void* ptr = (void*) index1;
 				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, cubeCollisionShapeIndex,ptr);
 				
 				index++;

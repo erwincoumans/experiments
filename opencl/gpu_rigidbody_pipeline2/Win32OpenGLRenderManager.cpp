@@ -18,8 +18,17 @@ subject to the following restrictions:
 
 #include <windows.h>
 #include <GL/gl.h>
+#include "LinearMath/btVector3.h"
 
 static InternalData2* sData = 0;
+
+extern btVector3 m_cameraPosition;
+extern btVector3 m_cameraTargetPosition;
+extern btScalar m_cameraDistance;
+extern btVector3 m_cameraUp;
+extern float m_azi;
+extern float m_ele;
+
 
 struct InternalData2
 {
@@ -33,11 +42,21 @@ struct InternalData2
 	int m_oldHeight;
 	int m_oldBitsPerPel;
 	bool m_quit;
+	Win32OpenGLWindow* m_window;
+	int m_mouseLButton;
+	int m_mouseRButton;
+	int m_mouseMButton;
+	int m_mouseXpos;
+	int m_mouseYpos;
 
-	
 	InternalData2()
 	{
 		m_hWnd = 0;
+		m_window = 0;
+		m_mouseLButton=0;
+		m_mouseRButton=0;
+		m_mouseMButton=0;
+	
 		m_width = 0;
 		m_height = 0;
 		m_hDC = 0;
@@ -152,6 +171,102 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
+		case WM_MBUTTONUP:
+	{
+			int xPos = LOWORD(lParam); 
+			int yPos = HIWORD(lParam); 
+			if (sData)
+			{
+				sData->m_mouseMButton=0;
+				sData->m_mouseXpos = xPos;
+				sData->m_mouseYpos = yPos;
+			}
+		break;
+	}
+	case WM_MBUTTONDOWN:
+	{
+			int xPos = LOWORD(lParam); 
+			int yPos = HIWORD(lParam); 
+			if (sData)
+			{
+				sData->m_mouseMButton=1;
+				sData->m_mouseXpos = xPos;
+				sData->m_mouseYpos = yPos;
+			}
+		break;
+	}
+
+	case WM_LBUTTONUP:
+	{
+			int xPos = LOWORD(lParam); 
+			int yPos = HIWORD(lParam); 
+			if (sData)
+			{
+				sData->m_mouseLButton=0;
+				sData->m_mouseXpos = xPos;
+				sData->m_mouseYpos = yPos;
+			}
+		//	gDemoApplication->mouseFunc(0,1,xPos,yPos);
+		break;
+	}
+	case WM_LBUTTONDOWN:
+		{
+				int xPos = LOWORD(lParam); 
+				int yPos = HIWORD(lParam); 
+			if (sData)
+			{
+				sData->m_mouseLButton=1;
+				sData->m_mouseXpos = xPos;
+				sData->m_mouseYpos = yPos;
+			}
+			break;
+		}
+
+
+	case 0x020A://WM_MOUSEWHEEL:
+	{
+
+		int  zDelta = (short)HIWORD(wParam);
+		int xPos = LOWORD(lParam); 
+		int yPos = HIWORD(lParam); 
+		m_cameraDistance -= zDelta*0.01;
+		break;
+	}
+
+	case WM_MOUSEMOVE:
+		{
+				int xPos = LOWORD(lParam); 
+				int yPos = HIWORD(lParam); 
+				if (sData)
+				{
+					if (sData->m_mouseLButton)
+					{
+						float xDelta = xPos-sData->m_mouseXpos;
+						float yDelta = yPos-sData->m_mouseYpos;
+						m_azi += xDelta*0.1;
+						m_ele += yDelta*0.1;
+					}
+					sData->m_mouseXpos = xPos;
+					sData->m_mouseYpos = yPos;
+				}
+
+				//gDemoApplication->mouseMotionFunc(xPos,yPos);
+			break;
+		}
+	case WM_RBUTTONUP:
+	{
+			int xPos = LOWORD(lParam); 
+			int yPos = HIWORD(lParam); 
+			//gDemoApplication->mouseFunc(2,1,xPos,yPos);
+		break;
+	}
+	case WM_RBUTTONDOWN:
+	{
+			int xPos = LOWORD(lParam); 
+			int yPos = HIWORD(lParam); 
+			//gDemoApplication->mouseFunc(2,0,xPos,yPos);
+		break;
+	}
 	case WM_SIZE:													// Size Action Has Taken Place
 
 			switch (wParam)												// Evaluate Size Action
