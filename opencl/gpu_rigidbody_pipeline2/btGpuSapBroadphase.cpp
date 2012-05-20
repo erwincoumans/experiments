@@ -25,6 +25,11 @@ m_gpuSortedAabbs(ctx,q)
 	cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
 	btAssert(errNum==CL_SUCCESS);
 
+	
+	
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelOriginal",&errNum,sapProg );
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelBarrier",&errNum,sapProg );
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
 	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernel",&errNum,sapProg );
 	btAssert(errNum==CL_SUCCESS);
 

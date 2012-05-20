@@ -125,7 +125,6 @@ __kernel void   computePairsKernelBarrier( __global const btAabbCL* aabbs, volat
 		
 		barrier(CLK_LOCAL_MEM_FENCE);
 		
-		j++;
 		if (j>=numObjects && !localBreak)
 		{
 			atomic_inc(breakRequest);
@@ -147,12 +146,13 @@ __kernel void   computePairsKernelBarrier( __global const btAabbCL* aabbs, volat
 				}
 			}
 		}
+		j++;
+
 	} while (breakRequest[0]<numActiveWgItems[0]);
 }
 
 
 __kernel void   computePairsKernelLocalSharedMemory( __global const btAabbCL* aabbs, volatile __global int2* pairsOut,volatile  __global int* pairCount, int numObjects, int axis, int maxPairs)
-//__kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __global int2* pairsOut,volatile  __global int* pairCount, int numObjects, int axis, int maxPairs)
 {
 	int i = get_global_id(0);
 	int localId = get_local_id(0);
@@ -200,7 +200,6 @@ __kernel void   computePairsKernelLocalSharedMemory( __global const btAabbCL* aa
 		
 		barrier(CLK_LOCAL_MEM_FENCE);
 		
-		j++;
 		if (j>=numObjects && !localBreak)
 		{
 			atomic_inc(breakRequest);
@@ -223,6 +222,8 @@ __kernel void   computePairsKernelLocalSharedMemory( __global const btAabbCL* aa
 			}
 		}
 		
+		barrier(CLK_LOCAL_MEM_FENCE);
+
 		localCount++;
 		if (localCount==64)
 		{
@@ -231,6 +232,7 @@ __kernel void   computePairsKernelLocalSharedMemory( __global const btAabbCL* aa
 			localAabbs[localId] = ((i+block)<numObjects) ? aabbs[i+block] : aabbs[0];
 			localAabbs[localId+64] = ((i+64+block)<numObjects) ? aabbs[i+block+64] : aabbs[0];
 		}
+		j++;
 		
 	} while (breakRequest[0]<numActiveWgItems[0]);
 	
@@ -289,7 +291,6 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 		
 		barrier(CLK_LOCAL_MEM_FENCE);
 		
-		j++;
 		if (j>=numObjects && !localBreak)
 		{
 			atomic_inc(breakRequest);
@@ -317,6 +318,7 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 				}
 			}
 		}
+		barrier(CLK_LOCAL_MEM_FENCE);
 		
 		localCount++;
 		if (localCount==64)
@@ -326,6 +328,7 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 			localAabbs[localId] = ((i+block)<numObjects) ? aabbs[i+block] : aabbs[0];
 			localAabbs[localId+64] = ((i+64+block)<numObjects) ? aabbs[i+block+64] : aabbs[0];
 		}
+		j++;
 		
 	} while (breakRequest[0]<numActiveWgItems[0]);
 	
