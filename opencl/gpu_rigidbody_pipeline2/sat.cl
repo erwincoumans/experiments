@@ -201,7 +201,9 @@ inline bool IsAlmostZero(const float4 v)
 }
 
 
-bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
+
+
+bool findSeparatingAxisA(	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
 	const float4 posA1,
 	const float4 ornA,
 	const float4 posB1,
@@ -210,7 +212,8 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 	__global const float4* uniqueEdges, 
 	__global const btGpuFace* faces,
 	__global const int*  indices,
-	__global volatile float4* sep)
+	__global volatile float4* sep,
+	float* dmin)
 {
 	int i = get_global_id(0);
 
@@ -224,31 +227,71 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 	float4 c1 = transform(&c1local,&posB,&ornB);
 	const float4 DeltaC2 = c0 - c1;
 
-	float dmin = FLT_MAX;
+
 	int curPlaneTests=0;
 
-	int numFacesA = hullA->m_numFaces;
-	// Test normals from hullA
-	for(int i=0;i<numFacesA;i++)
 	{
-		const float4 normal = faces[hullA->m_faceOffset+i].m_plane;
-		float4 faceANormalWS = qtRotate(ornA,normal);
-
-		if (dot3F4(DeltaC2,faceANormalWS)<0)
-			continue;
-
-		curPlaneTests++;
-
-		float d;
-		if(!TestSepAxis( hullA, hullB, posA,ornA,posB,ornB,&faceANormalWS, vertices,&d))
-			return false;
-
-		if(d<dmin)
+		int numFacesA = hullA->m_numFaces;
+		// Test normals from hullA
+		for(int i=0;i<numFacesA;i++)
 		{
-			dmin = d;
-			*sep = faceANormalWS;
+			const float4 normal = faces[hullA->m_faceOffset+i].m_plane;
+			float4 faceANormalWS = qtRotate(ornA,normal);
+	
+			if (dot3F4(DeltaC2,faceANormalWS)<0)
+				continue;
+	
+			curPlaneTests++;
+	
+			float d;
+			if(!TestSepAxis( hullA, hullB, posA,ornA,posB,ornB,&faceANormalWS, vertices,&d))
+				return false;
+	
+			if(d<*dmin)
+			{
+				*dmin = d;
+				*sep = faceANormalWS;
+			}
 		}
 	}
+
+	const float4 deltaC = posB - posA;
+	if((dot3F4(deltaC,*sep))>0.0f)
+	{
+		*sep = -(*sep);
+	}
+	return true;
+}
+
+
+bool findSeparatingAxisB(	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
+	const float4 posA1,
+	const float4 ornA,
+	const float4 posB1,
+	const float4 ornB,
+	__global const float4* vertices, 
+	__global const float4* uniqueEdges, 
+	__global const btGpuFace* faces,
+	__global const int*  indices,
+	__global volatile float4* sep,
+	float* dmin)
+{
+	int i = get_global_id(0);
+
+	float4 posA = posA1;
+	posA.w = 0.f;
+	float4 posB = posB1;
+	posB.w = 0.f;
+	float4 c0local = hullA->m_localCenter;
+	float4 c0 = transform(&c0local, &posA, &ornA);
+	float4 c1local = hullB->m_localCenter;
+	float4 c1 = transform(&c1local,&posB,&ornB);
+	const float4 DeltaC2 = c0 - c1;
+
+
+	int curPlaneTests=0;
+
+	
 
 	int numFacesB = hullB->m_numFaces;
 	// Test normals from hullB
@@ -266,13 +309,48 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 		if(!TestSepAxis(hullA, hullB,posA,ornA,posB,ornB,&WorldNormal,vertices,&d))
 			return false;
 
-		if(d<dmin)
+		if(d<*dmin)
 		{
-			dmin = d;
+			*dmin = d;
 			*sep = WorldNormal;
 		}
 	}
 
+	const float4 deltaC = posB - posA;
+	if((dot3F4(deltaC,*sep))>0.0f)
+	{
+		*sep = -(*sep);
+	}
+	return true;
+}
+
+
+bool findSeparatingAxisEdgeEdge(	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB, 
+	const float4 posA1,
+	const float4 ornA,
+	const float4 posB1,
+	const float4 ornB,
+	__global const float4* vertices, 
+	__global const float4* uniqueEdges, 
+	__global const btGpuFace* faces,
+	__global const int*  indices,
+	__global volatile float4* sep,
+	float* dmin)
+{
+	int i = get_global_id(0);
+
+	float4 posA = posA1;
+	posA.w = 0.f;
+	float4 posB = posB1;
+	posB.w = 0.f;
+	float4 c0local = hullA->m_localCenter;
+	float4 c0 = transform(&c0local, &posA, &ornA);
+	float4 c1local = hullB->m_localCenter;
+	float4 c1 = transform(&c1local,&posB,&ornB);
+	const float4 DeltaC2 = c0 - c1;
+
+
+	int curPlaneTests=0;
 
 	int curEdgeEdge = 0;
 	// Test edges
@@ -297,12 +375,27 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 					continue;
 
 				float dist;
-				if(!TestSepAxis( hullA, hullB, posA,ornA,posB,ornB,&crossje, vertices,&dist))
-					return false;
-
-				if(dist<dmin)
+				bool result = true;
 				{
-					dmin = dist;
+					float Min0,Max0;
+					float Min1,Max1;
+					project(hullA,posA,ornA,&crossje,vertices, &Min0, &Max0);
+					project(hullB,posB,ornB,&crossje,vertices, &Min1, &Max1);
+				
+					if(Max0<Min1 || Max1<Min0)
+						result = false;
+				
+					float d0 = Max0 - Min1;
+					float d1 = Max1 - Min0;
+					dist = d0<d1 ? d0:d1;
+					result = true;
+
+				}
+				
+
+				if(dist<*dmin)
+				{
+					*dmin = dist;
 					*sep = crossje;
 				}
 			}
@@ -317,6 +410,7 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 	}
 	return true;
 }
+
 
 
 
@@ -343,20 +437,23 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 
 		int numFacesA = convexShapes[shapeIndexA].m_numFaces;
 
+		float dmin = FLT_MAX;
 
-		hasSeparatingAxis[i] = findSeparatingAxis(	&convexShapes[shapeIndexA], 
-																								&convexShapes[shapeIndexB],
-																								rigidBodies[bodyIndexA].m_pos,
-																								rigidBodies[bodyIndexA].m_quat,
-																								rigidBodies[bodyIndexB].m_pos,
-																								rigidBodies[bodyIndexB].m_quat,
-																								vertices,
-																								uniqueEdges,
-																								faces,
-																								indices,
-																								&separatingNormals[i]);
+		
+		bool sepA = findSeparatingAxisA(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
+																								indices,&separatingNormals[i],&dmin);
 
-	 
+		bool sepB = findSeparatingAxisB(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
+																								indices,&separatingNormals[i],&dmin);
+
+		bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
+																								indices,&separatingNormals[i],&dmin);
+
+		 
+		 hasSeparatingAxis[i] = sepA || sepB || sepEE;
 
 	}
 }

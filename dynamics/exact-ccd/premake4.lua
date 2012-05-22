@@ -1,6 +1,9 @@
+
 	
 		project "exact-ccd"
 
+		flags {"FloatStrict"}
+		
 		language "C++"
 				
 		kind "ConsoleApp"
@@ -9,12 +12,11 @@
 --		links {
 --		}
 
-		configuration{}
-
 		includedirs {
 		".",
 		}
 
+	
 		files {
 			"**.cpp",
 			"**.h"

@@ -53,8 +53,8 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	btQuaternion born(btVector3(1,0,0),SIMD_PI*0.25*0.5);
 
 	float orn[4] = {0,0,0,1};
-//	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
-	float rotOrn[4] ={0,0,0,1};
+	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
+//	float rotOrn[4] ={0,0,0,1};
 	
 
 	float color[4] = {1,1,1,1};
@@ -109,10 +109,18 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 
 	for (int i=0;i<NUM_OBJECTS_X;i++)
 	{
-		for (int j=0;j<NUM_OBJECTS_Y/2;j++)
+		for (int j=0;j<NUM_OBJECTS_Y;j++)
 		{
-			for (int k=0;k<NUM_OBJECTS_Z;k++)
+			int k=0;
+			if (j==NUM_OBJECTS_Y-1)
 			{
+				k=1;
+				if (i==0)
+					continue;
+			}
+			for (;k<NUM_OBJECTS_Z;k++)
+			{
+
 				float mass = 1.f;//j? 1.f : 0.f;
 
 				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
@@ -204,19 +212,25 @@ int main(int argc, char* argv[])
 
 		static bool printStats  = true;
 
+		
+		
 		 if (printStats)
 		 {
-			static int count = 10;
+			static int count = 0;
 			count--;
 			if (count<0)
 			{
 				count = 100;
 				CProfileManager::dumpAll();
-				//printf("total broadphase pairs= %d\n", gFpIO.m_numOverlap);
+				printf("total broadphase pairs= %d\n", numPairsTotal);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);
 				//printStats  = false;
+			} else
+			{
+				printf(".");
 			}
 		 }
+		
 
 	}
 

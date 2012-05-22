@@ -11,7 +11,12 @@
 #include <cassert>
 #ifdef _WIN32
 #include <float.h>
-#pragma fenv_access (on)
+#pragma float_control(precise, on)
+#pragma fenv_access(on)
+//#pragma float_control(except, on)
+// The following line is needed on Itanium processors.
+#pragma fp_contract(off)
+
 #else
 #include <fenv.h>
 #endif

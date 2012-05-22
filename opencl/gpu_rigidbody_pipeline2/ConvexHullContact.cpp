@@ -33,23 +33,29 @@ typedef btAlignedObjectArray<btVector3> btVertexArray;
 GpuSatCollision::GpuSatCollision(cl_context ctx,cl_device_id device, cl_command_queue  q )
 :m_context(ctx),
 m_device(device),
-m_queue(q)
+m_queue(q),
+m_findSeparatingAxisKernel(0)
 {
 	char* src = 0;
 	cl_int errNum=0;
 
-	cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/sat.cl");
-	btAssert(errNum==CL_SUCCESS);
+	if (1)
+	{
+		cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/sat.cl");
+		btAssert(errNum==CL_SUCCESS);
 
-	m_findSeparatingAxisKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findSeparatingAxisKernel",&errNum,satProg );
-	btAssert(errNum==CL_SUCCESS);
-
+		m_findSeparatingAxisKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findSeparatingAxisKernel",&errNum,satProg );
+		btAssert(errNum==CL_SUCCESS);
+	}
 
 }
 
 GpuSatCollision::~GpuSatCollision()
 {
-	clReleaseKernel(m_findSeparatingAxisKernel);
+	if (m_findSeparatingAxisKernel)
+		clReleaseKernel(m_findSeparatingAxisKernel);
+
+	
 }
 
 int gExpectedNbTests=0;
@@ -497,7 +503,7 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 
 	ContactResult& resultOut)
 {
-	//BT_PROFILE("clipHullAgainstHull");
+	BT_PROFILE("clipHullAgainstHull");
 	btVector3 separatingNormal = separatingNormal1.normalized();
 	const btVector3 c0 = transA * hullA.m_localCenter;
 	const btVector3 c1 = transB * hullB.m_localCenter;
@@ -523,9 +529,11 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 	}
 
 	btVertexArray worldVertsB1;
+	btAssert(closestFaceB>=0);
 	{
 		const btGpuFace& polyB = faces[hullB.m_faceOffset+closestFaceB];
 		const int numVertices = polyB.m_numIndices;
+		worldVertsB1.reserve(numVertices);
 		for(int e0=0;e0<numVertices;e0++)
 		{
 			const btVector3& b = vertices[hullB.m_vertexOffset+indices[polyB.m_indexOffset+e0]];
@@ -788,7 +796,9 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 	}
 	
 	
-
+	//m_hostContactOut.reserve(nPairs);
+	m_hostContactOut.resize(nPairs+nContacts);//m_hostContactOut.size()+1);
+	int actualContacts = 0;
 	for (int i=0;i<nPairs;i++)
 	{
 		int indexA = m_hostPairs[i].x;
@@ -831,7 +841,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 
 		if (hostHasSep[i])
 		{
-//			BT_PROFILE("clipHullAgainstHull");
+			BT_PROFILE("clipHullAgainstHull");
 	
 			btScalar minDist = -1;
 			btScalar maxDist = 0.1;
@@ -861,18 +871,21 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		if (overlap)
 		{
 
-//			BT_PROFILE("overlap");
+			BT_PROFILE("overlap");
 			float4 centerOut;
 			int contactIdx[4]={-1,-1,-1,-1};
 
 			int numPoints = 0;
 			
 			{
-	//			BT_PROFILE("extractManifold");
+				BT_PROFILE("extractManifold");
 				numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
 			}
-
-			m_hostContactOut.resize(m_hostContactOut.size()+1);
+			
+			{
+				//BT_PROFILE("m_hostContactOut.resize");
+				
+			}
 			Contact4& contact = m_hostContactOut[nContacts];
 			contact.m_batchIdx = i;
 			contact.m_bodyAPtr = m_hostPairs[i].x;
@@ -891,9 +904,9 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		}
 	}
 
-	
+	m_hostContactOut.resize(nContacts);
 
-	nContacts = m_hostContactOut.size();
+	//nContacts = m_hostContactOut.size();
 	{
 		BT_PROFILE("copyFromHost(m_hostContactOut");
 		contactOut->copyFromHost(m_hostContactOut);

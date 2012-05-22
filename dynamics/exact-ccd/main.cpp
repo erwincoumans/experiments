@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <float.h>
-#pragma fenv_access (on)
+//#pragma fenv_access (on)
 #include <assert.h>
 
 #include "rootparitycollisiontest.h"

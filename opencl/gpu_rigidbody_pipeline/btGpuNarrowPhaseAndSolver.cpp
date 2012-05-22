@@ -40,6 +40,8 @@ subject to the following restrictions:
 int gpuBatchContacts = 1;
 
 int numPairsOut =0;
+int numPairsTotal =0;
+
 struct CPUSolveData
 {
 	u32 m_n[BT_SOLVER_N_SPLIT*BT_SOLVER_N_SPLIT];
@@ -383,6 +385,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 		BT_PROFILE("ChNarrowphase::culling");
 		clFinish(m_queue);
 
+		numPairsTotal = numBroadphasePairs;
 		numPairsOut = m_internalData->m_narrowPhase->culling(
 			&broadphasePairsGPU, 
 			numBroadphasePairs,
