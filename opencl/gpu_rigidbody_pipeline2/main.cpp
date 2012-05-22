@@ -40,6 +40,7 @@ float Y_GAP = 2.f;
 float Z_GAP = 2.f;
 
 extern int numPairsOut;
+extern int numPairsTotal;
 
 
 void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
@@ -53,8 +54,8 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 	btQuaternion born(btVector3(1,0,0),SIMD_PI*0.25*0.5);
 
 	float orn[4] = {0,0,0,1};
-	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
-//	float rotOrn[4] ={0,0,0,1};
+//	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
+	float rotOrn[4] ={0,0,0,1};
 	
 
 	float color[4] = {1,1,1,1};
