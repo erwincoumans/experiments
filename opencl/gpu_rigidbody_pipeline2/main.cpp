@@ -30,14 +30,14 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
 
-int NUM_OBJECTS_X = 25;
-int NUM_OBJECTS_Y = 25;
-int NUM_OBJECTS_Z = 25;
+int NUM_OBJECTS_X = 35;
+int NUM_OBJECTS_Y = 35;
+int NUM_OBJECTS_Z = 35;
 
 
-float X_GAP = 2.f;
+float X_GAP = 2.3f;
 float Y_GAP = 2.f;
-float Z_GAP = 2.f;
+float Z_GAP = 2.3f;
 
 extern int numPairsOut;
 extern int numPairsTotal;

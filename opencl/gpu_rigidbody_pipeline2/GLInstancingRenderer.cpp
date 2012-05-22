@@ -58,9 +58,9 @@ extern int gShapeIndex;
 
 btVector3 m_cameraPosition(0,0,0);//will be overridden by a position computed from azi/ele
 btVector3 m_cameraTargetPosition(15,-5,-10);
-btScalar m_cameraDistance = 45;
+btScalar m_cameraDistance = 125;
 btVector3 m_cameraUp(0,1,0);
-float m_azi=95.f;
+float m_azi=135.f;
 float m_ele=15.f;
 
 
