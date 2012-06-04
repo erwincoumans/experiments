@@ -354,10 +354,7 @@ void	CLPhysicsDemo::stepSimulation()
 {
 	BT_PROFILE("simulationLoop");
 	
-	{
-		BT_PROFILE("glFinish");
-		glFinish();
-	}
+	
 	cl_int ciErrNum = CL_SUCCESS;
 
 

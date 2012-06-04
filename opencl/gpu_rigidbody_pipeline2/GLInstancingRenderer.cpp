@@ -849,6 +849,7 @@ void GLInstancingRenderer::RenderScene(void)
 	
 	GLint err = glGetError();
 	assert(err==GL_NO_ERROR);
+	
 }
 
 

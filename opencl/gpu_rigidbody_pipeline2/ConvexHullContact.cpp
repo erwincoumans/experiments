@@ -48,6 +48,18 @@ m_findSeparatingAxisKernel(0)
 		btAssert(errNum==CL_SUCCESS);
 	}
 
+	if (1)
+	{
+		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
+		btAssert(errNum==CL_SUCCESS);
+
+		m_extractManifoldAndAddContactKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "extractManifoldAndAddContactKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);
+
+		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "clipHullHullKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);
+	}
+
 }
 
 GpuSatCollision::~GpuSatCollision()
@@ -55,7 +67,10 @@ GpuSatCollision::~GpuSatCollision()
 	if (m_findSeparatingAxisKernel)
 		clReleaseKernel(m_findSeparatingAxisKernel);
 
-	
+	if (m_clipHullHullKernel)
+		clReleaseKernel(m_clipHullHullKernel);
+	if (m_extractManifoldAndAddContactKernel)
+		clReleaseKernel(m_extractManifoldAndAddContactKernel);
 }
 
 int gExpectedNbTests=0;
@@ -492,7 +507,7 @@ static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexP
 
 }
 
-
+btVertexArray worldVertsB1;
 static void	clipHullAgainstHull(const btVector3& separatingNormal1, 
 	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, 
 	const btTransform& transA,const btTransform& transB, const btScalar minDist, btScalar maxDist,
@@ -504,16 +519,14 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 	ContactResult& resultOut)
 {
 	BT_PROFILE("clipHullAgainstHull");
-	btVector3 separatingNormal = separatingNormal1.normalized();
-	const btVector3 c0 = transA * hullA.m_localCenter;
-	const btVector3 c1 = transB * hullB.m_localCenter;
-	const btVector3 DeltaC2 = c0 - c1;
-
+	btVector3 separatingNormal = separatingNormal1;//.normalized();
 
 	btScalar curMaxDist=maxDist;
 	int closestFaceB=-1;
 	btScalar dmax = -FLT_MAX;
+
 	{
+		//BT_PROFILE("closestFaceB");
 		for(int face=0;face<hullB.m_numFaces;face++)
 		{
 			const btVector3 Normal(faces[hullB.m_faceOffset+face].m_plane.x, 
@@ -528,9 +541,14 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 		}
 	}
 
-	btVertexArray worldVertsB1;
+	
+	{
+		//BT_PROFILE("resize");
+		worldVertsB1.resize(0);
+	}
 	btAssert(closestFaceB>=0);
 	{
+		//BT_PROFILE("worldVertsB1");
 		const btGpuFace& polyB = faces[hullB.m_faceOffset+closestFaceB];
 		const int numVertices = polyB.m_numIndices;
 		worldVertsB1.reserve(numVertices);
@@ -543,7 +561,10 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 
 	
 	if (closestFaceB>=0)
+	{
+		//BT_PROFILE("clipFaceAgainstHull");
 		clipFaceAgainstHull(separatingNormal, hullA, transA,worldVertsB1, minDist, maxDist,vertices,faces,indices,resultOut);
+	}
 
 }
 
@@ -559,8 +580,7 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 #define REDUCE_MIN(v, n) {int i=0;\
 	for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i+offset]; }
 
-int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& centerOut, 
-					 int contactIdx[4])
+int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& centerOut,  int contactIdx[4])
 {
 	if( nPoints == 0 ) return 0;
 
@@ -579,7 +599,8 @@ int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& ce
 	{	//	sample 4 directions
 		if( nPoints < 4 )
 		{
-			for(int i=0; i<nPoints; i++) contactIdx[i] = i;
+			for(int i=0; i<nPoints; i++) 
+				contactIdx[i] = i;
 			return nPoints;
 		}
 
@@ -655,7 +676,8 @@ int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& ce
 //		if( max00.y < 0.0f )
 //			contactIdx[0] = (int)max00.x;
 
-		std::sort( contactIdx, contactIdx+4 );
+		//does this sort happen on GPU too?
+		//std::sort( contactIdx, contactIdx+4 );
 
 		return 4;
 	}
@@ -698,15 +720,27 @@ struct ContactAccumulator: public ContactResult
 void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
-			const btAlignedObjectArray<ConvexPolyhedronCL>* hostConvexData,
-			const btAlignedObjectArray<btVector3>& vertices,
-			const btAlignedObjectArray<btVector3>& uniqueEdges,
-			const btAlignedObjectArray<btGpuFace>& faces,
-			const btAlignedObjectArray<int>& indices)
+			const btOpenCLArray<ConvexPolyhedronCL>& convexData,
+			const btOpenCLArray<btVector3>& gpuVertices,
+			const btOpenCLArray<btVector3>& gpuUniqueEdges,
+			const btOpenCLArray<btGpuFace>& gpuFaces,
+			const btOpenCLArray<int>& gpuIndices)
 {
 	
 	BT_PROFILE("computeConvexConvexContactsHost");
 
+	btAlignedObjectArray<btVector3> vertices;
+		
+	{
+		BT_PROFILE("copyToHost(gpuVertices)");
+		gpuVertices.copyToHost(vertices);
+	}
+
+	btAlignedObjectArray<btGpuFace> faces;
+	{
+		BT_PROFILE("copyToHost(gpuFaces)");
+		gpuFaces.copyToHost(faces);
+	}
 	m_hostPairs.resize(pairs->size());
 	if (pairs->size())
 	{
@@ -730,6 +764,26 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		shapeBuf->copyToHost(hostShapeBuf);
 	}
 
+	btAlignedObjectArray<btVector3> uniqueEdges;
+	{
+		BT_PROFILE("copyToHost(gpuUniqueEdges)");
+		gpuUniqueEdges.copyToHost(uniqueEdges);
+	}
+
+	btAlignedObjectArray<int> indices;
+	{
+		BT_PROFILE("copyToHost(gpuIndices)");
+		gpuIndices.copyToHost(indices);
+	}
+
+	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
+	{
+		BT_PROFILE("copyToHost(convexData)");
+		convexData.copyToHost(hostConvexData);
+	}
+
+
+	bool reductionOnGpu = false;//true;
 
 
 	btAssert(m_hostPairs.size() == nPairs);
@@ -741,26 +795,13 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 
 
 	{
-		btOpenCLArray<int> contactCount(m_context, m_queue);
+		
 		btOpenCLArray<float4> sepNormals(m_context,m_queue);
 		sepNormals.resize(nPairs);
 		btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
 		hasSeparatingNormals.resize(nPairs);
 
-		btOpenCLArray<btVector3> gpuVertices(m_context,m_queue);
-		gpuVertices.copyFromHost(vertices);
-		btOpenCLArray<btVector3> gpuUniqueEdges(m_context,m_queue);
-		gpuUniqueEdges.copyFromHost(uniqueEdges);
-		btOpenCLArray<btGpuFace> gpuFaces(m_context,m_queue);	
-		gpuFaces.copyFromHost(faces);
-		btOpenCLArray<int> gpuIndices(m_context,m_queue);
-		gpuIndices.copyFromHost(indices);
-
-		contactCount.push_back(0);
-		btOpenCLArray<ConvexPolyhedronCL> convexData(m_context,m_queue);
-		convexData.copyFromHost(*hostConvexData);
-		//work-in-progress
-
+		
 		clFinish(m_queue);
 		if (1)
 		{
@@ -773,8 +814,6 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 				btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
 				btBufferInfoCL( gpuFaces.getBufferCL(),true),
 				btBufferInfoCL( gpuIndices.getBufferCL(),true),
-
-
 				btBufferInfoCL( sepNormals.getBufferCL()),
 				btBufferInfoCL( hasSeparatingNormals.getBufferCL())};
 			btLauncherCL launcher(m_queue, m_findSeparatingAxisKernel);
@@ -818,15 +857,15 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 
 			BT_PROFILE("findSeparatingAxis");
 			foundSepAxis = findSeparatingAxis(
-						hostConvexData->at(shapeA), 
-						hostConvexData->at(shapeB),
+						hostConvexData.at(shapeA), 
+						hostConvexData.at(shapeB),
 						hostBodyBuf[indexA].m_pos,
 						hostBodyBuf[indexA].m_quat,
 						hostBodyBuf[indexB].m_pos,
 						hostBodyBuf[indexB].m_quat,
 
 						vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
-			if (foundSepAxis != hostHasSep[i])
+			if ((int)foundSepAxis != hostHasSep[i])
 			{
 				printf("not matching boolean with gpu at %d\n",i);
 			} 
@@ -834,35 +873,37 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			{
 				printf("not matching normal %f != %f with gpu at %d\n",sepNormalWorldSpace[0],hostNormals[i].x,i);
 			}
-			
-
 		}
-	
 
 		if (hostHasSep[i])
 		{
-			BT_PROFILE("clipHullAgainstHull");
+			BT_PROFILE("hostHasSep");
 	
 			btScalar minDist = -1;
 			btScalar maxDist = 0.1;
 
-			resultOut.m_closestPointInBs.resize(0);
-			resultOut.m_distances.resize(0);
+			{
+				//BT_PROFILE("resultOut.m_distances");
+				resultOut.m_closestPointInBs.resize(0);
+				resultOut.m_distances.resize(0);
+			}
 			
 
 			btTransform trA,trB;
-		trA.setIdentity();
-		trA.setOrigin(btVector3(hostBodyBuf[indexA].m_pos.x,hostBodyBuf[indexA].m_pos.y,hostBodyBuf[indexA].m_pos.z));
-		trA.setRotation(btQuaternion(hostBodyBuf[indexA].m_quat.x,hostBodyBuf[indexA].m_quat.y,hostBodyBuf[indexA].m_quat.z,hostBodyBuf[indexA].m_quat.w));
-		
-		trB.setIdentity();
-		trB.setOrigin(btVector3(hostBodyBuf[indexB].m_pos.x,hostBodyBuf[indexB].m_pos.y,hostBodyBuf[indexB].m_pos.z));
-		trB.setRotation(btQuaternion(hostBodyBuf[indexB].m_quat.x,hostBodyBuf[indexB].m_quat.y,hostBodyBuf[indexB].m_quat.z,hostBodyBuf[indexB].m_quat.w));
-
+			{
+			//BT_PROFILE("transform computation");
+			//trA.setIdentity();
+			trA.setOrigin(btVector3(hostBodyBuf[indexA].m_pos.x,hostBodyBuf[indexA].m_pos.y,hostBodyBuf[indexA].m_pos.z));
+			trA.setRotation(btQuaternion(hostBodyBuf[indexA].m_quat.x,hostBodyBuf[indexA].m_quat.y,hostBodyBuf[indexA].m_quat.z,hostBodyBuf[indexA].m_quat.w));
+			
+			//trB.setIdentity();
+			trB.setOrigin(btVector3(hostBodyBuf[indexB].m_pos.x,hostBodyBuf[indexB].m_pos.y,hostBodyBuf[indexB].m_pos.z));
+			trB.setRotation(btQuaternion(hostBodyBuf[indexB].m_quat.x,hostBodyBuf[indexB].m_quat.y,hostBodyBuf[indexB].m_quat.z,hostBodyBuf[indexB].m_quat.w));
+			}
 
 			clipHullAgainstHull((btVector3&)hostNormals[i], 
-				hostConvexData->at(shapeA), 
-				hostConvexData->at(shapeA),
+				hostConvexData.at(shapeA), 
+				hostConvexData.at(shapeA),
 							trA,
 							trB,minDist, maxDist,vertices,faces,indices,resultOut);
 			
@@ -871,42 +912,89 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		if (overlap)
 		{
 
-			BT_PROFILE("overlap");
-			float4 centerOut;
-			int contactIdx[4]={-1,-1,-1,-1};
+			if (reductionOnGpu)
+			{
+				int numContacts = resultOut.m_closestPointInBs.size();
+				btOpenCLArray<int> contactCount(m_context, m_queue);
+				contactCount.push_back(numContacts);
+				btOpenCLArray<int> totalContactsOut(m_context, m_queue);
+				totalContactsOut.push_back(nContacts);
 
-			int numPoints = 0;
-			
-			{
-				BT_PROFILE("extractManifold");
-				numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
-			}
-			
-			{
-				//BT_PROFILE("m_hostContactOut.resize");
 				
-			}
-			Contact4& contact = m_hostContactOut[nContacts];
-			contact.m_batchIdx = i;
-			contact.m_bodyAPtr = m_hostPairs[i].x;
-			contact.m_bodyBPtr = m_hostPairs[i].y;
-			contact.m_frictionCoeffCmp = 45874;
-			contact.m_restituitionCoeffCmp = 0;
-			
-			float distance = 0.f;
-			for (int p=0;p<numPoints;p++)
+
+				btOpenCLArray<int> contactOffsets(m_context, m_queue);
+				contactOffsets.push_back(0);
+				
+				btOpenCLArray<float4> closestPointOnBWorld(m_context,m_queue);
+				closestPointOnBWorld.copyFromHost(resultOut.m_closestPointInBs);
+
+				btOpenCLArray<float4> normalOnSurface(m_context,m_queue);
+				normalOnSurface.push_back(resultOut.m_normalOnSurfaceB);
+
+				BT_PROFILE("extractManifoldAndAddContactKernel");
+				btBufferInfoCL bInfo[] = { 
+					btBufferInfoCL( pairs->getBufferCL(), true ), 
+					btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+					btBufferInfoCL( closestPointOnBWorld.getBufferCL(),true),
+					btBufferInfoCL( normalOnSurface.getBufferCL(),true),
+					btBufferInfoCL( contactCount.getBufferCL(),true),
+					btBufferInfoCL( contactOffsets.getBufferCL(),true),
+					btBufferInfoCL( contactOut->getBufferCL()),
+					btBufferInfoCL( totalContactsOut.getBufferCL())
+				};
+
+				btLauncherCL launcher(m_queue, m_extractManifoldAndAddContactKernel);
+				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+				int num = 1;//nPairs;
+				
+				launcher.setConst( num);//nPairs  );
+				launcher.setConst( i);//nPairs  );
+				//int contactCapacity = MAX_BROADPHASE_COLLISION_CL;
+				//launcher.setConst(contactCapacity);
+				
+				launcher.launch1D( num);
+				clFinish(m_queue);
+
+				nContacts = totalContactsOut.at(0);
+		
+			} else
 			{
-				contact.m_worldPos[p] = resultOut.m_closestPointInBs[contactIdx[p]];
-				contact.m_worldNormal = resultOut.m_normalOnSurfaceB; 
-			}
-			contact.m_worldNormal.w = numPoints;
-			nContacts++;
+				BT_PROFILE("overlap");
+				float4 centerOut;
+				int contactIdx[4]={-1,-1,-1,-1};
+
+				int numPoints = 0;
+				
+				{
+					BT_PROFILE("extractManifold");
+					numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
+				}
+				
+				btAssert(numPoints);
+				
+				Contact4& contact = m_hostContactOut[nContacts];
+				contact.m_batchIdx = i;
+				contact.m_bodyAPtr = m_hostPairs[i].x;
+				contact.m_bodyBPtr = m_hostPairs[i].y;
+				contact.m_frictionCoeffCmp = 45874;
+				contact.m_restituitionCoeffCmp = 0;
+				
+				float distance = 0.f;
+				for (int p=0;p<numPoints;p++)
+				{
+					contact.m_worldPos[p] = resultOut.m_closestPointInBs[contactIdx[p]];
+					contact.m_worldNormal = resultOut.m_normalOnSurfaceB; 
+				}
+				contact.m_worldNormal.w = numPoints;
+				nContacts++;
+			} 
 		}
 	}
 
+	
 	m_hostContactOut.resize(nContacts);
 
-	//nContacts = m_hostContactOut.size();
+	if (!reductionOnGpu)
 	{
 		BT_PROFILE("copyFromHost(m_hostContactOut");
 		contactOut->copyFromHost(m_hostContactOut);

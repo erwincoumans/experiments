@@ -116,8 +116,8 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 			if (j==NUM_OBJECTS_Y-1)
 			{
 				k=1;
-				if (i==0)
-					continue;
+				//if (i==0)
+				//	continue;
 			}
 			for (;k<NUM_OBJECTS_Z;k++)
 			{
@@ -202,12 +202,18 @@ int main(int argc, char* argv[])
 	{
 		CProfileManager::Reset();
 		
+		
 		demo.stepSimulation();
 
 
 		window->startRendering();
 		render.RenderScene();
 		window->endRendering();
+
+		{
+			BT_PROFILE("glFinish");
+			glFinish();
+		}
 
 		CProfileManager::Increment_Frame_Counter();
 

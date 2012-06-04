@@ -37,6 +37,11 @@ subject to the following restrictions:
 #include "../../dynamics/basic_demo/Stubs/ChNarrowPhase.h"
 #include "../../dynamics/basic_demo/Stubs/Solver.h"
 
+
+#define MAX_CONVEX_UNIQUE_EDGES 8192
+#define MAX_CONVEX_VERTICES 8192
+#define MAX_CONVEX_INDICES 8192
+
 int gpuBatchContacts = 1;
 
 int numPairsOut =0;
@@ -60,12 +65,20 @@ struct	CustomDispatchData
 	btOpenCLArray<ChNarrowphase::ShapeData>* m_ShapeBuffer;
 	btAlignedObjectArray<ConvexHeightField*>* m_shapePointers;
 	btAlignedObjectArray<btConvexUtility*>* m_convexData;
-	btAlignedObjectArray<ConvexPolyhedronCL>* m_convexPolyhedra;
+
+	btAlignedObjectArray<ConvexPolyhedronCL> m_convexPolyhedra;
 	btAlignedObjectArray<btVector3> m_uniqueEdges;	
 	btAlignedObjectArray<btVector3> m_convexVertices;
+	btAlignedObjectArray<int> m_convexIndices;
+
+	btOpenCLArray<ConvexPolyhedronCL>* m_convexPolyhedraGPU;
+	btOpenCLArray<btVector3>* m_uniqueEdgesGPU;	
+	btOpenCLArray<btVector3>* m_convexVerticesGPU;
+	btOpenCLArray<int>* m_convexIndicesGPU;
+
 
 	btAlignedObjectArray<btGpuFace> m_convexFaces;
-	btAlignedObjectArray<int> m_convexIndices;
+	btOpenCLArray<btGpuFace>* m_convexFacesGPU;
 
 	GpuSatCollision*	m_gpuSatCollision;
 	
@@ -135,6 +148,14 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 	m_internalData->m_bodyBufferGPU = new btOpenCLArray<RigidBodyBase::Body>(ctx,queue, MAX_CONVEX_BODIES_CL,false);
 	m_internalData->m_narrowPhase = new ChNarrowphase(ctx,device,queue);
 
+	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
+
+	m_internalData->m_convexPolyhedraGPU = new btOpenCLArray<ConvexPolyhedronCL>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
+	m_internalData->m_uniqueEdgesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_UNIQUE_EDGES,true);
+	m_internalData->m_convexVerticesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_VERTICES,true);
+	m_internalData->m_convexIndicesGPU = new btOpenCLArray<int>(ctx,queue,MAX_CONVEX_INDICES,true);
+
+
 	//m_internalData->m_Data = adl::ChNarrowphase<adl::TYPE_CL>::allocate(m_internalData->m_deviceCL);
 //		m_internalData->m_DataCPU = adl::ChNarrowphase<adl::TYPE_HOST>::allocate(m_internalData->m_deviceHost);
 		
@@ -143,11 +164,10 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 
 	m_internalData->m_shapePointers = new btAlignedObjectArray<ConvexHeightField*>();
 	m_internalData->m_convexData = new btAlignedObjectArray<btConvexUtility* >();
-	m_internalData->m_convexPolyhedra = new btAlignedObjectArray<ConvexPolyhedronCL>();
-	
+		
 	m_internalData->m_shapePointers->resize(MAX_CONVEX_SHAPES_CL);
 	m_internalData->m_convexData->resize(MAX_CONVEX_SHAPES_CL);
-	m_internalData->m_convexPolyhedra->resize(MAX_CONVEX_SHAPES_CL);
+	m_internalData->m_convexPolyhedra.resize(MAX_CONVEX_SHAPES_CL);
 
 	m_internalData->m_numAcceleratedShapes = 0;
 	m_internalData->m_numAcceleratedRigidBodies = 0;
@@ -162,10 +182,10 @@ int btGpuNarrowphaseAndSolver::registerShape(ConvexHeightField* convexShape,btCo
 	m_internalData->m_shapePointers->resize(m_internalData->m_numAcceleratedShapes+1);
 	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);	
 	m_internalData->m_ShapeBuffer->resize(m_internalData->m_numAcceleratedShapes+1);
-	m_internalData->m_convexPolyhedra->resize(m_internalData->m_numAcceleratedShapes+1);
+	m_internalData->m_convexPolyhedra.resize(m_internalData->m_numAcceleratedShapes+1);
 	
 
-	ConvexPolyhedronCL& convex = m_internalData->m_convexPolyhedra->at(m_internalData->m_convexPolyhedra->size()-1);
+	ConvexPolyhedronCL& convex = m_internalData->m_convexPolyhedra.at(m_internalData->m_convexPolyhedra.size()-1);
 	convex.mC = convexPtr->mC;
 	convex.mE = convexPtr->mE;
 	convex.m_extents= convexPtr->m_extents;
@@ -219,6 +239,14 @@ int btGpuNarrowphaseAndSolver::registerShape(ConvexHeightField* convexShape,btCo
 	(*m_internalData->m_convexData)[m_internalData->m_numAcceleratedShapes] = convexPtr;
 	m_internalData->m_narrowPhase->setShape(m_internalData->m_ShapeBuffer, convexShape, m_internalData->m_numAcceleratedShapes, 0.01f);
 	
+	m_internalData->m_convexFacesGPU->copyFromHost(m_internalData->m_convexFaces);
+
+	m_internalData->m_convexPolyhedraGPU->copyFromHost(m_internalData->m_convexPolyhedra);
+	m_internalData->m_uniqueEdgesGPU->copyFromHost(m_internalData->m_uniqueEdges);
+	m_internalData->m_convexVerticesGPU->copyFromHost(m_internalData->m_convexVertices);
+	m_internalData->m_convexIndicesGPU->copyFromHost(m_internalData->m_convexIndices);
+
+
 	return m_internalData->m_numAcceleratedShapes++;
 }
 
@@ -341,7 +369,6 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_pBufContactOutCPU;
 		delete m_internalData->m_shapePointers;
 		delete m_internalData->m_convexData;
-		delete m_internalData->m_convexPolyhedra;
 		delete m_internalData->m_ShapeBuffer;
 		delete m_internalData->m_inertiaBufferCPU;
 		delete m_internalData->m_contactCGPU;
@@ -350,6 +377,11 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_bodyBufferCPU;
 		delete m_internalData->m_narrowPhase;
 		delete m_internalData->m_gpuSatCollision;
+		delete m_internalData->m_convexFacesGPU;
+		delete m_internalData->m_convexPolyhedraGPU;
+		delete m_internalData->m_uniqueEdgesGPU;
+		delete m_internalData->m_convexVerticesGPU;
+		delete m_internalData->m_convexIndicesGPU;
 		delete m_internalData;
 
 	}
@@ -437,8 +469,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 				m_internalData->m_bodyBufferGPU, 
 				m_internalData->m_ShapeBuffer, 
 				m_internalData->m_pBufContactOutGPU, 
-				nContactOut, cfgNP, m_internalData->m_convexPolyhedra,m_internalData->m_convexVertices,m_internalData->m_uniqueEdges,
-				m_internalData->m_convexFaces,m_internalData->m_convexIndices);
+				nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
+				*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
 #else
 
 			m_internalData->m_narrowPhase->execute(

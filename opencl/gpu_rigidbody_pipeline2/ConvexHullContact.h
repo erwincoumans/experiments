@@ -23,6 +23,9 @@ struct GpuSatCollision
 	cl_device_id			m_device;
 	cl_command_queue		m_queue;
 	cl_kernel				m_findSeparatingAxisKernel;
+	cl_kernel				m_clipHullHullKernel;
+	cl_kernel				m_extractManifoldAndAddContactKernel;
+
 
 	btAlignedObjectArray<Contact4>	m_hostContactOut;
 	btAlignedObjectArray<int2>		m_hostPairs;
@@ -34,11 +37,11 @@ struct GpuSatCollision
 	void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
-			const btAlignedObjectArray<ConvexPolyhedronCL>* hostConvexData,
-			const btAlignedObjectArray<btVector3>& vertices,
-			const btAlignedObjectArray<btVector3>& uniqueEdges,
-			const btAlignedObjectArray<btGpuFace>& faces,
-			const btAlignedObjectArray<int>& indices);
+			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,
+			const btOpenCLArray<btVector3>& vertices,
+			const btOpenCLArray<btVector3>& uniqueEdges,
+			const btOpenCLArray<btGpuFace>& faces,
+			const btOpenCLArray<int>& indices);
 };
 
 #endif //_CONVEX_HULL_CONTACT_H
