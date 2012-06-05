@@ -77,38 +77,47 @@ int gExpectedNbTests=0;
 int gActualNbTests = 0;
 bool gUseInternalObject = true;
 
-// Clips a face to the back of a plane
-static void clipFace(const btVertexArray& pVtxIn, btVertexArray& ppVtxOut, const btVector3& planeNormalWS,btScalar planeEqWS)
+__inline float4 lerp3(const float4& a,const float4& b, float  t)
+{
+	return make_float4(	a.x + (b.x - a.x) * t,
+						a.y + (b.y - a.y) * t,
+						a.z + (b.z - a.z) * t,
+						0.f);
+}
+
+
+// Clips a face to the back of a plane, return the number of vertices out, stored in ppVtxOut
+int clipFace(const float4* pVtxIn, int numVertsIn, float4& planeNormalWS,float planeEqWS, float4* ppVtxOut)
 {
 	
 	int ve;
-	btScalar ds, de;
-	int numVerts = pVtxIn.size();
-	if (numVerts < 2)
-		return;
+	float ds, de;
+	int numVertsOut = 0;
+	if (numVertsIn < 2)
+		return 0;
 
-	btVector3 firstVertex=pVtxIn[pVtxIn.size()-1];
-	btVector3 endVertex = pVtxIn[0];
+	float4 firstVertex=pVtxIn[numVertsIn-1];
+	float4 endVertex = pVtxIn[0];
 	
-	ds = planeNormalWS.dot(firstVertex)+planeEqWS;
+	ds = dot3F4(planeNormalWS,firstVertex)+planeEqWS;
 
-	for (ve = 0; ve < numVerts; ve++)
+	for (ve = 0; ve < numVertsIn; ve++)
 	{
 		endVertex=pVtxIn[ve];
 
-		de = planeNormalWS.dot(endVertex)+planeEqWS;
+		de = dot3F4(planeNormalWS,endVertex)+planeEqWS;
 
 		if (ds<0)
 		{
 			if (de<0)
 			{
 				// Start < 0, end < 0, so output endVertex
-				ppVtxOut.push_back(endVertex);
+				ppVtxOut[numVertsOut++] = endVertex;
 			}
 			else
 			{
 				// Start < 0, end >= 0, so output intersection
-				ppVtxOut.push_back( 	firstVertex.lerp(endVertex,btScalar(ds * 1.f/(ds - de))));
+				ppVtxOut[numVertsOut++] = lerp3(firstVertex, endVertex,(ds * 1.f/(ds - de)) );
 			}
 		}
 		else
@@ -116,13 +125,14 @@ static void clipFace(const btVertexArray& pVtxIn, btVertexArray& ppVtxOut, const
 			if (de<0)
 			{
 				// Start >= 0, end < 0 so output intersection and end
-				ppVtxOut.push_back(firstVertex.lerp(endVertex,btScalar(ds * 1.f/(ds - de))));
-				ppVtxOut.push_back(endVertex);
+				ppVtxOut[numVertsOut++] = lerp3(firstVertex, endVertex,(ds * 1.f/(ds - de)) );
+				ppVtxOut[numVertsOut++] = endVertex;
 			}
 		}
 		firstVertex = endVertex;
 		ds = de;
 	}
+	return numVertsOut;
 }
 
 inline void project(const ConvexPolyhedronCL& hull,  const float4& pos, const float4& orn, const float4& dir, const btAlignedObjectArray<btVector3>& vertices, btScalar& min, btScalar& max)
@@ -384,32 +394,38 @@ static bool findSeparatingAxis(	const ConvexPolyhedronCL& hullA, const ConvexPol
 	return true;
 }
 
-static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexPolyhedronCL& hullA,  
-	const btTransform& transA, btVertexArray& worldVertsB1, 
-	const btScalar minDist, btScalar maxDist,
-	const btAlignedObjectArray<btVector3>& vertices,
-	const btAlignedObjectArray<btGpuFace>& faces,
-	const btAlignedObjectArray<int>& indices,
-	ContactResult& resultOut)
-{
 
-	btVertexArray worldVertsB2;
-	btVertexArray* pVtxIn = &worldVertsB1;
-	btVertexArray* pVtxOut = &worldVertsB2;
-	pVtxOut->reserve(pVtxIn->size());
+
+int clipFaceAgainstHull(const float4& separatingNormal, const ConvexPolyhedronCL* hullA,  
+	const float4& posA, const Quaternion& ornA, float4* worldVertsB1, int numWorldVertsB1,
+	float4* worldVertsB2, int capacityWorldVertsB2,
+	const float minDist, float maxDist,
+	const float4* vertices,
+	const btGpuFace* faces,
+	const int* indices,
+	float4* contactsOut,
+	int contactCapacity)
+{
+	int numContactsOut = 0;
+
+	float4* pVtxIn = worldVertsB1;
+	float4* pVtxOut = worldVertsB2;
+	
+	int numVertsIn = numWorldVertsB1;
+	int numVertsOut = 0;
 
 	int closestFaceA=-1;
 	{
-		btScalar dmin = FLT_MAX;
-		for(int face=0;face<hullA.m_numFaces;face++)
+		float dmin = FLT_MAX;
+		for(int face=0;face<hullA->m_numFaces;face++)
 		{
-			const btVector3 Normal(
-				faces[hullA.m_faceOffset+face].m_plane.x, 
-				faces[hullA.m_faceOffset+face].m_plane.y, 
-				faces[hullA.m_faceOffset+face].m_plane.z);
-			const btVector3 faceANormalWS = transA.getBasis() * Normal;
+			const float4 Normal = make_float4(
+				faces[hullA->m_faceOffset+face].m_plane.x, 
+				faces[hullA->m_faceOffset+face].m_plane.y, 
+				faces[hullA->m_faceOffset+face].m_plane.z,0.f);
+			const float4 faceANormalWS = qtRotate(ornA,Normal);
 		
-			btScalar d = faceANormalWS.dot(separatingNormal);
+			float d = dot3F4(faceANormalWS,separatingNormal);
 			if (d < dmin)
 			{
 				dmin = d;
@@ -418,121 +434,98 @@ static void	clipFaceAgainstHull(const btVector3& separatingNormal, const ConvexP
 		}
 	}
 	if (closestFaceA<0)
-		return;
+		return numContactsOut;
 
-	const btGpuFace& polyA = faces[hullA.m_faceOffset+closestFaceA];
+	btGpuFace polyA = faces[hullA->m_faceOffset+closestFaceA];
 
-		// clip polygon to back of planes of all faces of hull A that are adjacent to witness face
-	int numContacts = pVtxIn->size();
+	// clip polygon to back of planes of all faces of hull A that are adjacent to witness face
+	int numContacts = numWorldVertsB1;
 	int numVerticesA = polyA.m_numIndices;
 	for(int e0=0;e0<numVerticesA;e0++)
 	{
-		const btVector3& a = vertices[hullA.m_vertexOffset+indices[polyA.m_indexOffset+e0]];
-		const btVector3& b = vertices[hullA.m_vertexOffset+indices[polyA.m_indexOffset+((e0+1)%numVerticesA)]];
-		const btVector3 edge0 = a - b;
-		const btVector3 WorldEdge0 = transA.getBasis() * edge0;
-		btVector3 worldPlaneAnormal1 = transA.getBasis()* btVector3(polyA.m_plane.x,polyA.m_plane.y,polyA.m_plane.z);
+		const float4 a = vertices[hullA->m_vertexOffset+indices[polyA.m_indexOffset+e0]];
+		const float4 b = vertices[hullA->m_vertexOffset+indices[polyA.m_indexOffset+((e0+1)%numVerticesA)]];
+		const float4 edge0 = a - b;
+		const float4 WorldEdge0 = qtRotate(ornA,edge0);
+		float4 planeNormalA = make_float4(polyA.m_plane.x,polyA.m_plane.y,polyA.m_plane.z,0.f);
+		float4 worldPlaneAnormal1 = qtRotate(ornA,planeNormalA);
 
-		btVector3 planeNormalWS1 = -WorldEdge0.cross(worldPlaneAnormal1);//.cross(WorldEdge0);
-		btVector3 worldA1 = transA*a;
-		btScalar planeEqWS1 = -worldA1.dot(planeNormalWS1);
+		float4 planeNormalWS1 = -cross3(WorldEdge0,worldPlaneAnormal1);
+		float4 worldA1 = transform(a,posA,ornA);
+		float planeEqWS1 = -dot3F4(worldA1,planeNormalWS1);
 		
-//int otherFace=0;
-#ifdef BLA1
-		int otherFace = polyA.m_connectedFaces[e0];
-		btVector3 localPlaneNormal (hullA.m_faces[otherFace].m_plane[0],hullA.m_faces[otherFace].m_plane[1],hullA.m_faces[otherFace].m_plane[2]);
-		btScalar localPlaneEq = hullA.m_faces[otherFace].m_plane[3];
-
-		btVector3 planeNormalWS = transA.getBasis()*localPlaneNormal;
-		btScalar planeEqWS=localPlaneEq-planeNormalWS.dot(transA.getOrigin());
-#else 
-		btVector3 planeNormalWS = planeNormalWS1;
-		btScalar planeEqWS=planeEqWS1;
+		float4 planeNormalWS = planeNormalWS1;
+		float planeEqWS=planeEqWS1;
 		
-#endif
 		//clip face
+		//clipFace(*pVtxIn, *pVtxOut,planeNormalWS,planeEqWS);
+		numVertsOut = clipFace(pVtxIn, numVertsIn, planeNormalWS,planeEqWS, pVtxOut);
 
-		clipFace(*pVtxIn, *pVtxOut,planeNormalWS,planeEqWS);
-		btSwap(pVtxIn,pVtxOut);
-		pVtxOut->resize(0);
+		//btSwap(pVtxIn,pVtxOut);
+		float4* tmp = pVtxOut;
+		pVtxOut = pVtxIn;
+		pVtxIn = tmp;
+		numVertsIn = numVertsOut;
+		numVertsOut = 0;
 	}
 
-
-
-//#define ONLY_REPORT_DEEPEST_POINT
-
-	btVector3 point;
 	
-
 	// only keep points that are behind the witness face
 	{
-		btVector3 localPlaneNormal (polyA.m_plane.x,polyA.m_plane.y,polyA.m_plane.z);
-		btScalar localPlaneEq = polyA.m_plane.w;
-		btVector3 planeNormalWS = transA.getBasis()*localPlaneNormal;
-		btScalar planeEqWS=localPlaneEq-planeNormalWS.dot(transA.getOrigin());
-		for (int i=0;i<pVtxIn->size();i++)
+		float4 localPlaneNormal  = make_float4(polyA.m_plane.x,polyA.m_plane.y,polyA.m_plane.z,0.f);
+		float localPlaneEq = polyA.m_plane.w;
+		float4 planeNormalWS = qtRotate(ornA,localPlaneNormal);
+		float planeEqWS=localPlaneEq-dot3F4(planeNormalWS,posA);
+		for (int i=0;i<numVertsIn;i++)
 		{
-			
-			btScalar depth = planeNormalWS.dot(pVtxIn->at(i))+planeEqWS;
+			float depth = dot3F4(planeNormalWS,pVtxIn[i])+planeEqWS;
 			if (depth <=minDist)
 			{
-//				printf("clamped: depth=%f to minDist=%f\n",depth,minDist);
 				depth = minDist;
 			}
 
 			if (depth <=maxDist)
 			{
-				btVector3 point = pVtxIn->at(i);
-#ifdef ONLY_REPORT_DEEPEST_POINT
-				curMaxDist = depth;
-#else
-#if 0
-				if (depth<-3)
-				{
-					printf("error in btPolyhedralContactClipping depth = %f\n", depth);
-					printf("likely wrong separatingNormal passed in\n");
-				} 
-#endif				
-				resultOut.addContactPoint(separatingNormal,point,depth);
-#endif
+				float4 pointInWorld = pVtxIn[i];
+				//resultOut.addContactPoint(separatingNormal,point,depth);
+				contactsOut[numContactsOut++] = make_float4(pointInWorld.x,pointInWorld.y,pointInWorld.z,depth);
 			}
 		}
 	}
-#ifdef ONLY_REPORT_DEEPEST_POINT
-	if (curMaxDist<maxDist)
-	{
-		resultOut.addContactPoint(separatingNormal,point,curMaxDist);
-	}
-#endif //ONLY_REPORT_DEEPEST_POINT
 
+	return numContactsOut;
 }
 
-btVertexArray worldVertsB1;
-static void	clipHullAgainstHull(const btVector3& separatingNormal1, 
+
+
+static int	clipHullAgainstHull(const float4& separatingNormal, 
 	const ConvexPolyhedronCL& hullA, const ConvexPolyhedronCL& hullB, 
-	const btTransform& transA,const btTransform& transB, const btScalar minDist, btScalar maxDist,
-	const btAlignedObjectArray<btVector3>& vertices,
-	const btAlignedObjectArray<btGpuFace>& faces,
-	const btAlignedObjectArray<int>& indices,
-
-
-	ContactResult& resultOut)
+	const float4& posA, const Quaternion& ornA,const float4& posB, const Quaternion& ornB, 
+	float4* worldVertsB1, float4* worldVertsB2, int capacityWorldVerts,
+	const float minDist, float maxDist,
+	const float4* vertices,
+	const btGpuFace* faces,
+	const int* indices,
+	float4*	contactsOut,
+	int contactCapacity)
 {
-	BT_PROFILE("clipHullAgainstHull");
-	btVector3 separatingNormal = separatingNormal1;//.normalized();
+	int numContactsOut = 0;
+	int numWorldVertsB1= 0;
 
-	btScalar curMaxDist=maxDist;
+	BT_PROFILE("clipHullAgainstHull");
+
+	float curMaxDist=maxDist;
 	int closestFaceB=-1;
-	btScalar dmax = -FLT_MAX;
+	float dmax = -FLT_MAX;
 
 	{
 		//BT_PROFILE("closestFaceB");
 		for(int face=0;face<hullB.m_numFaces;face++)
 		{
-			const btVector3 Normal(faces[hullB.m_faceOffset+face].m_plane.x, 
-				faces[hullB.m_faceOffset+face].m_plane.y, faces[hullB.m_faceOffset+face].m_plane.z);
-			const btVector3 WorldNormal = transB.getBasis() * Normal;
-			btScalar d = WorldNormal.dot(separatingNormal);
+			const float4 Normal = make_float4(faces[hullB.m_faceOffset+face].m_plane.x, 
+				faces[hullB.m_faceOffset+face].m_plane.y, faces[hullB.m_faceOffset+face].m_plane.z,0.f);
+			const float4 WorldNormal = qtRotate(ornB, Normal);
+			float d = dot3F4(WorldNormal,separatingNormal);
 			if (d > dmax)
 			{
 				dmax = d;
@@ -542,30 +535,29 @@ static void	clipHullAgainstHull(const btVector3& separatingNormal1,
 	}
 
 	
-	{
-		//BT_PROFILE("resize");
-		worldVertsB1.resize(0);
-	}
 	btAssert(closestFaceB>=0);
 	{
 		//BT_PROFILE("worldVertsB1");
 		const btGpuFace& polyB = faces[hullB.m_faceOffset+closestFaceB];
 		const int numVertices = polyB.m_numIndices;
-		worldVertsB1.reserve(numVertices);
 		for(int e0=0;e0<numVertices;e0++)
 		{
-			const btVector3& b = vertices[hullB.m_vertexOffset+indices[polyB.m_indexOffset+e0]];
-			worldVertsB1.push_back(transB*b);
+			const float4& b = vertices[hullB.m_vertexOffset+indices[polyB.m_indexOffset+e0]];
+			worldVertsB1[numWorldVertsB1++] = transform(b,posB,ornB);
 		}
 	}
 
-	
 	if (closestFaceB>=0)
 	{
 		//BT_PROFILE("clipFaceAgainstHull");
-		clipFaceAgainstHull(separatingNormal, hullA, transA,worldVertsB1, minDist, maxDist,vertices,faces,indices,resultOut);
+		numContactsOut = clipFaceAgainstHull((float4&)separatingNormal, &hullA, 
+				posA,ornA,
+				worldVertsB1,numWorldVertsB1,worldVertsB2,capacityWorldVerts, minDist, maxDist,vertices,
+				faces,
+				indices,contactsOut,contactCapacity);
 	}
 
+	return numContactsOut;
 }
 
 
@@ -683,38 +675,8 @@ int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& ce
 	}
 }
 
-struct ContactAccumulator: public ContactResult
-{
-		float4							m_normalOnSurfaceB;
-		btAlignedObjectArray<float4>	m_closestPointInBs;
-		btAlignedObjectArray<btScalar>	m_distances; //negative means penetration !
 
-		ContactAccumulator()
-		{
-
-		}
-		virtual ~ContactAccumulator() {};
-
-		virtual void setShapeIdentifiersA(int partId0,int index0)
-		{
-		}
-		virtual void setShapeIdentifiersB(int partId1,int index1)
-		{
-		}
-
-		virtual void addContactPoint(const btVector3& normalOnBInWorld1,const btVector3& pointInWorld,btScalar depth)
-		{
-			btVector3 normalOnBInWorld = -normalOnBInWorld1;
-			
-			float4 normalWorld = make_float4(normalOnBInWorld.getX(),normalOnBInWorld.getY(),normalOnBInWorld.getZ(),0);
-			float4 pos = make_float4(pointInWorld.getX(),pointInWorld.getY(),pointInWorld.getZ(),depth);
-			m_normalOnSurfaceB = normalWorld;
-			m_closestPointInBs.push_back(pos);
-			m_closestPointInBs[m_closestPointInBs.size()-1].w = depth;
-
-		}
-};
-
+#define MAX_VERTS 1024
 
 
 void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
@@ -729,77 +691,12 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 	
 	BT_PROFILE("computeConvexConvexContactsHost");
 
-	btAlignedObjectArray<btVector3> vertices;
-		
-	{
-		BT_PROFILE("copyToHost(gpuVertices)");
-		gpuVertices.copyToHost(vertices);
-	}
-
-	btAlignedObjectArray<btGpuFace> faces;
-	{
-		BT_PROFILE("copyToHost(gpuFaces)");
-		gpuFaces.copyToHost(faces);
-	}
-	m_hostPairs.resize(pairs->size());
-	if (pairs->size())
-	{
-		BT_PROFILE("copyToHost(m_hostPairs)");
-		pairs->copyToHost(m_hostPairs);
-	}
-	
-	if (contactOut->size())
-	{
-		BT_PROFILE("copyToHost(m_hostContactOut");
-		contactOut->copyToHost(m_hostContactOut);
-	}
-	btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
-	{
-		BT_PROFILE("copyToHost(hostBodyBuf");
-		bodyBuf->copyToHost(hostBodyBuf);
-	}
-	btAlignedObjectArray<ChNarrowphase::ShapeData> hostShapeBuf;
-	{
-		BT_PROFILE("copyToHost(hostShapeBuf");
-		shapeBuf->copyToHost(hostShapeBuf);
-	}
-
-	btAlignedObjectArray<btVector3> uniqueEdges;
-	{
-		BT_PROFILE("copyToHost(gpuUniqueEdges)");
-		gpuUniqueEdges.copyToHost(uniqueEdges);
-	}
-
-	btAlignedObjectArray<int> indices;
-	{
-		BT_PROFILE("copyToHost(gpuIndices)");
-		gpuIndices.copyToHost(indices);
-	}
-
-	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
-	{
-		BT_PROFILE("copyToHost(convexData)");
-		convexData.copyToHost(hostConvexData);
-	}
-
-
-	bool reductionOnGpu = false;//true;
-
-
-	btAssert(m_hostPairs.size() == nPairs);
-	m_hostContactOut.reserve(nPairs);
-	ContactAccumulator resultOut;
-	
-	btAlignedObjectArray<float4> hostNormals;
-	btAlignedObjectArray<int> hostHasSep;
-
+	btOpenCLArray<float4> sepNormals(m_context,m_queue);
+	sepNormals.resize(nPairs);
+	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
+	hasSeparatingNormals.resize(nPairs);
 
 	{
-		
-		btOpenCLArray<float4> sepNormals(m_context,m_queue);
-		sepNormals.resize(nPairs);
-		btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
-		hasSeparatingNormals.resize(nPairs);
 
 		
 		clFinish(m_queue);
@@ -824,179 +721,282 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			clFinish(m_queue);
 		}
 
-		if (sepNormals.size())
-		{
-			sepNormals.copyToHost(hostNormals);
-			hasSeparatingNormals.copyToHost(hostHasSep);
-		}
 //		printf("hostNormals.size()=%d\n",hostNormals.size());
 		//int numPairs = pairCount.at(0);
 		
 	}
 	
-	
-	//m_hostContactOut.reserve(nPairs);
-	m_hostContactOut.resize(nPairs+nContacts);//m_hostContactOut.size()+1);
-	int actualContacts = 0;
-	for (int i=0;i<nPairs;i++)
+	bool contactClippingOnGpu = true;
+	if (contactClippingOnGpu)
 	{
-		int indexA = m_hostPairs[i].x;
-		int indexB = m_hostPairs[i].y;
-		int shapeA = hostBodyBuf[indexA].m_shapeIdx;
-		int shapeB = hostBodyBuf[indexB].m_shapeIdx;
+		BT_PROFILE("clipHullHullKernel");
+
+		btOpenCLArray<int> totalContactsOut(m_context, m_queue);
+		totalContactsOut.push_back(nContacts);
+
+		btBufferInfoCL bInfo[] = { 
+			btBufferInfoCL( pairs->getBufferCL(), true ), 
+			btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+			btBufferInfoCL( convexData.getBufferCL(),true),
+			btBufferInfoCL( gpuVertices.getBufferCL(),true),
+			btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+			btBufferInfoCL( gpuFaces.getBufferCL(),true),
+			btBufferInfoCL( gpuIndices.getBufferCL(),true),
+			btBufferInfoCL( sepNormals.getBufferCL()),
+			btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+			btBufferInfoCL( contactOut->getBufferCL()),
+			btBufferInfoCL( totalContactsOut.getBufferCL())	
+		};
+		btLauncherCL launcher(m_queue, m_clipHullHullKernel);
+		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+		launcher.setConst( nPairs  );
+		int num = nPairs;
+		launcher.launch1D( num);
+		clFinish(m_queue);
+		
+		nContacts = totalContactsOut.at(0);
+
+	} else
+	{	
+		bool reductionOnGpu = true;
 
 	
-		
-
-		bool validateFindSeparatingAxis = false;
-		if (validateFindSeparatingAxis)
+		btAlignedObjectArray<btVector3> vertices;
 		{
-		
-			btVector3 sepNormalWorldSpace;
-			bool foundSepAxis =false;
-
-			BT_PROFILE("findSeparatingAxis");
-			foundSepAxis = findSeparatingAxis(
-						hostConvexData.at(shapeA), 
-						hostConvexData.at(shapeB),
-						hostBodyBuf[indexA].m_pos,
-						hostBodyBuf[indexA].m_quat,
-						hostBodyBuf[indexB].m_pos,
-						hostBodyBuf[indexB].m_quat,
-
-						vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
-			if ((int)foundSepAxis != hostHasSep[i])
-			{
-				printf("not matching boolean with gpu at %d\n",i);
-			} 
-			if (foundSepAxis && (btFabs(sepNormalWorldSpace[0]-hostNormals[i].x)>1e06f))
-			{
-				printf("not matching normal %f != %f with gpu at %d\n",sepNormalWorldSpace[0],hostNormals[i].x,i);
-			}
+			BT_PROFILE("copyToHost(gpuVertices)");
+			gpuVertices.copyToHost(vertices);
+		}
+		btAlignedObjectArray<btGpuFace> faces;
+		{
+			BT_PROFILE("copyToHost(gpuFaces)");
+			gpuFaces.copyToHost(faces);
+		}
+		m_hostPairs.resize(pairs->size());
+		if (pairs->size())
+		{
+			BT_PROFILE("copyToHost(m_hostPairs)");
+			pairs->copyToHost(m_hostPairs);
+		}
+		if (contactOut->size())
+		{
+			BT_PROFILE("copyToHost(m_hostContactOut");
+			contactOut->copyToHost(m_hostContactOut);
+		}
+		btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
+		{
+			BT_PROFILE("copyToHost(hostBodyBuf");
+			bodyBuf->copyToHost(hostBodyBuf);
+		}
+		btAlignedObjectArray<ChNarrowphase::ShapeData> hostShapeBuf;
+		{
+			BT_PROFILE("copyToHost(hostShapeBuf");
+			shapeBuf->copyToHost(hostShapeBuf);
 		}
 
-		if (hostHasSep[i])
+		btAlignedObjectArray<btVector3> uniqueEdges;
 		{
-			BT_PROFILE("hostHasSep");
-	
-			btScalar minDist = -1;
-			btScalar maxDist = 0.1;
-
-			{
-				//BT_PROFILE("resultOut.m_distances");
-				resultOut.m_closestPointInBs.resize(0);
-				resultOut.m_distances.resize(0);
-			}
-			
-
-			btTransform trA,trB;
-			{
-			//BT_PROFILE("transform computation");
-			//trA.setIdentity();
-			trA.setOrigin(btVector3(hostBodyBuf[indexA].m_pos.x,hostBodyBuf[indexA].m_pos.y,hostBodyBuf[indexA].m_pos.z));
-			trA.setRotation(btQuaternion(hostBodyBuf[indexA].m_quat.x,hostBodyBuf[indexA].m_quat.y,hostBodyBuf[indexA].m_quat.z,hostBodyBuf[indexA].m_quat.w));
-			
-			//trB.setIdentity();
-			trB.setOrigin(btVector3(hostBodyBuf[indexB].m_pos.x,hostBodyBuf[indexB].m_pos.y,hostBodyBuf[indexB].m_pos.z));
-			trB.setRotation(btQuaternion(hostBodyBuf[indexB].m_quat.x,hostBodyBuf[indexB].m_quat.y,hostBodyBuf[indexB].m_quat.z,hostBodyBuf[indexB].m_quat.w));
-			}
-
-			clipHullAgainstHull((btVector3&)hostNormals[i], 
-				hostConvexData.at(shapeA), 
-				hostConvexData.at(shapeA),
-							trA,
-							trB,minDist, maxDist,vertices,faces,indices,resultOut);
-			
+			BT_PROFILE("copyToHost(gpuUniqueEdges)");
+			gpuUniqueEdges.copyToHost(uniqueEdges);
 		}
-		bool overlap = resultOut.m_closestPointInBs.size()>0;
-		if (overlap)
+
+		btAlignedObjectArray<int> indices;
 		{
+			BT_PROFILE("copyToHost(gpuIndices)");
+			gpuIndices.copyToHost(indices);
+		}
 
-			if (reductionOnGpu)
-			{
-				int numContacts = resultOut.m_closestPointInBs.size();
-				btOpenCLArray<int> contactCount(m_context, m_queue);
-				contactCount.push_back(numContacts);
-				btOpenCLArray<int> totalContactsOut(m_context, m_queue);
-				totalContactsOut.push_back(nContacts);
+		btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
+		{
+			BT_PROFILE("copyToHost(convexData)");
+			convexData.copyToHost(hostConvexData);
+		}
 
-				
-
-				btOpenCLArray<int> contactOffsets(m_context, m_queue);
-				contactOffsets.push_back(0);
-				
-				btOpenCLArray<float4> closestPointOnBWorld(m_context,m_queue);
-				closestPointOnBWorld.copyFromHost(resultOut.m_closestPointInBs);
-
-				btOpenCLArray<float4> normalOnSurface(m_context,m_queue);
-				normalOnSurface.push_back(resultOut.m_normalOnSurfaceB);
-
-				BT_PROFILE("extractManifoldAndAddContactKernel");
-				btBufferInfoCL bInfo[] = { 
-					btBufferInfoCL( pairs->getBufferCL(), true ), 
-					btBufferInfoCL( bodyBuf->getBufferCL(),true), 
-					btBufferInfoCL( closestPointOnBWorld.getBufferCL(),true),
-					btBufferInfoCL( normalOnSurface.getBufferCL(),true),
-					btBufferInfoCL( contactCount.getBufferCL(),true),
-					btBufferInfoCL( contactOffsets.getBufferCL(),true),
-					btBufferInfoCL( contactOut->getBufferCL()),
-					btBufferInfoCL( totalContactsOut.getBufferCL())
-				};
-
-				btLauncherCL launcher(m_queue, m_extractManifoldAndAddContactKernel);
-				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-				int num = 1;//nPairs;
-				
-				launcher.setConst( num);//nPairs  );
-				launcher.setConst( i);//nPairs  );
-				//int contactCapacity = MAX_BROADPHASE_COLLISION_CL;
-				//launcher.setConst(contactCapacity);
-				
-				launcher.launch1D( num);
-				clFinish(m_queue);
-
-				nContacts = totalContactsOut.at(0);
+		btAssert(m_hostPairs.size() == nPairs);
+		m_hostContactOut.reserve(nPairs);
 		
-			} else
-			{
-				BT_PROFILE("overlap");
-				float4 centerOut;
-				int contactIdx[4]={-1,-1,-1,-1};
+		btAlignedObjectArray<float4> hostNormals;
+		btAlignedObjectArray<int> hostHasSep;
 
-				int numPoints = 0;
-				
+		if (sepNormals.size())
+		{
+			sepNormals.copyToHost(hostNormals);
+			hasSeparatingNormals.copyToHost(hostHasSep);
+		}
+
+
+		//m_hostContactOut.reserve(nPairs);
+		m_hostContactOut.resize(nPairs+nContacts);//m_hostContactOut.size()+1);
+		int actualContacts = 0;
+		for (int i=0;i<nPairs;i++)
+		{
+			int indexA = m_hostPairs[i].x;
+			int indexB = m_hostPairs[i].y;
+			int shapeA = hostBodyBuf[indexA].m_shapeIdx;
+			int shapeB = hostBodyBuf[indexB].m_shapeIdx;
+
+		
+			
+
+			bool validateFindSeparatingAxis = false;
+			if (validateFindSeparatingAxis)
+			{
+			
+				btVector3 sepNormalWorldSpace;
+				bool foundSepAxis =false;
+
+				BT_PROFILE("findSeparatingAxis");
+				foundSepAxis = findSeparatingAxis(
+							hostConvexData.at(shapeA), 
+							hostConvexData.at(shapeB),
+							hostBodyBuf[indexA].m_pos,
+							hostBodyBuf[indexA].m_quat,
+							hostBodyBuf[indexB].m_pos,
+							hostBodyBuf[indexB].m_quat,
+
+							vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
+				if ((int)foundSepAxis != hostHasSep[i])
 				{
-					BT_PROFILE("extractManifold");
-					numPoints = extractManifold(&resultOut.m_closestPointInBs[0], resultOut.m_closestPointInBs.size(), resultOut.m_normalOnSurfaceB, centerOut,  contactIdx);
-				}
-				
-				btAssert(numPoints);
-				
-				Contact4& contact = m_hostContactOut[nContacts];
-				contact.m_batchIdx = i;
-				contact.m_bodyAPtr = m_hostPairs[i].x;
-				contact.m_bodyBPtr = m_hostPairs[i].y;
-				contact.m_frictionCoeffCmp = 45874;
-				contact.m_restituitionCoeffCmp = 0;
-				
-				float distance = 0.f;
-				for (int p=0;p<numPoints;p++)
+					printf("not matching boolean with gpu at %d\n",i);
+				} 
+				if (foundSepAxis && (btFabs(sepNormalWorldSpace[0]-hostNormals[i].x)>1e06f))
 				{
-					contact.m_worldPos[p] = resultOut.m_closestPointInBs[contactIdx[p]];
-					contact.m_worldNormal = resultOut.m_normalOnSurfaceB; 
+					printf("not matching normal %f != %f with gpu at %d\n",sepNormalWorldSpace[0],hostNormals[i].x,i);
 				}
-				contact.m_worldNormal.w = numPoints;
-				nContacts++;
-			} 
+			}
+
+			float4 contactsOut[MAX_VERTS];
+			int contactCapacity=MAX_VERTS;
+			int numContactsOut=0;
+			
+			if (hostHasSep[i])
+			{
+				BT_PROFILE("hostHasSep");
+		
+				btScalar minDist = -1;
+				btScalar maxDist = 0.1;
+
+				
+				
+
+				btTransform trA,trB;
+				{
+				//BT_PROFILE("transform computation");
+				//trA.setIdentity();
+				trA.setOrigin(btVector3(hostBodyBuf[indexA].m_pos.x,hostBodyBuf[indexA].m_pos.y,hostBodyBuf[indexA].m_pos.z));
+				trA.setRotation(btQuaternion(hostBodyBuf[indexA].m_quat.x,hostBodyBuf[indexA].m_quat.y,hostBodyBuf[indexA].m_quat.z,hostBodyBuf[indexA].m_quat.w));
+				
+				//trB.setIdentity();
+				trB.setOrigin(btVector3(hostBodyBuf[indexB].m_pos.x,hostBodyBuf[indexB].m_pos.y,hostBodyBuf[indexB].m_pos.z));
+				trB.setRotation(btQuaternion(hostBodyBuf[indexB].m_quat.x,hostBodyBuf[indexB].m_quat.y,hostBodyBuf[indexB].m_quat.z,hostBodyBuf[indexB].m_quat.w));
+				}
+
+		
+				float4 worldVertsB1[MAX_VERTS];
+				float4 worldVertsB2[MAX_VERTS];
+				int capacityWorldVerts = MAX_VERTS;
+
+
+				numContactsOut = clipHullAgainstHull(hostNormals[i], 
+					hostConvexData.at(shapeA), 
+					hostConvexData.at(shapeA),
+								(float4&)trA.getOrigin(), (Quaternion&)trA.getRotation(),
+								(float4&)trB.getOrigin(), (Quaternion&)trB.getRotation(),
+								worldVertsB1,worldVertsB2,capacityWorldVerts,
+								minDist, maxDist,(float4*)&vertices[0],&faces[0],&indices[0],contactsOut,contactCapacity);
+				
+			}
+			if (numContactsOut>0)
+			{
+				float4 normalOnSurfaceB = (float4&)-hostNormals[i];
+				if (reductionOnGpu)
+				{
+					btOpenCLArray<int> contactCount(m_context, m_queue);
+					contactCount.push_back(numContactsOut);
+					btOpenCLArray<int> totalContactsOut(m_context, m_queue);
+					totalContactsOut.push_back(nContacts);
+
+					
+
+					btOpenCLArray<int> contactOffsets(m_context, m_queue);
+					contactOffsets.push_back(0);
+					
+					btOpenCLArray<float4> closestPointOnBWorld(m_context,m_queue);
+					
+					closestPointOnBWorld.resize(numContactsOut,false);
+					closestPointOnBWorld.copyFromHostPointer(contactsOut,numContactsOut,0,true);
+					//closestPointOnBWorld.copyFromHost(resultOut.m_closestPointInBs);
+
+					
+					btOpenCLArray<float4> normalOnSurface(m_context,m_queue);
+					normalOnSurface.push_back(normalOnSurfaceB);
+
+					BT_PROFILE("extractManifoldAndAddContactKernel");
+					btBufferInfoCL bInfo[] = { 
+						btBufferInfoCL( pairs->getBufferCL(), true ), 
+						btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+						btBufferInfoCL( closestPointOnBWorld.getBufferCL(),true),
+						btBufferInfoCL( normalOnSurface.getBufferCL(),true),
+						btBufferInfoCL( contactCount.getBufferCL(),true),
+						btBufferInfoCL( contactOffsets.getBufferCL(),true),
+						btBufferInfoCL( contactOut->getBufferCL()),
+						btBufferInfoCL( totalContactsOut.getBufferCL())
+					};
+
+					btLauncherCL launcher(m_queue, m_extractManifoldAndAddContactKernel);
+					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+					int num = 1;//nPairs;
+					
+					launcher.setConst( num);//nPairs  );
+					launcher.setConst( i);//nPairs  );
+					//int contactCapacity = MAX_BROADPHASE_COLLISION_CL;
+					//launcher.setConst(contactCapacity);
+					
+					launcher.launch1D( num);
+					clFinish(m_queue);
+
+					nContacts = totalContactsOut.at(0);
+			
+				} else
+				{
+					BT_PROFILE("overlap");
+					float4 centerOut;
+					int contactIdx[4]={-1,-1,-1,-1};
+
+					int numPoints = 0;
+					
+					{
+						BT_PROFILE("extractManifold");
+						numPoints = extractManifold(contactsOut, numContactsOut, normalOnSurfaceB, centerOut,  contactIdx);
+					}
+					
+					btAssert(numPoints);
+					
+					Contact4& contact = m_hostContactOut[nContacts];
+					contact.m_batchIdx = i;
+					contact.m_bodyAPtr = m_hostPairs[i].x;
+					contact.m_bodyBPtr = m_hostPairs[i].y;
+					contact.m_frictionCoeffCmp = 45874;
+					contact.m_restituitionCoeffCmp = 0;
+					
+					float distance = 0.f;
+					for (int p=0;p<numPoints;p++)
+					{
+						contact.m_worldPos[p] = contactsOut[contactIdx[p]];
+						contact.m_worldNormal = normalOnSurfaceB; 
+					}
+					contact.m_worldNormal.w = numPoints;
+					nContacts++;
+				} 
+			}
 		}
-	}
 
-	
-	m_hostContactOut.resize(nContacts);
+		
+		m_hostContactOut.resize(nContacts);
 
-	if (!reductionOnGpu)
-	{
-		BT_PROFILE("copyFromHost(m_hostContactOut");
-		contactOut->copyFromHost(m_hostContactOut);
+		if (!reductionOnGpu)
+		{
+			BT_PROFILE("copyFromHost(m_hostContactOut");
+			contactOut->copyFromHost(m_hostContactOut);
+		}
 	}
 }

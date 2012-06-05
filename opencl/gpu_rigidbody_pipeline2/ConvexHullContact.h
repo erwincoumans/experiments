@@ -10,11 +10,6 @@
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
 
-struct ContactResult
-{
-	virtual ~ContactResult(){}	
-	virtual void addContactPoint(const btVector3& normalOnBInWorld,const btVector3& pointInWorld,btScalar depth)=0;
-};
 
 
 struct GpuSatCollision
