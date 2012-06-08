@@ -409,8 +409,8 @@ typedef struct
 //	int m_nPoints;
 //	int m_padding0;
 
-	u32 m_bodyAPtr;//x:m_bodyAPtr, y:m_bodyBPtr
-	u32 m_bodyBPtr;
+	int m_bodyAPtrAndSignBit;//x:m_bodyAPtr, y:m_bodyBPtr
+	int m_bodyBPtrAndSignBit;
 } Contact4;
 
 #define GET_NPOINTS(x) (x).m_worldNormal.w
@@ -1152,8 +1152,8 @@ void output(__local BodyData* bodyAPtr, __local BodyData* bodyBPtr,
 //			c->m_frictionCoeff = 0.7f;
 			c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
 			GET_NPOINTS(*c) = nContacts;
-			c->m_bodyAPtr = iPair[0].x;
-			c->m_bodyBPtr = iPair[0].y;
+			c->m_bodyAPtrAndSignBit = bodyAPtr->m_invMass==0 ? -iPair[0].x:iPair[0].x;
+			c->m_bodyBPtrAndSignBit = bodyBPtr->m_invMass==0 ? -iPair[0].y:iPair[0].y;
 		}
 	}
 	else
@@ -1218,8 +1218,8 @@ void output2(__local BodyData* bodyAPtr, __local BodyData* bodyBPtr,
 //				c->m_restituitionCoeff = 0.f;
 //				c->m_frictionCoeff = 0.7f;
 				c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
-				c->m_bodyAPtr = pair0;
-				c->m_bodyBPtr = pair1;
+				c->m_bodyAPtrAndSignBit = bodyAPtr->m_invMass==0.f ? -pair0:pair0;
+				c->m_bodyBPtrAndSignBit = bodyBPtr->m_invMass==0.f ? -pair1:pair1;
 			}
 			GET_NPOINTS(*c) = nContacts;
 		}
@@ -1270,8 +1270,8 @@ void output2LDS(__local BodyData* bodyAPtr, __local BodyData* bodyBPtr,
 //			contactsOut->m_restituitionCoeff = 0.f;
 //			contactsOut->m_frictionCoeff = 0.7f;
 			contactsOut->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
-			contactsOut->m_bodyAPtr = pair0;
-			contactsOut->m_bodyBPtr = pair1;
+			contactsOut->m_bodyAPtrAndSignBit = bodyAPtr->m_invMass==0.f?-pair0:pair0;
+			contactsOut->m_bodyBPtrAndSignBit = bodyBPtr->m_invMass==0.f? -pair1:pair1;
 		}
 		GET_NPOINTS(*contactsOut) = nContacts;//nContacts;
 	}
@@ -1332,8 +1332,8 @@ void output2_1(__local BodyData* bodyAPtr, __local BodyData* bodyBPtr,
 //				c->m_restituitionCoeff = 0.f;
 //				c->m_frictionCoeff = 0.7f;
 				c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
-				c->m_bodyAPtr = pair0;
-				c->m_bodyBPtr = pair1;
+				c->m_bodyAPtrAndSignBit = bodyAPtr->m_invMass==0.f? -pair0:pair0;
+				c->m_bodyBPtrAndSignBit = bodyBPtr->m_invMass==0.f? -pair1:pair1;
 			}
 			GET_NPOINTS(*c) = nContacts;
 		}
@@ -1466,12 +1466,12 @@ void NarrowphaseKernel( const __global int2* restrict pairs, const __global Shap
 		if( GET_LOCAL_IDX == 0 )	//	for debug
 		{
 			ldsContacts[0].m_worldNormal = make_float4(-1,-1,-1,0);
-			ldsContacts[0].m_bodyAPtr = 0;
-			ldsContacts[0].m_bodyBPtr = 0;
+			ldsContacts[0].m_bodyAPtrAndSignBit = 0;
+			ldsContacts[0].m_bodyBPtrAndSignBit = 0;
 			ldsContacts[0].m_batchIdx = 111;
 			ldsContacts[1].m_worldNormal = make_float4(-1,-1,-1,0);
-			ldsContacts[1].m_bodyAPtr = 0;
-			ldsContacts[1].m_bodyBPtr = 0;
+			ldsContacts[1].m_bodyAPtrAndSignBit = 0;
+			ldsContacts[1].m_bodyBPtrAndSignBit = 0;
 			ldsContacts[1].m_batchIdx = 111;
 		}
 */
@@ -1494,7 +1494,7 @@ void NarrowphaseKernel( const __global int2* restrict pairs, const __global Shap
 					float nDotn = dot3F4( ldsContacts[0].m_worldNormal, ldsContacts[1].m_worldNormal );
 					if( nDotn < -(1.f-0.01f) )
 					{
-						if( ldsContacts[0].m_bodyAPtr > ldsContacts[1].m_bodyAPtr )
+						if( ldsContacts[0].m_bodyAPtrAndSignBit > ldsContacts[1].m_bodyAPtrAndSignBit )
 							lNContactsA = 0;
 						else
 							lNContactsB = 0;

@@ -16,7 +16,7 @@ subject to the following restrictions:
 #ifndef DEMO_SETTINGS_H
 #define DEMO_SETTINGS_H
 
-#define SHAPE_VERTEX_BUFFER_SIZE 1024*1024
+#define SHAPE_VERTEX_BUFFER_SIZE 512*1024
 
 #define SHAPE_BUFFER_SIZE (SHAPE_VERTEX_BUFFER_SIZE)
 

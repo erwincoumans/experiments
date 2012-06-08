@@ -410,8 +410,8 @@ typedef struct
 	u32 m_coeffs;
 	int m_batchIdx;
 
-	u32 m_bodyAPtr;
-	u32 m_bodyBPtr;
+	int m_bodyAPtrAndSignBit;
+	int m_bodyBPtrAndSignBit;
 } Contact4;
 
 typedef struct
@@ -607,10 +607,30 @@ void solveAConstraint(__global Body* gBodies, __global Shape* gShapes, __global 
 			posB, &linVelB, &angVelB, invMassB, invInertiaB, maxRambdaDt, minRambdaDt );
 	}
 
-	gBodies[aIdx].m_linVel = linVelA;
-	gBodies[aIdx].m_angVel = angVelA;
+#if 0
+	if (gBodies[aIdx].m_invMass)
+	{
+		gBodies[aIdx].m_linVel = linVelA;
+		gBodies[aIdx].m_angVel = angVelA;
+	} else
+	{
+		gBodies[aIdx].m_linVel = make_float4(0,0,0,0);
+		gBodies[aIdx].m_angVel = make_float4(0,0,0,0);
+	}
+	if (gBodies[bIdx].m_invMass)
+	{
 	gBodies[bIdx].m_linVel = linVelB;
 	gBodies[bIdx].m_angVel = angVelB;
+	} else
+	{
+	gBodies[bIdx].m_linVel = make_float4(0,0,0,0);
+	gBodies[bIdx].m_angVel = make_float4(0,0,0,0);
+	
+	}
+#else
+	gBodies[bIdx].m_linVel = linVelB;
+	gBodies[bIdx].m_angVel = angVelB;
+#endif
 }
 
 void solveContactConstraint(__global Body* gBodies, __global Shape* gShapes, __global Constraint4* ldsCs)
@@ -634,10 +654,34 @@ void solveContactConstraint(__global Body* gBodies, __global Shape* gShapes, __g
 	solveContact( ldsCs, posA, &linVelA, &angVelA, invMassA, invInertiaA,
 			posB, &linVelB, &angVelB, invMassB, invInertiaB );
 
-	gBodies[aIdx].m_linVel = linVelA;
-	gBodies[aIdx].m_angVel = angVelA;
-	gBodies[bIdx].m_linVel = linVelB;
-	gBodies[bIdx].m_angVel = angVelB;
+#if 0
+  if (gBodies[aIdx].m_invMass)
+  {
+		gBodies[aIdx].m_linVel = linVelA;
+		gBodies[aIdx].m_angVel = angVelA;
+	} else
+	{
+		gBodies[aIdx].m_linVel = make_float4(0,0,0,0);
+		gBodies[aIdx].m_angVel = make_float4(0,0,0,0);
+	
+	}
+	if (gBodies[bIdx].m_invMass)
+  {
+		gBodies[bIdx].m_linVel = linVelB;
+		gBodies[bIdx].m_angVel = angVelB;
+	} else
+	{
+		gBodies[bIdx].m_linVel = make_float4(0,0,0,0);
+		gBodies[bIdx].m_angVel = make_float4(0,0,0,0);
+	
+	}
+#else
+		gBodies[aIdx].m_linVel = linVelA;
+		gBodies[aIdx].m_angVel = angVelA;
+		gBodies[bIdx].m_linVel = linVelB;
+		gBodies[bIdx].m_angVel = angVelB;
+#endif
+
 }
 
 void solveFrictionConstraint(__global Body* gBodies, __global Shape* gShapes, __global Constraint4* ldsCs)
@@ -677,11 +721,33 @@ void solveFrictionConstraint(__global Body* gBodies, __global Shape* gShapes, __
 		solveFriction( ldsCs, posA, &linVelA, &angVelA, invMassA, invInertiaA,
 			posB, &linVelB, &angVelB, invMassB, invInertiaB, maxRambdaDt, minRambdaDt );
 	}
-
+#if 0
+	
+	if (gBodies[aIdx].m_invMass)
+	{
+		gBodies[aIdx].m_linVel = linVelA;
+		gBodies[aIdx].m_angVel = angVelA;
+	} else
+	{
+		gBodies[aIdx].m_linVel = make_float4(0,0,0,0);
+		gBodies[aIdx].m_angVel = make_float4(0,0,0,0);
+	}
+	if (gBodies[bIdx].m_invMass)
+	{
+		gBodies[bIdx].m_linVel = linVelB;
+		gBodies[bIdx].m_angVel = angVelB;
+	} else
+	{
+		gBodies[bIdx].m_linVel = make_float4(0,0,0,0);
+		gBodies[bIdx].m_angVel = make_float4(0,0,0,0);
+	}
+#else
 	gBodies[aIdx].m_linVel = linVelA;
 	gBodies[aIdx].m_angVel = angVelA;
 	gBodies[bIdx].m_linVel = linVelB;
 	gBodies[bIdx].m_angVel = angVelB;
+#endif
+
 }
 
 typedef struct 
@@ -880,10 +946,10 @@ void SetSortDataKernel(__global Contact4* gContact, __global Body* gBodies, __gl
 
 	if( gIdx < nContacts )
 	{
-		int aIdx = gContact[gIdx].m_bodyAPtr;
-		int bIdx = gContact[gIdx].m_bodyBPtr;
+		int aIdx = abs(gContact[gIdx].m_bodyAPtrAndSignBit);
+		int bIdx = abs(gContact[gIdx].m_bodyBPtrAndSignBit);
 
-		int idx = (aIdx == staticIdx)? bIdx: aIdx;
+		int idx = (gContact[gIdx].m_bodyAPtrAndSignBit<0)? bIdx: aIdx;
 		float4 p = gBodies[idx].m_pos;
 		int xIdx = (int)((p.x-((p.x<0.f)?1.f:0.f))*scale) & (N_SPLIT-1);
 		int zIdx = (int)((p.z-((p.z<0.f)?1.f:0.f))*scale) & (N_SPLIT-1);
@@ -903,8 +969,8 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 	Contact4 src, float dt, float positionDrift, float positionConstraintCoeff,
 	Constraint4* dstC )
 {
-	dstC->m_bodyA = src.m_bodyAPtr;
-	dstC->m_bodyB = src.m_bodyBPtr;
+	dstC->m_bodyA = abs(src.m_bodyAPtrAndSignBit);
+	dstC->m_bodyB = abs(src.m_bodyBPtrAndSignBit);
 
 	float dtInv = 1.f/dt;
 	for(int ic=0; ic<4; ic++)
@@ -1012,8 +1078,8 @@ void ContactToConstraintKernel(__global Contact4* gContact, __global Body* gBodi
 
 	if( gIdx < nContacts )
 	{
-		int aIdx = gContact[gIdx].m_bodyAPtr;
-		int bIdx = gContact[gIdx].m_bodyBPtr;
+		int aIdx = abs(gContact[gIdx].m_bodyAPtrAndSignBit);
+		int bIdx = abs(gContact[gIdx].m_bodyBPtrAndSignBit);
 
 		float4 posA = gBodies[aIdx].m_pos;
 		float4 linVelA = gBodies[aIdx].m_linVel;

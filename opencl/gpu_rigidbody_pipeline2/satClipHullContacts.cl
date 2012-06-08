@@ -41,8 +41,8 @@ typedef struct
 //	int m_nPoints;
 //	int m_padding0;
 
-	u32 m_bodyAPtr;//x:m_bodyAPtr, y:m_bodyBPtr
-	u32 m_bodyBPtr;
+	int m_bodyAPtrAndSignBit;//x:m_bodyAPtr, y:m_bodyBPtr
+	int m_bodyBPtrAndSignBit;
 } Contact4;
 
 #define GET_NPOINTS(x) (x).m_worldNormal.w
@@ -230,6 +230,7 @@ int clipFace(const float4* pVtxIn, int numVertsIn, float4 planeNormalWS,float pl
 	int ve;
 	float ds, de;
 	int numVertsOut = 0;
+//double-check next test
 	if (numVertsIn < 2)
 		return 0;
 
@@ -575,8 +576,10 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 			c->m_worldNormal = normal;
 			c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
 			c->m_batchIdx = idx;
-			c->m_bodyAPtr = pairs[pairIndex].x;
-			c->m_bodyBPtr = pairs[pairIndex].y;
+			int bodyA = pairs[pairIndex].x;
+			int bodyB = pairs[pairIndex].y;
+			c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0 ? -bodyA:bodyA;
+			c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0 ? -bodyB:bodyB;
 			for (int i=0;i<nContacts;i++)
 			{
 				c->m_worldPos[i] = localPoints[contactIdx[i]];
@@ -611,8 +614,8 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 	float4 localContactsOut[64];
 	int localContactCapacity=64;
 	
-	float minDist = -1.f;
-	float maxDist = 0.1f;
+	float minDist = -1e30f;
+	float maxDist = 0.02f;
 
 	if (i<numPairs)
 	{
@@ -652,8 +655,11 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 					c->m_worldNormal = normal;
 					c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
 					c->m_batchIdx = pairIndex;
-					c->m_bodyAPtr = pairs[pairIndex].x;
-					c->m_bodyBPtr = pairs[pairIndex].y;
+					int bodyA = pairs[pairIndex].x;
+					int bodyB = pairs[pairIndex].y;
+					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
+					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
+
 					for (int i=0;i<nReducedContacts;i++)
 					{
 						c->m_worldPos[i] = pointsIn[contactIdx[i]];
@@ -666,4 +672,3 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 	}//	if (i<numPairs)
 
 }
-

@@ -434,6 +434,9 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 		int bodyIndexB = pairs[i].y;
 		int shapeIndexA = rigidBodies[bodyIndexA].m_shapeIdx;
 		int shapeIndexB = rigidBodies[bodyIndexB].m_shapeIdx;
+//once the broadphase avoids static-static pairs, we can remove this test
+		if ((rigidBodies[bodyIndexA].m_invMass==0) &&(rigidBodies[bodyIndexB].m_invMass==0))
+			return;
 
 		int numFacesA = convexShapes[shapeIndexA].m_numFaces;
 
@@ -443,18 +446,33 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 		bool sepA = findSeparatingAxisA(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
 																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
 																								indices,&separatingNormals[i],&dmin);
+		hasSeparatingAxis[i] = 4;
+		if (!sepA)
+		{
+			hasSeparatingAxis[i] = 0;
+		} else
+		{
+			bool sepB = findSeparatingAxisB(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+																									rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
+																									indices,&separatingNormals[i],&dmin);
 
-		bool sepB = findSeparatingAxisB(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
-																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
-																								indices,&separatingNormals[i],&dmin);
-
-		bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
-																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
-																								indices,&separatingNormals[i],&dmin);
-
-		 
-		 hasSeparatingAxis[i] = sepA || sepB || sepEE;
-
+			if (!sepB)
+			{
+				hasSeparatingAxis[i] = 0;
+			} else
+			{
+				bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+																									rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,vertices,uniqueEdges,faces,
+																									indices,&separatingNormals[i],&dmin);
+				if (!sepEE)
+				{
+					hasSeparatingAxis[i] = 0;
+				} else
+				{
+					hasSeparatingAxis[i] = 1;
+				}
+			}
+		}
+		
 	}
 }
-

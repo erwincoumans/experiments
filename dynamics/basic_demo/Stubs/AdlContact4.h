@@ -34,9 +34,13 @@ struct Contact4
 	u16 m_frictionCoeffCmp;
 	int m_batchIdx;
 
-	u32 m_bodyAPtr;
-	u32 m_bodyBPtr;
+	int m_bodyAPtrAndSignBit;
+	int m_bodyBPtrAndSignBit;
 
+	int getBodyA()const {return abs(m_bodyAPtrAndSignBit);}
+	int getBodyB()const {return abs(m_bodyBPtrAndSignBit);}
+	bool isBodyAFixed()const { return m_bodyAPtrAndSignBit<0;}
+	bool isBodyBFixed()const { return m_bodyBPtrAndSignBit<0;}
 	//	todo. make it safer
 	int& getBatchIdx() { return m_batchIdx; }
 	float getRestituitionCoeff() const { return ((float)m_restituitionCoeffCmp/(float)0xffff); }
@@ -49,7 +53,7 @@ struct Contact4
 
 	float getPenetration(int idx) const { return m_worldPos[idx].w; }
 
-	bool isInvalid() const { return ((u32)m_bodyAPtr+(u32)m_bodyBPtr) == 0; }
+	bool isInvalid() const { return (getBodyA()+getBodyB()) == 0; }
 };
 
 struct ContactPoint4

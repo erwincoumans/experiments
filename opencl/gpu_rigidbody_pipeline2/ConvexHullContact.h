@@ -29,7 +29,7 @@ struct GpuSatCollision
 	virtual ~GpuSatCollision();
 	
 
-	void computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
+	void computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,

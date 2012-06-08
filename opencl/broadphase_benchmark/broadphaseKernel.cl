@@ -1,5 +1,54 @@
 MSTRINGIFY(
 
+typedef float4 Quaternion;
+
+__inline
+float4 cross3(float4 a, float4 b)
+{
+	return cross(a,b);
+}
+
+__inline
+float dot3F4(float4 a, float4 b)
+{
+	float4 a1 = (float4)(a.xyz,0.f);
+	float4 b1 = (float4)(b.xyz,0.f);
+	return dot(a1, b1);
+}
+
+
+__inline
+Quaternion qtMul(Quaternion a, Quaternion b)
+{
+	Quaternion ans;
+	ans = cross3( a, b );
+	ans += a.w*b+b.w*a;
+	ans.w = a.w*b.w - dot3F4(a, b);
+	return ans;
+}
+
+__inline
+Quaternion qtInvert(Quaternion q)
+{
+	return (Quaternion)(-q.xyz, q.w);
+}
+
+__inline
+float4 qtRotate(Quaternion q, float4 vec)
+{
+	Quaternion qInv = qtInvert( q );
+	float4 vcpy = vec;
+	vcpy.w = 0.f;
+	float4 out = qtMul(qtMul(q,vcpy),qInv);
+	return out;
+}
+
+__inline
+float4 transform(const float4* p, const float4* translation, const Quaternion* orientation)
+{
+	return qtRotate( *orientation, *p ) + (*translation);
+}
+
 typedef struct
 {
 	float4	m_row[3];
@@ -72,13 +121,6 @@ Matrix3x3 mtTranspose(Matrix3x3 m)
 	return out;
 }
 
-__inline
-float dot3F4(float4 a, float4 b)
-{
-	float4 a1 = (float4)(a.xyz,0.f);
-	float4 b1 = (float4)(b.xyz,0.f);
-	return dot(a1, b1);
-}
 
 
 __inline
@@ -166,6 +208,7 @@ __kernel void
 		   )
 {
 	int nodeID = get_global_id(0);
+	
 	if( nodeID < numNodes )
 	{
 		float inverseMass = gBodies[nodeID].m_invMass;
@@ -173,6 +216,10 @@ __kernel void
 		{
 			linVel[nodeID] = (float4)(gBodies[nodeID].m_linVel.xyz,0.f);
 			pAngVel[nodeID] = (float4)(gBodies[nodeID].m_angVel.xyz,0.f);
+		} else
+		{
+			linVel[nodeID] = (float4)(0,0,0,0);
+			pAngVel[nodeID] = (float4)(0,0,0,0);
 		}
 	}
 }
@@ -241,19 +288,22 @@ __kernel void
 			btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
 			
 			float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
-
+			float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;
+			
+			float4 worldCenter = transform(&localCenter,&position,&orientation);
+			
 			Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
 			float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
 		
 
-			pAABB[nodeID*2].fx = position.x-extent.x;
-			pAABB[nodeID*2].fy = position.y-extent.y;
-			pAABB[nodeID*2].fz = position.z-extent.z;
+			pAABB[nodeID*2].fx = worldCenter.x-extent.x;
+			pAABB[nodeID*2].fy = worldCenter.y-extent.y;
+			pAABB[nodeID*2].fz = worldCenter.z-extent.z;
 			pAABB[nodeID*2].uw = nodeID;
 
-			pAABB[nodeID*2+1].fx = position.x+extent.x;
-			pAABB[nodeID*2+1].fy = position.y+extent.y;
-			pAABB[nodeID*2+1].fz = position.z+extent.z;
+			pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
+			pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
+			pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
 			pAABB[nodeID*2+1].uw = nodeID;		
 		}
 	}

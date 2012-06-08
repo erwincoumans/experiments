@@ -404,6 +404,7 @@ void GLInstancingRenderer::writeTransforms()
 
 int GLInstancingRenderer::registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling)
 {
+	btAssert(shapeIndex == (m_graphicsInstances.size()-1));
 	btGraphicsInstance* gfxObj = m_graphicsInstances[shapeIndex];
 
 	int index = gfxObj->m_numGraphicsInstances + gfxObj->m_instanceOffset;

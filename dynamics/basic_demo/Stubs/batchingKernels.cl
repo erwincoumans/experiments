@@ -71,8 +71,8 @@ typedef struct
 	u32 m_coeffs;
 	int m_batchIdx;
 
-	u32 m_bodyA;
-	u32 m_bodyB;
+	int m_bodyA;//sign bit set for fixed objects
+	int m_bodyB;
 }Contact4;
 
 typedef struct 
@@ -85,8 +85,8 @@ typedef struct
 
 typedef struct 
 {
-	u32 m_a;
-	u32 m_b;
+	int m_a;
+	int m_b;
 	u32 m_idx;
 }Elem;
 
@@ -157,7 +157,7 @@ __kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4*
 	}
 	
 //	while(1)
-	for(int ie=0; ie<250; ie++)
+	for(int ie=0; ie<50; ie++)
 	{
 		ldsFixedBuffer[lIdx] = 0;
 
@@ -211,25 +211,27 @@ __kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4*
 					
 					if( !done )
 					{
-						int aUsed = readBuf( ldsFixedBuffer, e.m_a);
-						int bUsed = readBuf( ldsFixedBuffer, e.m_b);
+						int aUsed = readBuf( ldsFixedBuffer, abs(e.m_a));
+						int bUsed = readBuf( ldsFixedBuffer, abs(e.m_b));
 
 						if( aUsed==0 && bUsed==0 )
 						{
 							int aAvailable;
 							int bAvailable;
+							int ea = abs(e.m_a);
+							int eb = abs(e.m_b);
 
-							aAvailable = tryWrite( ldsCheckBuffer, e.m_a );
-							bAvailable = tryWrite( ldsCheckBuffer, e.m_b );
+							aAvailable = tryWrite( ldsCheckBuffer, ea );
+							bAvailable = tryWrite( ldsCheckBuffer, eb );
 
-							//aAvailable = (m_staticIdx == e.m_a)? 1: aAvailable;
-							//bAvailable = (m_staticIdx == e.m_b)? 1: bAvailable;
+							aAvailable = (e.m_a<0)? 1: aAvailable;
+							bAvailable = (e.m_b<0)? 1: bAvailable;
 
 							bool success = (aAvailable && bAvailable);
 							if(success)
 							{
-								writeBuf( ldsFixedBuffer, e.m_a );
-								writeBuf( ldsFixedBuffer, e.m_b );
+								writeBuf( ldsFixedBuffer, ea );
+								writeBuf( ldsFixedBuffer, eb );
 							}
 							done = success;
 						}

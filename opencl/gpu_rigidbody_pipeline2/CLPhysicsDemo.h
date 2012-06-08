@@ -38,7 +38,7 @@ struct CLPhysicsDemo
 	
 	void	setupInterop();
 
-	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling);
+	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 
 	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, void* userPointer);
 

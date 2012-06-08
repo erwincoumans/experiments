@@ -679,7 +679,7 @@ int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& ce
 #define MAX_VERTS 1024
 
 
-void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>* pairs, int nPairs, 
+void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btOpenCLArray<ConvexPolyhedronCL>& convexData,
@@ -689,18 +689,29 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			const btOpenCLArray<int>& gpuIndices)
 {
 	
-	BT_PROFILE("computeConvexConvexContactsHost");
+	BT_PROFILE("computeConvexConvexContactsGPUSAT");
 
 	btOpenCLArray<float4> sepNormals(m_context,m_queue);
 	sepNormals.resize(nPairs);
 	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
 	hasSeparatingNormals.resize(nPairs);
 
+
+				btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
+			btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
+
+	btAlignedObjectArray<float4> hostNormals;
+	btAlignedObjectArray<int> hostHasSep;
+
+	bool findSeparatingAxisOnGpu = true;
+
+
 	{
 
 		
+
 		clFinish(m_queue);
-		if (1)
+		if (findSeparatingAxisOnGpu)
 		{
 			BT_PROFILE("findSeparatingAxisKernel");
 			btBufferInfoCL bInfo[] = { 
@@ -719,6 +730,87 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			int num = nPairs;
 			launcher.launch1D( num);
 			clFinish(m_queue);
+		} else
+		{
+
+			{
+
+				BT_PROFILE("copyToHost(convexData)");
+				convexData.copyToHost(hostConvexData);
+			}
+
+			{
+				BT_PROFILE("copyToHost(hostBodyBuf");
+				bodyBuf->copyToHost(hostBodyBuf);
+			}
+
+					m_hostPairs.resize(pairs->size());
+		if (pairs->size())
+		{
+			BT_PROFILE("copyToHost(m_hostPairs)");
+			pairs->copyToHost(m_hostPairs);
+		}
+		if (contactOut->size())
+		{
+			BT_PROFILE("copyToHost(m_hostContactOut");
+			contactOut->copyToHost(m_hostContactOut);
+		}
+
+
+			btAlignedObjectArray<btVector3> vertices;
+		{
+			BT_PROFILE("copyToHost(gpuVertices)");
+			gpuVertices.copyToHost(vertices);
+		}
+		btAlignedObjectArray<btGpuFace> faces;
+		{
+			BT_PROFILE("copyToHost(gpuFaces)");
+			gpuFaces.copyToHost(faces);
+		}
+
+		btAlignedObjectArray<btVector3> uniqueEdges;
+		{
+			BT_PROFILE("copyToHost(gpuUniqueEdges)");
+			gpuUniqueEdges.copyToHost(uniqueEdges);
+		}
+
+		btAlignedObjectArray<int> indices;
+		{
+			BT_PROFILE("copyToHost(gpuIndices)");
+			gpuIndices.copyToHost(indices);
+		}
+
+
+			hostHasSep.resize(nPairs);
+			hostNormals.resize(nPairs);
+
+			for (int i=0;i<nPairs;i++)
+			{
+				int indexA = m_hostPairs[i].x;
+				int indexB = m_hostPairs[i].y;
+				int shapeA = hostBodyBuf[indexA].m_shapeIdx;
+				int shapeB = hostBodyBuf[indexB].m_shapeIdx;
+
+
+				btVector3 sepNormalWorldSpace;
+				bool foundSepAxis =false;
+
+				BT_PROFILE("findSeparatingAxis");
+				foundSepAxis = findSeparatingAxis(
+							hostConvexData.at(shapeA), 
+							hostConvexData.at(shapeB),
+							hostBodyBuf[indexA].m_pos,
+							hostBodyBuf[indexA].m_quat,
+							hostBodyBuf[indexB].m_pos,
+							hostBodyBuf[indexB].m_quat,
+
+							vertices,uniqueEdges,faces,indices,sepNormalWorldSpace);
+
+				hostHasSep[i] = foundSepAxis;
+				if (foundSepAxis)
+					hostNormals[i] = make_float4(sepNormalWorldSpace.getX(),sepNormalWorldSpace.getY(),sepNormalWorldSpace.getZ(),0.f);
+
+			}
 		}
 
 //		printf("hostNormals.size()=%d\n",hostNormals.size());
@@ -782,7 +874,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			BT_PROFILE("copyToHost(m_hostContactOut");
 			contactOut->copyToHost(m_hostContactOut);
 		}
-		btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
+		
 		{
 			BT_PROFILE("copyToHost(hostBodyBuf");
 			bodyBuf->copyToHost(hostBodyBuf);
@@ -805,7 +897,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 			gpuIndices.copyToHost(indices);
 		}
 
-		btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
+		
 		{
 			BT_PROFILE("copyToHost(convexData)");
 			convexData.copyToHost(hostConvexData);
@@ -814,10 +906,8 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		btAssert(m_hostPairs.size() == nPairs);
 		m_hostContactOut.reserve(nPairs);
 		
-		btAlignedObjectArray<float4> hostNormals;
-		btAlignedObjectArray<int> hostHasSep;
-
-		if (sepNormals.size())
+		
+		if (findSeparatingAxisOnGpu && sepNormals.size())
 		{
 			sepNormals.copyToHost(hostNormals);
 			hasSeparatingNormals.copyToHost(hostHasSep);
@@ -837,7 +927,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 		
 			
 
-			bool validateFindSeparatingAxis = false;
+			bool validateFindSeparatingAxis = false;//true;
 			if (validateFindSeparatingAxis)
 			{
 			
@@ -898,7 +988,7 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 
 				numContactsOut = clipHullAgainstHull(hostNormals[i], 
 					hostConvexData.at(shapeA), 
-					hostConvexData.at(shapeA),
+					hostConvexData.at(shapeB),
 								(float4&)trA.getOrigin(), (Quaternion&)trA.getRotation(),
 								(float4&)trB.getOrigin(), (Quaternion&)trB.getRotation(),
 								worldVertsB1,worldVertsB2,capacityWorldVerts,
@@ -973,8 +1063,9 @@ void GpuSatCollision::computeConvexConvexContactsHost( const btOpenCLArray<int2>
 					
 					Contact4& contact = m_hostContactOut[nContacts];
 					contact.m_batchIdx = i;
-					contact.m_bodyAPtr = m_hostPairs[i].x;
-					contact.m_bodyBPtr = m_hostPairs[i].y;
+					contact.m_bodyAPtrAndSignBit = (hostBodyBuf[indexA].m_invMass==0)? -m_hostPairs[i].x:m_hostPairs[i].x;
+					contact.m_bodyBPtrAndSignBit = (hostBodyBuf[indexB].m_invMass==0)? -m_hostPairs[i].y:m_hostPairs[i].y;
+
 					contact.m_frictionCoeffCmp = 45874;
 					contact.m_restituitionCoeffCmp = 0;
 					
