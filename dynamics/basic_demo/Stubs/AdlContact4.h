@@ -43,6 +43,7 @@ struct Contact4
 	bool isBodyBFixed()const { return m_bodyBPtrAndSignBit<0;}
 	//	todo. make it safer
 	int& getBatchIdx() { return m_batchIdx; }
+	const int& getBatchIdx() const { return m_batchIdx; }
 	float getRestituitionCoeff() const { return ((float)m_restituitionCoeffCmp/(float)0xffff); }
 	void setRestituitionCoeff( float c ) { btAssert( c >= 0.f && c <= 1.f ); m_restituitionCoeffCmp = (u16)(c*0xffff); }
 	float getFrictionCoeff() const { return ((float)m_frictionCoeffCmp/(float)0xffff); }

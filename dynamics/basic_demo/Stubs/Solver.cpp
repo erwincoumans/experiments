@@ -85,10 +85,14 @@ Solver::Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int 
 	m_contactBuffer = new btOpenCLArray<Contact4>(ctx,queue);
 
 	m_numConstraints = new btOpenCLArray<u32>(ctx,queue,N_SPLIT*N_SPLIT );
-	m_offsets = new btOpenCLArray<u32>( ctx,queue, N_SPLIT*N_SPLIT );
+	m_numConstraints->resize(N_SPLIT*N_SPLIT);
 
+	m_offsets = new btOpenCLArray<u32>( ctx,queue, N_SPLIT*N_SPLIT );
+	m_offsets->resize(N_SPLIT*N_SPLIT);
 	const char* additionalMacros = "";
 	const char* srcFileNameForCaching="";
+
+
 
 	cl_int pErrNum;
 	char* kernelSource = 0;
@@ -468,7 +472,7 @@ void Solver::batchContacts(  btOpenCLArray<Contact4>* contacts, int nContacts, b
 {
 
 	{
-		BT_PROFILE("GPU classTestKernel/Kernel (batch generation?)");
+		BT_PROFILE("batch generation");
 		
 		btInt4 cdata;
 		cdata.x = nContacts;
@@ -495,12 +499,14 @@ void Solver::batchContacts(  btOpenCLArray<Contact4>* contacts, int nContacts, b
 		};
 
 		
-		
-		btLauncherCL launcher( m_queue, m_batchingKernel);
-		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst(  cdata );
-		launcher.launch1D( numWorkItems, 64 );
-		clFinish(m_queue);
+		{
+			BT_PROFILE("batchingKernel");
+			btLauncherCL launcher( m_queue, m_batchingKernel);
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst(  cdata );
+			launcher.launch1D( numWorkItems, 64 );
+			clFinish(m_queue);
+		}
 
 #ifdef BATCH_DEBUG
 	aaaa
@@ -539,8 +545,8 @@ void Solver::batchContacts(  btOpenCLArray<Contact4>* contacts, int nContacts, b
 
 //	copy buffer to buffer
 	btAssert(m_contactBuffer->size()==nContacts);
-	contacts->copyFromOpenCLArray( *m_contactBuffer);
-	clFinish(m_queue);//needed?
+	//contacts->copyFromOpenCLArray( *m_contactBuffer);
+	//clFinish(m_queue);//needed?
 
 	
 }

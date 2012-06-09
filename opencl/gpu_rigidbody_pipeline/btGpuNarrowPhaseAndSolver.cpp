@@ -120,7 +120,7 @@ struct	CustomDispatchData
 
 
 btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_id device, cl_command_queue queue)
-	:m_internalData(0) ,m_planeBodyIndex(-1),
+	:m_internalData(0) ,m_planeBodyIndex(-1),m_static0Index(-1),
 	m_context(ctx),
 	m_device(device),
 	m_queue(queue)
@@ -316,6 +316,9 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int shapeIndex, float mass, con
 
 	if (mass==0.f)
 	{
+		if (m_internalData->m_numAcceleratedRigidBodies==0)
+			m_static0Index = 0;
+
 		shapeInfo.m_initInvInertia = mtZero();
 		shapeInfo.m_invInertia = mtZero();
 	} else
@@ -407,7 +410,131 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 
 }
 
+static bool sortfnc(const btSortData& a,const btSortData& b)
+{
+	return (a.m_key<b.m_key);
+}
 
+btAlignedObjectArray<u32> idxBuffer;
+btAlignedObjectArray<btSortData> sortData;
+btAlignedObjectArray<Contact4> old;
+
+static
+__inline
+int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchData*	internalData)
+{
+	int numIter = 0;
+
+	sortData.resize(n);
+	idxBuffer.resize(n);
+	old.resize(n);
+	
+	u32* idxSrc = &idxBuffer[0];
+	u32* idxDst = &idxBuffer[0];
+	int nIdxSrc, nIdxDst;
+
+	const int N_FLG = 256;
+	const int FLG_MASK = N_FLG-1;
+	u32 flg[N_FLG/32];
+#if defined(_DEBUG)
+	for(int i=0; i<n; i++) 
+		cs[i].getBatchIdx() = -1; 
+#endif
+	for(int i=0; i<n; i++) idxSrc[i] = i;
+	nIdxSrc = n;
+
+	int batchIdx = 0;
+
+	{
+		BT_PROFILE("cpu batch innerloop");
+		while( nIdxSrc )
+		{
+			numIter++;
+			nIdxDst = 0;
+			int nCurrentBatch = 0;
+
+			//	clear flag
+			for(int i=0; i<N_FLG/32; i++) flg[i] = 0;
+
+			for(int i=0; i<nIdxSrc; i++)
+			{
+				int idx = idxSrc[i];
+				ADLASSERT( idx < n );
+				//	check if it can go
+				int bodyAS = cs[idx].m_bodyAPtrAndSignBit;
+				int bodyBS = cs[idx].m_bodyBPtrAndSignBit;
+
+				if (bodyAS<0)
+					printf("A static\n");
+
+				if (bodyBS<0)
+					printf("B static\n");
+
+				int bodyA = abs(bodyAS);
+				int bodyB = abs(bodyBS);
+
+				int aIdx = bodyA & FLG_MASK;
+				int bIdx = bodyB & FLG_MASK;
+
+				u32 aUnavailable = flg[ aIdx/32 ] & (1<<(aIdx&31));
+				u32 bUnavailable = flg[ bIdx/32 ] & (1<<(bIdx&31));
+
+//use inv_mass!
+				aUnavailable = (bodyAS>=0)? aUnavailable:0;//
+				bUnavailable = (bodyBS>=0)? bUnavailable:0;
+
+				if( aUnavailable==0 && bUnavailable==0 ) // ok 
+				{
+					flg[ aIdx/32 ] |= (1<<(aIdx&31));
+					flg[ bIdx/32 ] |= (1<<(bIdx&31));
+					cs[idx].getBatchIdx() = batchIdx;
+					sortData[idx].m_key = batchIdx;
+					sortData[idx].m_value = idx;
+
+					{
+						nCurrentBatch++;
+						if( nCurrentBatch == simdWidth )
+						{
+							nCurrentBatch = 0;
+							for(int i=0; i<N_FLG/32; i++) flg[i] = 0;
+						}
+					}
+				}
+				else
+				{
+					idxDst[nIdxDst++] = idx;
+				}
+			}
+			swap2( idxSrc, idxDst );
+			swap2( nIdxSrc, nIdxDst );
+			batchIdx ++;
+		}
+	}
+	{
+		BT_PROFILE("quickSort");
+		sortData.quickSort(sortfnc);
+	}
+	
+	
+	{	
+			BT_PROFILE("reorder");
+		//	reorder
+		
+		memcpy( &old[0], cs, sizeof(Contact4)*n);
+		for(int i=0; i<n; i++)
+		{
+			int idx = sortData[i].m_value;
+			cs[i] = old[idx];
+		}
+	}
+
+	
+#if defined(_DEBUG)
+//		debugPrintf( "nBatches: %d\n", batchIdx );
+	for(int i=0; i<n; i++) ADLASSERT( cs[i].getBatchIdx() != -1 );
+#endif
+	return batchIdx;
+}
 
 void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs) 
 {
@@ -476,6 +603,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 					0,0,m_internalData->m_pBufContactOutGPU, nContactOut, cfgNP);
 			}
 	}
+
+
+	
 	{
 		BT_PROFILE("ChNarrowphase::execute");
 		
@@ -536,6 +666,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 		clFinish(m_queue);
 	}
 	
+	
+	m_internalData->m_pBufContactOutGPU->resize(nContactOut);
+
 	if (!nContactOut)
 		return;
 	
@@ -548,7 +681,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 		SolverBase::ConstraintCfg csCfg( dt );
 		csCfg.m_enableParallelSolve = true;
 		csCfg.m_averageExtent = 0.2f;//@TODO m_averageObjExtent;
-		csCfg.m_staticIdx = m_planeBodyIndex;
+		csCfg.m_staticIdx = m_static0Index;//m_planeBodyIndex;
 
 		btOpenCLArray<Contact4>* contactsIn = m_internalData->m_pBufContactOutGPU;
 		const btOpenCLArray<RigidBodyBase::Body>* bodyBuf = m_internalData->m_bodyBufferGPU;
@@ -560,20 +693,23 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 		bool useCPU=false;
 
 		{
-			BT_PROFILE("GPU batch");
-
+			
+			if( m_internalData->m_solverGPU->m_contactBuffer)
 			{
-				//@todo: just reserve it, without copy of original contact (unless we use warmstarting)
-				if( m_internalData->m_solverGPU->m_contactBuffer)
-				{
-					m_internalData->m_solverGPU->m_contactBuffer->resize(nContacts);
-				}
+				m_internalData->m_solverGPU->m_contactBuffer->resize(nContacts);
+			}
 
-				if( m_internalData->m_solverGPU->m_contactBuffer == 0 )
-				{
-					m_internalData->m_solverGPU->m_contactBuffer = new btOpenCLArray<Contact4>(m_context,m_queue, nContacts );
-					m_internalData->m_solverGPU->m_contactBuffer->resize(nContacts);
-				}
+			if( m_internalData->m_solverGPU->m_contactBuffer == 0 )
+			{
+				m_internalData->m_solverGPU->m_contactBuffer = new btOpenCLArray<Contact4>(m_context,m_queue, nContacts );
+				m_internalData->m_solverGPU->m_contactBuffer->resize(nContacts);
+			}
+
+			
+			{
+				BT_PROFILE("batching");
+				//@todo: just reserve it, without copy of original contact (unless we use warmstarting)
+				
 
 				btOpenCLArray<Contact4>* contactNative  = contactsIn;
 				const btOpenCLArray<RigidBodyBase::Body>* bodyNative = bodyBuf;
@@ -695,21 +831,74 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 				}
 					
 				bool compareGPU = false;
+				
 				if (gpuBatchContacts)
 				{
 					BT_PROFILE("gpu batchContacts");
 					m_internalData->m_solverGPU->batchContacts( contactNative, nContacts, m_internalData->m_solverGPU->m_numConstraints, m_internalData->m_solverGPU->m_offsets, csCfg.m_staticIdx );
+				} else
+				{
+					BT_PROFILE("cpu batchContacts");
+					btAlignedObjectArray<Contact4> cpuContacts;
+					btOpenCLArray<Contact4>* contactsIn = m_internalData->m_pBufContactOutGPU;
+					contactsIn->copyToHost(cpuContacts);
+
+					btOpenCLArray<u32>* countsNative = m_internalData->m_solverGPU->m_numConstraints;
+					btOpenCLArray<u32>* offsetsNative = m_internalData->m_solverGPU->m_offsets;
+
+					btAlignedObjectArray<u32> nNativeHost;
+					btAlignedObjectArray<u32> offsetsNativeHost;
+
+					{
+						BT_PROFILE("countsNative/offsetsNative copyToHost");
+						countsNative->copyToHost(nNativeHost);
+						offsetsNative->copyToHost(offsetsNativeHost);
+					}
+
+					
+					int numNonzeroGrid=0;
+					int maxNumBatches = 0;
+					{
+						BT_PROFILE("batch grid");
+						for(int i=0; i<BT_SOLVER_N_SPLIT*BT_SOLVER_N_SPLIT; i++)
+						{
+							int n = (nNativeHost)[i];
+							int offset = (offsetsNativeHost)[i];
+
+							if( n ) 
+							{
+								numNonzeroGrid++;
+								//printf("cpu batch\n");
+							
+								int simdWidth = -1;
+								int numBatches = sortConstraintByBatch( &cpuContacts[0]+offset, n, simdWidth,m_internalData );	//	on GPU
+								maxNumBatches = btMax(numBatches,maxNumBatches);
+
+								clFinish(m_queue);
+				
+							}
+						}
+					}
+					{
+						BT_PROFILE("m_contactBuffer->copyFromHost");
+						m_internalData->m_solverGPU->m_contactBuffer->copyFromHost(cpuContacts);
+					}
+				//	printf("maxNumBatches = %d\n", maxNumBatches);
+					
 				}
+				
 
 				if (1)
 				{
-					BT_PROFILE("gpu convertToConstraints");
-					m_internalData->m_solverGPU->convertToConstraints( bodyBuf, shapeBuf, contactNative, contactCOut, additionalData, nContacts, csCfg );
+					//BT_PROFILE("gpu convertToConstraints");
+					m_internalData->m_solverGPU->convertToConstraints( bodyBuf, shapeBuf, m_internalData->m_solverGPU->m_contactBuffer /*contactNative*/, contactCOut, additionalData, nContacts, csCfg );
 					clFinish(m_queue);
 				}
+			
+			} 
 
-			}
-		}
+			
+		} 
 
 
 		if (1)

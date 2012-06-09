@@ -56,6 +56,7 @@ protected:
 	CustomDispatchData*	m_internalData;
 	int m_acceleratedCompanionShapeIndex;
 	int m_planeBodyIndex;
+	int	m_static0Index;
 
 	cl_context m_context;
 	cl_device_id m_device;

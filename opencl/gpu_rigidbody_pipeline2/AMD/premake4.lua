@@ -21,8 +21,12 @@
 		"../../../bullet2"
 		}
 		
+		links {"BulletFileLoader"}
+		
 		files {
 			"../main.cpp",
+			"../BulletDataExtractor.cpp",
+			"../BulletDataExtractor.h",
 			"../btGpuSapBroadphase.cpp",
 			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
@@ -61,6 +65,8 @@
 			"../../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h",
 			"../../3dGridBroadphase/Shared/btGpu3DGridBroadphase.cpp",
 			"../../3dGridBroadphase/Shared/btGpu3DGridBroadphase.h",
+			"../../../bullet2/LinearMath/btSerializer.cpp",
+			"../../../bullet2/LinearMath/btSerializer.h",
 			"../../../bullet2/LinearMath/btAlignedAllocator.cpp",
 			"../../../bullet2/LinearMath/btQuickprof.cpp",
 			"../../../bullet2/LinearMath/btQuickprof.h",

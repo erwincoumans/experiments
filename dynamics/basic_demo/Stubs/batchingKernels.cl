@@ -127,8 +127,8 @@ u32 tryWrite(__local u32* buff, int idx)
 }
 
 //	batching on the GPU
-__kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4* gConstraintsOut,
-		__global u32* gN, __global u32* gStart, 
+__kernel void CreateBatches( __global const Contact4* gConstraints, __global Contact4* gConstraintsOut,
+		__global const u32* gN, __global const u32* gStart, 
 		ConstBuffer cb )
 {
 	__local u32 ldsStackIdx[STACK_SIZE];
@@ -157,6 +157,7 @@ __kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4*
 	}
 	
 //	while(1)
+//was 250
 	for(int ie=0; ie<50; ie++)
 	{
 		ldsFixedBuffer[lIdx] = 0;
@@ -226,6 +227,9 @@ __kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4*
 
 							aAvailable = (e.m_a<0)? 1: aAvailable;
 							bAvailable = (e.m_b<0)? 1: bAvailable;
+							
+							aAvailable = (e.m_a==m_staticIdx)? 1: aAvailable;
+							bAvailable = (e.m_b==m_staticIdx)? 1: bAvailable;
 
 							bool success = (aAvailable && bAvailable);
 							if(success)
@@ -314,8 +318,6 @@ __kernel void CreateBatches( __global Contact4* gConstraints, __global Contact4*
 
 
 }
-
-
 
 
 

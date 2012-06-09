@@ -19,186 +19,22 @@ subject to the following restrictions:
 
 #include "GLInstancingRenderer.h"
 
-
-#include "GLInstancingRenderer.h"
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 #include "Win32OpenGLRenderManager.h"
 #include "CLPhysicsDemo.h"
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
 #include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
-#include "ShapeData.h"
+
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
-
-int NUM_OBJECTS_X = 32;
-int NUM_OBJECTS_Y = 32;
-int NUM_OBJECTS_Z = 32;
+#include "BulletDataExtractor.h"
 
 
-float X_GAP = 2.3f;
-float Y_GAP = 2.f;
-float Z_GAP = 2.3f;
+
 
 extern int numPairsOut;
 extern int numPairsTotal;
 
-
-void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
-{
-	int strideInBytes = sizeof(float)*9;
-
-	bool noHeightField = true;
-	int barrelShapeIndex = -1;
-	int cubeShapeIndex = -1;
-	int tetraShapeIndex = -1;
-
-	float position[4]={0,0,0,0};
-	btQuaternion born(btVector3(1,0,0),SIMD_PI*0.25*0.5);
-
-	float orn[4] = {0,0,0,1};
-//	float rotOrn[4] = {born.getX(),born.getY(),born.getZ(),born.getW()};//
-	float rotOrn[4] ={0,0,0,1};
-	
-
-	float color[4] = {1,1,1,1};
-	int index=0;
-#if 0
-	{
-		int numVertices = sizeof(barrel_vertices)/strideInBytes;
-		int numIndices = sizeof(barrel_indices)/sizeof(int);
-		barrelShapeIndex = renderer.registerShape(&barrel_vertices[0],numVertices,barrel_indices,numIndices);
-	}
-
-
-	float barrelScaling[4] = {1,1,1,1};
-
-
-	int barrelCollisionShapeIndex = physicsSim.registerCollisionShape(&barrel_vertices[0],strideInBytes, sizeof(barrel_vertices)/strideInBytes,&barrelScaling[0],noHeightField);
-	
-
-
-	for (int i=0;i<NUM_OBJECTS_X;i++)
-	{
-		for (int j=0;j<(NUM_OBJECTS_Y/2);j++)
-		{
-			for (int k=0;k<NUM_OBJECTS_Z;k++)
-			{
-				float mass = j? 1.f : 0.f;
-
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+5;
-				position[1]=1+j*Y_GAP*0.5;
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)-NUM_OBJECTS_Z*3;
-				position[3] = 1.f;
-				
-				renderer.registerGraphicsInstance(barrelShapeIndex,position,rotOrn,color,barrelScaling);
-				void* ptr = (void*) index;
-				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, barrelCollisionShapeIndex,ptr);
-				
-				index++;
-			}
-		}
-	}
-#endif
-
-	float cubeScaling[4] = {2,2,2,1};
-	int cubeCollisionShapeIndex = physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
-
-
-	{
-		int numVertices = sizeof(cube_vertices)/strideInBytes;
-		int numIndices = sizeof(cube_indices)/sizeof(int);
-		cubeShapeIndex = renderer.registerShape(&cube_vertices[0],numVertices,cube_indices,numIndices);
-	}
-
-	
-	
-
-
-
-	if (1)
-	for (int i=0;i<NUM_OBJECTS_X;i++)
-	{
-		for (int j=0;j<NUM_OBJECTS_Y;j++)
-		{
-			int k=0;
-			
-			for (;k<NUM_OBJECTS_Z;k++)
-			{
-
-				float mass = 1.f;//j? 1.f : 0.f;
-
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
-				position[1]=1+(j*Y_GAP);//-NUM_OBJECTS_Y/2);
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
-				position[3] = 0.f;
-				
-				renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);
-				int index1 = index;
-				void* ptr = (void*) index1;
-				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, cubeCollisionShapeIndex,ptr);
-				
-				index++;
-			}
-		}
-	}
-
-	if (0)
-	{
-		//add some 'special' plane shape
-		void* ptr = (void*) index;
-		position[0] = 0.f;
-		position[1] = 0.f;//-NUM_OBJECTS_Y/2-1;
-		position[2] = 0.f;
-		position[3] = 1.f;
-
-		physicsSim.registerPhysicsInstance(0.f,position, orn, -1,ptr);
-		color[0] = 1.f;
-		color[1] = 0.f;
-		color[2] = 0.f;
-		cubeScaling[0] = 5000.f;
-		cubeScaling[1] = 0.01f;
-		cubeScaling[2] = 5000.f;
-
-		renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
-	}
-
-	{
-		int numVertices = sizeof(tetra_vertices)/strideInBytes;
-		int numIndices = sizeof(tetra_indices)/sizeof(int);
-		tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
-	}
-
-#if 1
-
-	{
-		float groundScaling[4] = {5,2,5,1};
-		bool noHeightField = true;
-		int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
-
-		for (int i=0;i<50;i++)
-			for (int j=0;j<50;j++)
-		if (1)
-		{
-			void* ptr = (void*) index;
-			float posnew[4];
-			posnew[0] = i*10.01-120;
-			posnew[1] = 0;
-			posnew[2] = j*10.01-120;
-			posnew[3] = 1.f;
-
-			physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,ptr);
-			color[0] = 1.f;
-			color[1] = 0.f;
-			color[2] = 0.f;
-			renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
-		}
-	}
-#endif
-
-	physicsSim.writeBodiesToGpu();
-
-
-}
 
 int main(int argc, char* argv[])
 {

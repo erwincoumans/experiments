@@ -38,7 +38,6 @@ subject to the following restrictions:
 #include "../broadphase_benchmark/btAabbHost.h"
 #include "LinearMath/btQuickprof.h"
 
-
 #define MSTRINGIFY(A) #A
 static char* interopKernelString = 
 #include "../broadphase_benchmark/integrateKernel.cl"
