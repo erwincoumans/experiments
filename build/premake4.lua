@@ -115,7 +115,7 @@ end
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"
 --	include "../dynamics/basic_demo"
-	include "../dynamics/bullet_serialize"
+	--include "../dynamics/bullet_serialize"
 
 	include "../dynamics/exact-ccd"
 	
