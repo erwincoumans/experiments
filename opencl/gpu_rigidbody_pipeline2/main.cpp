@@ -30,7 +30,7 @@ subject to the following restrictions:
 #include "BulletDataExtractor.h"
 
 
-
+bool pauseSimulation = false;
 
 extern int numPairsOut;
 extern int numPairsTotal;
@@ -66,6 +66,8 @@ int main(int argc, char* argv[])
 		
 
 	printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
+	printf("numDynamicPhysicsInstances= %d\n", demo.m_numDynamicPhysicsInstances);
+	
 
 
 	render.writeTransforms();
@@ -75,8 +77,8 @@ int main(int argc, char* argv[])
 	{
 		CProfileManager::Reset();
 		
-		
-		demo.stepSimulation();
+		if (!pauseSimulation )
+			demo.stepSimulation();
 
 
 		window->startRendering();
@@ -94,7 +96,7 @@ int main(int argc, char* argv[])
 
 		
 		
-		 if (printStats)
+		 if (printStats && !pauseSimulation)
 		 {
 			static int count = 0;
 			count--;

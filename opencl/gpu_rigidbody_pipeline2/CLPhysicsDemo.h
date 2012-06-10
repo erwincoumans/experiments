@@ -25,6 +25,8 @@ struct CLPhysicsDemo
 	int m_numCollisionShapes;
 
 	int m_numPhysicsInstances;
+	int m_numDynamicPhysicsInstances;
+
 
 	struct InternalData* m_data;
 	

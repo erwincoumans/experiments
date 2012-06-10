@@ -154,6 +154,7 @@ CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer)
 {
 	m_numCollisionShapes=0;
 	m_numPhysicsInstances=0;
+	m_numDynamicPhysicsInstances = 0;
 
 	m_data = new InternalData;
 }
@@ -286,6 +287,9 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 
 	if (narrowphaseAndSolver)
 		bodyIndex = narrowphaseAndSolver->registerRigidBody(collisionShapeIndex,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+
+	if (mass>0.f)
+		m_numDynamicPhysicsInstances++;
 
 	m_numPhysicsInstances++;
 	return bodyIndex;

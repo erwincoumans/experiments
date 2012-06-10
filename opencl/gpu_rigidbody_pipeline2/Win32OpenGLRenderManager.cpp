@@ -29,6 +29,7 @@ extern btVector3 m_cameraUp;
 extern float m_azi;
 extern float m_ele;
 
+extern bool pauseSimulation;
 
 struct InternalData2
 {
@@ -161,6 +162,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			switch ( wParam )
 			{
+			case ' ':
+			case 'p':
+				{
+					pauseSimulation = !pauseSimulation;
+					break;
+				}
+
 				case 'Q':
 				case VK_ESCAPE:
 					{
