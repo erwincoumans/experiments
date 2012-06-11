@@ -25,6 +25,7 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "../../opencl/broadphase_benchmark/btLauncherCL.h"
 
+
 struct SolverDebugInfo
 {
 	int m_valInt0;
@@ -95,35 +96,36 @@ Solver::Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int 
 
 
 	cl_int pErrNum;
-	char* kernelSource = 0;
+	const char* batchKernelSource = batchingKernelsCL;
+	const char* solverKernelSource = solverKernelsCL;
 	
 	{
-		cl_program batchingProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, BATCHING_PATH);
+		cl_program batchingProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, batchKernelSource, &pErrNum,additionalMacros, BATCHING_PATH);
 		btAssert(batchingProg);
 
-		m_batchingKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "CreateBatches", &pErrNum, batchingProg,additionalMacros );
+		m_batchingKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, batchKernelSource, "CreateBatches", &pErrNum, batchingProg,additionalMacros );
 		btAssert(m_batchingKernel);
 	}
 	
 	{
-		cl_program solverProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, SOLVER_KERNEL_PATH);
+		cl_program solverProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solverKernelSource, &pErrNum,additionalMacros, SOLVER_KERNEL_PATH);
 		btAssert(solverProg);
 		
-		m_batchSolveKernel= btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "BatchSolveKernel", &pErrNum, solverProg,additionalMacros );
+		m_batchSolveKernel= btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "BatchSolveKernel", &pErrNum, solverProg,additionalMacros );
 		btAssert(m_batchSolveKernel);
 	
 		
-		m_contactToConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "ContactToConstraintKernel", &pErrNum, solverProg,additionalMacros );
+		m_contactToConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "ContactToConstraintKernel", &pErrNum, solverProg,additionalMacros );
 		btAssert(m_contactToConstraintKernel);
 			
-		m_setSortDataKernel =  btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SetSortDataKernel", &pErrNum, solverProg,additionalMacros );
+		m_setSortDataKernel =  btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "SetSortDataKernel", &pErrNum, solverProg,additionalMacros );
 		btAssert(m_setSortDataKernel);
 				
-		m_reorderContactKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "ReorderContactKernel", &pErrNum, solverProg,additionalMacros );
+		m_reorderContactKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "ReorderContactKernel", &pErrNum, solverProg,additionalMacros );
 		btAssert(m_reorderContactKernel);
 		
 
-		m_copyConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "CopyConstraintKernel", &pErrNum, solverProg,additionalMacros );
+		m_copyConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "CopyConstraintKernel", &pErrNum, solverProg,additionalMacros );
 		btAssert(m_copyConstraintKernel);
 		
 	}

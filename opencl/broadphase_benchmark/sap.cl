@@ -1,4 +1,4 @@
-
+MSTRINGIFY(
 /*
 Copyright (c) 2012 Advanced Micro Devices, Inc.  
 
@@ -380,3 +380,4 @@ __kernel void   scatterKernel( __global const btAabbCL* aabbs, volatile __global
 
 		sortedAabbs[i] = aabbs[sortData[i].y];
 }
+);

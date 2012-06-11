@@ -13,6 +13,7 @@ subject to the following restrictions:
 */
 //Originally written by Erwin Coumans
 
+bool useSapGpuBroadphase = true;
 #include "OpenGLInclude.h"
 
 #include "CLPhysicsDemo.h"
@@ -29,11 +30,11 @@ subject to the following restrictions:
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../../dynamics/basic_demo/ConvexHeightFieldShape.h"
 //#define USE_GRID_BROADPHASE
-#ifdef USE_GRID_BROADPHASE
+//#ifdef USE_GRID_BROADPHASE
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
-#else
+//#else
 #include "btGpuSapBroadphase.h"
-#endif //USE_GRID_BROADPHASE
+//#endif //USE_GRID_BROADPHASE
 
 #include "../broadphase_benchmark/btAabbHost.h"
 #include "LinearMath/btQuickprof.h"
@@ -80,11 +81,8 @@ struct InternalData
 	btOpenCLArray<btVector3>* m_angVelBuf;
 	btOpenCLArray<float>* m_bodyTimes;
 	bool	m_useInterop;
-#ifdef USE_GRID_BROADPHASE
-	btGridBroadphaseCl* m_Broadphase;
-#else
-	btGpuSapBroadphase* m_Broadphase;
-#endif //USE_GRID_BROADPHASE
+	btGridBroadphaseCl* m_BroadphaseGrid;
+	btGpuSapBroadphase* m_BroadphaseSap;
 
 	btOpenCLArray<btAABBHost>* m_localShapeAABB;
 
@@ -92,7 +90,7 @@ struct InternalData
 	btAlignedObjectArray<btVector3>	m_angVelHost;
 	btAlignedObjectArray<float> m_bodyTimesHost;
 
-	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_useInterop(0),m_Broadphase(0)
+	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_useInterop(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
 	{
 		
 	}
@@ -188,7 +186,7 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 
 	btConvexUtility* utilPtr = new btConvexUtility();
 	bool merge = true;
-	utilPtr->initializePolyhedralFeatures(verts,merge);
+	utilPtr->initializePolyhedralFeatures(&verts[0],verts.size(),merge);
 
 	int numFaces= utilPtr->m_faces.size();
 	float4* eqn = new float4[numFaces];
@@ -273,7 +271,11 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 
 	
 		//btBroadphaseProxy* proxy = m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1,0,0);//m_dispatcher);
-		m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
+	
+		if (useSapGpuBroadphase)
+			m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
+		else
+			m_data->m_BroadphaseGrid->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
 	}
 			
 	bool writeToGpu = false;
@@ -321,15 +323,15 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	int maxPairsSmallProxy = 32;
 	
 
-#ifdef USE_GRID_BROADPHASE
-	btOverlappingPairCache* overlappingPairCache=0;
-	m_data->m_Broadphase = new btGridBroadphaseCl(overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
-		g_cxMainContext ,g_device,g_cqCommandQue);
-#else //USE_GRID_BROADPHASE
-	m_data->m_Broadphase = new btGpuSapBroadphase(g_cxMainContext ,g_device,g_cqCommandQue);//overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
-		//g_cxMainContext ,g_device,g_cqCommandQue);
-	
-#endif//USE_GRID_BROADPHASE
+	if (useSapGpuBroadphase)
+	{
+			m_data->m_BroadphaseSap = new btGpuSapBroadphase(g_cxMainContext ,g_device,g_cqCommandQue);//overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
+	} else
+	{
+		btOverlappingPairCache* overlappingPairCache=0;
+		m_data->m_BroadphaseGrid = new btGridBroadphaseCl(overlappingPairCache,btVector3(4.f, 4.f, 4.f), 128, 128, 128,maxObjects, maxObjects, maxPairsSmallProxy, 100.f, 128,
+			g_cxMainContext ,g_device,g_cqCommandQue);
+	}		//g_cxMainContext ,g_device,g_cqCommandQue);
 	
 
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
@@ -371,7 +373,8 @@ void	CLPhysicsDemo::cleanup()
 	delete m_data->m_bodyTimes;
 	delete m_data->m_localShapeAABB;
 
-	delete m_data->m_Broadphase;
+	delete m_data->m_BroadphaseSap;
+	delete m_data->m_BroadphaseGrid;
 
 
 	m_data=0;
@@ -379,6 +382,18 @@ void	CLPhysicsDemo::cleanup()
 	delete s_convexHeightField;
 }
 
+
+
+void	CLPhysicsDemo::setObjectTransform(const float* position, const float* orientation, int objectIndex)
+{
+	narrowphaseAndSolver->setObjectTransform(position, orientation, objectIndex);
+}
+
+void	CLPhysicsDemo::setObjectLinearVelocity(const float* linVel, int objectIndex)
+{
+	m_data->m_linVelHost[objectIndex].setValue(linVel[0],linVel[1],linVel[2]);
+	m_data->m_linVelBuf->copyFromHostPointer((const btVector3*)linVel,1,objectIndex,true);
+}
 
 
 
@@ -434,7 +449,13 @@ void	CLPhysicsDemo::stepSimulation()
 		gFpIO.m_numObjects = m_numPhysicsInstances;
 		gFpIO.m_positionOffset = SHAPE_VERTEX_BUFFER_SIZE/4;
 		gFpIO.m_clObjectsBuffer = clBuffer;
-		gFpIO.m_dAABB = m_data->m_Broadphase->getAabbBuffer();
+		if (useSapGpuBroadphase)
+		{
+			gFpIO.m_dAABB = m_data->m_BroadphaseSap->getAabbBuffer();
+		} else
+		{
+			gFpIO.m_dAABB = m_data->m_BroadphaseGrid->getAabbBuffer();
+		}
 		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABB->getBufferCL();
 		gFpIO.m_numOverlap = 0;
 		{
@@ -444,9 +465,19 @@ void	CLPhysicsDemo::stepSimulation()
 		if (1)
 		{
 			BT_PROFILE("calculateOverlappingPairs");
-			m_data->m_Broadphase->calculateOverlappingPairs();
-			gFpIO.m_dAllOverlappingPairs = m_data->m_Broadphase->getOverlappingPairBuffer();
-			gFpIO.m_numOverlap = m_data->m_Broadphase->getNumOverlap();
+			
+			if (useSapGpuBroadphase)
+			{
+				m_data->m_BroadphaseSap->calculateOverlappingPairs();
+				gFpIO.m_dAllOverlappingPairs = m_data->m_BroadphaseSap->getOverlappingPairBuffer();
+				gFpIO.m_numOverlap = m_data->m_BroadphaseSap->getNumOverlap();
+			}
+			else
+			{
+				m_data->m_BroadphaseGrid->calculateOverlappingPairs();
+				gFpIO.m_dAllOverlappingPairs = m_data->m_BroadphaseGrid->getOverlappingPairBuffer();
+				gFpIO.m_numOverlap = m_data->m_BroadphaseGrid->getNumOverlap();
+			}
 		}
 		
 		//printf("gFpIO.m_numOverlap = %d\n",gFpIO.m_numOverlap );

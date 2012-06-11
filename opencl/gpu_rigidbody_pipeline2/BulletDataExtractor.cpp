@@ -1,3 +1,11 @@
+int NUM_OBJECTS_X = 25;
+int NUM_OBJECTS_Y = 25;
+int NUM_OBJECTS_Z = 5;
+
+
+float X_GAP = 2.3f;
+float Y_GAP = 2.f;
+float Z_GAP = 2.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
@@ -45,24 +53,62 @@ struct InstanceGroup
 };
 
 
-int NUM_OBJECTS_X = 35;
-int NUM_OBJECTS_Y = 35;
-int NUM_OBJECTS_Z = 35;
 
 
-float X_GAP = 2.3f;
-float Y_GAP = 2.f;
-float Z_GAP = 2.3f;
+#define MY_UNITSPHERE_POINTS 42
+
+static btVector3	sUnitSpherePoints[MY_UNITSPHERE_POINTS] = 
+{
+	btVector3(btScalar(0.000000) , btScalar(-0.000000),btScalar(-1.000000)),
+	btVector3(btScalar(0.723608) , btScalar(-0.525725),btScalar(-0.447219)),
+	btVector3(btScalar(-0.276388) , btScalar(-0.850649),btScalar(-0.447219)),
+	btVector3(btScalar(-0.894426) , btScalar(-0.000000),btScalar(-0.447216)),
+	btVector3(btScalar(-0.276388) , btScalar(0.850649),btScalar(-0.447220)),
+	btVector3(btScalar(0.723608) , btScalar(0.525725),btScalar(-0.447219)),
+	btVector3(btScalar(0.276388) , btScalar(-0.850649),btScalar(0.447220)),
+	btVector3(btScalar(-0.723608) , btScalar(-0.525725),btScalar(0.447219)),
+	btVector3(btScalar(-0.723608) , btScalar(0.525725),btScalar(0.447219)),
+	btVector3(btScalar(0.276388) , btScalar(0.850649),btScalar(0.447219)),
+	btVector3(btScalar(0.894426) , btScalar(0.000000),btScalar(0.447216)),
+	btVector3(btScalar(-0.000000) , btScalar(0.000000),btScalar(1.000000)),
+	btVector3(btScalar(0.425323) , btScalar(-0.309011),btScalar(-0.850654)),
+	btVector3(btScalar(-0.162456) , btScalar(-0.499995),btScalar(-0.850654)),
+	btVector3(btScalar(0.262869) , btScalar(-0.809012),btScalar(-0.525738)),
+	btVector3(btScalar(0.425323) , btScalar(0.309011),btScalar(-0.850654)),
+	btVector3(btScalar(0.850648) , btScalar(-0.000000),btScalar(-0.525736)),
+	btVector3(btScalar(-0.525730) , btScalar(-0.000000),btScalar(-0.850652)),
+	btVector3(btScalar(-0.688190) , btScalar(-0.499997),btScalar(-0.525736)),
+	btVector3(btScalar(-0.162456) , btScalar(0.499995),btScalar(-0.850654)),
+	btVector3(btScalar(-0.688190) , btScalar(0.499997),btScalar(-0.525736)),
+	btVector3(btScalar(0.262869) , btScalar(0.809012),btScalar(-0.525738)),
+	btVector3(btScalar(0.951058) , btScalar(0.309013),btScalar(0.000000)),
+	btVector3(btScalar(0.951058) , btScalar(-0.309013),btScalar(0.000000)),
+	btVector3(btScalar(0.587786) , btScalar(-0.809017),btScalar(0.000000)),
+	btVector3(btScalar(0.000000) , btScalar(-1.000000),btScalar(0.000000)),
+	btVector3(btScalar(-0.587786) , btScalar(-0.809017),btScalar(0.000000)),
+	btVector3(btScalar(-0.951058) , btScalar(-0.309013),btScalar(-0.000000)),
+	btVector3(btScalar(-0.951058) , btScalar(0.309013),btScalar(-0.000000)),
+	btVector3(btScalar(-0.587786) , btScalar(0.809017),btScalar(-0.000000)),
+	btVector3(btScalar(-0.000000) , btScalar(1.000000),btScalar(-0.000000)),
+	btVector3(btScalar(0.587786) , btScalar(0.809017),btScalar(-0.000000)),
+	btVector3(btScalar(0.688190) , btScalar(-0.499997),btScalar(0.525736)),
+	btVector3(btScalar(-0.262869) , btScalar(-0.809012),btScalar(0.525738)),
+	btVector3(btScalar(-0.850648) , btScalar(0.000000),btScalar(0.525736)),
+	btVector3(btScalar(-0.262869) , btScalar(0.809012),btScalar(0.525738)),
+	btVector3(btScalar(0.688190) , btScalar(0.499997),btScalar(0.525736)),
+	btVector3(btScalar(0.525730) , btScalar(0.000000),btScalar(0.850652)),
+	btVector3(btScalar(0.162456) , btScalar(-0.499995),btScalar(0.850654)),
+	btVector3(btScalar(-0.425323) , btScalar(-0.309011),btScalar(0.850654)),
+	btVector3(btScalar(-0.425323) , btScalar(0.309011),btScalar(0.850654)),
+	btVector3(btScalar(0.162456) , btScalar(0.499995),btScalar(0.850654))
+};
 
 
-
-
-
-void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
+void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim, bool useConvexHeightfield)
 {
 	int strideInBytes = sizeof(float)*9;
 
-	bool noHeightField = true;
+	bool noHeightField = false;
 	int barrelShapeIndex = -1;
 	int cubeShapeIndex = -1;
 	int tetraShapeIndex = -1;
@@ -77,6 +123,28 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 
 	float color[4] = {1,1,1,1};
 	int index=0;
+
+
+	{
+		float sphereScaling[4] = {3,3,3,1};
+		bool noHeightField = false;
+		int sphereCollisionShapeIndex = physicsSim.registerCollisionShape(&sUnitSpherePoints[0].getX(),sizeof(btVector3), MY_UNITSPHERE_POINTS,&sphereScaling[0],noHeightField);
+		position[1] = 11120;	
+		position[1] = 1120;
+		position[1] = 11120;
+
+		void* ptr = (void*) index;
+		float mass = 100.f;
+
+		int physIndex = physicsSim.registerPhysicsInstance(mass,  position, rotOrn, sphereCollisionShapeIndex,ptr);
+		GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromConvexHull(&sUnitSpherePoints[0],MY_UNITSPHERE_POINTS);
+		renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+		renderer.registerGraphicsInstance(sphereCollisionShapeIndex,position,rotOrn,color,sphereScaling);
+		index++;
+
+	}
+
+
 #if 0
 	{
 		int numVertices = sizeof(barrel_vertices)/strideInBytes;
@@ -157,7 +225,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		}
 	}
 
-	if (0)
+	if (useConvexHeightfield)
 	{
 		//add some 'special' plane shape
 		void* ptr = (void*) index;
@@ -175,52 +243,50 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		cubeScaling[2] = 5000.f;
 
 		renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
-	}
-
+	} else
 	{
-		int numVertices = sizeof(tetra_vertices)/strideInBytes;
-		int numIndices = sizeof(tetra_indices)/sizeof(int);
-		tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
-	}
 
-#if 1
-
-	{
-		float groundScaling[4] = {2.5,2,2.5,1};
-		bool noHeightField = true;
-		int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
-
-		for (int i=0;i<50;i++)
-			for (int j=0;j<50;j++)
-		if (1)
 		{
-			void* ptr = (void*) index;
-			float posnew[4];
-			posnew[0] = i*5.01-120;
-			posnew[1] = 0;
-			posnew[2] = j*5.01-120;
-			posnew[3] = 1.f;
+			int numVertices = sizeof(tetra_vertices)/strideInBytes;
+			int numIndices = sizeof(tetra_indices)/sizeof(int);
+			tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
+		}
 
-			physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,ptr);
-			color[0] = 1.f;
-			color[1] = 0.f;
-			color[2] = 0.f;
-			renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
+		{
+			float groundScaling[4] = {2.5,2,2.5,1};
+			bool noHeightField = true;
+			int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
+
+			for (int i=0;i<50;i++)
+				for (int j=0;j<50;j++)
+			if (1)
+			{
+				void* ptr = (void*) index;
+				float posnew[4];
+				posnew[0] = i*5.01-120;
+				posnew[1] = 0;
+				posnew[2] = j*5.01-120;
+				posnew[3] = 1.f;
+
+				physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,ptr);
+				color[0] = 1.f;
+				color[1] = 0.f;
+				color[2] = 0.f;
+				renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
+			}
 		}
 	}
-#endif
-
 	physicsSim.writeBodiesToGpu();
 
 
 }
 
 
-void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
+void createScene( GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim, bool useConvexHeightfield, const char* fileName)
 {
 	//const char* fileName="../../bin/convex-trimesh.bullet";
 	//const char* fileName="../../bin/1000 convex.bullet";
-	const char* fileName="../../bin/1000 stack.bullet";
+	//const char* fileName="../../bin/1000 stack.bullet";
 	//const char* fileName="../../bin/3000 fall.bullet";
 	
 
@@ -282,7 +348,7 @@ void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim)
 
 	
 	
-	createSceneProgrammatically(renderer,physicsSim);
+	createSceneProgrammatically(renderer,physicsSim,useConvexHeightfield);
 	
 	
 }
@@ -516,8 +582,6 @@ int btBulletDataExtractor::convertCollisionShape(  Bullet::btCollisionShapeData*
 						{
 							Bullet::btConvexHullShapeData* convexData = (Bullet::btConvexHullShapeData*)bsd;
 							int numPoints = convexData->m_numUnscaledPoints;
-							
-
 							btVector3 localScaling;
 							localScaling.deSerializeFloat((btVector3FloatData&)bsd->m_localScaling);
 							btAlignedObjectArray<btVector3> tmpPoints;
@@ -533,80 +597,18 @@ int btBulletDataExtractor::convertCollisionShape(  Bullet::btCollisionShapeData*
 									tmpPoints.push_back(pt*localScaling);
 								}
 							}
-
 							float unitScaling[4] = {1,1,1,1};
+
 
 							int strideInBytes = sizeof(btVector3);
 							strideInBytes = 4*sizeof(float);
 							int noHeightField = 1;
 							shapeIndex  = m_physicsSim.registerCollisionShape(&tmpPoints[0].m_floats[0],strideInBytes, numPoints,&unitScaling[0],noHeightField);
 
-							btConvexUtility* utilPtr = new btConvexUtility();
-							bool merge = true;
-							utilPtr->initializePolyhedralFeatures(tmpPoints,merge);
-							
-							btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
-							{
-								int numVertices = utilPtr->m_vertices.size();
-								int numIndices = 0;
-								btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
-								for (int f=0;f<utilPtr->m_faces.size();f++)
-								{
-									const btFace& face = utilPtr->m_faces[f];
-									btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
-									if (face.m_indices.size()>2)
-									{
-										
-										GraphicsVertex vtx;
-										const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[0]];
-										vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
-										vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
-										vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
-										int newvtxindex0 = vertices->size();
-										vertices->push_back(vtx);
-									
-										for (int j=1;j<face.m_indices.size()-1;j++)
-										{
-											indicesPtr->push_back(newvtxindex0);
-											{
-												GraphicsVertex vtx;
-												const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j]];
-												vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
-												vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
-												vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
-												int newvtxindexj = vertices->size();
-												vertices->push_back(vtx);
-												indicesPtr->push_back(newvtxindexj);
-											}
-
-											{
-												GraphicsVertex vtx;
-												const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j+1]];
-												vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
-												vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
-												vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
-												int newvtxindexj1 = vertices->size();
-												vertices->push_back(vtx);
-												indicesPtr->push_back(newvtxindexj1);
-											}
-										}
-									}
-								}
-								
-								
-								GraphicsShape* gfxShape = new GraphicsShape;
-								gfxShape->m_vertices = &vertices->at(0).xyzw[0];
-								gfxShape->m_numvertices = vertices->size();
-								gfxShape->m_indices = &indicesPtr->at(0);
-								gfxShape->m_numIndices = indicesPtr->size();
-								for (int i=0;i<4;i++)
-									gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
-								m_graphicsShapes.push_back(gfxShape);
-							}
-							
 							printf("createConvexHull with %d vertices\n",numPoints);
 
-//							shape = createConvexHullShape();
+							GraphicsShape* gfxShape = createGraphicsShapeFromConvexHull(&tmpPoints[0],tmpPoints.size());
+							m_graphicsShapes.push_back(gfxShape);
 
 							return shapeIndex;
 							break;
@@ -833,3 +835,69 @@ int btBulletDataExtractor::createPlaneShape( const Bullet::btVector3FloatData& p
 	return -1;
 }
 
+
+GraphicsShape* btBulletDataExtractor::createGraphicsShapeFromConvexHull(const btVector3* tmpPoints, int numPoints)
+{
+	btConvexUtility* utilPtr = new btConvexUtility();
+	bool merge = true;
+	utilPtr->initializePolyhedralFeatures(tmpPoints,numPoints,merge);
+	
+	btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
+	{
+		int numVertices = utilPtr->m_vertices.size();
+		int numIndices = 0;
+		btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
+		for (int f=0;f<utilPtr->m_faces.size();f++)
+		{
+			const btFace& face = utilPtr->m_faces[f];
+			btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
+			if (face.m_indices.size()>2)
+			{
+				
+				GraphicsVertex vtx;
+				const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[0]];
+				vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+				vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+				vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+				int newvtxindex0 = vertices->size();
+				vertices->push_back(vtx);
+			
+				for (int j=1;j<face.m_indices.size()-1;j++)
+				{
+					indicesPtr->push_back(newvtxindex0);
+					{
+						GraphicsVertex vtx;
+						const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j]];
+						vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+						vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+						vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+						int newvtxindexj = vertices->size();
+						vertices->push_back(vtx);
+						indicesPtr->push_back(newvtxindexj);
+					}
+
+					{
+						GraphicsVertex vtx;
+						const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j+1]];
+						vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+						vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+						vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+						int newvtxindexj1 = vertices->size();
+						vertices->push_back(vtx);
+						indicesPtr->push_back(newvtxindexj1);
+					}
+				}
+			}
+		}
+		
+		
+		GraphicsShape* gfxShape = new GraphicsShape;
+		gfxShape->m_vertices = &vertices->at(0).xyzw[0];
+		gfxShape->m_numvertices = vertices->size();
+		gfxShape->m_indices = &indicesPtr->at(0);
+		gfxShape->m_numIndices = indicesPtr->size();
+		for (int i=0;i<4;i++)
+			gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
+		return gfxShape;
+	}
+}

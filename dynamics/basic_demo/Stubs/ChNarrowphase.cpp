@@ -51,7 +51,7 @@ ChNarrowphase::ChNarrowphase(cl_context ctx, cl_device_id device, cl_command_que
 	const char* srcFileNameForCaching="";
 
 	cl_int pErrNum;
-	char* kernelSource = 0;
+	const char* kernelSource = narrowphaseKernelsCL;
 	
 	cl_program narrowphaseProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, NARROWPHASE_KERNEL_PATH);
 	btAssert(narrowphaseProg);

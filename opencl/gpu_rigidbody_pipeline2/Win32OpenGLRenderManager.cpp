@@ -30,6 +30,8 @@ extern float m_azi;
 extern float m_ele;
 
 extern bool pauseSimulation;
+extern bool shootObject;
+
 
 struct InternalData2
 {
@@ -101,6 +103,12 @@ void Win32OpenGLWindow::enableOpenGL()
 	m_data->m_OpenGLInitialized = true;
 	
 	
+}
+
+void Win32OpenGLWindow::getMouseCoordinates(int& x, int& y)
+{
+	x = m_data->m_mouseXpos;
+	y = m_data->m_mouseYpos;
 }
 
 
@@ -265,6 +273,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 			int xPos = LOWORD(lParam); 
 			int yPos = HIWORD(lParam); 
+			sData->m_mouseRButton = 1;
+
 			//gDemoApplication->mouseFunc(2,1,xPos,yPos);
 		break;
 	}
@@ -272,6 +282,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 			int xPos = LOWORD(lParam); 
 			int yPos = HIWORD(lParam); 
+			sData->m_mouseRButton = 0;
+			shootObject = true;
+
 			//gDemoApplication->mouseFunc(2,0,xPos,yPos);
 		break;
 	}

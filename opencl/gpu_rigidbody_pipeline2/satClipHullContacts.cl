@@ -410,7 +410,6 @@ int	clipHullAgainstHull(const float4 separatingNormal,
 	}
 
 	{
-		//BT_PROFILE("worldVertsB1");
 		const btGpuFace polyB = faces[hullB->m_faceOffset+closestFaceB];
 		const int numVertices = polyB.m_numIndices;
 		for(int e0=0;e0<numVertices;e0++)

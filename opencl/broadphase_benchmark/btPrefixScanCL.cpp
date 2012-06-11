@@ -8,23 +8,24 @@
 
 #include "btLauncherCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
+#include "../../opencl/primitives/AdlPrimitives/Scan/PrefixScanKernelsCL.h"
 
 btPrefixScanCL::btPrefixScanCL(cl_context ctx, cl_device_id device, cl_command_queue queue, int size)
 :m_commandQueue(queue)
 {
-	char* kernelSource = 0;
+	const char* scanKernelSource = prefixScanKernelsCL;
 	cl_int pErrNum;
 	char* additionalMacros=0;
 
 	m_workBuffer = new btOpenCLArray<unsigned int>(ctx,queue,size);
-	cl_program scanProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, BT_PREFIXSCAN_PROG_PATH);
+	cl_program scanProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, scanKernelSource, &pErrNum,additionalMacros, BT_PREFIXSCAN_PROG_PATH);
 	btAssert(scanProg);
 
-	m_localScanKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "LocalScanKernel", &pErrNum, scanProg,additionalMacros );
+	m_localScanKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, scanKernelSource, "LocalScanKernel", &pErrNum, scanProg,additionalMacros );
 	btAssert(m_localScanKernel );
-	m_blockSumKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "TopLevelScanKernel", &pErrNum, scanProg,additionalMacros );
+	m_blockSumKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, scanKernelSource, "TopLevelScanKernel", &pErrNum, scanProg,additionalMacros );
 	btAssert(m_blockSumKernel );
-	m_propagationKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "AddOffsetKernel", &pErrNum, scanProg,additionalMacros );
+	m_propagationKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, scanKernelSource, "AddOffsetKernel", &pErrNum, scanProg,additionalMacros );
 	btAssert(m_propagationKernel );
 }
 

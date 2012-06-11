@@ -13,8 +13,10 @@ subject to the following restrictions:
 */
 //Originally written by Erwin Coumans
 
-#define USE_CONVEX_CONVEX_HOST 1
-#define DISABLE_CONVEX_HEIGHTFIELD
+//#define USE_CONVEX_CONVEX_HOST 1
+//#define DISABLE_CONVEX_HEIGHTFIELD
+
+bool useConvexHeightfield = false;
 
 #include "btGpuNarrowphaseAndSolver.h"
 
@@ -274,6 +276,21 @@ cl_mem	btGpuNarrowphaseAndSolver::getBodyInertiasGpu()
 	return (cl_mem)m_internalData->m_inertiaBufferGPU->getBufferCL();
 }
 
+void btGpuNarrowphaseAndSolver::setObjectTransform(const float* position, const float* orientation , int bodyIndex)
+{
+	RigidBodyBase::Body* body = &m_internalData->m_bodyBufferCPU->at(bodyIndex);
+	m_internalData->m_bodyBufferGPU->copyToHostPointer(body,1,bodyIndex);
+
+	body->m_pos.x = position[0];
+	body->m_pos.y = position[1];
+	body->m_pos.z = position[2];
+	body->m_quat.x = orientation[0];
+	body->m_quat.y = orientation[1];
+	body->m_quat.z = orientation[2];
+	body->m_quat.w = orientation[3];
+	m_internalData->m_bodyBufferGPU->copyFromHostPointer(body,1,bodyIndex);
+
+}
 
 int btGpuNarrowphaseAndSolver::registerRigidBody(int shapeIndex, float mass, const float* position, const float* orientation , const float* aabbMinPtr, const float* aabbMaxPtr,bool writeToGpu)
 {
@@ -556,11 +573,11 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
 	btOpenCLArray<int2> broadphasePairsGPU(m_context,m_queue);
 	broadphasePairsGPU.setFromOpenCLBuffer(broadphasePairs,numBroadphasePairs);
-#ifdef USE_CONVEX_CONVEX_HOST
+
 	bool useCulling = false;
-#else
-	bool useCulling = true;
-#endif
+	if (useConvexHeightfield)
+		useCulling = true;
+
 	clFinish(m_queue);
 	numPairsTotal = numBroadphasePairs;
 	numPairsOut = numBroadphasePairs;
@@ -613,54 +630,56 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 			//convex versus convex
 			//m_internalData->m_narrowPhase->execute(m_internalData->m_convexPairsOutGPU,numPairsOut, m_internalData->m_bodyBufferGPU, m_internalData->m_ShapeBuffer, m_internalData->m_pBufContactOutGPU, nContactOut, cfgNP);
 
-#ifdef USE_CONVEX_CONVEX_HOST
+			if (!useConvexHeightfield)
+			{
 			
-			
-			m_internalData->m_pBufContactOutGPU->resize(nContactOut);
+				m_internalData->m_pBufContactOutGPU->resize(nContactOut);
 
-			if (useCulling)
-			{
-				m_internalData->m_convexPairsOutGPU->resize(numPairsOut);
-			
-			m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
-				m_internalData->m_convexPairsOutGPU,numPairsOut, 
-				m_internalData->m_bodyBufferGPU, 
-				m_internalData->m_ShapeBuffer, 
-				m_internalData->m_pBufContactOutGPU, 
-				nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
-				*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
-			} else
-			{
-				m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
+				if (useCulling)
+				{
+					m_internalData->m_convexPairsOutGPU->resize(numPairsOut);
+					
+					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
+						m_internalData->m_convexPairsOutGPU,numPairsOut, 
+						m_internalData->m_bodyBufferGPU, 
+						m_internalData->m_ShapeBuffer, 
+						m_internalData->m_pBufContactOutGPU, 
+						nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
+						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
+				} else
+				{
+					m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
 
-				m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
-				&broadphasePairsGPU, numBroadphasePairs, 
-				m_internalData->m_bodyBufferGPU, 
-				m_internalData->m_ShapeBuffer, 
-				m_internalData->m_pBufContactOutGPU, 
-				nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
-				*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
-			}
-#else
-			if (useCulling)
-			{
-			m_internalData->m_narrowPhase->execute(
-				m_internalData->m_convexPairsOutGPU,
-				numPairsOut, 
-				m_internalData->m_bodyBufferGPU, 
-				m_internalData->m_ShapeBuffer, 
-				m_internalData->m_pBufContactOutGPU, 
-				nContactOut, cfgNP);
-			} else
-			{
-				m_internalData->m_narrowPhase->execute(
+					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
 					&broadphasePairsGPU, numBroadphasePairs, 
 					m_internalData->m_bodyBufferGPU, 
 					m_internalData->m_ShapeBuffer, 
 					m_internalData->m_pBufContactOutGPU, 
-					nContactOut, cfgNP);
+					nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
+					*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
+				}
 			}
-#endif
+			else
+			{
+				if (useCulling)
+				{
+				m_internalData->m_narrowPhase->execute(
+					m_internalData->m_convexPairsOutGPU,
+					numPairsOut, 
+					m_internalData->m_bodyBufferGPU, 
+					m_internalData->m_ShapeBuffer, 
+					m_internalData->m_pBufContactOutGPU, 
+					nContactOut, cfgNP);
+				} else
+				{
+					m_internalData->m_narrowPhase->execute(
+						&broadphasePairsGPU, numBroadphasePairs, 
+						m_internalData->m_bodyBufferGPU, 
+						m_internalData->m_ShapeBuffer, 
+						m_internalData->m_pBufContactOutGPU, 
+						nContactOut, cfgNP);
+				}
+			}
 		} 
 
 		clFinish(m_queue);

@@ -26,13 +26,13 @@ btConvexUtility::~btConvexUtility()
 {
 }
 
-bool	btConvexUtility::initializePolyhedralFeatures(const btAlignedObjectArray<btVector3>& orgVertices, bool mergeCoplanarTriangles)
+bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices, int numPoints, bool mergeCoplanarTriangles)
 {
 	
 	
 
 	btConvexHullComputer conv;
-	conv.compute(&orgVertices[0].getX(), sizeof(btVector3),orgVertices.size(),0.f,0.f);
+	conv.compute(&orgVertices[0].getX(), sizeof(btVector3),numPoints,0.f,0.f);
 
 	btAlignedObjectArray<btVector3> faceNormals;
 	int numFaces = conv.faces.size();

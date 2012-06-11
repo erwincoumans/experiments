@@ -30,13 +30,17 @@ typedef btAlignedObjectArray<btVector3> btVertexArray;
 #include "../broadphase_benchmark/btLauncherCL.h"
 //#include "AdlQuaternion.h"
 
+#include "satKernels.h"
+#include "satClipKernels.h"
+
 GpuSatCollision::GpuSatCollision(cl_context ctx,cl_device_id device, cl_command_queue  q )
 :m_context(ctx),
 m_device(device),
 m_queue(q),
 m_findSeparatingAxisKernel(0)
 {
-	char* src = 0;
+	const char* src = satKernelsCL;
+	const char* srcClip = satClipKernelsCL;
 	cl_int errNum=0;
 
 	if (1)
@@ -50,7 +54,7 @@ m_findSeparatingAxisKernel(0)
 
 	if (1)
 	{
-		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
+		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,srcClip,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
 		btAssert(errNum==CL_SUCCESS);
 
 		m_extractManifoldAndAddContactKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "extractManifoldAndAddContactKernel",&errNum,satClipContactsProg);

@@ -40,6 +40,10 @@ public:
 	int registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling);
 
 	void writeTransforms();
+
+	void writeSingleTransform(float* position, float* orientation, int objectIndex);
+
+	void getMouseDirection(float* dir, int mouseX, int mouseY);
 };
 
 #endif //GL_INSTANCING_RENDERER_H

@@ -11,6 +11,7 @@
 #define RADIXSORT32_PATH "../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl"
 #endif
 
+#include "../../opencl/primitives/AdlPrimitives/Sort/RadixSort32KernelsCL.h"
 
 btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command_queue queue, int initialCapacity)
 :m_commandQueue(queue)
@@ -36,7 +37,7 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 	const char* srcFileNameForCaching="";
 
 	cl_int pErrNum;
-	char* kernelSource = 0;
+	const char* kernelSource = radixSort32KernelsCL;
 	
 	cl_program sortProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, RADIXSORT32_PATH);
 	btAssert(sortProg);

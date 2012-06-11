@@ -65,6 +65,8 @@ public:
 	
 	virtual bool requestedExit();
 
+	virtual void getMouseCoordinates(int& x, int& y);
+
 };
 
 #endif //_WIN32_OPENGL_RENDER_MANAGER_H

@@ -8,11 +8,12 @@
 #else
 #define FILL_CL_PROGRAM_PATH "../opencl/primitives/AdlPrimitives/Fill/FillKernels.cl"
 #endif
+#include "../../opencl/primitives/AdlPrimitives/Fill/FillKernelsCL.h"
 
 btFillCL::btFillCL(cl_context ctx, cl_device_id device, cl_command_queue queue)
 :m_commandQueue(queue)
 {
-	char* kernelSource = 0;
+	const char* kernelSource = fillKernelsCL;
 	cl_int pErrNum;
 	const char* additionalMacros = "";
 

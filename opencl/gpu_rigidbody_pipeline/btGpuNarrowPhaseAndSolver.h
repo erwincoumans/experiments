@@ -73,6 +73,8 @@ public:
 
 	int registerShape(class ConvexHeightField* convexShape,class btConvexUtility* convexPtr);
 	int registerRigidBody(int shapeIndex, float mass, const float* position, const float* orientation, const float* aabbMin, const float* aabbMax,bool writeToGpu = true);
+	void setObjectTransform(const float* position, const float* orientation , int bodyIndex);
+
 	void	writeAllBodiesToGpu();
 	
 	//btBroadphasePair* GetPair(btBroadphasePairArray& pairArray, int idxBodyA, int idxBodyB);

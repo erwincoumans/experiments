@@ -44,6 +44,10 @@ struct CLPhysicsDemo
 
 	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, void* userPointer);
 
+	void	setObjectTransform(const float* position, const float* orientation, int objectIndex);
+
+	void	setObjectLinearVelocity(const float* velocityosition, int objectIndex);
+
 	void	writeVelocitiesToGpu();
 	void	writeBodiesToGpu();
 

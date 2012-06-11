@@ -327,7 +327,41 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
 
 	return hReturn;  
 }   
+void GLInstancingRenderer::writeSingleTransform(float* position, float* orientation, int objectIndex)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	glFlush();
+	
+	char* orgBase =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);
+	//btGraphicsInstance* gfxObj = m_graphicsInstances[k];
+	int totalNumInstances= 0;
+	for (int k=0;k<m_graphicsInstances.size();k++)
+	{
+		btGraphicsInstance* gfxObj = m_graphicsInstances[k];
+		totalNumInstances+=gfxObj->m_numGraphicsInstances;
+	}
 
+	int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
+
+	char* base = orgBase;
+
+	float* positions = (float*)(base+SHAPE_BUFFER_SIZE);
+	float* orientations = (float*)(base+SHAPE_BUFFER_SIZE + POSITION_BUFFER_SIZE);
+
+
+	positions[objectIndex*4] = position[0];
+	positions[objectIndex*4+1] = position[1];
+	positions[objectIndex*4+2] = position[2];
+	positions[objectIndex*4+3] = position[3];
+
+	orientations [objectIndex*4] = orientation[0];
+	orientations [objectIndex*4+1] = orientation[1];
+	orientations [objectIndex*4+2] = orientation[2];
+	orientations [objectIndex*4+3] = orientation[3];
+
+	glUnmapBuffer( GL_ARRAY_BUFFER);
+	glFlush();
+}
 
 void GLInstancingRenderer::writeTransforms()
 {
@@ -723,6 +757,57 @@ void updateCamera()
 			m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2], 
 			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
 	}
+
+}
+
+void GLInstancingRenderer::getMouseDirection(float* dir, int x, int y)
+{
+	float top = 1.f;
+	float bottom = -1.f;
+	float nearPlane = 1.f;
+	float tanFov = (top-bottom)*0.5f / nearPlane;
+	float fov = btScalar(2.0) * btAtan(tanFov);
+
+	btVector3	rayFrom = m_cameraPosition;
+	btVector3 rayForward = (m_cameraTargetPosition-m_cameraPosition);
+	rayForward.normalize();
+	float farPlane = 10000.f;
+	rayForward*= farPlane;
+
+	btVector3 rightOffset;
+	btVector3 vertical = m_cameraUp;
+
+	btVector3 hor;
+	hor = rayForward.cross(vertical);
+	hor.normalize();
+	vertical = hor.cross(rayForward);
+	vertical.normalize();
+
+	float tanfov = tanf(0.5f*fov);
+
+
+	hor *= 2.f * farPlane * tanfov;
+	vertical *= 2.f * farPlane * tanfov;
+
+	btScalar aspect;
+	
+	aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+	
+	hor*=aspect;
+
+
+	btVector3 rayToCenter = rayFrom + rayForward;
+	btVector3 dHor = hor * 1.f/float(m_glutScreenWidth);
+	btVector3 dVert = vertical * 1.f/float(m_glutScreenHeight);
+
+
+	btVector3 rayTo = rayToCenter - 0.5f * hor + 0.5f * vertical;
+	rayTo += btScalar(x) * dHor;
+	rayTo -= btScalar(y) * dVert;
+
+	dir[0] = rayTo[0];
+	dir[1] = rayTo[1];
+	dir[2] = rayTo[2];
 
 }
 

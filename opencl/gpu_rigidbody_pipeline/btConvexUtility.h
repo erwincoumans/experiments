@@ -49,7 +49,7 @@ class btConvexUtility
 	}
 	virtual ~btConvexUtility();
 
-	bool	initializePolyhedralFeatures(const btAlignedObjectArray<btVector3>& orgVertices, bool mergeCoplanarTriangles);
+	bool	initializePolyhedralFeatures(const btVector3* orgVertices, int numVertices, bool mergeCoplanarTriangles);
 		
 	void	initialize();
 	bool testContainment() const;

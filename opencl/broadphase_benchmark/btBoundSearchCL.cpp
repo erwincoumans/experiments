@@ -21,6 +21,7 @@ subject to the following restrictions:
 #include "btBoundSearchCL.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 #include "btLauncherCL.h"
+#include "../../opencl/primitives/AdlPrimitives/Search/BoundSearchKernelsCL.h"
 
 btBoundSearchCL::btBoundSearchCL(cl_context ctx, cl_device_id device, cl_command_queue queue, int maxSize)
 	:m_context(ctx),
@@ -32,7 +33,7 @@ btBoundSearchCL::btBoundSearchCL(cl_context ctx, cl_device_id device, cl_command
 	const char* srcFileNameForCaching="";
 
 	cl_int pErrNum;
-	char* kernelSource = 0;
+	const char* kernelSource = boundSearchKernelsCL;
 
 	cl_program boundSearchProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, kernelSource, &pErrNum,additionalMacros, BOUNDSEARCH_PATH);
 	btAssert(boundSearchProg);
