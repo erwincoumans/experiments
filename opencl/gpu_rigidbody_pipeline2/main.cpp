@@ -43,7 +43,7 @@ extern bool useSapGpuBroadphase;
 extern int NUM_OBJECTS_X;
 extern int NUM_OBJECTS_Y;
 extern int NUM_OBJECTS_Z;
-
+extern bool keepStaticObjects;
 extern float X_GAP;
 extern float Y_GAP;
 extern float Z_GAP;
@@ -51,7 +51,7 @@ extern float Z_GAP;
 char* fileName="../../bin/1000 stack.bullet";
 void Usage()
 {
-	printf("\nprogram.exe [--pause_simulation=<0 or 1>] [--load_bulletfile=test.bullet] [--enable_interop=<0 or 1>] [--enable_gpusap=<0 or 1>] [--enable_convexheightfield=<0 or 1>] [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
+	printf("\nprogram.exe [--pause_simulation=<0 or 1>] [--load_bulletfile=test.bullet] [--enable_interop=<0 or 1>] [--enable_gpusap=<0 or 1>] [--enable_convexheightfield=<0 or 1>] [--enable_static=<0 or 1>] [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
 };
 
 int main(int argc, char* argv[])
@@ -86,7 +86,10 @@ int main(int argc, char* argv[])
 	printf("x_dim=%d, y_dim=%d, z_dim=%d\n",NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z);
 	printf("x_gap=%f, y_gap=%f, z_gap=%f\n",X_GAP,Y_GAP,Z_GAP);
 	
+	args.GetCmdLineArgument("enable_static", keepStaticObjects);
+	printf("enable_static=%d\n",keepStaticObjects);	
 
+	
 	char* tmpfile = 0;
 	args.GetCmdLineArgument("load_bulletfile", tmpfile );
 	if (tmpfile)

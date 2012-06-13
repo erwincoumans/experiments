@@ -84,7 +84,8 @@ struct InternalData
 	btGridBroadphaseCl* m_BroadphaseGrid;
 	btGpuSapBroadphase* m_BroadphaseSap;
 
-	btOpenCLArray<btAABBHost>* m_localShapeAABB;
+	btOpenCLArray<btAABBHost>* m_localShapeAABBGPU;
+	btAlignedObjectArray<btAABBHost>* m_localShapeAABBCPU;
 
 	btAlignedObjectArray<btVector3>	m_linVelHost;
 	btAlignedObjectArray<btVector3>	m_angVelHost;
@@ -233,8 +234,12 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 		aabbMax.fz= myAabbMax[2];//s_convexHeightField->m_aabb.m_max.z;
 		aabbMax.uw = shapeIndex;
 
-		m_data->m_localShapeAABB->push_back(aabbMin);
-		m_data->m_localShapeAABB->push_back(aabbMax);
+		m_data->m_localShapeAABBCPU->push_back(aabbMin);
+		m_data->m_localShapeAABBGPU->push_back(aabbMin);
+
+		m_data->m_localShapeAABBCPU->push_back(aabbMax);
+		m_data->m_localShapeAABBGPU->push_back(aabbMax);
+
 		//m_data->m_localShapeAABB->copyFromHostPointer(&aabbMin,1,shapeIndex*2);
 		//m_data->m_localShapeAABB->copyFromHostPointer(&aabbMax,1,shapeIndex*2+1);
 		clFinish(g_cqCommandQue);
@@ -250,8 +255,8 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 	btVector3 aabbMin(0,0,0),aabbMax(0,0,0);
 	if (collisionShapeIndex>=0)
 	{
-		btAABBHost hostLocalAabbMin = m_data->m_localShapeAABB->at(collisionShapeIndex*2);
-		btAABBHost hostLocalAabbMax = m_data->m_localShapeAABB->at(collisionShapeIndex*2+1);
+		btAABBHost hostLocalAabbMin = m_data->m_localShapeAABBCPU->at(collisionShapeIndex*2);
+		btAABBHost hostLocalAabbMax = m_data->m_localShapeAABBCPU->at(collisionShapeIndex*2+1);
 		btVector3 localAabbMin(hostLocalAabbMin.fx,hostLocalAabbMin.fy,hostLocalAabbMin.fz);
 		btVector3 localAabbMax(hostLocalAabbMax.fx,hostLocalAabbMax.fy,hostLocalAabbMax.fz);
 		
@@ -310,7 +315,8 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	m_data->m_angVelBuf = new btOpenCLArray<btVector3>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_BODIES_CL,false);
 	m_data->m_bodyTimes = new btOpenCLArray<float>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_BODIES_CL,false);
 	
-	m_data->m_localShapeAABB = new btOpenCLArray<btAABBHost>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_SHAPES_CL,false);
+	m_data->m_localShapeAABBGPU = new btOpenCLArray<btAABBHost>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_SHAPES_CL,false);
+	m_data->m_localShapeAABBCPU = new btAlignedObjectArray<btAABBHost>;
 	
 
 	
@@ -371,7 +377,8 @@ void	CLPhysicsDemo::cleanup()
 	delete m_data->m_linVelBuf;
 	delete m_data->m_angVelBuf;
 	delete m_data->m_bodyTimes;
-	delete m_data->m_localShapeAABB;
+	delete m_data->m_localShapeAABBCPU;
+	delete m_data->m_localShapeAABBGPU;
 
 	delete m_data->m_BroadphaseSap;
 	delete m_data->m_BroadphaseGrid;
@@ -456,7 +463,7 @@ void	CLPhysicsDemo::stepSimulation()
 		{
 			gFpIO.m_dAABB = m_data->m_BroadphaseGrid->getAabbBuffer();
 		}
-		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABB->getBufferCL();
+		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABBGPU->getBufferCL();
 		gFpIO.m_numOverlap = 0;
 		{
 			BT_PROFILE("setupGpuAabbs");

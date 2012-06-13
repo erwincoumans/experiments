@@ -9,7 +9,7 @@ float Z_GAP = 2.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
-
+bool keepStaticObjects = false;
 #include <stdio.h>
 
 #include <GL/glew.h>
@@ -485,10 +485,12 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 				{
 					mass = 1.f/colObjData->m_inverseMass;
 					color[0] = 1;
-				void* ptr = (void*) m_physicsSim.m_numPhysicsInstances;
-				m_physicsSim.registerPhysicsInstance(mass,pos,quaternion,m_instanceGroups[i]->m_collisionShapeIndex,ptr);
-				m_renderer.registerGraphicsInstance(m_instanceGroups[i]->m_collisionShapeIndex,pos,quaternion,color,m_graphicsShapes[i]->m_scaling);
-	
+				}
+				if (keepStaticObjects || colObjData->m_inverseMass==0.f)
+				{
+					void* ptr = (void*) m_physicsSim.m_numPhysicsInstances;
+					m_physicsSim.registerPhysicsInstance(mass,pos,quaternion,m_instanceGroups[i]->m_collisionShapeIndex,ptr);
+					m_renderer.registerGraphicsInstance(m_instanceGroups[i]->m_collisionShapeIndex,pos,quaternion,color,m_graphicsShapes[i]->m_scaling);
 				}
 
 		
@@ -502,8 +504,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 		
 	}
 
-	#if 1
-
+	if (!keepStaticObjects)
 	{
 		int tetraShapeIndex= -1;
 		int strideInBytes = sizeof(float)*9;
@@ -536,7 +537,6 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 			m_renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
 		}
 	}
-#endif
 
 
 	m_physicsSim.writeBodiesToGpu();
