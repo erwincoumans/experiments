@@ -486,7 +486,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 					mass = 1.f/colObjData->m_inverseMass;
 					color[0] = 1;
 				}
-				if (keepStaticObjects || colObjData->m_inverseMass==0.f)
+				if (keepStaticObjects || colObjData->m_inverseMass!=0.f)
 				{
 					void* ptr = (void*) m_physicsSim.m_numPhysicsInstances;
 					m_physicsSim.registerPhysicsInstance(mass,pos,quaternion,m_instanceGroups[i]->m_collisionShapeIndex,ptr);
