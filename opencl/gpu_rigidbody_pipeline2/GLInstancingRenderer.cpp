@@ -670,26 +670,25 @@ void myinit()
 	//	  glCullFace(GL_BACK);
 }
 
-void updateCamera() 
-{
+
+void updateCamera() {
 
 
-	
-	btVector3 m_cameraUp(0,1,0);
-	int m_forwardAxis=2;
-	
+	float top = 1.f;
+	float bottom = -1.f;
+	float nearPlane = 1.f;
+	float farPlane(10000.f);
+	int m_forwardAxis(2);
+
+
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-
-
-	//m_azi+=0.0f;
-
 	btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
 	btScalar razi = m_azi * btScalar(0.01745329251994329547);// rads per deg
 
 
-		btQuaternion rot(m_cameraUp,razi);
+	btQuaternion rot(m_cameraUp,razi);
 
 
 	btVector3 eyePos(0,0,0);
@@ -710,47 +709,35 @@ void updateCamera()
 	m_cameraPosition[2] = eyePos.getZ();
 	m_cameraPosition += m_cameraTargetPosition;
 
-
-	float m_frustumZNear=1;
-	float m_frustumZFar=1000;
-
 	if (m_glutScreenWidth == 0 && m_glutScreenHeight == 0)
 		return;
 
-	float aspect;
+	btScalar aspect;
 	btVector3 extents;
 
-	if (m_glutScreenWidth > m_glutScreenHeight) 
-	{
-		aspect = m_glutScreenWidth / (float)m_glutScreenHeight;
-		extents.setValue(aspect * 1.0f, 1.0f,0);
-	} else 
-	{
-		aspect = m_glutScreenHeight / (float)m_glutScreenWidth;
-		extents.setValue(1.0f, aspect*1.f,0);
-	}
-
-
+	aspect = m_glutScreenWidth / (btScalar)m_glutScreenHeight;
+	extents.setValue(aspect * 1.0f, 1.0f,0);
+	
+	
 	if (m_ortho)
 	{
 		// reset matrix
 		glLoadIdentity();
+		
+		
 		extents *= m_cameraDistance;
 		btVector3 lower = m_cameraTargetPosition - extents;
 		btVector3 upper = m_cameraTargetPosition + extents;
+		//gluOrtho2D(lower.x, upper.x, lower.y, upper.y);
 		glOrtho(lower.getX(), upper.getX(), lower.getY(), upper.getY(),-1000,1000);
-
+		
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
+		//glTranslatef(100,210,0);
 	} else
 	{
-		if (m_glutScreenWidth > m_glutScreenHeight) 
-		{
-			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
-		} else 
-		{
-			glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
-		}
+//		glFrustum (-aspect, aspect, -1.0, 1.0, 1.0, 10000.0);
+		glFrustum (-aspect * nearPlane, aspect * nearPlane, -nearPlane, nearPlane, nearPlane, farPlane);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2], 

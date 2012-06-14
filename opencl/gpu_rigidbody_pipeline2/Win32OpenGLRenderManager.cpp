@@ -31,7 +31,8 @@ extern float m_ele;
 
 extern bool pauseSimulation;
 extern bool shootObject;
-
+extern int m_glutScreenWidth;
+extern int m_glutScreenHeight;
 
 struct InternalData2
 {
@@ -299,6 +300,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 					sData->m_width = LOWORD (lParam);
 					sData->m_height = HIWORD (lParam);
+					m_glutScreenWidth = sData->m_width;
+					m_glutScreenHeight = sData->m_height;
 					//if (sOpenGLInitialized)
 					//{
 					//	//gDemoApplication->reshape(sWidth,sHeight);
@@ -309,6 +312,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				case SIZE_RESTORED:										// Was Window Restored?
 					sData->m_width = LOWORD (lParam);
 					sData->m_height = HIWORD (lParam);
+					m_glutScreenWidth = sData->m_width;
+					m_glutScreenHeight = sData->m_height;
+
 					//if (sOpenGLInitialized)
 					//{
 					//	gDemoApplication->reshape(sWidth,sHeight);
@@ -404,6 +410,9 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		GetWindowRect(m_data->m_hWnd, &r);
 		m_data->m_width = r.right - r.left;
 		m_data->m_height = r.bottom - r.top;
+		m_glutScreenWidth = sData->m_width;
+		m_glutScreenHeight = sData->m_height;
+
 		//sFullScreen = false;
 		//sExternalWindow = true;
 	}
