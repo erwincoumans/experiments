@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 				//printStats  = false;
 			} else
 			{
-				printf(".");
+//				printf(".");
 			}
 		 }
 		
