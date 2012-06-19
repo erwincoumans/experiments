@@ -37,7 +37,8 @@ class btGpuSapBroadphase
 
 	public:
 	
-	btOpenCLArray<btSapAabb>	m_aabbs;
+	btOpenCLArray<btSapAabb>	m_aabbsGPU;
+	btAlignedObjectArray<btSapAabb>	m_aabbsCPU;
 	btOpenCLArray<btInt2>		m_overlappingPairs;
 
 	//temporary gpu work memory
@@ -52,6 +53,9 @@ class btGpuSapBroadphase
 
 	void createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,
 				void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask);
+
+	//call writeAabbsToGpu after done making all changes (createProxy etc)
+	void writeAabbsToGpu();
 
 	cl_mem	getAabbBuffer();
 	int	getNumOverlap();

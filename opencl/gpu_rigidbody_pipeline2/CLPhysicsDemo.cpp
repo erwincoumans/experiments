@@ -166,6 +166,9 @@ CLPhysicsDemo::~CLPhysicsDemo()
 
 void CLPhysicsDemo::writeBodiesToGpu()
 {
+	if (m_data->m_BroadphaseSap)
+		m_data->m_BroadphaseSap->writeAabbsToGpu();
+
 	writeVelocitiesToGpu();
 	
 	if (narrowphaseAndSolver)

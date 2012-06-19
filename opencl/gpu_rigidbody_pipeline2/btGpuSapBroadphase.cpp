@@ -16,7 +16,7 @@ btGpuSapBroadphase::btGpuSapBroadphase(cl_context ctx,cl_device_id device, cl_co
 :m_context(ctx),
 m_device(device),
 m_queue(q),
-m_aabbs(ctx,q),
+m_aabbsGPU(ctx,q),
 m_overlappingPairs(ctx,q),
 m_gpuSortData(ctx,q),
 m_gpuSortedAabbs(ctx,q)
@@ -66,6 +66,9 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 {
 	int axis = 0;//todo on GPU for now hardcode
 
+	btAssert(m_aabbsCPU.size() == m_aabbsGPU.size());
+	
+
 //#define FORCE_HOST
 #ifdef FORCE_HOST
 	
@@ -100,12 +103,12 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 	{
 		BT_PROFILE("GPU SAP");
 		
-		int numAabbs = m_aabbs.size();
+		int numAabbs = m_aabbsGPU.size();
 		m_gpuSortData.resize(numAabbs);
 	
 		{
 			BT_PROFILE("flipFloatKernel");
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbs.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL())};
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL())};
 			btLauncherCL launcher(m_queue, m_flipFloatKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst( numAabbs  );
@@ -125,7 +128,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 		m_gpuSortedAabbs.resize(numAabbs);
 		{
 			BT_PROFILE("scatterKernel");
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbs.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL(),true),btBufferInfoCL(m_gpuSortedAabbs.getBufferCL())};
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL(),true),btBufferInfoCL(m_gpuSortedAabbs.getBufferCL())};
 			btLauncherCL launcher(m_queue, m_scatterKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst( numAabbs);
@@ -166,6 +169,11 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 #endif
 }
 
+void btGpuSapBroadphase::writeAabbsToGpu()
+{
+	m_aabbsGPU.copyFromHost(m_aabbsCPU);
+}
+
 void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,
 				void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask)
 {
@@ -177,12 +185,12 @@ void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3&
 		aabb.m_max[i] = aabbMax[i];
 	}
 	aabb.m_minIndices[3] = index;//m_aabbs.size();
-	m_aabbs.push_back(aabb);
+	m_aabbsCPU.push_back(aabb);
 }
 
 cl_mem	btGpuSapBroadphase::getAabbBuffer()
 {
-	return m_aabbs.getBufferCL();
+	return m_aabbsGPU.getBufferCL();
 }
 
 int	btGpuSapBroadphase::getNumOverlap()
