@@ -1,5 +1,5 @@
 
 include "AMD"
---	include "Intel"
+include "Intel"
 include "NVIDIA"
 	

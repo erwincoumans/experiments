@@ -563,7 +563,12 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 		{
 			localPoints[i] = pointsIn[i];
 		}
-		int contactIdx[4] = {-1,-1,-1,-1};
+//		int contactIdx[4] = {-1,-1,-1,-1};
+		int contactIdx[4];// = {-1,-1,-1,-1};
+		contactIdx[0] = -1;
+		contactIdx[1] = -1;
+		contactIdx[2] = -1;
+		contactIdx[3] = -1;
 
 		int nContacts = extractManifoldSequential(localPoints, nPoints, normal, contactIdx);
 
@@ -642,7 +647,12 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 				float4 normal = -separatingNormals[i];
 				int nPoints = numLocalContactsOut;
 				float4* pointsIn = localContactsOut;
-				int contactIdx[4] = {-1,-1,-1,-1};
+				int contactIdx[4];// = {-1,-1,-1,-1};
+
+				contactIdx[0] = -1;
+				contactIdx[1] = -1;
+				contactIdx[2] = -1;
+				contactIdx[3] = -1;
 		
 				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
 		

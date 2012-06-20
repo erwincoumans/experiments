@@ -7,8 +7,7 @@
 #define MSTRINGIFY(A) #A
 static char* interopKernelString = 
 #include "../broadphase_benchmark/integrateKernel.cl"
-static char* sapKernelString = 
-#include "../broadphase_benchmark/sap.cl"
+#include "../broadphase_benchmark/sapKernels.h"
 
 
 
@@ -21,7 +20,7 @@ m_overlappingPairs(ctx,q),
 m_gpuSortData(ctx,q),
 m_gpuSortedAabbs(ctx,q)
 {
-	char* sapSrc = sapKernelString;
+	const char* sapSrc = sapCL;
 	cl_int errNum=0;
 
 	cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapSrc,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");

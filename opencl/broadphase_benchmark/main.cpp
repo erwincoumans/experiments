@@ -30,7 +30,7 @@ subject to the following restrictions:
 #include "btGlutInclude.h"
 #include "../opengl_interop/btStopwatch.h"
 #include "btRadixSort32CL.h"
-
+#include "sapKernels.h"
 
 
 btRadixSort32CL* sorter=0;
@@ -2237,7 +2237,7 @@ int main(int argc, char* argv[])
 	g_sineWaveKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "sineWaveKernel" );
 	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, NUM_OBJECTS);
 
-	char* src = 0;
+	const char* src = sapCL;
 	cl_int errNum=0;
 
 	sapProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,src,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");

@@ -33,18 +33,20 @@ typedef btAlignedObjectArray<btVector3> btVertexArray;
 #include "satKernels.h"
 #include "satClipKernels.h"
 
+
+
 GpuSatCollision::GpuSatCollision(cl_context ctx,cl_device_id device, cl_command_queue  q )
 :m_context(ctx),
 m_device(device),
 m_queue(q),
 m_findSeparatingAxisKernel(0)
 {
-	const char* src = satKernelsCL;
-	const char* srcClip = satClipKernelsCL;
+	
 	cl_int errNum=0;
 
 	if (1)
 	{
+		const char* src = satKernelsCL;
 		cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/sat.cl");
 		btAssert(errNum==CL_SUCCESS);
 
@@ -54,15 +56,22 @@ m_findSeparatingAxisKernel(0)
 
 	if (1)
 	{
+		const char* srcClip = satClipKernelsCL;
 		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,srcClip,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
 		btAssert(errNum==CL_SUCCESS);
 
-		m_extractManifoldAndAddContactKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "extractManifoldAndAddContactKernel",&errNum,satClipContactsProg);
+		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipHullHullKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
 
-		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "clipHullHullKernel",&errNum,satClipContactsProg);
+		m_extractManifoldAndAddContactKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "extractManifoldAndAddContactKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
+
+	} else
+	{
+		m_clipHullHullKernel=0;
+		m_extractManifoldAndAddContactKernel = 0;
 	}
+	
 
 }
 

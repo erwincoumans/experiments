@@ -115,11 +115,11 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 	glDC = wglGetCurrentDC();
 
 	int ciErrNum = 0;
-#ifdef CL_PLATFORM_INTEL
-	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
-#else
+//#ifdef CL_PLATFORM_INTEL
+//	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
+//#else
 	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
-#endif
+//#endif
 
 	
 
