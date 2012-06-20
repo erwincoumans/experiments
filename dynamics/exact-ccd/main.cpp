@@ -8,7 +8,9 @@
 
 int main(int argc, char* argv[])
 {
+#ifdef _WIN32
 	assert((_controlfp(0,0)&_MCW_RC)==_RC_NEAR);
+#endif
 	bool result =false;
 
 	{

@@ -96,7 +96,7 @@ uint prefixScanVectorEx( uint4* data )
 	return sum;
 }
 
-u32 localPrefixSum( u32 pData, uint lIdx, uint* totalSum, __local u32 sorterSharedMemory[], int wgSize /*64 or 128*/ )
+u32 localPrefixSum( u32 pData, uint lIdx, uint* totalSum, __local u32* sorterSharedMemory, int wgSize /*64 or 128*/ )
 {
 	{	//	Set data
 		sorterSharedMemory[lIdx] = 0;
@@ -172,7 +172,7 @@ u32 localPrefixSum( u32 pData, uint lIdx, uint* totalSum, __local u32 sorterShar
 }
 
 //__attribute__((reqd_work_group_size(128,1,1)))
-uint4 localPrefixSum128V( uint4 pData, uint lIdx, uint* totalSum, __local u32 sorterSharedMemory[] )
+uint4 localPrefixSum128V( uint4 pData, uint lIdx, uint* totalSum, __local u32* sorterSharedMemory )
 {
 	u32 s4 = prefixScanVectorEx( &pData );
 	u32 rank = localPrefixSum( s4, lIdx, totalSum, sorterSharedMemory, 128 );
@@ -181,7 +181,7 @@ uint4 localPrefixSum128V( uint4 pData, uint lIdx, uint* totalSum, __local u32 so
 
 
 //__attribute__((reqd_work_group_size(64,1,1)))
-uint4 localPrefixSum64V( uint4 pData, uint lIdx, uint* totalSum, __local u32 sorterSharedMemory[] )
+uint4 localPrefixSum64V( uint4 pData, uint lIdx, uint* totalSum, __local u32* sorterSharedMemory )
 {
 	u32 s4 = prefixScanVectorEx( &pData );
 	u32 rank = localPrefixSum( s4, lIdx, totalSum, sorterSharedMemory, 64 );
@@ -418,7 +418,7 @@ void PrefixScanKernel( __global u32* wHistogram1, int4  cb )
 }
 
 //	4 scan, 4 exchange
-void sort4Bits(u32 sortData[4], int startBit, int lIdx, __local u32 ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16])
+void sort4Bits(u32 sortData[4], int startBit, int lIdx, __local u32* ldsSortData)
 {
 	for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
 	{
