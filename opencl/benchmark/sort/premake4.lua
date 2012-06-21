@@ -1,4 +1,4 @@
 include "AMD"
 include "Apple"
-
---include "NVIDIA"
+include "NVIDIA"
+include "Intel"

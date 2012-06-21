@@ -1,12 +1,12 @@
 	
-	hasCL = findOpenCL_NVIDIA()
+	hasCL = findOpenCL_Intel()
 	hasDX11 = findDirectX11()
 	
 	if (hasCL) then
 
-		project "OpenCL_radixsort_benchmark_NVIDIA"
+		project "OpenCL_radixsort_benchmark_Intel"
 
-		initOpenCL_NVIDIA()
+		initOpenCL_Intel()
 
 		if (hasDX11) then
 			initDirectX11()
