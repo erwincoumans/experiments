@@ -578,111 +578,6 @@ void GLInstancingRenderer::InitShaders()
 }
 
 
-/* JONM : this code has been merged into the Tinylib layer so other modules can use it */
-#define GET(o) ((int)*(data + (o)))
-
-static int HalfSize(GLint components, GLint width, GLint height, const unsigned char *data, unsigned char *d, int filter) {
-	int x, y, c;
-	int line = width*components;
-
-	if (width > 1 && height > 1) {
-		if (filter)
-			for (y = 0; y < height; y += 2) {
-				for (x = 0; x < width; x += 2) {
-					for (c = 0; c < components; c++) {
-						*d++ = (GET(0)+GET(components)+GET(line)+GET(line+components)) / 4;
-						data++;
-					}
-					data += components;
-				}
-				data += line;
-			}
-		else
-			for (y = 0; y < height; y += 2) {
-				for (x = 0; x < width; x += 2) {
-					for (c = 0; c < components; c++) {
-						*d++ = GET(0);
-						data++;
-					}
-					data += components;
-				}
-				data += line;
-			}
-	}
-	else if (width > 1 && height == 1) {
-		if (filter)
-			for (y = 0; y < height; y += 1) {
-				for (x = 0; x < width; x += 2) {
-					for (c = 0; c < components; c++) {
-						*d++ = (GET(0)+GET(components)) / 2;
-						data++;
-					}
-					data += components;
-				}
-			}
-		else
-			for (y = 0; y < height; y += 1) {
-				for (x = 0; x < width; x += 2) {
-					for (c = 0; c < components; c++) {
-						*d++ = GET(0);
-						data++;
-					}
-					data += components;
-				}
-			}
-	}
-	else if (width == 1 && height > 1) {
-		if (filter)
-			for (y = 0; y < height; y += 2) {
-				for (x = 0; x < width; x += 1) {
-					for (c = 0; c < components; c++) {
-						*d++ = (GET(0)+GET(line)) / 2;
-						data++;
-					}
-				}
-				data += line;
-			}
-		else
-			for (y = 0; y < height; y += 2) {
-				for (x = 0; x < width; x += 1) {
-					for (c = 0; c < components; c++) {
-						*d++ = GET(0);
-						data++;
-					}
-				}
-				data += line;
-			}
-	}
-	else {
-		return 0;
-	}
-
-	return 1;
-}
-
-#undef GET
-
-/* Replacement for gluBuild2DMipmaps so GLU isn't needed */
-static void Build2DMipmaps(GLint components, GLint width, GLint height, GLenum format, const unsigned char *data, int filter) {
-	int level = 0;
-	unsigned char *d = (unsigned char *) malloc((width/2)*(height/2)*components+4);
-	const unsigned char *last = data;
-
-	glTexImage2D(GL_TEXTURE_2D, level, components, width, height, 0, format, GL_UNSIGNED_BYTE, (void*)data);
-	level++;
-
-	while (HalfSize(components, width, height, last, d, filter)) {
-		if (width  > 1) width  /= 2;
-		if (height > 1) height /= 2;
-
-		glTexImage2D(GL_TEXTURE_2D, level, components, width, height, 0, format, GL_UNSIGNED_BYTE, d);
-		level++;
-		last = d;
-	}
-
-	free(d);
-}
-
 
 
 void myinit()
@@ -794,9 +689,14 @@ void myinit()
 			 err = glGetError();
             assert(err==GL_NO_ERROR);
 			int filter=1;
-			 Build2DMipmaps(3,256,256,GL_RGB,image,filter);
+			// Build2DMipmaps(3,256,256,GL_RGB,image,filter);
              //gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
 
+			
+			//glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256,256,0,GL_RGB,GL_UNSIGNED_BYTE,image);
+			glGenerateMipmap(GL_TEXTURE_2D);
+			
             err = glGetError();
             assert(err==GL_NO_ERROR);
             

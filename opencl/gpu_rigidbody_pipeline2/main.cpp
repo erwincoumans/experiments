@@ -44,7 +44,12 @@ extern btVector3 m_cameraTargetPosition;
 extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
+#ifdef _WIN32
+bool useInterop = true;
+#else
 bool useInterop = false;
+#endif
+
 extern bool useSapGpuBroadphase;
 extern int NUM_OBJECTS_X;
 extern int NUM_OBJECTS_Y;
