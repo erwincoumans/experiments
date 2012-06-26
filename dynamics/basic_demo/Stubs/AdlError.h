@@ -20,16 +20,11 @@ subject to the following restrictions:
 #ifdef DX11RENDER
 #include <windows.h>
 #endif
+#include "LinearMath/btScalar.h"
 
-#ifdef _DEBUG
-	#include <assert.h>
-	#define CLASSERT(x) if(!(x)){__debugbreak(); }
-	#define ADLASSERT(x) if(!(x)){__debugbreak(); }
-#else
-	#define CLASSERT(x) if(x){}
-	#define ADLASSERT(x) if(x){}
+#define ADLASSERT(x) btAssert(x)
+#define CLASSERT(x) btAssert(x)
 
-#endif
 
 
 

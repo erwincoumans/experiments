@@ -4,7 +4,7 @@
 		configuration {"Windows"}
 			links {"opengl32"}
 		configuration {"MacOSX"}
- 			links { "Carbon.framework","OpenGL.framework","AGL.framework"} 
+ 			links { "OpenGL.framework"} 
 		configuration {"not Windows", "not MacOSX"}
 			links {"GL","GLU"}
 		configuration{}

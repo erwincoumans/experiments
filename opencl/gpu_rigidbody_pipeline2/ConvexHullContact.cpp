@@ -998,19 +998,23 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 				float4 worldVertsB2[MAX_VERTS];
 				int capacityWorldVerts = MAX_VERTS;
 
+                btQuaternion trAorn = trA.getRotation();
+                btQuaternion trBorn = trB.getRotation();
+                
 
 				numContactsOut = clipHullAgainstHull(hostNormals[i], 
 					hostConvexData.at(shapeA), 
 					hostConvexData.at(shapeB),
-								(float4&)trA.getOrigin(), (Quaternion&)trA.getRotation(),
-								(float4&)trB.getOrigin(), (Quaternion&)trB.getRotation(),
+								(float4&)trA.getOrigin(), (Quaternion&)trAorn,
+								(float4&)trB.getOrigin(), (Quaternion&)trBorn,
 								worldVertsB1,worldVertsB2,capacityWorldVerts,
 								minDist, maxDist,(float4*)&vertices[0],&faces[0],&indices[0],contactsOut,contactCapacity);
 				
 			}
 			if (numContactsOut>0)
 			{
-				float4 normalOnSurfaceB = (float4&)-hostNormals[i];
+				float4 normalOnSurfaceB = -(float4&)hostNormals[i];
+                
 				if (reductionOnGpu)
 				{
 					btOpenCLArray<int> contactCount(m_context, m_queue);

@@ -69,28 +69,33 @@ end
 	
 
 	include "../bullet2"	
-	include "../jpeglib"
+	--include "../jpeglib"
 
 	
 
 	
 if not _OPTIONS["with-nacl"] then
 
-	include "../opencl/c_api"
-	include "../opencl/basic_initialize"
-	include "../opencl/vector_add"
-	include "../opencl/gui_initialize"
+--	include "../opencl/c_api"
+--	include "../opencl/basic_initialize"
+--	include "../opencl/vector_add"
+--	include "../opencl/gui_initialize"
 --	include "../opencl/opengl_interop"
 	include "../opencl/global_atomics"
 --	include "../opencl/integration"
 
-	include "../opencl/benchmark/sort"
+--	include "../opencl/benchmark/sort"
 --	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
+	include "../rendering/osx"
+
 	include "../opencl/3dGridBroadphase"
 	include "../opencl/broadphase_benchmark"
 --	include "../opencl/gpu_rigidbody_pipeline"
 	include "../opencl/gpu_rigidbody_pipeline2"
+	include "../opencl/rendertest"
+	include "../opencl/tests"
+	
 	
 	include "../dynamics/profiler_test"
 	--include "../Lua"
@@ -112,21 +117,21 @@ if _OPTIONS["with-pe"] then
 
 end
 	
-	include "../dynamics/testbed"
-	include "../dynamics/position_based_dynamics"
+	--include "../dynamics/testbed"
+	--include "../dynamics/position_based_dynamics"
 --	include "../dynamics/basic_demo"
-	--include "../dynamics/bullet_serialize"
+--	include "../dynamics/bullet_serialize"
 
-	include "../dynamics/exact-ccd"
+	--include "../dynamics/exact-ccd"
 	
 --	include "../dynamics/corotational_fem"
 	--include "../dynamics/nncg_test"
 
 	
 
-	include "../rendering/Gwen/Gwen"
-	include "../rendering/Gwen/GwenOpenGLTest"
-	include "../rendering/OpenGLES2Angle"
+	--include "../rendering/Gwen/Gwen"
+	--include "../rendering/Gwen/GwenOpenGLTest"
+	--include "../rendering/OpenGLES2Angle"
 else
 	include "../rendering/NativeClient"	
 	

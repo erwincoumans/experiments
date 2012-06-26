@@ -16,12 +16,20 @@ subject to the following restrictions:
 #ifndef CL_PHYSICS_DEMO_H
 #define CL_PHYSICS_DEMO_H
 
+#ifdef _WIN32
 class Win32OpenGLWindow;
+#else
+class MacOpenGLWindow;
+#endif
 
 struct CLPhysicsDemo
 {
+#ifdef _WIN32
 	Win32OpenGLWindow* m_renderer;
-
+#else
+    MacOpenGLWindow* m_renderer;
+#endif
+    
 	int m_numCollisionShapes;
 
 	int m_numPhysicsInstances;
@@ -29,9 +37,12 @@ struct CLPhysicsDemo
 
 
 	struct InternalData* m_data;
-	
+#ifdef _WIN32
 	CLPhysicsDemo(Win32OpenGLWindow*	renderer);
-	
+#else
+    CLPhysicsDemo(MacOpenGLWindow*	renderer);
+#endif
+    
 	virtual ~CLPhysicsDemo();
 
 	//btOpenCLGLInteropBuffer*	m_interopBuffer;

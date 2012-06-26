@@ -20,11 +20,11 @@ subject to the following restrictions:
 
 
 
+#include "LinearMath/btScalar.h"
 
-
-struct Contact4
+ATTRIBUTE_ALIGNED16(struct) Contact4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	float4 m_worldPos[4];
 	float4 m_worldNormal;
@@ -57,6 +57,12 @@ struct Contact4
 	bool isInvalid() const { return (getBodyA()+getBodyB()) == 0; }
 };
 
+struct ContactPoint4Data
+{
+    int m_padding[3];
+    float m_nPoints;	//	for cl
+};
+
 struct ContactPoint4
 		{
 			float4 m_worldPos[4];
@@ -64,11 +70,7 @@ struct ContactPoint4
 			{
 				float4 m_worldNormal;
 
-				struct Data
-				{
-					int m_padding[3];
-					float m_nPoints;	//	for cl
-				}m_data;
+                ContactPoint4Data m_data;
 
 			};
 			float m_restituitionCoeff;

@@ -94,7 +94,7 @@ float4 operator-(const float4& a)
 __inline
 float4 operator*(const float4& a, const float4& b)
 {
-	CLASSERT((u32(&a) & 0xf) == 0);
+	//CLASSERT((u32(&a) & 0xf) == 0);
 
 	float4 out;
 	out.s[0] = a.s[0]*b.s[0];
@@ -174,7 +174,7 @@ void operator/=(float4& a, const float4& b)
 __inline
 void operator/=(float4& a, float b)
 {
-	CLASSERT((u32(&a) & 0xf) == 0);
+	//CLASSERT((u32(&a) & 0xf) == 0);
 
 	a.s[0]/=b;
 	a.s[1]/=b;

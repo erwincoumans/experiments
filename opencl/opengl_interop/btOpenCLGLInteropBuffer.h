@@ -18,7 +18,7 @@ subject to the following restrictions:
 #ifndef BT_OPENCL_GL_INTEROP_BUFFER_H
 #define BT_OPENCL_GL_INTEROP_BUFFER_H
 
-#include "btGlutInclude.h"
+#include "../gpu_rigidbody_pipeline2/OpenGLInclude.h"
 
 #include "../basic_initialize/btOpenCLInclude.h"
 

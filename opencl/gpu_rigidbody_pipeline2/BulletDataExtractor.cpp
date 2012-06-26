@@ -1,6 +1,6 @@
-int NUM_OBJECTS_X = 25;
-int NUM_OBJECTS_Y = 25;
-int NUM_OBJECTS_Z = 25;
+int NUM_OBJECTS_X = 15;
+int NUM_OBJECTS_Y = 15;
+int NUM_OBJECTS_Z = 15;
 
 
 float X_GAP = 2.3f;
@@ -12,7 +12,9 @@ float Z_GAP = 2.3f;
 bool keepStaticObjects = false;
 #include <stdio.h>
 
-#include <GL/glew.h>
+#include "OpenGLInclude.h"
+
+
 #include "GLInstancingRenderer.h"
 #include "CLPhysicsDemo.h"
 //#include "LinearMath/btQuickprof.h"

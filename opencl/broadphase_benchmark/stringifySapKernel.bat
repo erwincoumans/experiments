@@ -1,8 +1,6 @@
-python ..\stringify.py sap.cl sapCL >sapKernels.h
+
+python ../stringify.py sap.cl sapCL >sapKernels.h
+python ../stringify.py broadphaseKernel.cl broadphaseKernelCL > broadphaseKernel.h
 
 
-
-
-@echo Warning:
-@echo You might still need to find/replace for \\n (due to macros) and replace #include statements by their content
 pause

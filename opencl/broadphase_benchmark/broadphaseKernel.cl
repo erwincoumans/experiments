@@ -1,4 +1,4 @@
-MSTRINGIFY(
+
 
 typedef float4 Quaternion;
 
@@ -181,13 +181,14 @@ __kernel void
 
 			Matrix3x3 m = qtGetRotationMatrix( orientation);
 			Matrix3x3 mT = mtTranspose( m );
+            Matrix3x3 localInvInertia = bodyInertias[nodeID].m_initInvInertia;
 
-			Matrix3x3 tmp = mtMul(m, bodyInertias[nodeID].m_initInvInertia);
+			Matrix3x3 tmp = mtMul(m, localInvInertia);
+
 			Matrix3x3 tmp2 = mtMul(tmp, mT);
 			bodyInertias[nodeID].m_invInertia = tmp2;
 
 			//shapeInfo.m_invInertia = mtMul( mtMul( m, shapeInfo.m_initInvInertia ), mT );
-
 
 		} else
 		{
@@ -381,5 +382,3 @@ __kernel void
 		}
 	}
 }
-
-);

@@ -47,7 +47,7 @@ btRadixSort32CL::btRadixSort32CL(cl_context ctx, cl_device_id device, cl_command
 //this kernel doesn't work on Apple, use a slower serial fallback for now
 //
 //todo: detect this at runtime or fix the kernel to work cross-platform
-#if !defined(__APPLE__) && !defined(CL_PLATFORM_INTEL)
+#if !defined(__APPLE__1) && !defined(CL_PLATFORM_INTEL)
 	m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernel", &pErrNum, sortProg,additionalMacros );
 #else
     m_sortAndScatterSortDataKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, kernelSource, "SortAndScatterSortDataKernelSerial", &pErrNum, sortProg,additionalMacros );

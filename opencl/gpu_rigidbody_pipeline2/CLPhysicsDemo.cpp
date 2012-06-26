@@ -15,12 +15,18 @@ subject to the following restrictions:
 
 bool useSapGpuBroadphase = true;
 #include "OpenGLInclude.h"
+#ifdef _WIN32
+#include "windows.h"
+#endif
 
 #include "CLPhysicsDemo.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "DemoSettings.h"
 #include "../basic_initialize/btOpenCLUtils.h"
+#ifdef _WIN32
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
+#endif
+
 #include "../broadphase_benchmark/findPairsOpenCL.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btQuaternion.h"
@@ -54,7 +60,9 @@ bool runOpenCLKernels = true;
 
 btGpuNarrowphaseAndSolver* narrowphaseAndSolver = 0;
 ConvexHeightField* s_convexHeightField = 0 ;
+#ifdef _WIN32
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
+#endif
 
 extern GLuint               cube_vbo;
 extern int VBOsize;
@@ -109,11 +117,15 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 
 #ifdef _WIN32
 	glCtx = wglGetCurrentContext();
-#else //!_WIN32
-	GLXContext glCtx = glXGetCurrentContext();
-#endif //!_WIN32
 	glDC = wglGetCurrentDC();
+#else //!_WIN32
+#ifndef __APPLE__
+    GLXContext glCtx = glXGetCurrentContext();
+    glDC = wglGetCurrentDC();//??
+#endif
+#endif //!_WIN32
 
+    
 	int ciErrNum = 0;
 //#ifdef CL_PLATFORM_INTEL
 //	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
@@ -139,17 +151,22 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 	if (numDev>0)
 	{
 		g_device= btOpenCLUtils::getDevice(g_cxMainContext,0);
-		btOpenCLUtils::printDeviceInfo(g_device);
 		g_cqCommandQue = clCreateCommandQueue(g_cxMainContext, g_device, 0, &ciErrNum);
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+        
+        btOpenCLUtils::printDeviceInfo(g_device);
+
 	}
 
 }
 
 
 
-
+#ifdef _WIN32
 CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer)
+#else
+CLPhysicsDemo::CLPhysicsDemo(MacOpenGLWindow*	renderer)
+#endif
 {
 	m_numCollisionShapes=0;
 	m_numPhysicsInstances=0;
@@ -368,9 +385,11 @@ void CLPhysicsDemo::writeVelocitiesToGpu()
 void CLPhysicsDemo::setupInterop()
 {
 	m_data->m_useInterop = true;
-
+#ifdef _WIN32
 	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
 	clFinish(g_cqCommandQue);
+#endif
+
 }
 
 void	CLPhysicsDemo::cleanup()
@@ -388,7 +407,9 @@ void	CLPhysicsDemo::cleanup()
 
 
 	m_data=0;
+#ifdef _WIN32
 	delete g_interopBuffer;
+#endif
 	delete s_convexHeightField;
 }
 
@@ -419,10 +440,15 @@ void	CLPhysicsDemo::stepSimulation()
 
 	if(m_data->m_useInterop)
 	{
+#ifndef __APPLE__
 		clBuffer = g_interopBuffer->getCLBUffer();
 		BT_PROFILE("clEnqueueAcquireGLObjects");
 		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
 		clFinish(g_cqCommandQue);
+#else
+        assert(0);
+
+#endif
 	} else
 	{
 
@@ -453,7 +479,7 @@ void	CLPhysicsDemo::stepSimulation()
 
 
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
-	if (runOpenCLKernels && m_numPhysicsInstances)
+	if (1 && m_numPhysicsInstances)
 	{
 
 		gFpIO.m_numObjects = m_numPhysicsInstances;
@@ -471,6 +497,7 @@ void	CLPhysicsDemo::stepSimulation()
 		{
 			BT_PROFILE("setupGpuAabbs");
 			setupGpuAabbsFull(gFpIO,narrowphaseAndSolver->getBodiesGpu() );
+        //    setupGpuAabbsSimple(gFpIO);
 		}
 		if (1)
 		{
@@ -495,7 +522,7 @@ void	CLPhysicsDemo::stepSimulation()
 		{
 			colorPairsOpenCL(gFpIO);
 
-			if (1)
+			if (runOpenCLKernels)
 			{
 				{
 					//BT_PROFILE("setupBodies");
@@ -565,9 +592,11 @@ void	CLPhysicsDemo::stepSimulation()
 
 	if(m_data->m_useInterop)
 	{
+#ifndef __APPLE__
 		BT_PROFILE("clEnqueueReleaseGLObjects");
 		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
 		clFinish(g_cqCommandQue);
+#endif
 	}
 	else
 	{

@@ -15,12 +15,18 @@ subject to the following restrictions:
 
 //
 //#include "vld.h"
+#ifdef _WIN32
 #include <GL/glew.h>
+#endif
 
 #include "GLInstancingRenderer.h"
 
-#include "../opengl_interop/btOpenCLGLInteropBuffer.h"
+#ifdef _WIN32
 #include "Win32OpenGLRenderManager.h"
+#else
+#include "../rendertest/MacOpenGLWindow.h"
+#endif
+
 #include "CLPhysicsDemo.h"
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
 #include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
@@ -29,7 +35,7 @@ subject to the following restrictions:
 #include "LinearMath/btQuaternion.h"
 #include "BulletDataExtractor.h"
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
-
+#include "OpenGLInclude.h"
 
 bool pauseSimulation = false;
 bool shootObject = false;
@@ -38,7 +44,7 @@ extern btVector3 m_cameraTargetPosition;
 extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
-bool useInterop = true;
+bool useInterop = false;
 extern bool useSapGpuBroadphase;
 extern int NUM_OBJECTS_X;
 extern int NUM_OBJECTS_Y;
@@ -99,10 +105,17 @@ int main(int argc, char* argv[])
 
 	
 	printf("\n");
+#ifdef _WIN32
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-		
+#else
+    MacOpenGLWindow* window = new MacOpenGLWindow();
+#endif
+    
 	window->init(1024,768);
+#ifdef _WIN32
 	GLenum err = glewInit();
+#endif
+    
 	window->startRendering();
 	window->endRendering();
 
@@ -133,6 +146,11 @@ int main(int argc, char* argv[])
 	render.writeTransforms();
 
 
+    
+    window->startRendering();
+    render.RenderScene();
+    window->endRendering();
+    
 	while (!window->requestedExit())
 	{
 		CProfileManager::Reset();

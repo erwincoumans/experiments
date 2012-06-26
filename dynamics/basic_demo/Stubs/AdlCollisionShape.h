@@ -21,11 +21,10 @@ subject to the following restrictions:
 #include "Stubs/AdlAabb.h"
 
 
-_MEM_CLASSALIGN16
-class CollisionShape
+ATTRIBUTE_ALIGNED16(class) CollisionShape
 {
 	public:
-		_MEM_ALIGNED_ALLOCATOR16;
+		BT_DECLARE_ALIGNED_ALLOCATOR();
 
 		enum Type
 		{

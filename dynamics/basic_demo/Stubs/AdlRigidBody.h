@@ -18,15 +18,14 @@ subject to the following restrictions:
 #define ADL_RIGID_BODY_H
 
 #include "AdlQuaternion.h"
-
+#include "LinearMath/btScalar.h"
 class RigidBodyBase
 {
 	public:
 
-		_MEM_CLASSALIGN16
-		struct Body
+		ATTRIBUTE_ALIGNED16(struct) Body
 		{
-			_MEM_ALIGNED_ALLOCATOR16;
+			BT_DECLARE_ALIGNED_ALLOCATOR();
 
 			float4 m_pos;
 			Quaternion m_quat;

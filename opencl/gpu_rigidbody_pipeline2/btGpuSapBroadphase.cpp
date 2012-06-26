@@ -28,10 +28,10 @@ m_gpuSortedAabbs(ctx,q)
 
 	
 	
-	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelOriginal",&errNum,sapProg );
-	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelBarrier",&errNum,sapProg );
-	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
-	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "computePairsKernel",&errNum,sapProg );
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelOriginal",&errNum,sapProg );
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelBarrier",&errNum,sapProg );
+	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
+	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernel",&errNum,sapProg );
 	btAssert(errNum==CL_SUCCESS);
 
 	m_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
@@ -73,7 +73,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 	
 
 	btAlignedObjectArray<btSapAabb> hostAabbs;
-	m_aabbs.copyToHost(hostAabbs);
+	m_aabbsGPU.copyToHost(hostAabbs);
 	int numAabbs = hostAabbs.size();
 
 	btAlignedObjectArray<btInt2> hostPairs;
@@ -104,7 +104,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 		
 		int numAabbs = m_aabbsGPU.size();
 		m_gpuSortData.resize(numAabbs);
-	
+#if 1
 		{
 			BT_PROFILE("flipFloatKernel");
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL())};
@@ -136,7 +136,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 			clFinish(m_queue);
 			
 		}
-
+        
 
 			int maxPairsPerBody = 64;
 			int maxPairs = maxPairsPerBody * numAabbs;//todo
@@ -144,10 +144,11 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 
 			btOpenCLArray<int> pairCount(m_context, m_queue);
 			pairCount.push_back(0);
+            int numPairs=0;
 
 			{
 				BT_PROFILE("sapKernel");
-				btBufferInfoCL bInfo[] = { btBufferInfoCL( m_gpuSortedAabbs.getBufferCL(), true ), btBufferInfoCL( m_overlappingPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
+				btBufferInfoCL bInfo[] = { btBufferInfoCL( m_gpuSortedAabbs.getBufferCL() ), btBufferInfoCL( m_overlappingPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
 				btLauncherCL launcher(m_queue, m_sapKernel);
 				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 				launcher.setConst( numAabbs  );
@@ -156,12 +157,85 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 
 			
 				int num = numAabbs;
-				launcher.launch1D( num);
+#if 0                
+                int buffSize = launcher.getSerializationBufferSize();
+                unsigned char* buf = new unsigned char[buffSize+sizeof(int)];
+                for (int i=0;i<buffSize+1;i++)
+                {
+                    unsigned char* ptr = (unsigned char*)&buf[i];
+                    *ptr = 0xff;
+                }
+                int actualWrite = launcher.serializeArguments(buf,buffSize);
+                
+                unsigned char* cptr = (unsigned char*)&buf[buffSize];
+    //            printf("buf[buffSize] = %d\n",*cptr);
+                
+                assert(buf[buffSize]==0xff);//check for buffer overrun
+                int* ptr = (int*)&buf[buffSize];
+                
+                *ptr = num;
+                
+                FILE* f = fopen("m_sapKernelArgs.bin","wb");
+                fwrite(buf,buffSize+sizeof(int),1,f);
+                fclose(f);
+#endif//
+
+                launcher.launch1D( num);
 				clFinish(m_queue);
+                
+                numPairs = pairCount.at(0);
+                
 			}
 			
-			int numPairs = pairCount.at(0);
-			m_overlappingPairs.resize(numPairs);
+#else
+        int numPairs = 0;
+        
+        
+        btLauncherCL launcher(m_queue, m_sapKernel);
+
+        const char* fileName = "m_sapKernelArgs.bin";
+        FILE* f = fopen(fileName,"rb");
+        if (f)
+        {
+            int sizeInBytes=0;
+            if (fseek(f, 0, SEEK_END) || (sizeInBytes = ftell(f)) == EOF || fseek(f, 0, SEEK_SET)) 
+            {
+                printf("error, cannot get file size\n");
+                exit(0);
+            }
+            
+            unsigned char* buf = (unsigned char*) malloc(sizeInBytes);
+            fread(buf,sizeInBytes,1,f);
+            int serializedBytes = launcher.deserializeArgs(buf, sizeInBytes,m_context);
+            int num = *(int*)&buf[serializedBytes];
+            launcher.launch1D( num);
+            
+            btOpenCLArray<int> pairCount(m_context, m_queue);
+            int numElements = launcher.m_arrays[2]->size()/sizeof(int);
+            pairCount.setFromOpenCLBuffer(launcher.m_arrays[2]->getBufferCL(),numElements);
+            numPairs = pairCount.at(0);
+            //printf("overlapping pairs = %d\n",numPairs);
+            btAlignedObjectArray<btInt2>		hostOoverlappingPairs;
+            btOpenCLArray<btInt2> tmpGpuPairs(m_context,m_queue);
+            tmpGpuPairs.setFromOpenCLBuffer(launcher.m_arrays[1]->getBufferCL(),numPairs );
+   
+            tmpGpuPairs.copyToHost(hostOoverlappingPairs);
+            m_overlappingPairs.copyFromHost(hostOoverlappingPairs);
+            //printf("hello %d\n", m_overlappingPairs.size());
+            free(buf);
+            fclose(f);
+            
+        } else {
+            printf("error: cannot find file %s\n",fileName);
+        }
+        
+        clFinish(m_queue);
+
+        
+#endif
+
+			
+        m_overlappingPairs.resize(numPairs);
 		
 	}//BT_PROFILE("GPU_RADIX SORT");
 

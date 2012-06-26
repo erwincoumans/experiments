@@ -32,6 +32,7 @@ typedef struct
 
 
 /// conservative test for overlap between two aabbs
+bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2);
 bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2)
 {
 	bool overlap = true;
@@ -40,7 +41,7 @@ bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2)
 	overlap = (aabb1->m_min.y > aabb2->m_max.y || aabb1->m_max.y < aabb2->m_min.y) ? false : overlap;
 	return overlap;
 }
-
+bool TestAabbAgainstAabb2GlobalGlobal(__global const btAabbCL* aabb1, __global const btAabbCL* aabb2);
 bool TestAabbAgainstAabb2GlobalGlobal(__global const btAabbCL* aabb1, __global const btAabbCL* aabb2)
 {
 	bool overlap = true;
@@ -50,7 +51,7 @@ bool TestAabbAgainstAabb2GlobalGlobal(__global const btAabbCL* aabb1, __global c
 	return overlap;
 }
 
-
+bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2);
 bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2)
 {
 	bool overlap = true;
@@ -345,13 +346,14 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 
 
 //http://stereopsis.com/radix.html
+unsigned int FloatFlip(float fl);
 unsigned int FloatFlip(float fl)
 {
 	unsigned int f = *(unsigned int*)&fl;
 	unsigned int mask = -(int)(f >> 31) | 0x80000000;
 	return f ^ mask;
 }
-
+float IFloatFlip(unsigned int f);
 float IFloatFlip(unsigned int f)
 {
 	unsigned int mask = ((f >> 31) - 1) | 0x80000000;

@@ -476,7 +476,7 @@ int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchDa
 			for(int i=0; i<nIdxSrc; i++)
 			{
 				int idx = idxSrc[i];
-				ADLASSERT( idx < n );
+				btAssert( idx < n );
 				//	check if it can go
 				int bodyAS = cs[idx].m_bodyAPtrAndSignBit;
 				int bodyBS = cs[idx].m_bodyBPtrAndSignBit;
@@ -548,14 +548,16 @@ int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchDa
 	
 #if defined(_DEBUG)
 //		debugPrintf( "nBatches: %d\n", batchIdx );
-	for(int i=0; i<n; i++) ADLASSERT( cs[i].getBatchIdx() != -1 );
+	for(int i=0; i<n; i++) 
+    {
+        btAssert( cs[i].getBatchIdx() != -1 );
+    }
 #endif
 	return batchIdx;
 }
 
 void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs) 
 {
-
 
 	BT_PROFILE("computeContactsAndSolver");
 	bool bGPU = (m_internalData != 0);
@@ -576,7 +578,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
 	bool useCulling = false;
 	if (useConvexHeightfield)
-		useCulling = true;
+		useCulling = false;
 
 	clFinish(m_queue);
 	numPairsTotal = numBroadphasePairs;
@@ -759,7 +761,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 								int m_nSplit;
 							};
 
-							ADLASSERT( sortSize%64 == 0 );
+							btAssert( sortSize%64 == 0 );
 							CB cdata;
 							cdata.m_nContacts = nContacts;
 							cdata.m_staticIdx = csCfg.m_staticIdx;

@@ -18,8 +18,7 @@ subject to the following restrictions:
 #include "../basic_initialize/btOpenCLUtils.h"
 
 #define MSTRINGIFY(A) #A
-static char* broadphaseKernelString = 
-#include "broadphaseKernel.cl"
+#include "broadphaseKernel.h"
 
 #define GRID_BROADPHASE_PATH "..\\..\\opencl\\broadphase_benchmark\\broadphaseKernel.cl"
 
@@ -30,6 +29,7 @@ void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id de
 {
 
 	//m_proxies.push_back( proxy );
+    static const char* broadphaseKernelString = broadphaseKernelCL;
 
 	fpio.m_mainContext = cxMainContext;
 	fpio.m_cqCommandQue = commandQueue;

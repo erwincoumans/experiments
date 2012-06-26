@@ -18,6 +18,7 @@ subject to the following restrictions:
 
 #include "Stubs/AdlMath.h"
 #include "Stubs/AdlQuaternion.h"
+#include "LinearMath/btScalar.h"
 
 enum AdlCollisionShapeTypes
 {
@@ -26,11 +27,10 @@ enum AdlCollisionShapeTypes
 	SHAPE_CONVEX_HEIGHT_FIELD,
 };
 
-_MEM_CLASSALIGN16
-struct Aabb
+ATTRIBUTE_ALIGNED16(struct) Aabb
 {
 	public:
-		_MEM_ALIGNED_ALLOCATOR16;
+		BT_DECLARE_ALIGNED_ALLOCATOR();
 
 		__inline
 		void setEmpty();

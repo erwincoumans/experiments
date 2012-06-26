@@ -22,7 +22,7 @@ subject to the following restrictions:
 #ifdef USE_MINICL
 	#include <MiniCL/cl.h>
 #else
-	#include <MiniCL/cl.h>
+	#include <OpenCL/cl.h>
 #endif
 //CL_PLATFORM_MINI_CL could be defined in build system
 #else

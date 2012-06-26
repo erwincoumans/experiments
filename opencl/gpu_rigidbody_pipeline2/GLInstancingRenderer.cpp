@@ -27,6 +27,7 @@ subject to the following restrictions:
 
 #include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowphaseAndSolver.h"//for MAX_CONVEX_BODIES_CL
 
+
 struct btGraphicsInstance
 {
 	GLuint               m_cube_vao;
@@ -50,6 +51,18 @@ struct btGraphicsInstance
 bool m_ortho = false;
 int m_glutScreenWidth = 1024;
 int m_glutScreenHeight = 768;
+
+static GLfloat projectionMatrix[16];
+static GLfloat modelviewMatrix[16];
+
+static void checkError(const char *functionName)
+{
+    GLenum error;
+    while (( error = glGetError() ) != GL_NO_ERROR)
+    {
+        fprintf (stderr, "GL error 0x%X detected in %s\n", error, functionName);
+    }
+}
 
 
 
@@ -86,7 +99,7 @@ struct InternalDataRenderer
 
 static GLuint               instancingShader;        // The instancing renderer
 
-GLuint               cube_vbo;
+GLuint               cube_vbo=2;
 
 static GLuint				m_texturehandle;
 
@@ -230,12 +243,12 @@ static const char* fragmentShader= \
 "\n"
 "void main_textured(void)\n"
 "{\n"
-"    color =  texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
+"    color =  fragment.color;//texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
 "}\n"
 "\n"
 "void main(void)\n"
 "{\n"
-"    vec4 texel = fragment.color*texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
+"    vec4 texel = fragment.color*texture(Diffuse,vert.texcoord);//fragment.color;\n"
 "	vec3 ct,cf;\n"
 "	float intensity,at,af;\n"
 "	intensity = max(dot(lightDir,normalize(normal)),.2);\n"
@@ -277,8 +290,11 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
 	
 	// Compile them
 	glCompileShader(hVertexShader);
-	glCompileShader(hFragmentShader);
-
+	checkError("glCompileShader(hVertexShader)");
+    
+    glCompileShader(hFragmentShader);
+    checkError("glCompileShader(hFragmentShader)");
+    
 	// Check for errors
 	glGetShaderiv(hVertexShader, GL_COMPILE_STATUS, &testVal);
 	if(testVal == GL_FALSE)
@@ -312,7 +328,8 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
 	glAttachShader(hReturn, hFragmentShader);
 
 	glLinkProgram(hReturn);
-
+    checkError("glLinkProgram");
+    
 	// These are no longer needed
 	glDeleteShader(hVertexShader);
 	glDeleteShader(hFragmentShader);  
@@ -434,6 +451,9 @@ void GLInstancingRenderer::writeTransforms()
 	//if this glFinish is removed, the animation is not always working/blocks
 	//@todo: figure out why
 	glFlush();
+    GLint err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 }
 
 int GLInstancingRenderer::registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling)
@@ -538,8 +558,9 @@ void GLInstancingRenderer::InitShaders()
 
 	GLuint offset = 0;
 
-
 	glGenBuffers(1, &cube_vbo);
+    checkError("glGenBuffers");
+
 	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 
 
@@ -557,10 +578,118 @@ void GLInstancingRenderer::InitShaders()
 }
 
 
+/* JONM : this code has been merged into the Tinylib layer so other modules can use it */
+#define GET(o) ((int)*(data + (o)))
+
+static int HalfSize(GLint components, GLint width, GLint height, const unsigned char *data, unsigned char *d, int filter) {
+	int x, y, c;
+	int line = width*components;
+
+	if (width > 1 && height > 1) {
+		if (filter)
+			for (y = 0; y < height; y += 2) {
+				for (x = 0; x < width; x += 2) {
+					for (c = 0; c < components; c++) {
+						*d++ = (GET(0)+GET(components)+GET(line)+GET(line+components)) / 4;
+						data++;
+					}
+					data += components;
+				}
+				data += line;
+			}
+		else
+			for (y = 0; y < height; y += 2) {
+				for (x = 0; x < width; x += 2) {
+					for (c = 0; c < components; c++) {
+						*d++ = GET(0);
+						data++;
+					}
+					data += components;
+				}
+				data += line;
+			}
+	}
+	else if (width > 1 && height == 1) {
+		if (filter)
+			for (y = 0; y < height; y += 1) {
+				for (x = 0; x < width; x += 2) {
+					for (c = 0; c < components; c++) {
+						*d++ = (GET(0)+GET(components)) / 2;
+						data++;
+					}
+					data += components;
+				}
+			}
+		else
+			for (y = 0; y < height; y += 1) {
+				for (x = 0; x < width; x += 2) {
+					for (c = 0; c < components; c++) {
+						*d++ = GET(0);
+						data++;
+					}
+					data += components;
+				}
+			}
+	}
+	else if (width == 1 && height > 1) {
+		if (filter)
+			for (y = 0; y < height; y += 2) {
+				for (x = 0; x < width; x += 1) {
+					for (c = 0; c < components; c++) {
+						*d++ = (GET(0)+GET(line)) / 2;
+						data++;
+					}
+				}
+				data += line;
+			}
+		else
+			for (y = 0; y < height; y += 2) {
+				for (x = 0; x < width; x += 1) {
+					for (c = 0; c < components; c++) {
+						*d++ = GET(0);
+						data++;
+					}
+				}
+				data += line;
+			}
+	}
+	else {
+		return 0;
+	}
+
+	return 1;
+}
+
+#undef GET
+
+/* Replacement for gluBuild2DMipmaps so GLU isn't needed */
+static void Build2DMipmaps(GLint components, GLint width, GLint height, GLenum format, const unsigned char *data, int filter) {
+	int level = 0;
+	unsigned char *d = (unsigned char *) malloc((width/2)*(height/2)*components+4);
+	const unsigned char *last = data;
+
+	glTexImage2D(GL_TEXTURE_2D, level, components, width, height, 0, format, GL_UNSIGNED_BYTE, (void*)data);
+	level++;
+
+	while (HalfSize(components, width, height, last, d, filter)) {
+		if (width  > 1) width  /= 2;
+		if (height > 1) height /= 2;
+
+		glTexImage2D(GL_TEXTURE_2D, level, components, width, height, 0, format, GL_UNSIGNED_BYTE, d);
+		level++;
+		last = d;
+	}
+
+	free(d);
+}
+
+
+
 void myinit()
 {
 	GLint err = glGetError();
-
+    assert(err==GL_NO_ERROR);
+    
 	//	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
 	GLfloat light_ambient[] = { btScalar(1.0), btScalar(1.2), btScalar(0.2), btScalar(1.0) };
 
@@ -570,36 +699,32 @@ void myinit()
 	GLfloat light_position0[] = { btScalar(10000.0), btScalar(10000.0), btScalar(10000.0), btScalar(0.0 )};
 	GLfloat light_position1[] = { btScalar(-1.0), btScalar(-10.0), btScalar(-1.0), btScalar(0.0) };
 
-	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position0);
-
-	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
-	glLightfv(GL_LIGHT1, GL_POSITION, light_position1);
-
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_LIGHT1);
-
-
+	
 	//	glShadeModel(GL_FLAT);//GL_SMOOTH);
-	glShadeModel(GL_SMOOTH);
+	//glShadeModel(GL_SMOOTH);
 
+    err = glGetError();
+	assert(err==GL_NO_ERROR);
+    
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
+    err = glGetError();
+	assert(err==GL_NO_ERROR);
+    
 	glClearColor(float(0.7),float(0.7),float(0.7),float(0));
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
 
+    err = glGetError();
+	assert(err==GL_NO_ERROR);
 
 	static bool m_textureenabled = true;
 	static bool m_textureinitialized = false;
 
-
+    err = glGetError();
+	assert(err==GL_NO_ERROR);
+    
 	if(m_textureenabled)
 	{
 		if(!m_textureinitialized)
@@ -640,28 +765,64 @@ void myinit()
 
 			glGenTextures(1,(GLuint*)&m_texturehandle);
 			glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+#if 0
+
 			glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-			gluBuild2DMipmaps(GL_TEXTURE_2D,3,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
-			delete[] image;
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+          
+#endif
+			 err = glGetError();
+            assert(err==GL_NO_ERROR);
+			int filter=1;
+			 Build2DMipmaps(3,256,256,GL_RGB,image,filter);
+             //gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
+
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            delete[] image;
 			m_textureinitialized=true;
 		}
 		//		glMatrixMode(GL_TEXTURE);
 		//		glLoadIdentity();
 		//		glMatrixMode(GL_MODELVIEW);
 
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+        err = glGetError();
+        assert(err==GL_NO_ERROR);
+        
+        glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+        err = glGetError();
+        assert(err==GL_NO_ERROR);
+        
 
 	} else
 	{
 		glDisable(GL_TEXTURE_2D);
+        err = glGetError();
+        assert(err==GL_NO_ERROR);
 	}
 
-	glEnable(GL_COLOR_MATERIAL);
+	//glEnable(GL_COLOR_MATERIAL);
 	 
 	err = glGetError();
 	assert(err==GL_NO_ERROR);
@@ -671,8 +832,71 @@ void myinit()
 }
 
 
-void updateCamera() {
+void    btCreateFrustum(
+                        float left,
+                        float right,
+                        float bottom,
+                        float top,
+                        float nearVal,
+                        float farVal,
+                        float frustum[16])
+{
+    
+    frustum[0*4+0] = (float(2) * nearVal) / (right - left);
+    frustum[0*4+1] = float(0);
+    frustum[0*4+2] = float(0);
+    frustum[0*4+3] = float(0);
+    
+    frustum[1*4+0] = float(0);
+    frustum[1*4+1] = (float(2) * nearVal) / (top - bottom);
+    frustum[1*4+2] = float(0);
+    frustum[1*4+3] = float(0);
+    
+    frustum[2*4+0] = (right + left) / (right - left);
+    frustum[2*4+1] = (top + bottom) / (top - bottom);
+    frustum[2*4+2] = -(farVal + nearVal) / (farVal - nearVal);
+    frustum[2*4+3] = float(-1);
+    
+    frustum[3*4+0] = float(0);
+    frustum[3*4+1] = float(0);
+    frustum[3*4+2] = -(float(2) * farVal * nearVal) / (farVal - nearVal);
+    frustum[3*4+3] = float(0);
+    
+}
 
+
+
+void    btCreateLookAt(const btVector3& eye, const btVector3& center,const btVector3& up, GLfloat result[16])
+{
+    btVector3 f = (center - eye).normalized();
+    btVector3 u = up.normalized();
+    btVector3 s = (f.cross(u)).normalized();
+    u = s.cross(f);
+    
+    result[0*4+0] = s.x();
+    result[1*4+0] = s.y();
+    result[2*4+0] = s.z();
+    result[0*4+1] = u.x();
+    result[1*4+1] = u.y();
+    result[2*4+1] = u.z();
+    result[0*4+2] =-f.x();
+    result[1*4+2] =-f.y();
+    result[2*4+2] =-f.z();
+    
+    result[3*4+0] = -s.dot(eye);
+    result[3*4+1] = -u.dot(eye);
+    result[3*4+2] = f.dot(eye);
+    result[3*4+3] = 1.f;
+}
+
+
+
+void updateCamera() 
+{
+
+    GLint err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 
 	float top = 1.f;
 	float bottom = -1.f;
@@ -680,10 +904,11 @@ void updateCamera() {
 	float farPlane(10000.f);
 	int m_forwardAxis(2);
 
+    float m_frustumZNear=1;
+    float m_frustumZFar=10000.f;
+    
 
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
+    m_azi=m_azi+0.01;
 	btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
 	btScalar razi = m_azi * btScalar(0.01745329251994329547);// rads per deg
 
@@ -722,28 +947,35 @@ void updateCamera() {
 	if (m_ortho)
 	{
 		// reset matrix
-		glLoadIdentity();
 		
 		
 		extents *= m_cameraDistance;
 		btVector3 lower = m_cameraTargetPosition - extents;
 		btVector3 upper = m_cameraTargetPosition + extents;
 		//gluOrtho2D(lower.x, upper.x, lower.y, upper.y);
-		glOrtho(lower.getX(), upper.getX(), lower.getY(), upper.getY(),-1000,1000);
-		
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		//glTranslatef(100,210,0);
+				//glTranslatef(100,210,0);
 	} else
 	{
 //		glFrustum (-aspect, aspect, -1.0, 1.0, 1.0, 10000.0);
-		glFrustum (-aspect * nearPlane, aspect * nearPlane, -nearPlane, nearPlane, nearPlane, farPlane);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2], 
-			m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2], 
-			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
 	}
+    
+    
+    if (m_glutScreenWidth > m_glutScreenHeight)
+    {
+        //      glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+        btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
+    } else
+    {
+        //      glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
+        btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
+    }
+    /*gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2],
+     m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2],
+     m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
+     */
+
+    btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,modelviewMatrix);
+    
 
 }
 
@@ -805,11 +1037,22 @@ void GLInstancingRenderer::RenderScene(void)
 
 	myinit();
 
+    GLint err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 	updateCamera();
 
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    
 	//render coordinate system
-	glBegin(GL_LINES);
-	glColor3f(1,0,0);
+#if 0
+    glBegin(GL_LINES);
+	err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    glColor3f(1,0,0);
 	glVertex3f(0,0,0);
 	glVertex3f(1,0,0);
 	glColor3f(0,1,0);
@@ -819,7 +1062,9 @@ void GLInstancingRenderer::RenderScene(void)
 	glVertex3f(0,0,0);
 	glVertex3f(0,0,1);
 	glEnd();
-
+#endif
+    
+    
 	//do a finish, to make sure timings are clean
 	//	glFinish();
 
@@ -829,6 +1074,9 @@ void GLInstancingRenderer::RenderScene(void)
 	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	glFlush();
 
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 	//updatePos();
 
 //	simulationLoop();
@@ -880,23 +1128,19 @@ void GLInstancingRenderer::RenderScene(void)
 		glEnableVertexAttribArray(5);
 		glEnableVertexAttribArray(6);
 
-		glVertexAttribDivisor(0, 0);
-		glVertexAttribDivisor(1, 1);
-		glVertexAttribDivisor(2, 1);
-		glVertexAttribDivisor(3, 0);
-		glVertexAttribDivisor(4, 0);
-		glVertexAttribDivisor(5, 1);
-		glVertexAttribDivisor(6, 1);
-	
+		glVertexAttribDivisorARB(0, 0);
+		glVertexAttribDivisorARB(1, 1);
+		glVertexAttribDivisorARB(2, 1);
+		glVertexAttribDivisorARB(3, 0);
+		glVertexAttribDivisorARB(4, 0);
+		glVertexAttribDivisorARB(5, 1);
+		glVertexAttribDivisorARB(6, 1);
+        
 		glUseProgram(instancingShader);
 		glUniform1f(angle_loc, 0);
-		GLfloat pm[16];
-		glGetFloatv(GL_PROJECTION_MATRIX, pm);
-		glUniformMatrix4fv(ProjectionMatrix, 1, false, &pm[0]);
+		glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
 
-		GLfloat mvm[16];
-		glGetFloatv(GL_MODELVIEW_MATRIX, mvm);
-		glUniformMatrix4fv(ModelViewMatrix, 1, false, &mvm[0]);
+		glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
 
 		glUniform1i(uniform_texture_diffuse, 0);
 
@@ -915,12 +1159,14 @@ void GLInstancingRenderer::RenderScene(void)
 		}
 		curOffset+= gfxObj->m_numGraphicsInstances;
 	}
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
 	glUseProgram(0);
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 	glBindVertexArray(0);
 
 	
-	GLint err = glGetError();
+	err = glGetError();
 	assert(err==GL_NO_ERROR);
 	
 }

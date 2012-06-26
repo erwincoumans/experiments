@@ -819,6 +819,7 @@ cl_kernel btOpenCLUtils_compileCLKernelFromString(cl_context clContext, cl_devic
 	if (localErrNum != CL_SUCCESS)
 	{
 		printf("Error in clCreateKernel, Line %u in file %s, cannot find kernel function %s !!!\n\n", __LINE__, __FILE__, kernelName);
+        assert(0);
 		if (pErrNum)
 			*pErrNum = localErrNum;
 		return 0;

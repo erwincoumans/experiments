@@ -17,14 +17,17 @@ subject to the following restrictions:
 #ifndef __OPENGL_INCLUDE_H
 #define __OPENGL_INCLUDE_H
 
-#include <GL/glew.h>
 
 //think different
 #if defined(__APPLE__) && !defined (VMDMESA)
 #include <OpenGL/OpenGL.h>
-#include <OpenGL/gl.h>
+//#include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
+//#import <Cocoa/Cocoa.h>
+#include <OpenGL/gl3.h>
 #else
+
+#include <GL/glew.h>
 
 
 #ifdef _WINDOWS

@@ -18,15 +18,16 @@ subject to the following restrictions:
 #define MATRIX3X3_H
 
 #include "AdlMath.h"
+#include "LinearMath/btScalar.h"
 
 ///////////////////////////////////////
 //	Matrix3x3
 ///////////////////////////////////////
 
 typedef 
-_MEM_CLASSALIGN16 struct
+ATTRIBUTE_ALIGNED16(struct)
 {
-	_MEM_ALIGNED_ALLOCATOR16;
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	float4 m_row[3];
 }Matrix3x3;
 

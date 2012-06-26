@@ -21,6 +21,9 @@ subject to the following restrictions:
 #include <math.h>
 #include <float.h>
 #include <xmmintrin.h>
+#include "LinearMath/btScalar.h"
+#include "LinearMath/btAlignedAllocator.h"
+
 
 
 #include "AdlError.h"
@@ -31,13 +34,7 @@ subject to the following restrictions:
 #define NEXTMULTIPLEOF(num, alignment) (((num)/(alignment) + (((num)%(alignment)==0)?0:1))*(alignment))
 
 
-#define _MEM_CLASSALIGN16 __declspec(align(16))
-#define _MEM_ALIGNED_ALLOCATOR16 	void* operator new(size_t size) { return _aligned_malloc( size, 16 ); } \
-	void operator delete(void *p) { _aligned_free( p ); } \
-	void* operator new[](size_t size) { return _aligned_malloc( size, 16 ); } \
-	void operator delete[](void *p) { _aligned_free( p ); } \
-	void* operator new(size_t size, void* p) { return p; } \
-	void operator delete(void *p, void* pp) {} 
+
 
 
 
@@ -51,11 +48,10 @@ T nextPowerOf2(T n)
 }
 
 
-_MEM_CLASSALIGN16
-struct float4
+ATTRIBUTE_ALIGNED16(struct) float4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
-	union
+	BT_DECLARE_ALIGNED_ALLOCATOR();
+   union
 	{
 		struct
 		{
@@ -69,17 +65,16 @@ struct float4
 	};
 };
 
-__forceinline
-unsigned int isZero(const float4& a)
+SIMD_FORCE_INLINE unsigned int isZero(const float4& a)
 {
 	return (a.x == 0.f) & (a.y == 0.f) & (a.z == 0.f) & (a.w == 0.f);
 }
 
-_MEM_CLASSALIGN16
-struct int4
+
+ATTRIBUTE_ALIGNED16(struct) int4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
-	union
+	BT_DECLARE_ALIGNED_ALLOCATOR();
+   union
 	{
 		struct
 		{
@@ -189,7 +184,9 @@ struct SortData
 template<typename T>
 T* addByteOffset(void* baseAddr, u32 offset)
 {
-	return (T*)(((u32)baseAddr)+offset);
+	return (T*)(((unsigned long long)baseAddr)+offset);
+//   return (T*)(((unsigned int)baseAddr)+offset);
+
 }
 
 
