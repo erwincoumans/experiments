@@ -87,7 +87,6 @@ if not _OPTIONS["with-nacl"] then
 --	include "../opencl/benchmark/sort"
 --	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
-	include "../rendering/osx"
 
 	include "../opencl/3dGridBroadphase"
 	include "../opencl/broadphase_benchmark"

@@ -24,7 +24,8 @@
 		files {
 			"../main.cpp",
 			"../../basic_initialize/btOpenCLUtils.cpp",
-			"../../basic_initialize/btOpenCLUtils.h"
+			"../../basic_initialize/btOpenCLUtils.h",
+			"../../../bullet2/LinearMath/btAlignedAllocator.cpp"
 		}
 		
 	end
