@@ -250,7 +250,7 @@ void MacOpenGLWindow::runMainLoop()
     // fclose(dump);
     
     [m_internalData->m_myApp finishLaunching];
-    
+#if 0 
     bool shouldKeepRunning = YES;
     do
     {
@@ -276,6 +276,8 @@ void MacOpenGLWindow::runMainLoop()
         [m_internalData->m_myApp sendEvent:event];
         [m_internalData->m_myApp updateWindows];
     } while (shouldKeepRunning);
+#endif
+    
     [pool release];
 
 }
@@ -287,10 +289,64 @@ void MacOpenGLWindow::exit()
     m_internalData = 0;
     
 }
+extern float m_azi;
+extern float m_ele;
+extern float m_cameraDistance;
+
 
 void MacOpenGLWindow::startRendering()
 {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    
+    
+    
+    
+    NSEvent *event = nil;
+    
+    do
+    {
+        [pool release];
+        pool = [[NSAutoreleasePool alloc] init];
+        event =
+        [m_internalData->m_myApp
+         nextEventMatchingMask:NSAnyEventMask
+         untilDate:[NSDate distantPast]
+         inMode:NSDefaultRunLoopMode
+         //		  inMode:NSEventTrackingRunLoopMode
+         dequeue:YES];
+        
+        if ([event type] == NSKeyDown)
+        {
+            uint32 keycode = [event keyCode];
+            if (keycode==12)//'q'
+                [NSApp terminate:m_internalData->m_myApp];
+            
+            if (keycode == 0)
+                m_azi += 0.1;
+        //    input::doSomeWork(keycode);
+        }
+        if ([event type] == NSLeftMouseDragged)
+        {
+            CGMouseDelta dx1, dy1;
+            CGGetLastMouseDelta (&dx1, &dy1);
+            m_azi += dx1*0.1;
+            m_ele += dy1*0.1;
+        }
+        
+        if ([event type] == NSScrollWheel)
+        {
+            float dy, dx;
+            dy = [ event deltaY ];
+            dx = [ event deltaX ];
+            m_cameraDistance -= dy*0.1;
+            
+        }
+        [m_internalData->m_myApp sendEvent:event];
+        [m_internalData->m_myApp updateWindows];
+    } while (event);
+  
     [m_internalData->m_myview MakeCurrent];
+    
     
     //glClearColor(1.f,0.f,0.f,1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);     //clear buffers
@@ -319,6 +375,7 @@ void MacOpenGLWindow::startRendering()
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
+     [pool release];
 
 }
 

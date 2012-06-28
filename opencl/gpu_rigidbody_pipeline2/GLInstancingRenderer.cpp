@@ -71,7 +71,7 @@ extern int gShapeIndex;
 
 btVector3 m_cameraPosition(0,0,0);//will be overridden by a position computed from azi/ele
 btVector3 m_cameraTargetPosition(15,-5,-10);
-btScalar m_cameraDistance = 125;
+float m_cameraDistance = 125;
 btVector3 m_cameraUp(0,1,0);
 float m_azi=135.f;
 float m_ele=15.f;
@@ -808,7 +808,7 @@ void updateCamera()
     float m_frustumZFar=10000.f;
     
 
-    m_azi=m_azi+0.01;
+//    m_azi=m_azi+0.01;
 	btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
 	btScalar razi = m_azi * btScalar(0.01745329251994329547);// rads per deg
 
