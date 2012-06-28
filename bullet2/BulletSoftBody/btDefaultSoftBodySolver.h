@@ -13,14 +13,13 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #ifndef BT_SOFT_BODY_DEFAULT_SOLVER_H
 #define BT_SOFT_BODY_DEFAULT_SOLVER_H
 
 
 #include "BulletSoftBody/btSoftBodySolvers.h"
 #include "btSoftBodySolverVertexBuffer.h"
-
+struct btCollisionObjectWrapper;
 
 class btDefaultSoftBodySolver : public btSoftBodySolver
 {
@@ -55,7 +54,7 @@ public:
 
 	virtual void copySoftBodyToVertexBuffer( const btSoftBody *const softBody, btVertexBufferDescriptor *vertexBuffer );
 
-	virtual void processCollision( btSoftBody *, btCollisionObject* );
+	virtual void processCollision( btSoftBody *, const btCollisionObjectWrapper* );
 
 	virtual void processCollision( btSoftBody*, btSoftBody* );
 

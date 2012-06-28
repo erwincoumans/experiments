@@ -19,16 +19,18 @@ if os.is("Windows") then
 		
 
 		links { "testbed",
-			"bullet2",
-			"gwen"
-		}
+			"LinearMath",
+			"BulletCollision",
+			"BulletDynamics"
+	}
 		
 		initOpenGL()
 		initGlut()
 	
 		files {
-		"**.cpp",
-		"**.h"
+		"BasicDemo.cpp",
+		"BasicDemo.h",
+		"main.cpp"
 		}
 
 end

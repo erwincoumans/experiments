@@ -17,11 +17,19 @@ subject to the following restrictions:
 #include "GlutStuff.h"
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 #include "btBulletDynamicsCommon.h"
+#ifdef CL_PLATFORM_AMD
 #include "CustomConvexShape.h"
 #include "CustomConvexPairCollision.h"
 #include "CustomCollisionDispatcher.h"
-
 #include "ConvexHeightFieldShape.h"
+
+#define USE_CUSTOM_HEIGHTFIELD_SHAPE 
+
+#endif
+
+
+
+
 #include "GLDebugDrawer.h"
 static GLDebugDrawer sDebugDraw;
 
@@ -200,6 +208,7 @@ static int BarrelIdx[] = {
 44,26,47,
 };
 
+#ifdef CL_PLATFORM_AMD
 
 __inline void glVertexFloat4( const float4& v )
 {
@@ -239,10 +248,12 @@ void displaySamples(const float4* vertices, int numVertices, const float4& trans
 	drawPointListTransformed( vertices,numVertices, translation, quaternion );
 }
 
-
+#endif
 
 void BasicDemo::renderSurfacePoints()
 {
+#ifdef CL_PLATFORM_AMD
+
 	if (m_dynamicsWorld->getDebugDrawer()->getDebugMode()& btIDebugDraw::DBG_DrawContactPoints)
 	for (int i=0;i<m_dynamicsWorld->getCollisionObjectArray().size();i++)
 	{
@@ -278,6 +289,8 @@ void BasicDemo::renderSurfacePoints()
 		}
 
 	}
+#endif
+
 }
 void BasicDemo::clientMoveAndDisplay()
 {
@@ -346,11 +359,12 @@ void	BasicDemo::initPhysics()
 	
 #ifdef CL_PLATFORM_AMD
 	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration,	g_cxMainContext,g_clDevice,g_cqCommandQue);
+	m_dispatcher->registerCollisionCreateFunc(CUSTOM_POLYHEDRAL_SHAPE_TYPE,CUSTOM_POLYHEDRAL_SHAPE_TYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
+
 #else
-	m_dispatcher = new	CustomCollisionDispatcher(m_collisionConfiguration);
+	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 #endif
 
-	m_dispatcher->registerCollisionCreateFunc(CUSTOM_POLYHEDRAL_SHAPE_TYPE,CUSTOM_POLYHEDRAL_SHAPE_TYPE,new CustomConvexConvexPairCollision::CreateFunc(m_collisionConfiguration->getSimplexSolver(), m_collisionConfiguration->getPenetrationDepthSolver()));
 
 	m_broadphase = new btDbvtBroadphase();
 
@@ -366,10 +380,11 @@ void	BasicDemo::initPhysics()
 
 	///create a few basic rigid bodies
 	//btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
-#if 1
+#ifdef CL_PLATFORM_AMD
 	CustomConvexShape* groundShape = new CustomConvexShape(BoxVtx2,BoxVtxCount,3*sizeof(float));
-	//btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
-	
+#else
+	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
+#endif
 	m_collisionShapes.push_back(groundShape);
 
 	btTransform groundTransform;
@@ -395,7 +410,6 @@ void	BasicDemo::initPhysics()
 		//add the body to the dynamics world
 		m_dynamicsWorld->addRigidBody(body);
 	}
-#endif
 
 
 	{
@@ -404,7 +418,6 @@ void	BasicDemo::initPhysics()
 
 		//btCollisionShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-#define USE_CUSTOM_HEIGHTFIELD_SHAPE 
 #ifdef USE_CUSTOM_HEIGHTFIELD_SHAPE
 	CustomConvexShape* colShape = new CustomConvexShape(BarrelVtx2,BarrelVtxCount2,6*sizeof(float));
 

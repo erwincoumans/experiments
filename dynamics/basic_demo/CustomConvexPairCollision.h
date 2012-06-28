@@ -28,6 +28,7 @@ class CustomConvexConvexPairCollision : public btConvexConvexAlgorithm
 
 	virtual void processCollision (btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo,btManifoldResult* resultOut);
 
+protected:
 	btPersistentManifold*	getManifoldPtr()
 	{
 		return m_manifoldPtr;

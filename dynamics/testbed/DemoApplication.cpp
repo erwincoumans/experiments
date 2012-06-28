@@ -747,7 +747,7 @@ void DemoApplication::mouseFunc(int button, int state, int x, int y)
 					{
 
 
-						btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObject);
+						btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
 						if (body)
 						{
 							//other exclusions?

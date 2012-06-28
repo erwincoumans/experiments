@@ -25,7 +25,9 @@
 		links {"BulletFileLoader"}
 		
 		files {
-			"../../gpu_rigidbody_pipeline2/main.cpp",
+			"../main.cpp",
+			"../renderscene.cpp",
+			"../renderscene.h",
 			"../../gpu_rigidbody_pipeline2/GLInstancingRenderer.cpp",
 			"../../gpu_rigidbody_pipeline2/GLInstancingRenderer.h",
 			"../../gpu_rigidbody_pipeline2/Win32OpenGLRenderManager.cpp",
