@@ -29,19 +29,20 @@ struct btFace
 	btScalar	m_plane[4];
 };
 
-class btConvexUtility
+ATTRIBUTE_ALIGNED16(class) btConvexUtility
 {
 	public:
-		
-	btAlignedObjectArray<btVector3>	m_vertices;
-	btAlignedObjectArray<btFace>	m_faces;
-	btAlignedObjectArray<btVector3> m_uniqueEdges;
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 
 	btVector3		m_localCenter;
 	btVector3		m_extents;
-	btScalar		m_radius;
 	btVector3		mC;
 	btVector3		mE;
+	btScalar		m_radius;
+	
+	btAlignedObjectArray<btVector3>	m_vertices;
+	btAlignedObjectArray<btFace>	m_faces;
+	btAlignedObjectArray<btVector3> m_uniqueEdges;
 
 		
 	btConvexUtility()

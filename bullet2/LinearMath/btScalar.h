@@ -76,7 +76,7 @@ inline int	btGetVersion()
 			//with relatively little performance gain
 			//If you are not embedded Bullet data in your classes, or make sure that you align those classes on 16-byte boundaries
 			//you can manually enable this line or set it in the build system for a bit of performance gain (a few percent, dependent on usage)
-			//#define BT_USE_SSE_IN_API
+			#define BT_USE_SSE_IN_API
 			#endif //BT_USE_SSE
 			#include <emmintrin.h>
 #endif
