@@ -156,7 +156,7 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 	m_internalData->m_bodyBufferGPU = new btOpenCLArray<RigidBodyBase::Body>(ctx,queue, MAX_CONVEX_BODIES_CL,false);
 	m_internalData->m_narrowPhase = new ChNarrowphase(ctx,device,queue);
 
-	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
+	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL*MAX_FACES_PER_SHAPE,false);
 
 	m_internalData->m_convexPolyhedraGPU = new btOpenCLArray<ConvexPolyhedronCL>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
 	m_internalData->m_uniqueEdgesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_UNIQUE_EDGES,true);

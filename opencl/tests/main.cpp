@@ -31,6 +31,10 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 #include "../broadphase_benchmark/sapKernels.h"
+#include "../../dynamics/basic_demo/Stubs/SolverKernels.h"
+
+
+#define SOLVER_KERNEL_PATH "../../dynamics/basic_demo/Stubs/SolverKernels.cl"
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
@@ -163,6 +167,60 @@ int testSapKernel_computePairsKernelOriginal(int kernelIndex)
        
 }
 
+
+void testSolverKernel()
+{
+	const char* solverKernelSource = solverKernelsCL;
+	cl_int pErrNum=0;
+	const char* additionalMacros = "";
+
+	cl_program solverProg= btOpenCLUtils::compileCLProgramFromString( g_cxMainContext, g_device, solverKernelSource, &pErrNum,additionalMacros, SOLVER_KERNEL_PATH);
+	btAssert(solverProg);
+		
+	cl_kernel m_batchSolveKernel= btOpenCLUtils::compileCLKernelFromString( g_cxMainContext, g_device, solverKernelSource, "BatchSolveKernel", &pErrNum, solverProg,additionalMacros );
+	btAssert(m_batchSolveKernel);
+	
+
+	 btLauncherCL launcher(g_cqCommandQue, m_batchSolveKernel);
+        const char* fileName = "m_batchSolveKernel.bin";
+        FILE* f = fopen(fileName,"rb");
+        if (f)
+        {
+            int sizeInBytes=0;
+            if (fseek(f, 0, SEEK_END) || (sizeInBytes = ftell(f)) == EOF || fseek(f, 0, SEEK_SET)) 
+            {
+                printf("error, cannot get file size\n");
+                exit(0);
+            }
+            
+            unsigned char* buf = (unsigned char*) malloc(sizeInBytes);
+            fread(buf,sizeInBytes,1,f);
+            int serializedBytes = launcher.deserializeArgs(buf, sizeInBytes,g_cxMainContext);
+            int num = *(int*)&buf[serializedBytes];
+
+            launcher.launch1D( num);
+
+            /*btOpenCLArray<int> pairCount(g_cxMainContext, g_cqCommandQue);
+            int numElements = launcher.m_arrays[2]->size()/sizeof(int);
+            pairCount.setFromOpenCLBuffer(launcher.m_arrays[2]->getBufferCL(),numElements);
+            int count = pairCount.at(0);
+            printf("overlapping pairs = %d\n",count);
+           */
+
+            
+        } else {
+            printf("error: cannot find file %s\n",fileName);
+        }
+
+        
+    clFinish(g_cqCommandQue);
+        
+    clReleaseKernel(m_batchSolveKernel);
+    clReleaseProgram(solverProg);
+    clFinish(g_cqCommandQue);
+
+}
+
 int actualMain(int argc, char* argv[])
 {
 	int ciErrNum = 0;
@@ -171,9 +229,13 @@ int actualMain(int argc, char* argv[])
     InitCL(-1,-1,interop);
     
     
+	testSolverKernel();
+
+
     for (int i=0;i<4;i++)
         testSapKernel_computePairsKernelOriginal(1);
     
+	
   
     
     //int numPairs = pairCount.at(0);
