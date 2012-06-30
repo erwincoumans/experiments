@@ -11,7 +11,10 @@ __kernel void  globalAtomicKernelOpenCL1_1( volatile __global int* counter)
 
 //OpenCL 1.1 atomic device counters extension, usually faster on current AMD hardware
 //http://www.khronos.org/registry/cl/extensions/ext/cl_ext_atomic_counters_32.txt
+#ifdef cl_ext_atomic_counters_32
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable
+#endif
+
 __kernel void  counterAtomicKernelExt( counter32_t counter)
 {
 	atomic_inc(counter);
@@ -20,11 +23,13 @@ __kernel void  counterAtomicKernelExt( counter32_t counter)
 
 //OpenCL 1.0 optional extension, using atom_inc
 //see http://www.khronos.org/registry/cl/sdk/1.0/docs/man/xhtml/cl_khr_global_int32_base_atomics.html
+#ifdef cl_khr_global_int32_base_atomics
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable //atomic_inc
 __kernel void  globalAtomicKernelExt( __global int* counter)
 {
 	atom_inc(counter);
 }
+#endif
 
 
 __kernel void  globalAtomicKernelCounters32Broken( __global int* counter)

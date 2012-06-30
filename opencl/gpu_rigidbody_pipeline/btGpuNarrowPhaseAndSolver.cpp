@@ -156,7 +156,7 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 	m_internalData->m_bodyBufferGPU = new btOpenCLArray<RigidBodyBase::Body>(ctx,queue, MAX_CONVEX_BODIES_CL,false);
 	m_internalData->m_narrowPhase = new ChNarrowphase(ctx,device,queue);
 
-	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
+	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL*MAX_FACES_PER_SHAPE,false);
 
 	m_internalData->m_convexPolyhedraGPU = new btOpenCLArray<ConvexPolyhedronCL>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
 	m_internalData->m_uniqueEdgesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_UNIQUE_EDGES,true);
@@ -774,7 +774,11 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 							btBufferInfoCL bInfo[] = { btBufferInfoCL( contactNative->getBufferCL() ), btBufferInfoCL( bodyBuf->getBufferCL()), btBufferInfoCL( m_internalData->m_solverGPU->m_sortDataBuffer->getBufferCL()) };
 							btLauncherCL launcher(m_queue, m_internalData->m_solverGPU->m_setSortDataKernel );
 							launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-							launcher.setConst( cdata );
+							launcher.setConst( cdata.m_nContacts );
+                            launcher.setConst( cdata.m_scale );
+                            launcher.setConst(cdata.m_nSplit);
+                            
+                            
 							launcher.launch1D( sortSize, 64 );
 						}
 						bool gpuRadixSort=true;
@@ -796,7 +800,6 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 							*/
 
 						}
-
 
 
 						

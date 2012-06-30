@@ -505,7 +505,9 @@ void Solver::batchContacts(  btOpenCLArray<Contact4>* contacts, int nContacts, b
 			BT_PROFILE("batchingKernel");
 			btLauncherCL launcher( m_queue, m_batchingKernel);
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst(  cdata );
+			//launcher.setConst(  cdata );
+            launcher.setConst(staticIdx);
+            
 			launcher.launch1D( numWorkItems, 64 );
 			clFinish(m_queue);
 		}

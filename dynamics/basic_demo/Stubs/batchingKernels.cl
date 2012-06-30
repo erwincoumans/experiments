@@ -129,7 +129,7 @@ u32 tryWrite(__local u32* buff, int idx)
 //	batching on the GPU
 __kernel void CreateBatches( __global const Contact4* gConstraints, __global Contact4* gConstraintsOut,
 		__global const u32* gN, __global const u32* gStart, 
-		ConstBuffer cb )
+		int m_staticIdx )
 {
 	__local u32 ldsStackIdx[STACK_SIZE];
 	__local u32 ldsStackEnd;
@@ -146,7 +146,6 @@ __kernel void CreateBatches( __global const Contact4* gConstraints, __global Con
 	
 	const int m_n = gN[wgIdx];
 	const int m_start = gStart[wgIdx];
-	const int m_staticIdx = cb.m_staticIdx;
 		
 	if( lIdx == 0 )
 	{

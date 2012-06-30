@@ -8,6 +8,7 @@
 static char* interopKernelString = 
 #include "../broadphase_benchmark/integrateKernel.cl"
 #include "../broadphase_benchmark/sapKernels.h"
+#include "../broadphase_benchmark/sapFastKernels.h"
 
 
 
@@ -21,18 +22,27 @@ m_gpuSortData(ctx,q),
 m_gpuSortedAabbs(ctx,q)
 {
 	const char* sapSrc = sapCL;
+    const char* sapFastSrc = sapFastCL;
+    
 	cl_int errNum=0;
 
 	cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapSrc,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
 	btAssert(errNum==CL_SUCCESS);
+	cl_program sapFastProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapFastSrc,&errNum,"","../../opencl/broadphase_benchmark/sapFast.cl");
+	btAssert(errNum==CL_SUCCESS);
 
-	
 	
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelOriginal",&errNum,sapProg );
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelBarrier",&errNum,sapProg );
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
-	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernel",&errNum,sapProg );
+#ifndef __APPLE__
+	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapFastSrc, "computePairsKernel",&errNum,sapFastProg );
 	btAssert(errNum==CL_SUCCESS);
+#else
+	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
+	btAssert(errNum==CL_SUCCESS);
+#endif
+    
 
 	m_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
 

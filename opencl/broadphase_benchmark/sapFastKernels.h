@@ -1,4 +1,4 @@
-static const char* sapiFastCL= \
+static const char* sapFastCL= \
 "/*\n"
 "Copyright (c) 2012 Advanced Micro Devices, Inc.  \n"
 "\n"

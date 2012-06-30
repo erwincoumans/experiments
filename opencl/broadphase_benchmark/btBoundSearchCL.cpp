@@ -87,7 +87,9 @@ void btBoundSearchCL::execute(btOpenCLArray<btSortData>& src, unsigned int nSrc,
 
 		btLauncherCL launcher( m_queue, m_lowerSortDataKernel );
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst( constBuffer );
+		launcher.setConst( nSrc );
+        launcher.setConst( nDst );
+        
 		launcher.launch1D( nSrc, 64 );
 	}
 	else if( option == BOUND_UPPER )
@@ -96,7 +98,9 @@ void btBoundSearchCL::execute(btOpenCLArray<btSortData>& src, unsigned int nSrc,
 
 		btLauncherCL launcher(m_queue, m_upperSortDataKernel );
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst( constBuffer );
+        launcher.setConst( nSrc );
+        launcher.setConst( nDst );
+
 		launcher.launch1D( nSrc+1, 64 );
 	}
 	else if( option == COUNT )
@@ -118,7 +122,9 @@ void btBoundSearchCL::execute(btOpenCLArray<btSortData>& src, unsigned int nSrc,
 
 			btLauncherCL  launcher( m_queue, m_subtractKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( constBuffer );
+            launcher.setConst( nSrc );
+            launcher.setConst( nDst );
+
 			launcher.launch1D( nDst, 64 );
 		}
 	}

@@ -41,11 +41,9 @@ typedef struct
 __attribute__((reqd_work_group_size(64,1,1)))
 __kernel
 void SearchSortDataLowerKernel(__global SortData* src, __global u32 *dst, 
-					ConstBuffer cb)
+					unsigned int nSrc, unsigned int nDst)
 {
 	int gIdx = GET_GLOBAL_IDX;
-	u32 nSrc = cb.m_nSrc;
-	u32 nDst = cb.m_nDst;
 
 	if( gIdx < nSrc )
 	{
@@ -70,11 +68,9 @@ void SearchSortDataLowerKernel(__global SortData* src, __global u32 *dst,
 __attribute__((reqd_work_group_size(64,1,1)))
 __kernel
 void SearchSortDataUpperKernel(__global SortData* src, __global u32 *dst, 
-					ConstBuffer cb)
+					unsigned int nSrc, unsigned int nDst)
 {
 	int gIdx = GET_GLOBAL_IDX;
-	u32 nSrc = cb.m_nSrc;
-	u32 nDst = cb.m_nDst;
 
 	if( gIdx < nSrc+1 )
 	{
@@ -98,11 +94,10 @@ void SearchSortDataUpperKernel(__global SortData* src, __global u32 *dst,
 __attribute__((reqd_work_group_size(64,1,1)))
 __kernel
 void SubtractKernel(__global u32* A, __global u32 *B, __global u32 *C, 
-					ConstBuffer cb)
+					unsigned int nSrc, unsigned int nDst)
 {
 	int gIdx = GET_GLOBAL_IDX;
-	u32 nSrc = cb.m_nSrc;
-	u32 nDst = cb.m_nDst;
+	
 
 	if( gIdx < nDst )
 	{

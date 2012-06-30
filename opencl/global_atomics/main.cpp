@@ -31,7 +31,7 @@ char * findAndReplace(   char const * const original,     char const * const pat
 
 
 #include <string.h>
-#include <malloc.h>
+//#include <malloc.h>
 
 
 int main(int argc, char* argv[])

@@ -126,7 +126,26 @@ void btOpenCLUtils_printPlatformInfo(cl_platform_id platform)
 	printf("  CL_PLATFORM_VERSION: \t\t\t%s\n",platformInfo.m_platformVersion);
 }
 
-
+void MyFatalBreakAPPLE(   const char *  errstr , 
+                                       const void *  private_info , 
+                                       size_t        cb , 
+                                       void *        user_data  )
+{
+    printf("Error: %s\n", errstr);
+    
+    const char* patloc = strstr(errstr, "Warning");
+    //find out if it is a warning or error, exit if error
+    
+    if (patloc)
+    {
+        printf("warning\n");
+    } else 
+    {
+        printf("error\n");
+    }
+    
+  
+}
 
 cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC, int preferredDeviceIndex, int preferredPlatformIndex)
 {
@@ -188,7 +207,7 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 		{
 			//create a context of all devices
 #if defined (__APPLE__) && defined (_DEBUG)
-			retContext = clCreateContext(cprops,num_devices,devices,clLogMessagesToStderrAPPLE,NULL,&ciErrNum);
+			retContext = clCreateContext(cprops,num_devices,devices,MyFatalBreakAPPLE,NULL,&ciErrNum);
 #else
 			retContext = clCreateContext(cprops,num_devices,devices,NULL,NULL,&ciErrNum);
 #endif

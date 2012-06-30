@@ -15,7 +15,7 @@ subject to the following restrictions:
 
 ///original author: Erwin Coumans
 
-#include "../basic_initialize/btOpenCLUtils.h"
+
 #include <stdio.h>
 #ifdef __APPLE__
 #include <unistd.h>
@@ -26,10 +26,18 @@ subject to the following restrictions:
 #define sleep(x) Sleep(x*1000)
 #endif
 
-#include "LinearMath/btVector3.h"
+#ifndef __APPLE__
+#define MAX_KERNEL_TESTS 4
+#else
+#define MAX_KERNEL_TESTS 3
+#endif
+
+
 #include "../broadphase_benchmark/btLauncherCL.h"
-#include "LinearMath/btQuickprof.h"
+
 #include "../basic_initialize/btOpenCLUtils.h"
+
+#include "../broadphase_benchmark/sapFastKernels.h"
 #include "../broadphase_benchmark/sapKernels.h"
 
 cl_context			g_cxMainContext;
@@ -93,12 +101,20 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 int testSapKernel_computePairsKernelOriginal(int kernelIndex)
 {
            
-        const char* sapSrc = sapCL;
+    const char* sapSrc = sapCL;
+    const char* sapFastSrc = sapFastCL;
+    
+
+    
         cl_int errNum=0;
         
         cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,sapSrc,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
         btAssert(errNum==CL_SUCCESS);
-        
+#ifndef __APPLE__
+    cl_program sapFastProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,sapFastSrc,&errNum,"","../../opencl/broadphase_benchmark/sapFast.cl");
+    btAssert(errNum==CL_SUCCESS);
+#endif
+    
         cl_kernel m_sapKernel = 0;
         
         switch (kernelIndex)
@@ -112,9 +128,12 @@ int testSapKernel_computePairsKernelOriginal(int kernelIndex)
             case 2:
                 m_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
                 break;
+#ifndef __APPLE__
             case 3:
-                m_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapSrc, "computePairsKernel",&errNum,sapProg );
+                m_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapFastSrc, "computePairsKernel",&errNum,sapFastProg );
                 break;
+#endif
+                
             default:
             {
                 assert(0);
@@ -171,8 +190,8 @@ int actualMain(int argc, char* argv[])
     InitCL(-1,-1,interop);
     
     
-    for (int i=0;i<4;i++)
-        testSapKernel_computePairsKernelOriginal(1);
+    for (int i=0;i<MAX_KERNEL_TESTS;i++)
+        testSapKernel_computePairsKernelOriginal(i);
     
   
     
