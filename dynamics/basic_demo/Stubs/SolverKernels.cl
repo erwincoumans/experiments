@@ -936,14 +936,15 @@ typedef struct
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void SetSortDataKernel(__global Contact4* gContact, __global Body* gBodies, __global int2* gSortDataOut, ConstBufferSSD cb )
+void SetSortDataKernel(__global Contact4* gContact, __global Body* gBodies, __global int2* gSortDataOut, 
+int nContacts,
+float scale,
+int N_SPLIT
+)
+
 {
 	int gIdx = GET_GLOBAL_IDX;
-	int nContacts = cb.m_nContacts;
-	int staticIdx = cb.m_staticIdx;
-	float scale = cb.m_scale;
-	int N_SPLIT = cb.m_nSplit;
-
+	
 	if( gIdx < nContacts )
 	{
 		int aIdx = abs(gContact[gIdx].m_bodyAPtrAndSignBit);
@@ -1068,7 +1069,11 @@ typedef struct
 
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void ContactToConstraintKernel(__global Contact4* gContact, __global Body* gBodies, __global Shape* gShapes, __global Constraint4* gConstraintOut, ConstBufferCTC cb)
+void ContactToConstraintKernel(__global Contact4* gContact, __global Body* gBodies, __global Shape* gShapes, __global Constraint4* gConstraintOut, 
+
+ConstBufferCTC cb
+
+)
 {
 	int gIdx = GET_GLOBAL_IDX;
 	int nContacts = cb.m_nContacts;

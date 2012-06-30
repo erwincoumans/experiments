@@ -1,3 +1,3 @@
-..\..\..\opencl\stringify.py SolverKernels.cl solverKernelsCL >SolverKernels.h
+python ../../../opencl/stringify.py SolverKernels.cl solverKernelsCL >SolverKernels.h
 
 pause
