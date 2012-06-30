@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 
 	render.writeTransforms();
 
-    window->runMainLoop();
+//    window->runMainLoop();
 
 	while (!window->requestedExit())
 	{

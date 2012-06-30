@@ -5,6 +5,7 @@
 #include "btBufferInfoCL.h"
 #include "LinearMath/btMinMax.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
+#include <stdio.h>
 
 struct btKernelArgData
 {
@@ -155,7 +156,36 @@ class btLauncherCL
         
     
     }
-		template<typename T>
+	
+	void serializeToFile(const char* fileName, int numWorkItems)
+	{
+		int num = numWorkItems;
+		int buffSize = getSerializationBufferSize();
+		unsigned char* buf = new unsigned char[buffSize+sizeof(int)];
+		for (int i=0;i<buffSize+1;i++)
+		{
+			unsigned char* ptr = (unsigned char*)&buf[i];
+			*ptr = 0xff;
+		}
+		int actualWrite = serializeArguments(buf,buffSize);
+                
+		unsigned char* cptr = (unsigned char*)&buf[buffSize];
+	//            printf("buf[buffSize] = %d\n",*cptr);
+                
+		assert(buf[buffSize]==0xff);//check for buffer overrun
+		int* ptr = (int*)&buf[buffSize];
+                
+		*ptr = num;
+                
+		FILE* f = fopen(fileName,"wb");
+		fwrite(buf,buffSize+sizeof(int),1,f);
+		fclose(f);
+
+		delete[] buf;
+	}		
+
+
+	template<typename T>
 		inline void setConst( const T& consts )
 		{
 			int sz=sizeof(T);

@@ -701,7 +701,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			const btOpenCLArray<btGpuFace>& gpuFaces,
 			const btOpenCLArray<int>& gpuIndices)
 {
-	
+	if (!nPairs)
+		return;
+
 	BT_PROFILE("computeConvexConvexContactsGPUSAT");
 
 	btOpenCLArray<float4> sepNormals(m_context,m_queue);
