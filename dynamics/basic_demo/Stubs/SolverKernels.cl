@@ -764,151 +764,6 @@ typedef struct
 } SolverDebugInfo;
 
 
-__kernel
-__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-//void BatchSolveKernel(__global Body* gBodies, __global Shape* gShapes, __global Constraint4* gConstraints, 	__global int* gN, __global int* gOffsets, __global SolverDebugInfo* debugInfo, ConstBufferBatchSolve cb)
-void BatchSolveKernel(__global Body* gBodies, 
-__global Shape* gShapes, 
-__global Constraint4* gConstraints, 	
-__global int* gN, 
-__global int* gOffsets, 
-ConstBufferBatchSolve cb)
-{
-	__local int ldsBatchIdx[WG_SIZE+1];
-
-	__local int ldsCurBatch;
-	__local int ldsNextBatch;
-	__local int ldsStart;
-
-	int lIdx = GET_LOCAL_IDX;
-	int wgIdx = GET_GROUP_IDX;
-
-	int gIdx = GET_GLOBAL_IDX;
-//	debugInfo[gIdx].m_valInt0 = gIdx;
-	//debugInfo[gIdx].m_valInt1 = GET_GROUP_SIZE;
-
-	const int solveFriction = cb.m_solveFriction;
-	const int maxBatch = cb.m_maxBatch;
-	const int bIdx = cb.m_batchIdx;
-	const int nSplit = cb.m_nSplit;
-
-	int xIdx = (wgIdx/(nSplit/2))*2 + (bIdx&1);
-	int yIdx = (wgIdx%(nSplit/2))*2 + (bIdx>>1);
-	int cellIdx = xIdx+yIdx*nSplit;
-	
-	if( gN[cellIdx] == 0 ) 
-		return;
-
-	const int start = gOffsets[cellIdx];
-	const int end = start + gN[cellIdx];
-
-	
-	if( lIdx == 0 )
-	{
-		ldsCurBatch = 0;
-		ldsNextBatch = 0;
-		ldsStart = start;
-	}
-
-
-	GROUP_LDS_BARRIER;
-
-	int idx=ldsStart+lIdx;
-	while (ldsCurBatch < maxBatch)
-	{
-		for(; idx<end; )
-		{
-			if (gConstraints[idx].m_batchIdx == ldsCurBatch)
-			{
-				if( solveFriction )
-					solveFrictionConstraint( gBodies, gShapes, &gConstraints[idx] );
-				else
-					solveContactConstraint( gBodies, gShapes, &gConstraints[idx] );
-				idx+=64;
-			} else
-			{
-				break;
-			}
-		}
-		GROUP_LDS_BARRIER;
-		if( lIdx == 0 )
-		{
-			ldsCurBatch++;
-		}
-		GROUP_LDS_BARRIER;
-	}
-	
-	return;
-
-
-	int counter0 = 0;
-	int counter1 = 0;
-
-	do
-	{
-		counter0++;
-		int curStart = ldsStart;
-		int curBatch = ldsCurBatch;
-
-		GROUP_LDS_BARRIER;
-
-		while( curBatch == ldsNextBatch && curStart < end )
-		{
-			counter1++;
-			int idx = curStart + lIdx;
-			if( lIdx == 0 ) 
-				ldsBatchIdx[0] = curBatch;
-				GROUP_LDS_BARRIER;
-			ldsBatchIdx[(lIdx == 0)? lIdx:lIdx+1] = curBatch;
-			GROUP_LDS_BARRIER;
-//			debugInfo[gIdx].m_valInt2 = gConstraints[idx].m_batchIdx;
-//			debugInfo[gIdx].m_valInt3 = idx;
-
-
-			ldsBatchIdx[lIdx+1] = (idx<end)? gConstraints[idx].m_batchIdx : -1;
-
-			GROUP_LDS_BARRIER;
-
-
-			if( ldsBatchIdx[lIdx+1] == curBatch )
-			{
-				//	solve
-
-				if( solveFriction )
-				{
-					solveFrictionConstraint( gBodies, gShapes, &gConstraints[idx] );
-					}
-				else
-				{
-					solveContactConstraint( gBodies, gShapes, &gConstraints[idx] );
-					}
-			}
-			else
-			{
-				if( ldsBatchIdx[lIdx] == curBatch )
-				{
-					ldsStart = idx;
-					ldsNextBatch = ldsBatchIdx[lIdx+1];
-				}
-			}
-
-			GROUP_LDS_BARRIER;
-
-			curStart += GET_GROUP_SIZE;
-		}
-
-		if( lIdx == 0 )
-		{
-			ldsCurBatch = ldsNextBatch;
-		}
-
-		GROUP_LDS_BARRIER;
-	}
-//	while( ldsCurBatch != -1 && iter <= 10 );
-	while( ldsCurBatch != -1 && ldsCurBatch <= maxBatch );
-
-}
-
 
 
 //	others
@@ -965,13 +820,13 @@ int N_SPLIT
 }
 
 
-void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVelA, float invMassA, const Matrix3x3 invInertiaA, 
+void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVelA, float invMassA, const Matrix3x3 invInertiaA,
 	const float4 posB, const float4 linVelB, const float4 angVelB, float invMassB, const Matrix3x3 invInertiaB, 
-	Contact4 src, float dt, float positionDrift, float positionConstraintCoeff,
+	__global Contact4* src, float dt, float positionDrift, float positionConstraintCoeff,
 	Constraint4* dstC )
 {
-	dstC->m_bodyA = abs(src.m_bodyAPtrAndSignBit);
-	dstC->m_bodyB = abs(src.m_bodyBPtrAndSignBit);
+	dstC->m_bodyA = abs(src->m_bodyAPtrAndSignBit);
+	dstC->m_bodyB = abs(src->m_bodyBPtrAndSignBit);
 
 	float dtInv = 1.f/dt;
 	for(int ic=0; ic<4; ic++)
@@ -981,14 +836,14 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 	dstC->m_fJacCoeffInv[0] = dstC->m_fJacCoeffInv[1] = 0.f;
 
 
-	dstC->m_linear = -src.m_worldNormal;
-	dstC->m_linear.w = 0.7f ;//src.getFrictionCoeff() );
+	dstC->m_linear = -src->m_worldNormal;
+	dstC->m_linear.w = 0.7f ;//src->getFrictionCoeff() );
 	for(int ic=0; ic<4; ic++)
 	{
-		float4 r0 = src.m_worldPos[ic] - posA;
-		float4 r1 = src.m_worldPos[ic] - posB;
+		float4 r0 = src->m_worldPos[ic] - posA;
+		float4 r1 = src->m_worldPos[ic] - posB;
 
-		if( ic >= src.m_worldNormal.w )//npoints
+		if( ic >= src->m_worldNormal.w )//npoints
 		{
 			dstC->m_jacCoeffInv[ic] = 0.f;
 			continue;
@@ -997,7 +852,7 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 		float relVelN;
 		{
 			float4 linear, angular0, angular1;
-			setLinearAndAngular(src.m_worldNormal, r0, r1, &linear, &angular0, &angular1);
+			setLinearAndAngular(src->m_worldNormal, r0, r1, &linear, &angular0, &angular1);
 
 			dstC->m_jacCoeffInv[ic] = calcJacCoeff(linear, -linear, angular0, angular1,
 				invMassA, &invInertiaA, invMassB, &invInertiaB );
@@ -1005,25 +860,25 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 			relVelN = calcRelVel(linear, -linear, angular0, angular1,
 				linVelA, angVelA, linVelB, angVelB);
 
-			float e = 0.f;//src.getRestituitionCoeff();
+			float e = 0.f;//src->getRestituitionCoeff();
 			if( relVelN*relVelN < 0.004f ) e = 0.f;
 
 			dstC->m_b[ic] = e*relVelN;
-			//float penetration = src.m_worldPos[ic].w;
-			dstC->m_b[ic] += (src.m_worldPos[ic].w + positionDrift)*positionConstraintCoeff*dtInv;
+			//float penetration = src->m_worldPos[ic].w;
+			dstC->m_b[ic] += (src->m_worldPos[ic].w + positionDrift)*positionConstraintCoeff*dtInv;
 			dstC->m_appliedRambdaDt[ic] = 0.f;
 		}
 	}
 
-	if( src.m_worldNormal.w > 1 )//npoints
+	if( src->m_worldNormal.w > 1 )//npoints
 	{	//	prepare friction
 		float4 center = make_float4(0.f);
-		for(int i=0; i<src.m_worldNormal.w; i++) center += src.m_worldPos[i];
-		center /= (float)src.m_worldNormal.w;
+		for(int i=0; i<src->m_worldNormal.w; i++) center += src->m_worldPos[i];
+		center /= (float)src->m_worldNormal.w;
 
 		float4 tangent[2];
-		tangent[0] = cross3( src.m_worldNormal, src.m_worldPos[0]-center );
-		tangent[1] = cross3( tangent[0], src.m_worldNormal );
+		tangent[0] = cross3( src->m_worldNormal, src->m_worldPos[0]-center );
+		tangent[1] = cross3( tangent[0], src->m_worldNormal );
 		tangent[0] = normalize3( tangent[0] );
 		tangent[1] = normalize3( tangent[1] );
 		float4 r[2];
@@ -1048,9 +903,9 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 
 	for(int i=0; i<4; i++)
 	{
-		if( i<src.m_worldNormal.w )
+		if( i<src->m_worldNormal.w )
 		{
-			dstC->m_worldPos[i] = src.m_worldPos[i];
+			dstC->m_worldPos[i] = src->m_worldPos[i];
 		}
 		else
 		{
@@ -1070,17 +925,14 @@ typedef struct
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
 void ContactToConstraintKernel(__global Contact4* gContact, __global Body* gBodies, __global Shape* gShapes, __global Constraint4* gConstraintOut, 
-
-ConstBufferCTC cb
-
+int nContacts,
+float dt,
+float positionDrift,
+float positionConstraintCoeff
 )
 {
 	int gIdx = GET_GLOBAL_IDX;
-	int nContacts = cb.m_nContacts;
-	float dt = cb.m_dt;
-	float positionDrift = cb.m_positionDrift;
-	float positionConstraintCoeff = cb.m_positionConstraintCoeff;
-
+	
 	if( gIdx < nContacts )
 	{
 		int aIdx = abs(gContact[gIdx].m_bodyAPtrAndSignBit);
@@ -1100,8 +952,8 @@ ConstBufferCTC cb
 
 		Constraint4 cs;
 
-		setConstraint4( posA, linVelA, angVelA, invMassA, invInertiaA, posB, linVelB, angVelB, invMassB, invInertiaB,
-			gContact[gIdx], dt, positionDrift, positionConstraintCoeff, 
+    	setConstraint4( posA, linVelA, angVelA, invMassA, invInertiaA, posB, linVelB, angVelB, invMassB, invInertiaB,
+			&gContact[gIdx], dt, positionDrift, positionConstraintCoeff,
 			&cs );
 		
 		cs.m_batchIdx = gContact[gIdx].m_batchIdx;
@@ -1119,4 +971,124 @@ void CopyConstraintKernel(__global Contact4* gIn, __global Contact4* gOut, int4 
 	{
 		gOut[gIdx] = gIn[gIdx];
 	}
+}
+
+
+
+
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void BatchSolveKernel(__global Body* gBodies,
+                      __global Shape* gShapes,
+                      __global Constraint4* gConstraints,
+                      __global int* gN,
+                      __global int* gOffsets,
+                       int solveFriction,
+                       int maxBatch,
+                       int bIdx,
+                       int nSplit
+                      )
+{
+	__local int ldsBatchIdx[WG_SIZE+1];
+    
+	__local int ldsCurBatch;
+	__local int ldsNextBatch;
+	__local int ldsStart;
+    
+	int lIdx = GET_LOCAL_IDX;
+	int wgIdx = GET_GROUP_IDX;
+    
+	int gIdx = GET_GLOBAL_IDX;
+    //	debugInfo[gIdx].m_valInt0 = gIdx;
+	//debugInfo[gIdx].m_valInt1 = GET_GROUP_SIZE;
+    
+    
+	int xIdx = (wgIdx/(nSplit/2))*2 + (bIdx&1);
+	int yIdx = (wgIdx%(nSplit/2))*2 + (bIdx>>1);
+	int cellIdx = xIdx+yIdx*nSplit;
+	
+	if( gN[cellIdx] == 0 )
+		return;
+    
+	const int start = gOffsets[cellIdx];
+	const int end = start + gN[cellIdx];
+    
+	
+	if( lIdx == 0 )
+	{
+		ldsCurBatch = 0;
+		ldsNextBatch = 0;
+		ldsStart = start;
+	}
+    
+    
+	GROUP_LDS_BARRIER;
+   
+    
+	int counter0 = 0;
+	int counter1 = 0;
+    
+	do
+	{
+		counter0++;
+		int curStart = ldsStart;
+		int curBatch = ldsCurBatch;
+        
+		GROUP_LDS_BARRIER;
+        
+		while( curBatch == ldsNextBatch && curStart < end )
+		{
+			counter1++;
+			int idx = curStart + lIdx;
+			if( lIdx == 0 )
+				ldsBatchIdx[0] = curBatch;
+            GROUP_LDS_BARRIER;
+			ldsBatchIdx[(lIdx == 0)? lIdx:lIdx+1] = curBatch;
+			GROUP_LDS_BARRIER;
+            //			debugInfo[gIdx].m_valInt2 = gConstraints[idx].m_batchIdx;
+            //			debugInfo[gIdx].m_valInt3 = idx;
+            
+            
+			ldsBatchIdx[lIdx+1] = (idx<end)? gConstraints[idx].m_batchIdx : -1;
+            
+			GROUP_LDS_BARRIER;
+            
+            
+			if( ldsBatchIdx[lIdx+1] == curBatch )
+			{
+				//	solve
+                
+				if( solveFriction )
+				{
+					solveFrictionConstraint( gBodies, gShapes, &gConstraints[idx] );
+                }
+				else
+				{
+					solveContactConstraint( gBodies, gShapes, &gConstraints[idx] );
+                }
+			}
+			else
+			{
+				if( ldsBatchIdx[lIdx] == curBatch )
+				{
+					ldsStart = idx;
+					ldsNextBatch = ldsBatchIdx[lIdx+1];
+				}
+			}
+            
+			GROUP_LDS_BARRIER;
+            
+			curStart += GET_GROUP_SIZE;
+		}
+        
+		if( lIdx == 0 )
+		{
+			ldsCurBatch = ldsNextBatch;
+		}
+        
+		GROUP_LDS_BARRIER;
+	}
+    //	while( ldsCurBatch != -1 && iter <= 10 );
+	while( ldsCurBatch != -1 && ldsCurBatch <= maxBatch );
+    
 }

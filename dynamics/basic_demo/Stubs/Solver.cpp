@@ -271,8 +271,9 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 					cdata.z = ib;
 					cdata.w = N_SPLIT;
 
-				
-
+				btLauncherCL launcher( m_queue, m_batchSolveKernel );
+#if 1
+                    
 					btBufferInfoCL bInfo[] = { 
 
 						btBufferInfoCL( bodyBuf->getBufferCL() ), 
@@ -285,11 +286,41 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 #endif
 						};
 
-					btLauncherCL launcher( m_queue, m_batchSolveKernel );
-					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-					launcher.setConst(  cdata );
 					
-					launcher.launch1D( numWorkItems, 64 );
+
+                    launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+					launcher.setConst(  cdata.x );
+                    launcher.setConst(  cdata.y );
+                    launcher.setConst(  cdata.z );
+                    launcher.setConst(  cdata.w );
+                    launcher.launch1D( numWorkItems, 64 );
+
+                    
+#else
+                    const char* fileName = "m_batchSolveKernel.bin";
+                    FILE* f = fopen(fileName,"rb");
+                    if (f)
+                    {
+                        int sizeInBytes=0;
+                        if (fseek(f, 0, SEEK_END) || (sizeInBytes = ftell(f)) == EOF || fseek(f, 0, SEEK_SET))
+                        {
+                            printf("error, cannot get file size\n");
+                            exit(0);
+                        }
+                        
+                        unsigned char* buf = (unsigned char*) malloc(sizeInBytes);
+                        fread(buf,sizeInBytes,1,f);
+                        int serializedBytes = launcher.deserializeArgs(buf, sizeInBytes,m_context);
+                        int num = *(int*)&buf[serializedBytes];
+                        
+                        launcher.launch1D( num);
+
+                        //this clFinish is for testing on errors
+                        clFinish(m_queue);
+                    }
+
+#endif
+					
 
 #ifdef DEBUG_ME
 					clFinish(m_queue);
@@ -319,7 +350,7 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 		}
 
 		cdata.x = 1;
-		{
+    	{
 			BT_PROFILE("m_batchSolveKernel iterations2");
 			for(int iter=0; iter<m_nIterations; iter++)
 			{
@@ -340,7 +371,11 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 					};
 					btLauncherCL launcher( m_queue, m_batchSolveKernel );
 					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-					launcher.setConst(  cdata );
+					launcher.setConst(  cdata.x );
+                    launcher.setConst(  cdata.y );
+                    launcher.setConst(  cdata.z );
+                    launcher.setConst(  cdata.w );
+                    
 					launcher.launch1D( 64*nn/N_BATCHES, 64 );
 				}
 			}
@@ -383,7 +418,13 @@ void Solver::convertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bod
 			btBufferInfoCL( contactCOut->getBufferCL() )};
 		btLauncherCL launcher( m_queue, m_contactToConstraintKernel );
 		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst(  cdata );
+		//launcher.setConst(  cdata );
+        
+        launcher.setConst(cdata.m_nContacts);
+		launcher.setConst(cdata.m_dt);
+		launcher.setConst(cdata.m_positionDrift);
+		launcher.setConst(cdata.m_positionConstraintCoeff);
+        
 		launcher.launch1D( nContacts, 64 );	
 		clFinish(m_queue);
 

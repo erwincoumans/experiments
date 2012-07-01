@@ -725,8 +725,10 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 				m_internalData->m_solverGPU->m_contactBuffer = new btOpenCLArray<Contact4>(m_context,m_queue, nContacts );
 				m_internalData->m_solverGPU->m_contactBuffer->resize(nContacts);
 			}
-
+        clFinish(m_queue);
 			
+         
+            
 			{
 				BT_PROFILE("batching");
 				//@todo: just reserve it, without copy of original contact (unless we use warmstarting)
@@ -781,6 +783,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                             
 							launcher.launch1D( sortSize, 64 );
 						}
+                      
+
 						bool gpuRadixSort=true;
 						if (gpuRadixSort)
 						{	//	3. sort by cell idx
@@ -800,9 +804,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 							*/
 
 						}
-
-
-						
+                    						
 						{	
 							//	4. find entries
 							BT_PROFILE("gpuBoundSearch");
@@ -817,7 +819,10 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 							//unsigned int sum;
 							m_internalData->m_solverGPU->m_scan->execute(*countsNative,*offsetsNative, BT_SOLVER_N_SPLIT*BT_SOLVER_N_SPLIT);//,&sum );
 							//printf("sum = %d\n",sum);
-						} 
+						}
+                        
+                        
+
 
 
 						{	//	5. sort constraints by cellIdx
@@ -835,6 +840,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 								launcher.launch1D( nContacts, 64 );
 							}
 						}
+                        
+                      
+                        
 
 					}
 
@@ -854,6 +862,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 					clFinish(m_queue);
 				}
 					
+               
+                
 				bool compareGPU = false;
 				
 				if (gpuBatchContacts)
@@ -911,6 +921,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 					
 				}
 				
+                
+                
 
 				if (1)
 				{
@@ -919,6 +931,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 					clFinish(m_queue);
 				}
 			
+             
+                
 			} 
 
 			

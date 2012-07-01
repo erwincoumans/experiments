@@ -832,8 +832,12 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		//int numPairs = pairCount.at(0);
 		
 	}
+#ifdef __APPLE__
+ bool contactClippingOnGpu = false;
+#else
+ bool contactClippingOnGpu = true;
+#endif
 	
-	bool contactClippingOnGpu = true;
 	if (contactClippingOnGpu)
 	{
 		BT_PROFILE("clipHullHullKernel");
@@ -865,8 +869,11 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 	} else
 	{	
+#ifdef __APPLE__
+		bool reductionOnGpu = false;
+#else
 		bool reductionOnGpu = true;
-
+#endif
 	
 		btAlignedObjectArray<btVector3> vertices;
 		{
@@ -975,7 +982,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			
 			if (hostHasSep[i])
 			{
-				BT_PROFILE("hostHasSep");
+				BT_PROFILE("clipHullAgainstHull");
 		
 				btScalar minDist = -1;
 				btScalar maxDist = 0.1;
