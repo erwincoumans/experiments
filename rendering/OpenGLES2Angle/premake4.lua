@@ -43,7 +43,9 @@
 	links {
 		"libEGL",
 		"libGLESv2",
-		"bullet2",
+		"BulletCollision",
+		"LinearMath",
+		"BulletDynamics",
 		"jpeglib"
 	}
 	

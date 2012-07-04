@@ -23,15 +23,18 @@
 
 class btCollisionObject;
 
-struct GfxVertex
+ATTRIBUTE_ALIGNED16(struct) GfxVertex
 {
+	BT_DECLARE_ALIGNED_ALLOCATOR();
+
 	btVector3 m_position;
 	btVector3 m_normal;
 	float	m_uv[2];
 };
 
-struct GfxObject
+ATTRIBUTE_ALIGNED16(struct) GfxObject
 {
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	struct BasicTexture*	m_texture;
 	
 	int	m_numVerts;

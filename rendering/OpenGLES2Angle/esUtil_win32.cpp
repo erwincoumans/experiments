@@ -74,6 +74,10 @@ LRESULT WINAPI ESWindowProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
          }
          break;
 
+		 case WM_CLOSE:
+			 PostQuitMessage(0);             
+         break; 
+
       case WM_DESTROY:
          PostQuitMessage(0);             
          break; 

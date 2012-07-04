@@ -22,6 +22,8 @@ bool keepStaticObjects = false;
 #include "LinearMath/btMatrix3x3.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "ShapeData.h"
+#include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
+
 ///work-in-progress 
 ///This ReadBulletSample is kept as simple as possible without dependencies to the Bullet SDK.
 ///It can be used to load .bullet data for other physics SDKs
@@ -257,7 +259,79 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		{
 			float groundScaling[4] = {2.5,2,2.5,1};
 			bool noHeightField = true;
-			int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
+			
+			//int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, numVerts,&groundScaling[0],noHeightField);
+			btConvexUtility convex;
+			int numVertices = 4;
+
+			unsigned char* vts = (unsigned char*) tetra_vertices;
+			for (int i=0;i<numVertices;i++)
+			{
+				const float* vertex = (const float*) &vts[i*strideInBytes];
+				convex.m_vertices.push_back(btVector3(vertex[0]*groundScaling[0],vertex[1]*groundScaling[1],vertex[2]*groundScaling[2]));
+			}
+
+			{
+				btVector3 normal = ((convex.m_vertices[1]-convex.m_vertices[0]).cross(convex.m_vertices[2]-convex.m_vertices[0])).normalize();
+				
+				{
+					btScalar c = -(normal.dot(convex.m_vertices[0]));
+					btFace f;
+					f.m_plane[0] = normal[0];
+					f.m_plane[1] = normal[1];
+					f.m_plane[2] = normal[2];
+					f.m_plane[3] = c;
+					for (int i=0;i<numVertices;i++)
+					{
+						f.m_indices.push_back(i);
+					}
+					convex.m_faces.push_back(f);
+				}
+				{
+					btScalar c = (normal.dot(convex.m_vertices[0]));
+					btFace f;
+					f.m_plane[0] = -normal[0];
+					f.m_plane[1] = -normal[1];
+					f.m_plane[2] = -normal[2];
+					f.m_plane[3] = c;
+					for (int i=0;i<numVertices;i++)
+					{
+						f.m_indices.push_back(numVertices-i-1);
+					}
+					convex.m_faces.push_back(f);
+				}
+
+				bool addEdgePlanes = true;
+				if (addEdgePlanes)
+				{
+					int prevVertex = numVertices-1;
+					for (int i=0;i<numVertices-1;i++)
+					{
+						btVector3 v0 = convex.m_vertices[prevVertex];
+						btVector3 v1 = convex.m_vertices[i];
+
+						btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
+						btScalar c = -edgeNormal.dot(v0);
+						btFace f;
+						f.m_indices.push_back(prevVertex);
+						f.m_indices.push_back(i);
+						f.m_plane[0] = edgeNormal[0];
+						f.m_plane[1] = edgeNormal[1];
+						f.m_plane[2] = edgeNormal[2];
+						f.m_plane[3] = c;
+						convex.m_faces.push_back(f);
+						prevVertex = i;
+					}
+				}
+
+			}
+
+			
+			
+			int cubeCollisionShapeIndex2 = physicsSim.registerConvexShape(&convex, noHeightField);
+
+			
+
 
 			for (int i=0;i<50;i++)
 				for (int j=0;j<50;j++)

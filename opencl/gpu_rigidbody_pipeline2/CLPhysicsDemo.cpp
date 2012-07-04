@@ -194,21 +194,8 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
-int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField)
+int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeightField)
 {
-	btAlignedObjectArray<btVector3> verts;
-	
-	unsigned char* vts = (unsigned char*) vertices;
-	for (int i=0;i<numVertices;i++)
-	{
-		float* vertex = (float*) &vts[i*strideInBytes];
-		verts.push_back(btVector3(vertex[0]*scaling[0],vertex[1]*scaling[1],vertex[2]*scaling[2]));
-	}
-
-	btConvexUtility* utilPtr = new btConvexUtility();
-	bool merge = true;
-	utilPtr->initializePolyhedralFeatures(&verts[0],verts.size(),merge);
-
 	int numFaces= utilPtr->m_faces.size();
 	float4* eqn = new float4[numFaces];
 	for (int i=0;i<numFaces;i++)
@@ -239,10 +226,10 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 		btVector3 myAabbMin(1e30f,1e30f,1e30f);
 		btVector3 myAabbMax(-1e30f,-1e30f,-1e30f);
 
-		for (int i=0;i<verts.size();i++)
+		for (int i=0;i<utilPtr->m_vertices.size();i++)
 		{
-			myAabbMin.setMin(verts[i]);
-			myAabbMax.setMax(verts[i]);
+			myAabbMin.setMin(utilPtr->m_vertices[i]);
+			myAabbMax.setMax(utilPtr->m_vertices[i]);
 		}
 		aabbMin.fx = myAabbMin[0];//s_convexHeightField->m_aabb.m_min.x;
 		aabbMin.fy = myAabbMin[1];//s_convexHeightField->m_aabb.m_min.y;
@@ -265,8 +252,49 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 		clFinish(g_cqCommandQue);
 	}
 
-	m_numCollisionShapes++;
 	delete[] eqn;
+	
+	m_numCollisionShapes++;
+	
+	return shapeIndex;
+
+}
+
+int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField)
+{
+	btAlignedObjectArray<btVector3> verts;
+	
+	unsigned char* vts = (unsigned char*) vertices;
+	for (int i=0;i<numVertices;i++)
+	{
+		float* vertex = (float*) &vts[i*strideInBytes];
+		verts.push_back(btVector3(vertex[0]*scaling[0],vertex[1]*scaling[1],vertex[2]*scaling[2]));
+	}
+
+	btConvexUtility* utilPtr = new btConvexUtility();
+	bool merge = true;
+	utilPtr->initializePolyhedralFeatures(&verts[0],verts.size(),merge);
+#if 1
+	for (int i=0;i<utilPtr->m_faces.size();i++)
+	{
+		if (utilPtr->m_faces[i].m_indices.size()>3)
+		{
+			btVector3 v0 = utilPtr->m_vertices[utilPtr->m_faces[i].m_indices[0]];
+			btVector3 v1 = utilPtr->m_vertices[utilPtr->m_faces[i].m_indices[1]];
+			btVector3 v2 = utilPtr->m_vertices[utilPtr->m_faces[i].m_indices[2]];
+
+			btVector3 faceNormal = ((v1-v0).cross(v2-v0)).normalize();
+			btScalar c = -faceNormal.dot(v0);
+			printf("normal = %f,%f,%f, planeConstant = %f\n",faceNormal.getX(),faceNormal.getY(),faceNormal.getZ(),c);
+			
+			//utilPtr->m_faces[i].m_plane
+		}
+	}
+#endif
+
+	
+	int shapeIndex = registerConvexShape(utilPtr,noHeightField);
+	
 	return shapeIndex;
 }
 

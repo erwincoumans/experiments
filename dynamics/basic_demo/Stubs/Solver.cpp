@@ -350,6 +350,8 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 		}
 
 		cdata.x = 1;
+		bool applyFriction=true;
+		if (applyFriction)
     	{
 			BT_PROFILE("m_batchSolveKernel iterations2");
 			for(int iter=0; iter<m_nIterations; iter++)

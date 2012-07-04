@@ -69,7 +69,7 @@ end
 	
 
 	include "../bullet2"	
-	--include "../jpeglib"
+	include "../jpeglib"
 
 	
 
@@ -119,7 +119,7 @@ end
 	include "../dynamics/testbed"
 	--include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"
---	include "../dynamics/bullet_serialize"
+	--include "../dynamics/bullet_serialize"
 
 	--include "../dynamics/exact-ccd"
 	
@@ -128,9 +128,9 @@ end
 
 	
 
-	--include "../rendering/Gwen/Gwen"
-	--include "../rendering/Gwen/GwenOpenGLTest"
-	--include "../rendering/OpenGLES2Angle"
+	include "../rendering/Gwen/Gwen"
+	include "../rendering/Gwen/GwenOpenGLTest"
+	include "../rendering/OpenGLES2Angle"
 else
 	include "../rendering/NativeClient"	
 	

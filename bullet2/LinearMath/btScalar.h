@@ -87,7 +87,8 @@ inline int	btGetVersion()
 
 		#include <assert.h>
 #ifdef BT_DEBUG
-		#define btAssert assert
+		#include <stdio.h>
+		#define btAssert(x) { if(!(x)){printf("Assert "__FILE__ ":%u ("#x")\n", __LINE__);__debugbreak();	}}
 #else
 		#define btAssert(x)
 #endif
