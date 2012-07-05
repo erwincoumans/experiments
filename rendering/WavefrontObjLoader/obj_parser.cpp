@@ -38,9 +38,9 @@ void obj_set_material_defaults(obj_material *mtl)
 	mtl->diff[0] = 0.8;
 	mtl->diff[1] = 0.8;
 	mtl->diff[2] = 0.8;
-	mtl->spec[0] = 1.0;
-	mtl->spec[1] = 1.0;
-	mtl->spec[2] = 1.0;
+	mtl->spec[0] = 0.0;
+	mtl->spec[1] = 0.0;
+	mtl->spec[2] = 0.0;
 	mtl->reflect = 0.0;
 	mtl->trans = 1;
 	mtl->glossy = 98;
@@ -168,6 +168,15 @@ obj_vector* obj_parse_vector()
 	return v;
 }
 
+obj_vector* obj_parse_vector2()
+{
+	obj_vector *v = (obj_vector*)malloc(sizeof(obj_vector));
+	v->e[0] = atof( strtok(NULL, WHITESPACE));
+	v->e[1] = atof( strtok(NULL, WHITESPACE));
+	v->e[2] = 0;
+	return v;
+}
+
 void obj_parse_camera(obj_growable_scene_data *scene, obj_camera *camera)
 {
 	int indices[3];
@@ -214,7 +223,7 @@ int obj_parse_mtl_file(char *filename, list *material_list)
 			obj_set_material_defaults(current_mtl);
 			
 			// get the name
-			strncpy(current_mtl->name, strtok(NULL, " \t"), MATERIAL_NAME_SIZE);
+			strncpy(current_mtl->name, strtok(NULL, WHITESPACE), MATERIAL_NAME_SIZE);
 			list_add_item(material_list, current_mtl, current_mtl->name);
 		}
 		
@@ -339,7 +348,7 @@ int obj_parse_obj_file(obj_growable_scene_data *growable_data, char *filename)
 		
 		else if( strequal(current_token, "vt") ) //process vertex texture
 		{
-			list_add_item(&growable_data->vertex_texture_list,  obj_parse_vector(), NULL);
+			list_add_item(&growable_data->vertex_texture_list,  obj_parse_vector2(), NULL);
 		}
 		
 		else if( strequal(current_token, "f") ) //process face
