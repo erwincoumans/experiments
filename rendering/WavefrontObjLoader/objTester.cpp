@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 // Obj_loader.cpp : Defines the entry point for the console application.
 //
 #include <stdio.h>

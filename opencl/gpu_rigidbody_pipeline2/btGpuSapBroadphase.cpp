@@ -257,10 +257,9 @@ void btGpuSapBroadphase::writeAabbsToGpu()
 	m_aabbsGPU.copyFromHost(m_aabbsCPU);
 }
 
-void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,
-				void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask)
+void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask)
 {
-	int index = (int)userPtr;
+	int index = userPtr;
 	btSapAabb aabb;
 	for (int i=0;i<4;i++)
 	{

@@ -1,7 +1,17 @@
 
+//keep this enum in sync with the CPU version (in AdlCollisionShape.h)
+#define SHAPE_CONVEX_HULL 3
 
 
 typedef unsigned int u32;
+
+///keep this in sync with btCollidable.h
+typedef struct
+{
+	int m_shapeType;
+	int m_shapeIndex;
+	
+} btCollidableGpu;
 
 typedef struct
 {
@@ -10,7 +20,7 @@ typedef struct
 	float4 m_linVel;
 	float4 m_angVel;
 
-	u32 m_shapeIdx;
+	u32 m_collidableIdx;
 	u32 m_shapeType;
 	
 	float m_invMass;
@@ -417,6 +427,7 @@ bool findSeparatingAxisEdgeEdge(	__global const ConvexPolyhedronCL* hullA, __glo
 // work-in-progress
 __kernel void   findSeparatingAxisKernel( __global const int2* pairs, 
 																					__global const BodyData* rigidBodies, 
+																					__global const btCollidableGpu* collidables,
 																					__global const ConvexPolyhedronCL* convexShapes, 
 																					__global const float4* vertices,
 																					__global const float4* uniqueEdges,
@@ -432,12 +443,21 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 	{
 		int bodyIndexA = pairs[i].x;
 		int bodyIndexB = pairs[i].y;
-		int shapeIndexA = rigidBodies[bodyIndexA].m_shapeIdx;
-		int shapeIndexB = rigidBodies[bodyIndexB].m_shapeIdx;
+		
+
+		if ((rigidBodies[bodyIndexA].m_shapeType!=SHAPE_CONVEX_HULL) ||(rigidBodies[bodyIndexB].m_shapeType!=SHAPE_CONVEX_HULL))
+			return;
+
 //once the broadphase avoids static-static pairs, we can remove this test
 		if ((rigidBodies[bodyIndexA].m_invMass==0) &&(rigidBodies[bodyIndexB].m_invMass==0))
 			return;
 
+		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+
+		int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+		int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+		
 		int numFacesA = convexShapes[shapeIndexA].m_numFaces;
 
 		float dmin = FLT_MAX;

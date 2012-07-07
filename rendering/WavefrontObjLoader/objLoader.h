@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 #ifndef OBJ_LOADER_H
 #define OBJ_LOADER_H
 

@@ -9,6 +9,7 @@
 #include "../gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
+#include "../gpu_rigidbody_pipeline/btCollidable.h"
 
 
 
@@ -36,7 +37,35 @@ struct GpuSatCollision
 			const btOpenCLArray<btVector3>& vertices,
 			const btOpenCLArray<btVector3>& uniqueEdges,
 			const btOpenCLArray<btGpuFace>& faces,
-			const btOpenCLArray<int>& indices);
+			const btOpenCLArray<int>& indices,
+			const btOpenCLArray<btCollidable>& gpuCollidables
+			);
+
+
+		void computeConvexConvexContactsGPUSATSingle(
+			int bodyIndexA, int bodyIndexB,
+			int collidableIndexA, int collidableIndexB,
+
+			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
+			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
+			btOpenCLArray<Contact4>* contactOut, 
+			int& nContacts, const ChNarrowphase::Config& cfg , 
+			
+			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
+			const btOpenCLArray<ConvexPolyhedronCL>& gpuConvexDataB,
+	
+			const btAlignedObjectArray<btVector3>& verticesA, 
+			const btAlignedObjectArray<btVector3>& uniqueEdgesA, 
+			const btAlignedObjectArray<btGpuFace>& facesA,
+			const btAlignedObjectArray<int>& indicesA,
+	
+			const btOpenCLArray<btVector3>& gpuVerticesB,
+			const btOpenCLArray<btVector3>& gpuUniqueEdgesB,
+			const btOpenCLArray<btGpuFace>& gpuFacesB,
+			const btOpenCLArray<int>& gpuIndicesB,
+
+			const btAlignedObjectArray<btCollidable>& hostCollidablesA,
+			const btOpenCLArray<btCollidable>& gpuCollidablesB);
 };
 
 #endif //_CONVEX_HULL_CONTACT_H

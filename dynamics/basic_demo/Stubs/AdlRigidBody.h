@@ -32,7 +32,7 @@ class RigidBodyBase
 			float4 m_linVel;
 			float4 m_angVel;
 
-			u32 m_shapeIdx;
+			u32 m_collidableIdx;
 			u32 m_shapeType;
 
 			float m_invMass;

@@ -16,8 +16,8 @@ struct btSapAabb
 	union
 	{
 		float m_max[4];
-		int m_signedMaxIndices[4];
-		unsigned int m_unsignedMaxIndices[4];
+		//int m_signedMaxIndices[4];
+		//unsigned int m_unsignedMaxIndices[4];
 	};
 };
 
@@ -51,8 +51,7 @@ class btGpuSapBroadphase
 	
 	void  calculateOverlappingPairs();
 
-	void createProxy(const btVector3& aabbMin,  const btVector3& aabbMax,int shapeType,
-				void* userPtr ,short int collisionFilterGroup,short int collisionFilterMask);
+	void createProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask);
 
 	//call writeAabbsToGpu after done making all changes (createProxy etc)
 	void writeAabbsToGpu();

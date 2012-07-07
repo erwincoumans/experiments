@@ -1,4 +1,6 @@
 
+//keep this enum in sync with the CPU version (in AdlCollisionShape.h)
+#define SHAPE_CONVEX_HULL 3
 
 typedef float4 Quaternion;
 
@@ -282,31 +284,40 @@ __kernel void
 		float4 green = (float4)(.4f,1.f,.4f,1.f);
 		g_vertexBuffer[nodeID + startOffset/4+numNodes+numNodes] = green;
 		
-		int shapeIndex = gBodies[nodeID].m_shapeIdx;
-		if (shapeIndex>=0)
-		{
-			btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
-			btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
-			
-			float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
-			float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;
-			
-			float4 worldCenter = transform(&localCenter,&position,&orientation);
-			
-			Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
-			float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
+	
 		
-
-			pAABB[nodeID*2].fx = worldCenter.x-extent.x;
-			pAABB[nodeID*2].fy = worldCenter.y-extent.y;
-			pAABB[nodeID*2].fz = worldCenter.z-extent.z;
-			pAABB[nodeID*2].uw = nodeID;
-
-			pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
-			pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
-			pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
-			pAABB[nodeID*2+1].uw = nodeID;		
-		}
+		int shapeType = gBodies[nodeID].m_shapeType;
+		//if (shapeType==SHAPE_CONVEX_HULL)
+		{
+		
+			
+			int shapeIndex = gBodies[nodeID].m_shapeIdx;
+			
+			if (shapeIndex>=0)
+			{
+				btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
+				btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
+				
+				float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
+				float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;
+				
+				float4 worldCenter = transform(&localCenter,&position,&orientation);
+				
+				Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
+				float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
+			
+	
+				pAABB[nodeID*2].fx = worldCenter.x-extent.x;
+				pAABB[nodeID*2].fy = worldCenter.y-extent.y;
+				pAABB[nodeID*2].fz = worldCenter.z-extent.z;
+				pAABB[nodeID*2].uw = nodeID;
+	
+				pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
+				pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
+				pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
+				pAABB[nodeID*2+1].uw = nodeID;		
+			}
+		} 
 	}
 }
 

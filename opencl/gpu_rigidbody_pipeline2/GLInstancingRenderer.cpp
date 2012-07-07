@@ -1055,6 +1055,7 @@ void GLInstancingRenderer::RenderScene(void)
 			{
 				BT_PROFILE("glDrawElementsInstanced");
 				glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
+				//glDrawElementsInstanced(GL_LINE_LOOP, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
 			}
 		}
 		curOffset+= gfxObj->m_numGraphicsInstances;

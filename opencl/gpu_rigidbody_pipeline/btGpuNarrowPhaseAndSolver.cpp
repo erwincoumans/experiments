@@ -19,7 +19,7 @@ subject to the following restrictions:
 bool useConvexHeightfield = false;
 
 #include "btGpuNarrowphaseAndSolver.h"
-
+#include "../rendering/WavefrontObjLoader/objLoader.h"
 //#include "CustomConvexShape.h"
 //#include "CustomConvexPairCollision.h"
 #include "LinearMath/btQuickprof.h"
@@ -118,6 +118,11 @@ struct	CustomDispatchData
 
 	int m_numAcceleratedShapes;
 	int m_numAcceleratedRigidBodies;
+
+	btAlignedObjectArray<btCollidable>	m_collidablesCPU;
+	btOpenCLArray<btCollidable>*	m_collidablesGPU;
+
+
 };
 
 
@@ -149,6 +154,7 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 	
 	m_internalData->m_pBufContactOutGPU = new btOpenCLArray<Contact4>(ctx,queue, MAX_BROADPHASE_COLLISION_CL,false);
 	m_internalData->m_inertiaBufferGPU = new btOpenCLArray<RigidBodyBase::Inertia>(ctx,queue,MAX_CONVEX_BODIES_CL,false);
+	m_internalData->m_collidablesGPU = new btOpenCLArray<btCollidable>(ctx,queue,MAX_CONVEX_SHAPES_CL);
 
 	m_internalData->m_solverGPU = new Solver(ctx,device,queue,MAX_BROADPHASE_COLLISION_CL);
 
@@ -190,7 +196,21 @@ btGpuNarrowphaseAndSolver::btGpuNarrowphaseAndSolver(cl_context ctx, cl_device_i
 
 }
 
-int btGpuNarrowphaseAndSolver::registerShape(ConvexHeightField* convexShape,btConvexUtility* convexPtr)
+int btGpuNarrowphaseAndSolver::allocateCollidable()
+{
+	int curSize = m_internalData->m_collidablesCPU.size();
+	m_internalData->m_collidablesCPU.expand();
+	return curSize;
+}
+
+int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btCollidable& col)
+{
+	m_concaveMeshes.push_back(obj);
+	return m_concaveMeshes.size()-1;
+}
+
+
+int btGpuNarrowphaseAndSolver::registerConvexHullShape(ConvexHeightField* convexShape,btConvexUtility* convexPtr,btCollidable& col)
 {
 #ifndef DISABLE_CONVEX_HEIGHTFIELD
 	m_internalData->m_shapePointers->resize(m_internalData->m_numAcceleratedShapes+1);
@@ -276,6 +296,17 @@ cl_mem	btGpuNarrowphaseAndSolver::getBodyInertiasGpu()
 	return (cl_mem)m_internalData->m_inertiaBufferGPU->getBufferCL();
 }
 
+btCollidable& btGpuNarrowphaseAndSolver::getCollidableCpu(int collidableIndex)
+{
+	return m_internalData->m_collidablesCPU[collidableIndex];
+}
+
+const btCollidable& btGpuNarrowphaseAndSolver::getCollidableCpu(int collidableIndex) const
+{
+	return m_internalData->m_collidablesGPU->at(collidableIndex);
+}
+
+
 void btGpuNarrowphaseAndSolver::setObjectTransform(const float* position, const float* orientation , int bodyIndex)
 {
 	RigidBodyBase::Body* body = &m_internalData->m_bodyBufferCPU->at(bodyIndex);
@@ -292,7 +323,8 @@ void btGpuNarrowphaseAndSolver::setObjectTransform(const float* position, const 
 
 }
 
-int btGpuNarrowphaseAndSolver::registerRigidBody(int shapeIndex, float mass, const float* position, const float* orientation , const float* aabbMinPtr, const float* aabbMaxPtr,bool writeToGpu)
+
+int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass, const float* position, const float* orientation , const float* aabbMinPtr, const float* aabbMaxPtr,bool writeToGpu)
 {
 	const float4 aabbMin = *(float4*)aabbMinPtr;
 	const float4 aabbMax = *(float4*)aabbMaxPtr;
@@ -312,15 +344,15 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int shapeIndex, float mass, con
 	body.m_linVel = make_float4(0.f);
 	body.m_pos = make_float4(position[0],position[1],position[2],0.f);
 	body.m_quat = make_float4(orientation[0],orientation[1],orientation[2],orientation[3]);
-	body.m_shapeIdx = shapeIndex;
-	if (shapeIndex<0)
+	body.m_collidableIdx = collidableIndex;
+	body.m_shapeType = m_internalData->m_collidablesCPU.at(collidableIndex).m_shapeType;
+	//body.m_shapeType = shapeType;
+	/*if (shapeType==CollisionShape::SHAPE_PLANE)
 	{
-		body.m_shapeType = CollisionShape::SHAPE_PLANE;
 		m_planeBodyIndex = m_internalData->m_numAcceleratedRigidBodies;
-	} else
-	{
-		body.m_shapeType = CollisionShape::SHAPE_CONVEX_HEIGHT_FIELD;
 	}
+	*/
+
 	
 	body.m_invMass = mass? 1.f/mass : 0.f;
 
@@ -341,7 +373,7 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int shapeIndex, float mass, con
 	} else
 	{
 
-		assert(body.m_shapeIdx>=0);
+		assert(body.m_collidableIdx>=0);
 
 		//approximate using the aabb of the shape
 
@@ -390,8 +422,10 @@ void	btGpuNarrowphaseAndSolver::writeAllBodiesToGpu()
 
 	m_internalData->m_bodyBufferGPU->copyFromHostPointer(&m_internalData->m_bodyBufferCPU->at(0),m_internalData->m_numAcceleratedRigidBodies);
 	m_internalData->m_inertiaBufferGPU->copyFromHostPointer(&m_internalData->m_inertiaBufferCPU->at(0),m_internalData->m_numAcceleratedRigidBodies);
-}
 
+	m_internalData->m_collidablesGPU->copyFromHost(m_internalData->m_collidablesCPU);
+
+}
 
 
 btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
@@ -403,6 +437,7 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_planePairs;
 		delete m_internalData->m_pBufContactOutGPU;
 		delete m_internalData->m_inertiaBufferGPU;
+		delete m_internalData->m_collidablesGPU;
 		delete m_internalData->m_pBufContactOutCPU;
 #ifndef DISABLE_CONVEX_HEIGHTFIELD
 		delete m_internalData->m_shapePointers;
@@ -578,7 +613,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
 	bool useCulling = false;
 	if (useConvexHeightfield)
-		useCulling = false;
+		useCulling = true;
 
 	clFinish(m_queue);
 	numPairsTotal = numBroadphasePairs;
@@ -647,18 +682,97 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 						m_internalData->m_ShapeBuffer, 
 						m_internalData->m_pBufContactOutGPU, 
 						nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
-						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
+						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU,*m_internalData->m_collidablesGPU);
 				} else
 				{
 					m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
+
+					//convex versus concave convex
 
 					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
 					&broadphasePairsGPU, numBroadphasePairs, 
 					m_internalData->m_bodyBufferGPU, 
 					m_internalData->m_ShapeBuffer, 
 					m_internalData->m_pBufContactOutGPU, 
-					nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
-					*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU);
+					nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,
+					*m_internalData->m_convexVerticesGPU,
+					//*m_internalData->m_convexVerticesGPU,
+					*m_internalData->m_uniqueEdgesGPU,
+					*m_internalData->m_convexFacesGPU,
+					*m_internalData->m_convexIndicesGPU, 
+					
+					*m_internalData->m_collidablesGPU);
+
+					//convex versus concave trimesh
+
+					if (broadphasePairsGPU.size())
+					{
+						btAlignedObjectArray<int2> hostPairs;
+						broadphasePairsGPU.copyToHost(hostPairs);
+						m_internalData->m_bodyBufferGPU->copyToHost(*m_internalData->m_bodyBufferCPU);
+
+						//concave case...
+						//for now, compute overlapping triangles and run convex-convex again with those pairs
+						for (int i=0;i<numBroadphasePairs;i++)
+						{
+							int2 pair = hostPairs[i];
+							RigidBodyBase::Body& bodyA = m_internalData->m_bodyBufferCPU->at(pair.x);
+							RigidBodyBase::Body& bodyB = m_internalData->m_bodyBufferCPU->at(pair.y);
+
+							if (bodyA.m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)
+							{
+								//bodyA.m_shapeIdx = 
+
+								printf("concave x\n");
+
+								int collidableA = bodyA.m_collidableIdx;
+								int collidableB = bodyB.m_collidableIdx;
+								int shapeA = m_internalData->m_collidablesCPU[collidableA].m_shapeIndex;
+								int shapeB = m_internalData->m_collidablesCPU[collidableB].m_shapeIndex;
+								objLoader* obj = m_concaveMeshes[shapeA];
+
+								for (int f=0;f<obj->faceCount;f++)
+								{
+									obj_face* face = obj->faceList[f];
+									if (face->vertex_count>=3)
+									{
+										if (face->vertex_count<=4)
+										{
+											//indicesPtr->push_back(face->vertex_index[0]);
+											//indicesPtr->push_back(face->vertex_index[1]);
+											//indicesPtr->push_back(face->vertex_index[2]);
+										}
+										if (face->vertex_count==4)
+										{
+											//indicesPtr->push_back(face->vertex_index[0]);
+											//indicesPtr->push_back(face->vertex_index[2]);
+											//indicesPtr->push_back(face->vertex_index[3]);
+										}
+									}
+									
+
+
+								}
+
+
+							}
+
+							if (bodyB.m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)
+							{
+								printf("concave y!\n");
+							}
+						}
+					}
+
+						//if shapeType == concave for both
+						//find all overlapping triangles
+						//run convex-triangle for each pair
+
+						//&broadphasePairsGPU, numBroadphasePairs, 
+						//m_internalData->m_bodyBufferGPU, 
+
+					
+
 				}
 			}
 			else

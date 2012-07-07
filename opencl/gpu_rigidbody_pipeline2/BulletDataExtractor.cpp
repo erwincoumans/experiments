@@ -3,9 +3,9 @@ int NUM_OBJECTS_Y = 25;
 int NUM_OBJECTS_Z = 25;
 
 
-float X_GAP = 2.3f;
-float Y_GAP = 2.f;
-float Z_GAP = 2.3f;
+float X_GAP = 4.3f;
+float Y_GAP = 4.f;
+float Z_GAP = 4.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
@@ -23,6 +23,7 @@ bool keepStaticObjects = false;
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "ShapeData.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
+#include "../rendering/WavefrontObjLoader/objLoader.h"
 
 ///work-in-progress 
 ///This ReadBulletSample is kept as simple as possible without dependencies to the Bullet SDK.
@@ -137,10 +138,10 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		position[1] = 1120;
 		position[1] = 11120;
 
-		void* ptr = (void*) index;
+		
 		float mass = 100.f;
 
-		int physIndex = physicsSim.registerPhysicsInstance(mass,  position, rotOrn, sphereCollisionShapeIndex,ptr);
+		int physIndex = physicsSim.registerPhysicsInstance(mass,  position, rotOrn, sphereCollisionShapeIndex,index);
 		GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromConvexHull(&sUnitSpherePoints[0],MY_UNITSPHERE_POINTS);
 		renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 		renderer.registerGraphicsInstance(sphereCollisionShapeIndex,position,rotOrn,color,sphereScaling);
@@ -221,8 +222,8 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				
 				renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);
 				int index1 = index;
-				void* ptr = (void*) index1;
-				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, cubeCollisionShapeIndex,ptr);
+				
+				physicsSim.registerPhysicsInstance(mass,  position, rotOrn, cubeCollisionShapeIndex,index1);
 				
 				index++;
 			}
@@ -232,13 +233,13 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 	if (useConvexHeightfield)
 	{
 		//add some 'special' plane shape
-		void* ptr = (void*) index;
+		
 		position[0] = 0.f;
 		position[1] = 0.f;//-NUM_OBJECTS_Y/2-1;
 		position[2] = 0.f;
 		position[3] = 1.f;
 
-		physicsSim.registerPhysicsInstance(0.f,position, orn, -1,ptr);
+		physicsSim.registerPhysicsInstance(0.f,position, orn, -1,index);
 		color[0] = 1.f;
 		color[1] = 0.f;
 		color[2] = 0.f;
@@ -249,106 +250,127 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		renderer.registerGraphicsInstance(cubeShapeIndex,position,orn,color,cubeScaling);
 	} else
 	{
+		//
+		
+		objLoader *objData = new objLoader();
+		char* fileName = "../../bin/wavefront/plane.obj";
+		bool loadFile = 0;//objData->load(fileName);
 
+		if (loadFile)
 		{
-			int numVertices = sizeof(tetra_vertices)/strideInBytes;
-			int numIndices = sizeof(tetra_indices)/sizeof(int);
-			tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
-		}
 
-		{
-			float groundScaling[4] = {2.5,2,2.5,1};
-			bool noHeightField = true;
+			GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromWavefrontObj(objData);
+
+			//GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromConvexHull(&sUnitSpherePoints[0],MY_UNITSPHERE_POINTS);
+			float meshScaling[4] = {1,1,1,1};
+			int shapeIndex = renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+			float groundPos[4] = {0,0,0,0};
+			renderer.registerGraphicsInstance(shapeIndex,groundPos,rotOrn,color,meshScaling);
+			int colShape = physicsSim.registerConcaveMesh(objData);
 			
-			//int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, numVerts,&groundScaling[0],noHeightField);
-			btConvexUtility convex;
-			int numVertices = 4;
+			physicsSim.registerPhysicsInstance(0.f,groundPos, orn, colShape,colShape);
+			
+		} else
+		{
 
-			unsigned char* vts = (unsigned char*) tetra_vertices;
-			for (int i=0;i<numVertices;i++)
 			{
-				const float* vertex = (const float*) &vts[i*strideInBytes];
-				convex.m_vertices.push_back(btVector3(vertex[0]*groundScaling[0],vertex[1]*groundScaling[1],vertex[2]*groundScaling[2]));
+				int numVertices = sizeof(tetra_vertices)/strideInBytes;
+				int numIndices = sizeof(tetra_indices)/sizeof(int);
+				tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
 			}
 
 			{
-				btVector3 normal = ((convex.m_vertices[1]-convex.m_vertices[0]).cross(convex.m_vertices[2]-convex.m_vertices[0])).normalize();
+				float groundScaling[4] = {2.5,2,2.5,1};
+				bool noHeightField = true;
+			
+				//int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, numVerts,&groundScaling[0],noHeightField);
+				btConvexUtility convex;
+				int numVertices = 4;
+
+				unsigned char* vts = (unsigned char*) tetra_vertices;
+				for (int i=0;i<numVertices;i++)
+				{
+					const float* vertex = (const float*) &vts[i*strideInBytes];
+					convex.m_vertices.push_back(btVector3(vertex[0]*groundScaling[0],vertex[1]*groundScaling[1],vertex[2]*groundScaling[2]));
+				}
+
+				{
+					btVector3 normal = ((convex.m_vertices[1]-convex.m_vertices[0]).cross(convex.m_vertices[2]-convex.m_vertices[0])).normalize();
 				
-				{
-					btScalar c = -(normal.dot(convex.m_vertices[0]));
-					btFace f;
-					f.m_plane[0] = normal[0];
-					f.m_plane[1] = normal[1];
-					f.m_plane[2] = normal[2];
-					f.m_plane[3] = c;
-					for (int i=0;i<numVertices;i++)
 					{
-						f.m_indices.push_back(i);
-					}
-					convex.m_faces.push_back(f);
-				}
-				{
-					btScalar c = (normal.dot(convex.m_vertices[0]));
-					btFace f;
-					f.m_plane[0] = -normal[0];
-					f.m_plane[1] = -normal[1];
-					f.m_plane[2] = -normal[2];
-					f.m_plane[3] = c;
-					for (int i=0;i<numVertices;i++)
-					{
-						f.m_indices.push_back(numVertices-i-1);
-					}
-					convex.m_faces.push_back(f);
-				}
-
-				bool addEdgePlanes = true;
-				if (addEdgePlanes)
-				{
-					int prevVertex = numVertices-1;
-					for (int i=0;i<numVertices-1;i++)
-					{
-						btVector3 v0 = convex.m_vertices[prevVertex];
-						btVector3 v1 = convex.m_vertices[i];
-
-						btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
-						btScalar c = -edgeNormal.dot(v0);
+						btScalar c = -(normal.dot(convex.m_vertices[0]));
 						btFace f;
-						f.m_indices.push_back(prevVertex);
-						f.m_indices.push_back(i);
-						f.m_plane[0] = edgeNormal[0];
-						f.m_plane[1] = edgeNormal[1];
-						f.m_plane[2] = edgeNormal[2];
+						f.m_plane[0] = normal[0];
+						f.m_plane[1] = normal[1];
+						f.m_plane[2] = normal[2];
 						f.m_plane[3] = c;
+						for (int i=0;i<numVertices;i++)
+						{
+							f.m_indices.push_back(i);
+						}
 						convex.m_faces.push_back(f);
-						prevVertex = i;
 					}
+					{
+						btScalar c = (normal.dot(convex.m_vertices[0]));
+						btFace f;
+						f.m_plane[0] = -normal[0];
+						f.m_plane[1] = -normal[1];
+						f.m_plane[2] = -normal[2];
+						f.m_plane[3] = c;
+						for (int i=0;i<numVertices;i++)
+						{
+							f.m_indices.push_back(numVertices-i-1);
+						}
+						convex.m_faces.push_back(f);
+					}
+
+					bool addEdgePlanes = true;
+					if (addEdgePlanes)
+					{
+						int prevVertex = numVertices-1;
+						for (int i=0;i<numVertices-1;i++)
+						{
+							btVector3 v0 = convex.m_vertices[prevVertex];
+							btVector3 v1 = convex.m_vertices[i];
+
+							btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
+							btScalar c = -edgeNormal.dot(v0);
+							btFace f;
+							f.m_indices.push_back(prevVertex);
+							f.m_indices.push_back(i);
+							f.m_plane[0] = edgeNormal[0];
+							f.m_plane[1] = edgeNormal[1];
+							f.m_plane[2] = edgeNormal[2];
+							f.m_plane[3] = c;
+							convex.m_faces.push_back(f);
+							prevVertex = i;
+						}
+					}
+
 				}
-
-			}
-
 			
-			
-			int cubeCollisionShapeIndex2 = physicsSim.registerConvexShape(&convex, noHeightField);
+				int cubeCollisionShapeIndex2 = physicsSim.registerConvexShape(&convex, noHeightField);
 
 			
 
 
-			for (int i=0;i<50;i++)
-				for (int j=0;j<50;j++)
-			if (1)
-			{
-				void* ptr = (void*) index;
-				float posnew[4];
-				posnew[0] = i*5.01-120;
-				posnew[1] = 0;
-				posnew[2] = j*5.01-120;
-				posnew[3] = 1.f;
+				for (int i=0;i<50;i++)
+					for (int j=0;j<50;j++)
+				if (1)
+				{
+				
+					float posnew[4];
+					posnew[0] = i*5.01-120;
+					posnew[1] = 0;
+					posnew[2] = j*5.01-120;
+					posnew[3] = 1.f;
 
-				physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,ptr);
-				color[0] = 1.f;
-				color[1] = 0.f;
-				color[2] = 0.f;
-				renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
+					physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,index);
+					color[0] = 1.f;
+					color[1] = 0.f;
+					color[2] = 0.f;
+					renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
+				}
 			}
 		}
 	}
@@ -564,8 +586,8 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 				}
 				if (keepStaticObjects || colObjData->m_inverseMass!=0.f)
 				{
-					void* ptr = (void*) m_physicsSim.m_numPhysicsInstances;
-					m_physicsSim.registerPhysicsInstance(mass,pos,quaternion,m_instanceGroups[i]->m_collisionShapeIndex,ptr);
+					
+					m_physicsSim.registerPhysicsInstance(mass,pos,quaternion,m_instanceGroups[i]->m_collisionShapeIndex,m_physicsSim.m_numPhysicsInstances);
 					m_renderer.registerGraphicsInstance(m_instanceGroups[i]->m_collisionShapeIndex,pos,quaternion,color,m_graphicsShapes[i]->m_scaling);
 				}
 
@@ -609,7 +631,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 			float orn[4] = {0,0,0,1};
 			float color[4] = {0,0,1,1};
 
-			m_physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,ptr);
+			m_physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,m_physicsSim.m_numPhysicsInstances);
 			m_renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
 		}
 	}
@@ -909,6 +931,62 @@ int btBulletDataExtractor::createPlaneShape( const Bullet::btVector3FloatData& p
 {
 	printf("createPlaneShape with normal %f,%f,%f and planeConstant\n",planeNormal.m_floats[0], planeNormal.m_floats[1],planeNormal.m_floats[2],planeConstant);
 	return -1;
+}
+
+
+
+GraphicsShape* btBulletDataExtractor::createGraphicsShapeFromWavefrontObj(objLoader* obj)
+{
+	btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
+	{
+		int numVertices = obj->vertexCount;
+		int numIndices = 0;
+		btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
+
+		for (int v=0;v<obj->vertexCount;v++)
+		{
+			GraphicsVertex vtx;
+			vtx.xyzw[0] = obj->vertexList[v]->e[0];
+			vtx.xyzw[1] = obj->vertexList[v]->e[1];
+			vtx.xyzw[2] = obj->vertexList[v]->e[2];
+			vtx.normal[0] = 0; //todo
+			vtx.normal[1] = 1;
+			vtx.normal[2] = 0;
+			vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;	//todo
+			vertices->push_back(vtx);
+		}
+
+		for (int f=0;f<obj->faceCount;f++)
+		{
+			obj_face* face = obj->faceList[f];
+			//btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
+			if (face->vertex_count>=3)
+			{
+				if (face->vertex_count<=4)
+				{
+					indicesPtr->push_back(face->vertex_index[0]);
+					indicesPtr->push_back(face->vertex_index[1]);
+					indicesPtr->push_back(face->vertex_index[2]);
+				}
+				if (face->vertex_count==4)
+				{
+					indicesPtr->push_back(face->vertex_index[0]);
+					indicesPtr->push_back(face->vertex_index[2]);
+					indicesPtr->push_back(face->vertex_index[3]);
+				}
+			}
+		}
+		
+		
+		GraphicsShape* gfxShape = new GraphicsShape;
+		gfxShape->m_vertices = &vertices->at(0).xyzw[0];
+		gfxShape->m_numvertices = vertices->size();
+		gfxShape->m_indices = &indicesPtr->at(0);
+		gfxShape->m_numIndices = indicesPtr->size();
+		for (int i=0;i<4;i++)
+			gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
+		return gfxShape;
+	}
 }
 
 

@@ -45,6 +45,15 @@ typedef struct
 	int m_bodyBPtrAndSignBit;
 } Contact4;
 
+
+///keep this in sync with btCollidable.h
+typedef struct
+{
+	int m_shapeType;
+	int m_shapeIndex;
+	
+} btCollidableGpu;
+
 #define GET_NPOINTS(x) (x).m_worldNormal.w
 
 typedef struct
@@ -54,8 +63,8 @@ typedef struct
 	float4 m_linVel;
 	float4 m_angVel;
 
-	u32 m_shapeIdx;
-	u32 m_shapeType;
+	u32 m_collidableIdx;
+	u32 m_collidableType;
 	
 	float m_invMass;
 	float m_restituitionCoeff;
@@ -596,6 +605,7 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 
 __kernel void   clipHullHullKernel( __global const int2* pairs, 
 																					__global const BodyData* rigidBodies, 
+																					__global const btCollidableGpu* collidables,
 																					__global const ConvexPolyhedronCL* convexShapes, 
 																					__global const float4* vertices,
 																					__global const float4* uniqueEdges,
@@ -629,8 +639,13 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 
 			int bodyIndexA = pairs[i].x;
 			int bodyIndexB = pairs[i].y;
-			int shapeIndexA = rigidBodies[bodyIndexA].m_shapeIdx;
-			int shapeIndexB = rigidBodies[bodyIndexB].m_shapeIdx;
+			
+			int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+			int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+			
+			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+			
 
 		
 			int numLocalContactsOut = clipHullAgainstHull(separatingNormals[i],

@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 #include "objLoader.h"
 #include "obj_parser.h"
 

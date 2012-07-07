@@ -1,3 +1,5 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
 #ifndef __LIST_H
 #define __LIST_H
 

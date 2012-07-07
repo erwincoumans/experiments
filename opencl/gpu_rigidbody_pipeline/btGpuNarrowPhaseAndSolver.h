@@ -15,8 +15,8 @@ subject to the following restrictions:
 
 #ifndef GPU_NARROWPHASE_SOLVER_H
 #define GPU_NARROWPHASE_SOLVER_H
-
-
+#include "LinearMath/btAlignedObjectArray.h"
+#include "btCollidable.h"
 
 //#define MAX_CONVEX_BODIES_CL 8*1024
 //#define MAX_CONVEX_BODIES_CL 128*1024
@@ -65,6 +65,8 @@ protected:
 	cl_device_id m_device;
 	cl_command_queue m_queue;
 
+	btAlignedObjectArray<class objLoader*> m_concaveMeshes;
+
 public:
 
 	
@@ -74,8 +76,9 @@ public:
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
-	int registerShape(class ConvexHeightField* convexShape,class btConvexUtility* convexPtr);
-	int registerRigidBody(int shapeIndex, float mass, const float* position, const float* orientation, const float* aabbMin, const float* aabbMax,bool writeToGpu = true);
+	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col);
+	int registerConvexHullShape(class ConvexHeightField* convexShape,class btConvexUtility* convexPtr, btCollidable& col);
+	int registerRigidBody(int collidableIndex, float mass, const float* position, const float* orientation, const float* aabbMin, const float* aabbMax,bool writeToGpu);
 	void setObjectTransform(const float* position, const float* orientation , int bodyIndex);
 
 	void	writeAllBodiesToGpu();
@@ -87,6 +90,14 @@ public:
 	cl_mem	getBodiesGpu();
 
 	cl_mem	getBodyInertiasGpu();
+	
+	cl_mem	getCollidablesGpu();
+
+	int allocateCollidable();
+
+	btCollidable& getCollidableCpu(int collidableIndex);
+	const btCollidable& getCollidableCpu(int collidableIndex) const;
+	
 
 };
 

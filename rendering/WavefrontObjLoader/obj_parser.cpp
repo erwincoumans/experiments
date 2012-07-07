@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

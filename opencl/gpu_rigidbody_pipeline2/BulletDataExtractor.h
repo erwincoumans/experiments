@@ -43,6 +43,8 @@ class btBulletDataExtractor
 	virtual int createSphereShape( float radius, const Bullet::btVector3FloatData& localScaling, float collisionMargin);
 
 	static GraphicsShape* createGraphicsShapeFromConvexHull(const btVector3* tmpPoints, int numPoints);
+	static GraphicsShape* createGraphicsShapeFromWavefrontObj(class objLoader* obj);
+
 };
 
 

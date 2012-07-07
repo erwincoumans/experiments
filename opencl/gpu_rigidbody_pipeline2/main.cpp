@@ -38,7 +38,7 @@ subject to the following restrictions:
 #include "OpenGLInclude.h"
 
 static bool printStats  = true;
-bool pauseSimulation = false;
+bool pauseSimulation = true;
 bool shootObject = false;
 extern btVector3 m_cameraPosition;
 extern btVector3 m_cameraTargetPosition;

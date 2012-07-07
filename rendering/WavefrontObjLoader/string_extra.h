@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 #ifndef STRING_EXTRA_H
 #define STRING_EXTRA_H
 

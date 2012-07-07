@@ -26,7 +26,7 @@ bool useSapGpuBroadphase = true;
 #ifdef _WIN32
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 #endif
-
+#include "../rendering/WavefrontObjLoader/objLoader.h"
 #include "../broadphase_benchmark/findPairsOpenCL.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btQuaternion.h"
@@ -168,7 +168,7 @@ CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer)
 CLPhysicsDemo::CLPhysicsDemo(MacOpenGLWindow*	renderer)
 #endif
 {
-	m_numCollisionShapes=0;
+
 	m_numPhysicsInstances=0;
 	m_numDynamicPhysicsInstances = 0;
 
@@ -194,8 +194,54 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
+int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj)
+{
+	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	
+	col.m_shapeType = CollisionShape::SHAPE_CONCAVE_TRIMESH;
+	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(obj,col);
+
+	
+
+	btAABBHost aabbMin, aabbMax;
+	btVector3 myAabbMin(1e30f,1e30f,1e30f);
+	btVector3 myAabbMax(-1e30f,-1e30f,-1e30f);
+
+	for (int i=0;i<obj->vertexCount;i++)
+	{
+		btVector3 vtx(obj->vertexList[i]->e[0],obj->vertexList[i]->e[1],obj->vertexList[i]->e[2]);
+		myAabbMin.setMin(vtx);
+		myAabbMax.setMax(vtx);
+	}
+	aabbMin.fx = myAabbMin[0];//s_convexHeightField->m_aabb.m_min.x;
+	aabbMin.fy = myAabbMin[1];//s_convexHeightField->m_aabb.m_min.y;
+	aabbMin.fz= myAabbMin[2];//s_convexHeightField->m_aabb.m_min.z;
+	aabbMin.uw = 0;
+
+	aabbMax.fx = myAabbMax[0];//s_convexHeightField->m_aabb.m_max.x;
+	aabbMax.fy = myAabbMax[1];//s_convexHeightField->m_aabb.m_max.y;
+	aabbMax.fz= myAabbMax[2];//s_convexHeightField->m_aabb.m_max.z;
+	aabbMax.uw = 0;
+
+	m_data->m_localShapeAABBCPU->push_back(aabbMin);
+	m_data->m_localShapeAABBGPU->push_back(aabbMin);
+
+	m_data->m_localShapeAABBCPU->push_back(aabbMax);
+	m_data->m_localShapeAABBGPU->push_back(aabbMax);
+	clFinish(g_cqCommandQue);
+
+	return collidableIndex;
+}
+
 int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeightField)
 {
+	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+
+	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
+	col.m_shapeIndex = -1;
+	
 	int numFaces= utilPtr->m_faces.size();
 	float4* eqn = new float4[numFaces];
 	for (int i=0;i<numFaces;i++)
@@ -215,12 +261,14 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		s_convexHeightField = new ConvexHeightField(eqn,numFaces);
 	}
 
-	int shapeIndex=-1;
+
 
 	if (narrowphaseAndSolver)
-		shapeIndex = narrowphaseAndSolver->registerShape(s_convexHeightField,utilPtr);
+	{
+		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(s_convexHeightField,utilPtr,col);
+	}
 
-	if (shapeIndex>=0)
+	if (col.m_shapeIndex>=0)
 	{
 		btAABBHost aabbMin, aabbMax;
 		btVector3 myAabbMin(1e30f,1e30f,1e30f);
@@ -234,12 +282,12 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		aabbMin.fx = myAabbMin[0];//s_convexHeightField->m_aabb.m_min.x;
 		aabbMin.fy = myAabbMin[1];//s_convexHeightField->m_aabb.m_min.y;
 		aabbMin.fz= myAabbMin[2];//s_convexHeightField->m_aabb.m_min.z;
-		aabbMin.uw = shapeIndex;
+		aabbMin.uw = 0;
 
 		aabbMax.fx = myAabbMax[0];//s_convexHeightField->m_aabb.m_max.x;
 		aabbMax.fy = myAabbMax[1];//s_convexHeightField->m_aabb.m_max.y;
 		aabbMax.fz= myAabbMax[2];//s_convexHeightField->m_aabb.m_max.z;
-		aabbMax.uw = shapeIndex;
+		aabbMax.uw = 0;
 
 		m_data->m_localShapeAABBCPU->push_back(aabbMin);
 		m_data->m_localShapeAABBGPU->push_back(aabbMin);
@@ -254,9 +302,9 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 
 	delete[] eqn;
 	
-	m_numCollisionShapes++;
 	
-	return shapeIndex;
+	
+	return collidableIndex;
 
 }
 
@@ -273,7 +321,11 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 
 	btConvexUtility* utilPtr = new btConvexUtility();
 	bool merge = true;
-	utilPtr->initializePolyhedralFeatures(&verts[0],verts.size(),merge);
+	if (numVertices)
+	{
+		utilPtr->initializePolyhedralFeatures(&verts[0],verts.size(),merge);
+	}
+
 #if 1
 	for (int i=0;i<utilPtr->m_faces.size();i++)
 	{
@@ -298,13 +350,13 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 	return shapeIndex;
 }
 
-int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, void* userPointer)
+int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, const float* orientation, int collidableIndex, int userIndex)
 {
 	btVector3 aabbMin(0,0,0),aabbMax(0,0,0);
-	if (collisionShapeIndex>=0)
+	if (collidableIndex>=0)
 	{
-		btAABBHost hostLocalAabbMin = m_data->m_localShapeAABBCPU->at(collisionShapeIndex*2);
-		btAABBHost hostLocalAabbMax = m_data->m_localShapeAABBCPU->at(collisionShapeIndex*2+1);
+		btAABBHost hostLocalAabbMin = m_data->m_localShapeAABBCPU->at(collidableIndex*2);
+		btAABBHost hostLocalAabbMax = m_data->m_localShapeAABBCPU->at(collidableIndex*2+1);
 		btVector3 localAabbMin(hostLocalAabbMin.fx,hostLocalAabbMin.fy,hostLocalAabbMin.fz);
 		btVector3 localAabbMax(hostLocalAabbMax.fx,hostLocalAabbMax.fy,hostLocalAabbMax.fz);
 		
@@ -326,9 +378,12 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 		//btBroadphaseProxy* proxy = m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1,0,0);//m_dispatcher);
 	
 		if (useSapGpuBroadphase)
-			m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
+			m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);
 		else
-			m_data->m_BroadphaseGrid->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1);//m_dispatcher);
+		{
+			void* userPtr = (void*)userIndex;
+			m_data->m_BroadphaseGrid->createProxy(aabbMin,aabbMax,collidableIndex,userPtr ,1,1);//m_dispatcher);
+		}
 	}
 			
 	bool writeToGpu = false;
@@ -341,7 +396,12 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 	
 
 	if (narrowphaseAndSolver)
-		bodyIndex = narrowphaseAndSolver->registerRigidBody(collisionShapeIndex,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+	{
+		//bodyIndex = narrowphaseAndSolver->registerRigidBody(collisionShapeIndex,CollisionShape::SHAPE_CONVEX_HEIGHT_FIELD,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+		bodyIndex = narrowphaseAndSolver->registerRigidBody(collidableIndex,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+		
+
+	}
 
 	if (mass>0.f)
 		m_numDynamicPhysicsInstances++;

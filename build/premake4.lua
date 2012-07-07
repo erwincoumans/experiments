@@ -127,6 +127,7 @@ end
 	--include "../dynamics/nncg_test"
 
 	
+	include "../rendering/WavefrontObjLoader"
 
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"

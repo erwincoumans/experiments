@@ -16,11 +16,15 @@ subject to the following restrictions:
 #ifndef CL_PHYSICS_DEMO_H
 #define CL_PHYSICS_DEMO_H
 
+#include "LinearMath/btAlignedObjectArray.h"
+
 #ifdef _WIN32
 class Win32OpenGLWindow;
 #else
 class MacOpenGLWindow;
 #endif
+
+#include "../gpu_rigidbody_pipeline/btCollidable.h"
 
 struct CLPhysicsDemo
 {
@@ -30,10 +34,13 @@ struct CLPhysicsDemo
     MacOpenGLWindow* m_renderer;
 #endif
     
-	int m_numCollisionShapes;
+	
 
 	int m_numPhysicsInstances;
 	int m_numDynamicPhysicsInstances;
+	
+	
+
 
 
 	struct InternalData* m_data;
@@ -53,8 +60,9 @@ struct CLPhysicsDemo
 
 	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 	int		registerConvexShape(class btConvexUtility* utilPtr , bool noHeightField);
+	int		registerConcaveMesh(class objLoader* obj);
 
-	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, void* userPointer);
+	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, int userPointer);
 
 	void	setObjectTransform(const float* position, const float* orientation, int objectIndex);
 

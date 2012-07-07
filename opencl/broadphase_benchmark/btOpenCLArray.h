@@ -197,8 +197,8 @@ public:
 		
 		bool copyOldContents = false;
 		resize (newSize,copyOldContents);
-
-		copyFromHostPointer(&srcArray[0],newSize,0,waitForCompletion);
+		if (newSize)
+			copyFromHostPointer(&srcArray[0],newSize,0,waitForCompletion);
 
 	}
 

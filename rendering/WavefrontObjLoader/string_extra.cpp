@@ -1,3 +1,6 @@
+//from http://www.kixor.net/dev/objloader/
+//public domain
+
 #include "string_extra.h"
 #include <string.h>
 
