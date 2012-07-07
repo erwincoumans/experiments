@@ -820,7 +820,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 			btAssert(numPoints);
 					
 			Contact4& contact = m_hostContactOut[nContacts];
-			contact.m_batchIdx = i;
+			contact.m_batchIdx = 0;//i;
 			contact.m_bodyAPtrAndSignBit = (bodyBuf->at(bodyIndexA).m_invMass==0)? -bodyIndexA:bodyIndexA;
 			contact.m_bodyBPtrAndSignBit = (bodyBuf->at(bodyIndexB).m_invMass==0)? -bodyIndexB:bodyIndexB;
 
@@ -870,7 +870,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 	btAlignedObjectArray<float4> hostNormals;
 	btAlignedObjectArray<int> hostHasSep;
 
-	bool findSeparatingAxisOnGpu = false;
+	bool findSeparatingAxisOnGpu = true;
 
 
 	{
@@ -1291,7 +1291,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 					btAssert(numPoints);
 					
 					Contact4& contact = m_hostContactOut[nContacts];
-					contact.m_batchIdx = i;
+					contact.m_batchIdx = 0;//i;
 					contact.m_bodyAPtrAndSignBit = (hostBodyBuf[indexA].m_invMass==0)? -m_hostPairs[i].x:m_hostPairs[i].x;
 					contact.m_bodyBPtrAndSignBit = (hostBodyBuf[indexB].m_invMass==0)? -m_hostPairs[i].y:m_hostPairs[i].y;
 

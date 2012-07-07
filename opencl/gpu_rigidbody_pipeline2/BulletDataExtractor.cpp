@@ -3,9 +3,9 @@ int NUM_OBJECTS_Y = 25;
 int NUM_OBJECTS_Z = 25;
 
 
-float X_GAP = 4.3f;
-float Y_GAP = 4.f;
-float Z_GAP = 4.3f;
+float X_GAP = 2.3f;
+float Y_GAP = 2.f;
+float Z_GAP = 2.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"

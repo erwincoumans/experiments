@@ -696,7 +696,6 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 					m_internalData->m_pBufContactOutGPU, 
 					nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,
 					*m_internalData->m_convexVerticesGPU,
-					//*m_internalData->m_convexVerticesGPU,
 					*m_internalData->m_uniqueEdgesGPU,
 					*m_internalData->m_convexFacesGPU,
 					*m_internalData->m_convexIndicesGPU, 
@@ -707,6 +706,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
 					if (broadphasePairsGPU.size())
 					{
+						BT_PROFILE("concave-convex");
 						btAlignedObjectArray<int2> hostPairs;
 						broadphasePairsGPU.copyToHost(hostPairs);
 						m_internalData->m_bodyBufferGPU->copyToHost(*m_internalData->m_bodyBufferCPU);
@@ -726,9 +726,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 								printf("concave x\n");
 
 								int collidableA = bodyA.m_collidableIdx;
-								int collidableB = bodyB.m_collidableIdx;
+								int collidableIndexB = bodyB.m_collidableIdx;
 								int shapeA = m_internalData->m_collidablesCPU[collidableA].m_shapeIndex;
-								int shapeB = m_internalData->m_collidablesCPU[collidableB].m_shapeIndex;
+								int shapeB = m_internalData->m_collidablesCPU[collidableIndexB].m_shapeIndex;
 								objLoader* obj = m_concaveMeshes[shapeA];
 
 								for (int f=0;f<obj->faceCount;f++)
@@ -738,6 +738,40 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 									{
 										if (face->vertex_count<=4)
 										{
+
+											int bodyIndexA = pair.x;
+											int bodyIndexB = pair.y;
+											btAlignedObjectArray<btCollidable> hostCollidablesA;
+											btAlignedObjectArray<ConvexPolyhedronCL> hostConvexDataA;
+											int collidableIndexA = 0;
+											btAlignedObjectArray<btVector3> verticesA; 
+											btAlignedObjectArray<btVector3> uniqueEdgesA;
+											btAlignedObjectArray<btGpuFace> facesA;
+											btAlignedObjectArray<int> indicesA;
+	
+
+											m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSATSingle(
+														bodyIndexA, bodyIndexB,
+														collidableIndexA, collidableIndexB,
+														m_internalData->m_bodyBufferCPU,
+														0,
+														m_internalData->m_pBufContactOutGPU, 
+														nContactOut,cfgNP, 
+														hostConvexDataA,
+														*m_internalData->m_convexPolyhedraGPU,
+														verticesA,
+														uniqueEdgesA,
+														facesA,
+														indicesA,
+														*m_internalData->m_convexVerticesGPU,
+														*m_internalData->m_uniqueEdgesGPU,
+														*m_internalData->m_convexFacesGPU,
+														*m_internalData->m_convexIndicesGPU, 
+														hostCollidablesA,
+														*m_internalData->m_collidablesGPU);
+											
+
+
 											//indicesPtr->push_back(face->vertex_index[0]);
 											//indicesPtr->push_back(face->vertex_index[1]);
 											//indicesPtr->push_back(face->vertex_index[2]);
