@@ -732,6 +732,13 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 	btAlignedObjectArray<btCollidable> hostCollidablesB;
 	gpuCollidablesB.copyToHost(hostCollidablesB);
+    
+
+    btCollidable colA = hostCollidablesA[collidableIndexA];
+    hullA = hostConvexDataA[colA.m_shapeIndex];
+    printf("numvertsA = %d\n",hullA.m_numVertices);
+    
+    
     btCollidable colB = hostCollidablesB[collidableIndexB];
     hullB = hostConvexDataB[colB.m_shapeIndex];
     printf("numvertsB = %d\n",hullB.m_numVertices);

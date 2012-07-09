@@ -30,6 +30,8 @@ subject to the following restrictions:
 /* SVN $Revision$ on $Date$ from http://bullet.googlecode.com*/
 #define BT_BULLET_VERSION 280
 
+
+
 inline int	btGetVersion()
 {
 	return BT_BULLET_VERSION;
@@ -197,8 +199,14 @@ inline int	btGetVersion()
 	#if defined(DEBUG) || defined (_DEBUG)
 	//	#define btAssert assert
 	#include <stdio.h>
-	extern void MyDeb();
- #define btAssert(x) { if(!(x)){printf("Assert "__FILE__ ":%u ("#x")\n", __LINE__);MyDeb();     }}
+ #define btAssert(x)\
+  {\
+    if(!(x))\
+    {\
+      printf("Assert %s in line %d, file %s\n",#x, __LINE__, __FILE__);\
+      asm volatile ("int3");\
+   }\
+  }
 	#else
 		#define btAssert(x)
 	#endif
