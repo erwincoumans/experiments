@@ -1,11 +1,11 @@
-int NUM_OBJECTS_X = 25;
-int NUM_OBJECTS_Y = 25;
-int NUM_OBJECTS_Z = 25;
+int NUM_OBJECTS_X = 5;
+int NUM_OBJECTS_Y = 5;
+int NUM_OBJECTS_Z = 5;
 
 
-float X_GAP = 2.3f;
-float Y_GAP = 2.f;
-float Z_GAP = 2.3f;
+float X_GAP = 4.3f;
+float Y_GAP = 4.f;
+float Z_GAP = 4.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
@@ -253,8 +253,12 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		//
 		
 		objLoader *objData = new objLoader();
+#ifdef __APPLE__
+		char* fileName = "wavefront/plane.obj";
+#else
 		char* fileName = "../../bin/wavefront/plane.obj";
-		bool loadFile = 0;//objData->load(fileName);
+#endif
+		bool loadFile = objData->load(fileName);
 
 		if (loadFile)
 		{

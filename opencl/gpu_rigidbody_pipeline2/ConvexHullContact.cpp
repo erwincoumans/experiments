@@ -724,6 +724,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 {
 
 	ConvexPolyhedronCL hullA, hullB;
+    
 	btVector3 sepNormalWorldSpace;
 
 	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexDataB;
@@ -731,7 +732,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 	btAlignedObjectArray<btCollidable> hostCollidablesB;
 	gpuCollidablesB.copyToHost(hostCollidablesB);
-
+    btCollidable colB = hostCollidablesB[collidableIndexB];
+    hullB = hostConvexDataB[colB.m_shapeIndex];
+    printf("numvertsB = %d\n",hullB.m_numVertices);
+    
 
 	btAlignedObjectArray<btVector3> verticesB;
 	btAlignedObjectArray<btVector3> uniqueEdgesB;

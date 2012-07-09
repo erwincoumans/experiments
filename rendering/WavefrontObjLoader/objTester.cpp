@@ -15,8 +15,16 @@ void printVector(obj_vector *v)
 
 int main(int argc, char **argv)
 {
+    FILE* f = fopen ("where.bin","wb");
+    fclose(f);
+    
 	objLoader *objData = new objLoader();
+#ifdef __APPLE__
+	char* fileName = "wavefront/plane.obj";
+#else
 	char* fileName = "../../bin/wavefront/plane.obj";
+#endif
+    
 	fopen ("dum.bin","wb");
 	if (!objData->load(fileName))
 	{

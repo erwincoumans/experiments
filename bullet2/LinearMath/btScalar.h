@@ -195,7 +195,10 @@ inline int	btGetVersion()
 	#endif
 
 	#if defined(DEBUG) || defined (_DEBUG)
-		#define btAssert assert
+	//	#define btAssert assert
+	#include <stdio.h>
+	extern void MyDeb();
+ #define btAssert(x) { if(!(x)){printf("Assert "__FILE__ ":%u ("#x")\n", __LINE__);MyDeb();     }}
 	#else
 		#define btAssert(x)
 	#endif

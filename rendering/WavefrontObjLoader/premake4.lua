@@ -4,7 +4,7 @@
 		language "C++"
 				
 		kind "ConsoleApp"
-		targetdir "../../../bin"
+		targetdir "../../bin"
 
 	 	includedirs {
                 ".",
