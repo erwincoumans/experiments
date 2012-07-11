@@ -256,13 +256,9 @@ static const float quad_vertices[] =
 	1.f,	0,  -1.f,  0.5f,	0,	1,0,	0,1,
 };
 
-static const int quad_indices[]=
-{
-	0,1,2,0,2,3
-};
 
 
-#if 0
+#if 1 
 static const float tetra_vertices[] =
 {
 	-1.f,	0,  -1.f,  0.5f,	0,  1,0,	0,0,
