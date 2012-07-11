@@ -46,7 +46,7 @@ extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
 #ifdef _WIN32
-bool useInterop = true;
+bool useInterop = false;//true;
 #else
 bool useInterop = false;
 #endif

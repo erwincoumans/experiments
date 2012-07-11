@@ -262,7 +262,7 @@ static const int quad_indices[]=
 };
 
 
-#if 0
+
 static const float tetra_vertices[] =
 {
 	-1.f,	0,  -1.f,  0.5f,	0,  1,0,	0,0,
@@ -275,18 +275,12 @@ static const float tetra_vertices[] =
 
 
 
-static const int quad_indices[]=
-{
-	0,1,2,0,2,3
-};
-
-
 static const int tetra_indices[]=
 {
 	0,1,2,0,2,3,//ground face
 	4,1,2,4,2,3,
 	4,3,0,4,0,1
 };
-#endif
+
 
 #endif //SHAPE_DATA_H

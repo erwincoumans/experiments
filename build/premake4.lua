@@ -1,4 +1,35 @@
-solution "0MySolution"
+
+  newoption {
+   trigger="stringify",
+   description="stringify OpenCL kernels"
+   }
+   
+   if _OPTIONS["stringify"] then
+   dofile ("stringifyKernel.lua")
+   stringifyKernel("../dynamics/basic_demo/Stubs/batchingKernels.cl","../dynamics/basic_demo/Stubs/batchingKernels.h", "batchingKernelsCL")
+   stringifyKernel("../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.cl","../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.h", "narrowphaseKernelsCL")
+   stringifyKernel("../dynamics/basic_demo/Stubs/SolverKernels.cl","../dynamics/basic_demo/Stubs/SolverKernels.h", "solverKernelsCL")
+	 stringifyKernel("../opencl/vector_add/VectorAddKernels.cl","../opencl/vector_add/VectorAddKernels.h", "vectorAddCL")
+
+	 stringifyKernel("../opencl/broadphase_benchmark/broadphaseKernel.cl","../opencl/broadphase_benchmark/broadphaseKernel.h", "broadphaseKernelCL")
+	 stringifyKernel("../opencl/broadphase_benchmark/sap.cl","../opencl/broadphase_benchmark/sapKernels.h", "sapCL")
+	 stringifyKernel("../opencl/broadphase_benchmark/sapFast.cl","../opencl/broadphase_benchmark/sapFastKernels.h", "sapFastCL")
+	 stringifyKernel("../opencl/gpu_rigidbody_pipeline2/sat.cl","../opencl/gpu_rigidbody_pipeline2/satKernels.h", "satKernelsCL")
+	 stringifyKernel("../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl","../opencl/gpu_rigidbody_pipeline2/satClipKernels.h", "satClipKernelsCL")
+
+	 stringifyKernel("../opencl/global_atomics/global_atomics.cl","../opencl/global_atomics/globalAtomicsKernel.h", "globalAtomicsKernelString")
+
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Sort/RadixSortStandardKernels.cl","../opencl/primitives/AdlPrimitives/Sort/RadixSortStandardKernelsCL.h", "radixSortStandardKernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Sort/RadixSortSimpleKernels.cl","../opencl/primitives/AdlPrimitives/Sort/RadixSortSimpleKernelsCL.h", "radixSortSimpleKernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Sort/RadixSort32Kernels.cl","../opencl/primitives/AdlPrimitives/Sort/RadixSort32KernelsCL.h", "radixSort32KernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Search/BoundSearchKernels.cl","../opencl/primitives/AdlPrimitives/Search/BoundSearchKernelsCL.h", "boundSearchKernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Scan/PrefixScanKernels.cl","../opencl/primitives/AdlPrimitives/Scan/PrefixScanKernelsCL.h", "prefixScanKernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Fill/FillKernels.cl","../opencl/primitives/AdlPrimitives/Fill/FillKernelsCL.h", "fillKernelsCL")
+	stringifyKernel("../opencl/primitives/AdlPrimitives/Copy/CopyKernels.cl","../opencl/primitives/AdlPrimitives/Copy/CopyKernelsCL.h", "copyKernelsCL")
+   
+ else
+
+  solution "0MySolution"
 
 	-- Multithreaded compiling
 	if _ACTION == "vs2010" or _ACTION=="vs2008" then
@@ -77,9 +108,9 @@ end
 if not _OPTIONS["with-nacl"] then
 
 --	include "../opencl/c_api"
---	include "../opencl/basic_initialize"
+	include "../opencl/basic_initialize"
 --	include "../opencl/vector_add"
---	include "../opencl/gui_initialize"
+	include "../opencl/gui_initialize"
 --	include "../opencl/opengl_interop"
 	include "../opencl/global_atomics"
 --	include "../opencl/integration"
@@ -135,4 +166,6 @@ end
 else
 	include "../rendering/NativeClient"	
 	
+end
+
 end

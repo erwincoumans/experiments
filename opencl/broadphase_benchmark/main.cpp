@@ -31,6 +31,7 @@ subject to the following restrictions:
 #include "../opengl_interop/btStopwatch.h"
 #include "btRadixSort32CL.h"
 #include "sapKernels.h"
+#include "sapFastKernels.h"
 
 
 btRadixSort32CL* sorter=0;
@@ -176,6 +177,8 @@ float m_ele=0.f;
 btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 cl_kernel g_sineWaveKernel;
 cl_program sapProg;
+cl_program sapFastProg;
+
 cl_kernel g_sapKernel;
 cl_kernel g_flipFloatKernel;
 cl_kernel g_scatterKernel;
@@ -2237,18 +2240,21 @@ int main(int argc, char* argv[])
 	g_sineWaveKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "sineWaveKernel" );
 	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, NUM_OBJECTS);
 
-	const char* src = sapCL;
 	cl_int errNum=0;
 
-	sapProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,src,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
+	sapProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,sapCL,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
+	btAssert(errNum==CL_SUCCESS);
+	
+	sapFastProg = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,sapFastCL,&errNum,"","../../opencl/broadphase_benchmark/sapFast.cl");
 	btAssert(errNum==CL_SUCCESS);
 
-	g_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "computePairsKernel",&errNum,sapProg );
+
+	g_sapKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapFastCL, "computePairsKernel",&errNum,sapFastProg );
 	btAssert(errNum==CL_SUCCESS);
 
-	g_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
+	g_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapCL, "flipFloatKernel",&errNum,sapProg );
 
-	g_scatterKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "scatterKernel",&errNum,sapProg );
+	g_scatterKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,sapCL, "scatterKernel",&errNum,sapProg );
 	
 
 	sorter = new btRadixSort32CL(g_cxMainContext,g_device, g_cqCommandQue);
