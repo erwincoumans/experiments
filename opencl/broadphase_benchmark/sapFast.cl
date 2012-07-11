@@ -117,14 +117,13 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 				curNumPairs++;
 				if (curNumPairs==64)
 				{
+					int curPair = atomic_add(pairCount,curNumPairs);
 					//avoid a buffer overrun
-					if ((*pairCount+curNumPairs)<maxPairs)
+					if ((curPair+curNumPairs)<maxPairs)
 					{
-						int curPair = atomic_add(pairCount,curNumPairs);
 						for (int p=0;p<curNumPairs;p++)
 						{
-							  
-									pairsOut[curPair+p] = myPairs[p]; //flush to main memory
+							pairsOut[curPair+p] = myPairs[p]; //flush to main memory
 						}
 					}
 					curNumPairs = 0;
@@ -148,19 +147,15 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	
 	if (curNumPairs>0)
 	{
-
-	{
 		//avoid a buffer overrun
-		if ((*pairCount+curNumPairs)<maxPairs)
+		int curPair = atomic_add(pairCount,curNumPairs);
+		if ((curPair+curNumPairs)<maxPairs)
 		{
-			int curPair = atomic_add(pairCount,curNumPairs);
-			
 			for (int p=0;p<curNumPairs;p++)
 			{
 					pairsOut[curPair+p] = myPairs[p]; //flush to main memory
 			}
 		}
 		curNumPairs = 0;
-	}
 	}
 }
