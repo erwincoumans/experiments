@@ -35,25 +35,10 @@ typedef struct
 bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2);
 bool TestAabbAgainstAabb2(const btAabbCL* aabb1, __local const btAabbCL* aabb2)
 {
-	bool overlap = true;
-	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
-	overlap = (aabb1->m_min.z > aabb2->m_max.z || aabb1->m_max.z < aabb2->m_min.z) ? false : overlap;
-	overlap = (aabb1->m_min.y > aabb2->m_max.y || aabb1->m_max.y < aabb2->m_min.y) ? false : overlap;
-	return overlap;
-}
-bool TestAabbAgainstAabb2GlobalGlobal(__global const btAabbCL* aabb1, __global const btAabbCL* aabb2);
-bool TestAabbAgainstAabb2GlobalGlobal(__global const btAabbCL* aabb1, __global const btAabbCL* aabb2)
-{
-	bool overlap = true;
-	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
-	overlap = (aabb1->m_min.z > aabb2->m_max.z || aabb1->m_max.z < aabb2->m_min.z) ? false : overlap;
-	overlap = (aabb1->m_min.y > aabb2->m_max.y || aabb1->m_max.y < aabb2->m_min.y) ? false : overlap;
-	return overlap;
-}
-
-bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2);
-bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2)
-{
+//skip pairs between static (mass=0) objects
+	if ((aabb1->m_maxIndices[3]==0) && (aabb2->m_maxIndices[3] == 0))
+		return false;
+		
 	bool overlap = true;
 	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
 	overlap = (aabb1->m_min.z > aabb2->m_max.z || aabb1->m_max.z < aabb2->m_min.z) ? false : overlap;
@@ -132,10 +117,15 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 				curNumPairs++;
 				if (curNumPairs==64)
 				{
-					int curPair = atomic_add(pairCount,curNumPairs);
-					for (int p=0;p<curNumPairs;p++)
+					//avoid a buffer overrun
+					if ((*pairCount+curNumPairs)<maxPairs)
 					{
-							pairsOut[curPair+p] = myPairs[p]; //flush to main memory
+						int curPair = atomic_add(pairCount,curNumPairs);
+						for (int p=0;p<curNumPairs;p++)
+						{
+							  
+									pairsOut[curPair+p] = myPairs[p]; //flush to main memory
+						}
 					}
 					curNumPairs = 0;
 				}
@@ -158,11 +148,19 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	
 	if (curNumPairs>0)
 	{
-		int curPair = atomic_add(pairCount,curNumPairs);
-		for (int p=0;p<curNumPairs;p++)
+
+	{
+		//avoid a buffer overrun
+		if ((*pairCount+curNumPairs)<maxPairs)
 		{
-				pairsOut[curPair+p] = myPairs[p]; //flush to main memory
+			int curPair = atomic_add(pairCount,curNumPairs);
+			
+			for (int p=0;p<curNumPairs;p++)
+			{
+					pairsOut[curPair+p] = myPairs[p]; //flush to main memory
+			}
 		}
 		curNumPairs = 0;
+	}
 	}
 }

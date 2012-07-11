@@ -1,11 +1,11 @@
-int NUM_OBJECTS_X = 5;
-int NUM_OBJECTS_Y = 5;
-int NUM_OBJECTS_Z = 5;
+int NUM_OBJECTS_X = 35;
+int NUM_OBJECTS_Y = 35;
+int NUM_OBJECTS_Z = 35;
 
 
-float X_GAP = 4.3f;
-float Y_GAP = 4.f;
-float Z_GAP = 4.3f;
+float X_GAP = 2.3f;
+float Y_GAP = 2.f;
+float Z_GAP = 2.3f;
 
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
@@ -188,7 +188,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 	}
 #endif
 
-	float cubeScaling[4] = {1,1,1,1};
+	float cubeScaling[4] = {1.,1.,1.,1};
 	int cubeCollisionShapeIndex = physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
 
 
@@ -215,8 +215,12 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 
 				float mass = 1.f;//j? 1.f : 0.f;
 
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1);
-				position[1]=1+(j*Y_GAP);//-NUM_OBJECTS_Y/2);
+				//position[0]=-2.5;
+				//position[1]=3;
+				//position[2]=3;
+
+				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1)+1;
+				position[1]=1+(j*Y_GAP)+0.2;//-NUM_OBJECTS_Y/2);
 				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 0.f;
 				
@@ -237,7 +241,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		position[0] = 0.f;
 		position[1] = 0.f;//-NUM_OBJECTS_Y/2-1;
 		position[2] = 0.f;
-		position[3] = 1.f;
+		position[3] = 0.f;
 
 		physicsSim.registerPhysicsInstance(0.f,position, orn, -1,index);
 		color[0] = 1.f;
@@ -257,8 +261,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		char* fileName = "wavefront/plane.obj";
 #else
 		char* fileName = "../../bin/wavefront/plane.obj";
+		//char* fileName = "../../bin/wavefront/triangle.obj";
 #endif
-		bool loadFile = objData->load(fileName);
+		bool loadFile = 0;//objData->load(fileName);
 
 		if (loadFile)
 		{
@@ -277,21 +282,48 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		} else
 		{
 
+#ifdef USE_POINTS
+			
+			btVector3 points[] = {
+					btVector3(-1.f,	-0.05,  -1.f),
+					btVector3(-1.f,	-0.05,	1.f),
+					btVector3(1.f,	-0.05,  1.f),
+					btVector3(1.f,	-0.05,  -1.f),
+					btVector3(-1.f,	0.05,  -1.f),
+					btVector3(-1.f,	0.05,	1.f),
+					btVector3(1.f,	0.05,  1.f),
+					btVector3(1.f,	0.05,  -1.f),
+					
+				};
+
+			int numVertices = sizeof(points)/sizeof(btVector3);//sizeof(triangle_vertices)/strideInBytes;
+#else
+			int numVertices = sizeof(quad_vertices)/(9*sizeof(float));
+#endif//USE_POINTS
 			{
-				int numVertices = sizeof(tetra_vertices)/strideInBytes;
-				int numIndices = sizeof(tetra_indices)/sizeof(int);
-				tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
+				
+				
+				//tetraShapeIndex = renderer.registerShape(&tetra_vertices[0],numVertices,tetra_indices,numIndices);
+		
+#ifdef USE_POINTS
+				GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromConvexHull(&points[0],numVertices);
+				tetraShapeIndex = renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+#else
+				int numIndices = sizeof(quad_indices)/sizeof(int);
+				tetraShapeIndex = renderer.registerShape(&quad_vertices[0],numVertices,quad_indices,numIndices);
+#endif
 			}
 
 			{
-				float groundScaling[4] = {2.5,2,2.5,1};
+				float groundScaling[4] = {2.5,2.5,2.5,1};//{1.3,1.3,1.3,1};//{1,1,1,1};////{1,1,1,1};//{2.5,2.5,2.5,1};
+				
+
 				bool noHeightField = true;
 			
 				//int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, numVerts,&groundScaling[0],noHeightField);
 				btConvexUtility convex;
-				int numVertices = 4;
-
-				unsigned char* vts = (unsigned char*) tetra_vertices;
+			
+				unsigned char* vts = (unsigned char*) quad_vertices;
 				for (int i=0;i<numVertices;i++)
 				{
 					const float* vertex = (const float*) &vts[i*strideInBytes];
@@ -314,6 +346,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 						}
 						convex.m_faces.push_back(f);
 					}
+#if 1
 					{
 						btScalar c = (normal.dot(convex.m_vertices[0]));
 						btFace f;
@@ -332,16 +365,16 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 					if (addEdgePlanes)
 					{
 						int prevVertex = numVertices-1;
-						for (int i=0;i<numVertices-1;i++)
+						for (int i=0;i<numVertices;i++)
 						{
-							btVector3 v0 = convex.m_vertices[prevVertex];
-							btVector3 v1 = convex.m_vertices[i];
+							btVector3 v0 = convex.m_vertices[i];
+							btVector3 v1 = convex.m_vertices[prevVertex];
 
 							btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
 							btScalar c = -edgeNormal.dot(v0);
 							btFace f;
-							f.m_indices.push_back(prevVertex);
 							f.m_indices.push_back(i);
+							f.m_indices.push_back(prevVertex);
 							f.m_plane[0] = edgeNormal[0];
 							f.m_plane[1] = edgeNormal[1];
 							f.m_plane[2] = edgeNormal[2];
@@ -350,14 +383,22 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 							prevVertex = i;
 						}
 					}
+#endif
 
 				}
 			
+				
+#ifdef USE_POINTS
+				int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&points[0].getX(),sizeof(btVector3),numVertices,groundScaling,true);
+#else
 				int cubeCollisionShapeIndex2 = physicsSim.registerConvexShape(&convex, noHeightField);
+#endif
 
 			
 
 
+				//int i=0;
+				//int j=0;
 				for (int i=0;i<50;i++)
 					for (int j=0;j<50;j++)
 				if (1)
@@ -365,11 +406,13 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				
 					float posnew[4];
 					posnew[0] = i*5.01-120;
+					//posnew[0] = 0;
 					posnew[1] = 0;
 					posnew[2] = j*5.01-120;
-					posnew[3] = 1.f;
+					//posnew[2] = 0;
+					posnew[3] = 0.f;
 
-					physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,index);
+					physicsSim.registerPhysicsInstance(0.f,  posnew, orn, cubeCollisionShapeIndex2,index);
 					color[0] = 1.f;
 					color[1] = 0.f;
 					color[2] = 0.f;
@@ -608,6 +651,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 
 	if (!keepStaticObjects)
 	{
+#if 0
 		int tetraShapeIndex= -1;
 		int strideInBytes = sizeof(float)*9;
 		{
@@ -638,6 +682,8 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 			m_physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,m_physicsSim.m_numPhysicsInstances);
 			m_renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
 		}
+#endif
+
 	}
 
 
@@ -960,6 +1006,7 @@ GraphicsShape* btBulletDataExtractor::createGraphicsShapeFromWavefrontObj(objLoa
 			vertices->push_back(vtx);
 		}
 
+		//for (int f=0;f<obj->faceCount;f+=2)
 		for (int f=0;f<obj->faceCount;f++)
 		{
 			obj_face* face = obj->faceList[f];

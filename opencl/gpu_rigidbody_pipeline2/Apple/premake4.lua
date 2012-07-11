@@ -84,13 +84,13 @@
 			"../../opengl_interop/btStopwatch.cpp",
 			"../../opengl_interop/btStopwatch.h",
 			"../../../rendering/WavefrontObjLoader/string_extra.cpp",
-                        "../../../rendering/WavefrontObjLoader/string_extra.h",
-                        "../../../rendering/WavefrontObjLoader/objLoader.cpp",
-                        "../../../rendering/WavefrontObjLoader/objLoader.h",
-                        "../../../rendering/WavefrontObjLoader/obj_parser.cpp",
-                        "../../../rendering/WavefrontObjLoader/obj_parser.h",
-                        "../../../rendering/WavefrontObjLoader/list.cpp",
-                        "../../../rendering/WavefrontObjLoader/list.h"
+			"../../../rendering/WavefrontObjLoader/string_extra.h",
+			"../../../rendering/WavefrontObjLoader/objLoader.cpp",
+			"../../../rendering/WavefrontObjLoader/objLoader.h",
+			"../../../rendering/WavefrontObjLoader/obj_parser.cpp",
+			"../../../rendering/WavefrontObjLoader/obj_parser.h",
+			"../../../rendering/WavefrontObjLoader/list.cpp",
+			"../../../rendering/WavefrontObjLoader/list.h"
 
 		}
 		

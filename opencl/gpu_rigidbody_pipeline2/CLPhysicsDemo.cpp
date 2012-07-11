@@ -265,6 +265,12 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 
 	if (narrowphaseAndSolver)
 	{
+		btVector3 localCenter(0,0,0);
+		for (int i=0;i<utilPtr->m_vertices.size();i++)
+			localCenter+=utilPtr->m_vertices[i];
+		localCenter*= (1./utilPtr->m_vertices.size());
+		utilPtr->m_localCenter = localCenter;
+
 		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(s_convexHeightField,utilPtr,col);
 	}
 

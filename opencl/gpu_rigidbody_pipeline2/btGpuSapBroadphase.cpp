@@ -283,4 +283,3 @@ cl_mem	btGpuSapBroadphase::getOverlappingPairBuffer()
 {
 	return m_overlappingPairs.getBufferCL();
 }
-

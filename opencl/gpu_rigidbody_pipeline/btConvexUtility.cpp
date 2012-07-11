@@ -22,10 +22,7 @@ subject to the following restrictions:
 
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 
- void MyDeb()
-{
-    asm volatile ("int3");
-}
+
 
 btConvexUtility::~btConvexUtility()
 {

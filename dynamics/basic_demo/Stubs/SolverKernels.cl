@@ -990,29 +990,28 @@ void BatchSolveKernel(__global Body* gBodies,
                       )
 {
 	__local int ldsBatchIdx[WG_SIZE+1];
-    
 	__local int ldsCurBatch;
 	__local int ldsNextBatch;
 	__local int ldsStart;
-    
+
 	int lIdx = GET_LOCAL_IDX;
 	int wgIdx = GET_GROUP_IDX;
-    
+
 	int gIdx = GET_GLOBAL_IDX;
-    //	debugInfo[gIdx].m_valInt0 = gIdx;
+//	debugInfo[gIdx].m_valInt0 = gIdx;
 	//debugInfo[gIdx].m_valInt1 = GET_GROUP_SIZE;
-    
-    
+
+
 	int xIdx = (wgIdx/(nSplit/2))*2 + (bIdx&1);
 	int yIdx = (wgIdx%(nSplit/2))*2 + (bIdx>>1);
 	int cellIdx = xIdx+yIdx*nSplit;
 	
-	if( gN[cellIdx] == 0 )
+	if( gN[cellIdx] == 0 ) 
 		return;
-    
+
 	const int start = gOffsets[cellIdx];
 	const int end = start + gN[cellIdx];
-    
+
 	
 	if( lIdx == 0 )
 	{
@@ -1020,75 +1019,34 @@ void BatchSolveKernel(__global Body* gBodies,
 		ldsNextBatch = 0;
 		ldsStart = start;
 	}
-    
-    
+
+
 	GROUP_LDS_BARRIER;
-   
-    
-	int counter0 = 0;
-	int counter1 = 0;
-    
-	do
+
+	int idx=ldsStart+lIdx;
+	while (ldsCurBatch < maxBatch)
 	{
-		counter0++;
-		int curStart = ldsStart;
-		int curBatch = ldsCurBatch;
-        
-		GROUP_LDS_BARRIER;
-        
-		while( curBatch == ldsNextBatch && curStart < end )
+		for(; idx<end; )
 		{
-			counter1++;
-			int idx = curStart + lIdx;
-			if( lIdx == 0 )
-				ldsBatchIdx[0] = curBatch;
-            GROUP_LDS_BARRIER;
-			ldsBatchIdx[(lIdx == 0)? lIdx:lIdx+1] = curBatch;
-			GROUP_LDS_BARRIER;
-            //			debugInfo[gIdx].m_valInt2 = gConstraints[idx].m_batchIdx;
-            //			debugInfo[gIdx].m_valInt3 = idx;
-            
-            
-			ldsBatchIdx[lIdx+1] = (idx<end)? gConstraints[idx].m_batchIdx : -1;
-            
-			GROUP_LDS_BARRIER;
-            
-            
-			if( ldsBatchIdx[lIdx+1] == curBatch )
+			if (gConstraints[idx].m_batchIdx == ldsCurBatch)
 			{
-				//	solve
-                
 				if( solveFriction )
-				{
 					solveFrictionConstraint( gBodies, gShapes, &gConstraints[idx] );
-                }
 				else
-				{
 					solveContactConstraint( gBodies, gShapes, &gConstraints[idx] );
-                }
-			}
-			else
+				idx+=64;
+			} else
 			{
-				if( ldsBatchIdx[lIdx] == curBatch )
-				{
-					ldsStart = idx;
-					ldsNextBatch = ldsBatchIdx[lIdx+1];
-				}
+				break;
 			}
-            
-			GROUP_LDS_BARRIER;
-            
-			curStart += GET_GROUP_SIZE;
 		}
-        
+		GROUP_LDS_BARRIER;
 		if( lIdx == 0 )
 		{
-			ldsCurBatch = ldsNextBatch;
+			ldsCurBatch++;
 		}
-        
 		GROUP_LDS_BARRIER;
 	}
-    //	while( ldsCurBatch != -1 && iter <= 10 );
-	while( ldsCurBatch != -1 && ldsCurBatch <= maxBatch );
+	
     
 }

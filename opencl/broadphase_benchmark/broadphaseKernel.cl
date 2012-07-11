@@ -110,7 +110,7 @@ typedef struct
 	float			fx;
 	float			fy;
 	float			fz;
-	unsigned int	uw;
+	int	uw;
 } btAABBCL;
 
 __inline
@@ -315,7 +315,7 @@ __kernel void
 				pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
 				pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
 				pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
-				pAABB[nodeID*2+1].uw = nodeID;		
+				pAABB[nodeID*2+1].uw = gBodies[nodeID].m_invMass==0.f? 0 : 1;
 			}
 		} 
 	}

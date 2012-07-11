@@ -22,7 +22,7 @@ struct GpuSatCollision
 	cl_kernel				m_clipHullHullKernel;
 	cl_kernel				m_extractManifoldAndAddContactKernel;
 
-
+	btOpenCLArray<int>		m_totalContactsOut;
 	btAlignedObjectArray<Contact4>	m_hostContactOut;
 	btAlignedObjectArray<int2>		m_hostPairs;
 
@@ -31,6 +31,17 @@ struct GpuSatCollision
 	
 
 	void computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
+			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,
+			const btOpenCLArray<btVector3>& vertices,
+			const btOpenCLArray<btVector3>& uniqueEdges,
+			const btOpenCLArray<btGpuFace>& faces,
+			const btOpenCLArray<int>& indices,
+			const btOpenCLArray<btCollidable>& gpuCollidables
+			);
+
+	void computeConvexConvexContactsGPUSAT_sequential( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,
@@ -52,20 +63,20 @@ struct GpuSatCollision
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
-			const btOpenCLArray<ConvexPolyhedronCL>& gpuConvexDataB,
+			const btAlignedObjectArray<ConvexPolyhedronCL>& gpuConvexDataB,
 	
 			const btAlignedObjectArray<btVector3>& verticesA, 
 			const btAlignedObjectArray<btVector3>& uniqueEdgesA, 
 			const btAlignedObjectArray<btGpuFace>& facesA,
 			const btAlignedObjectArray<int>& indicesA,
 	
-			const btOpenCLArray<btVector3>& gpuVerticesB,
-			const btOpenCLArray<btVector3>& gpuUniqueEdgesB,
-			const btOpenCLArray<btGpuFace>& gpuFacesB,
-			const btOpenCLArray<int>& gpuIndicesB,
+			const btAlignedObjectArray<btVector3>& gpuVerticesB,
+			const btAlignedObjectArray<btVector3>& gpuUniqueEdgesB,
+			const btAlignedObjectArray<btGpuFace>& gpuFacesB,
+			const btAlignedObjectArray<int>& gpuIndicesB,
 
 			const btAlignedObjectArray<btCollidable>& hostCollidablesA,
-			const btOpenCLArray<btCollidable>& gpuCollidablesB);
+			const btAlignedObjectArray<btCollidable>& gpuCollidablesB);
 };
 
 #endif //_CONVEX_HULL_CONTACT_H
