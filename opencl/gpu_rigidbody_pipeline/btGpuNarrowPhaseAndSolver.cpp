@@ -49,6 +49,7 @@ bool enableExperimentalCpuConcaveCollision = false;
 #define MAX_CONVEX_INDICES 8192
 
 int gpuBatchContacts = 1;
+int gpuSolveConstraint = 1;
 
 int numPairsOut =0;
 int numPairsTotal =0;
@@ -206,18 +207,94 @@ int btGpuNarrowphaseAndSolver::allocateCollidable()
 
 int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btCollidable& col)
 {
-	m_concaveMeshes.push_back(obj);
-	return m_concaveMeshes.size()-1;
+
+	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);
+	m_internalData->m_convexPolyhedra.resize(m_internalData->m_numAcceleratedShapes+1);
+	
+    
+	ConvexPolyhedronCL& convex = m_internalData->m_convexPolyhedra.at(m_internalData->m_convexPolyhedra.size()-1);
+	convex.mC = btVector3(0,0,0);
+	convex.mE = btVector3(0,0,0);
+	convex.m_extents= btVector3(0,0,0);
+	convex.m_localCenter = btVector3(0,0,0);
+	convex.m_radius = 0.f;
+	
+	convex.m_numUniqueEdges = 0;
+	int edgeOffset = m_internalData->m_uniqueEdges.size();
+	convex.m_uniqueEdgesOffset = edgeOffset;
+	
+	int faceOffset = m_internalData->m_convexFaces.size();
+	convex.m_faceOffset = faceOffset;
+	convex.m_numFaces = obj->faceCount;
+	m_internalData->m_convexFaces.resize(faceOffset+convex.m_numFaces);
+	for (int i=0;i<obj->faceCount;i++)
+	{
+		obj_face* face = obj->faceList[i];
+		
+		btVector3 vert0(obj->vertexList[face->vertex_index[0]]->e[0],obj->vertexList[face->vertex_index[0]]->e[1],obj->vertexList[face->vertex_index[0]]->e[2]);
+		btVector3 vert1(obj->vertexList[face->vertex_index[1]]->e[0],obj->vertexList[face->vertex_index[1]]->e[1],obj->vertexList[face->vertex_index[1]]->e[2]);
+		btVector3 vert2(obj->vertexList[face->vertex_index[2]]->e[0],obj->vertexList[face->vertex_index[2]]->e[1],obj->vertexList[face->vertex_index[2]]->e[2]);
+
+		btVector3 normal = ((vert1-vert0).cross(vert2-vert0)).normalize();
+		btScalar c = -(normal.dot(vert0));
+
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.x = normal.x();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.y = normal.y();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.z = normal.z();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.w = c;
+		int indexOffset = m_internalData->m_convexIndices.size();
+		int numIndices = face->vertex_count;
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_numIndices = numIndices;
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_indexOffset = indexOffset;
+		m_internalData->m_convexIndices.resize(indexOffset+numIndices);
+		for (int p=0;p<numIndices;p++)
+		{
+			m_internalData->m_convexIndices[indexOffset+p] = face->vertex_index[p];//convexPtr->m_faces[i].m_indices[p];
+		}
+	}
+    
+	convex.m_numVertices = obj->vertexCount;
+	int vertexOffset = m_internalData->m_convexVertices.size();
+	convex.m_vertexOffset =vertexOffset;
+	m_internalData->m_convexVertices.resize(vertexOffset+convex.m_numVertices);
+	for (int i=0;i<obj->vertexCount;i++)
+	{
+		btVector3 vert(obj->vertexList[i]->e[0],obj->vertexList[i]->e[1],obj->vertexList[i]->e[2]);
+		m_internalData->m_convexVertices[vertexOffset+i] = vert;
+	}
+
+	(*m_internalData->m_convexData)[m_internalData->m_numAcceleratedShapes] = 0;
+	
+	m_internalData->m_convexFacesGPU->copyFromHost(m_internalData->m_convexFaces);
+    
+	m_internalData->m_convexPolyhedraGPU->copyFromHost(m_internalData->m_convexPolyhedra);
+	m_internalData->m_uniqueEdgesGPU->copyFromHost(m_internalData->m_uniqueEdges);
+	m_internalData->m_convexVerticesGPU->copyFromHost(m_internalData->m_convexVertices);
+	m_internalData->m_convexIndicesGPU->copyFromHost(m_internalData->m_convexIndices);
+  
+	return m_internalData->m_numAcceleratedShapes++;
 }
 
-
-int btGpuNarrowphaseAndSolver::registerConvexHullShape(ConvexHeightField* convexShape,btConvexUtility* convexPtr,btCollidable& col)
+int btGpuNarrowphaseAndSolver::registerConvexHeightfield(ConvexHeightField* convexShape,btCollidable& col)
 {
 #ifndef DISABLE_CONVEX_HEIGHTFIELD
 	m_internalData->m_shapePointers->resize(m_internalData->m_numAcceleratedShapes+1);
 #endif
-	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);
 	m_internalData->m_ShapeBuffer->resize(m_internalData->m_numAcceleratedShapes+1);
+	
+    
+#ifndef DISABLE_CONVEX_HEIGHTFIELD
+	(*m_internalData->m_shapePointers)[m_internalData->m_numAcceleratedShapes] = convexShape;
+#endif
+	
+	m_internalData->m_narrowPhase->setShape(m_internalData->m_ShapeBuffer, convexShape, m_internalData->m_numAcceleratedShapes, 0.01f);
+    
+	return m_internalData->m_numAcceleratedShapes++;
+}
+
+int btGpuNarrowphaseAndSolver::registerConvexHullShape(btConvexUtility* convexPtr,btCollidable& col)
+{
+	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);
 	m_internalData->m_convexPolyhedra.resize(m_internalData->m_numAcceleratedShapes+1);
 	
     
@@ -270,11 +347,8 @@ int btGpuNarrowphaseAndSolver::registerConvexHullShape(ConvexHeightField* convex
 	{
 		m_internalData->m_convexVertices[vertexOffset+i] = convexPtr->m_vertices[i];
 	}
-#ifndef DISABLE_CONVEX_HEIGHTFIELD
-	(*m_internalData->m_shapePointers)[m_internalData->m_numAcceleratedShapes] = convexShape;
-#endif
+
 	(*m_internalData->m_convexData)[m_internalData->m_numAcceleratedShapes] = convexPtr;
-	m_internalData->m_narrowPhase->setShape(m_internalData->m_ShapeBuffer, convexShape, m_internalData->m_numAcceleratedShapes, 0.01f);
 	
 	m_internalData->m_convexFacesGPU->copyFromHost(m_internalData->m_convexFaces);
     
@@ -781,18 +855,22 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 								int collidableIndexB = bodyB.m_collidableIdx;
 								int shapeA = m_internalData->m_collidablesCPU[collidableA].m_shapeIndex;
 								int shapeB = m_internalData->m_collidablesCPU[collidableIndexB].m_shapeIndex;
-								objLoader* obj = m_concaveMeshes[shapeA];
-                                
-                                
-                                
-								for (int f=0;f<obj->faceCount;f++)
-								//for (int f=0;f<obj->faceCount;f+=2)
+								
+								
+								int numFaces = convexPolyhedraB[shapeA].m_numFaces;
+								
+								//for (int f=0;f<numFaces;f++)
+								for (int f=0;f<numFaces;f+=2)
+								
 								{
-									obj_face* face = obj->faceList[f];
+									
+									btGpuFace& face = facesB[convexPolyhedraB[shapeA].m_faceOffset+f];
+
+
                                     //for now we ignore quads, only tris are allowed
-                                    btAssert(face->vertex_count==3);
+									btAssert(face.m_numIndices==3);
                                     
-                                    if (face->vertex_count==3)
+									if (face.m_numIndices==3)
                                     {
                                         int bodyIndexA = pair.x;
                                         int bodyIndexB = pair.y;
@@ -821,9 +899,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 										btVector3 localCenter(0,0,0);
                                         for (int i=0;i<3;i++)
                                         {
-                                            btVector3 vert(obj->vertexList[face->vertex_index[i]]->e[0],
-                                                           obj->vertexList[face->vertex_index[i]]->e[1],
-                                                           obj->vertexList[face->vertex_index[i]]->e[2]);
+											int index = m_internalData->m_convexIndicesGPU->at(face.m_indexOffset+i);
+											btVector3 vert = verticesB[convexPolyhedraB[shapeA].m_vertexOffset+index];
                                             verticesA.push_back(vert);
 											localCenter+=vert;
                                         }
@@ -837,7 +914,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
                                         convexPolyhedronA.m_faceOffset = 0;
                                         
-                                        btVector3 normal = ((verticesA[1]-verticesA[0]).cross(verticesA[2]-verticesA[0])).normalize();
+										btVector3 normal(face.m_plane.x,face.m_plane.y,face.m_plane.z);
                                         
                                         //front size of triangle
                                         {
@@ -846,7 +923,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                                             indicesA.push_back(0);
                                             indicesA.push_back(1);
                                             indicesA.push_back(2);
-                                            btScalar c = -(normal.dot(verticesA[0]));
+											btScalar c = face.m_plane.w;
                                             gpuFace.m_plane.x = normal[0];
                                             gpuFace.m_plane.y = normal[1];
                                             gpuFace.m_plane.z = normal[2];
@@ -856,6 +933,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                                         }
 
                                         //back size of triangle
+#if 1
                                         {
                                             btGpuFace gpuFace;
                                             gpuFace.m_indexOffset=indicesA.size();
@@ -863,6 +941,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                                             indicesA.push_back(1);
                                             indicesA.push_back(0);
                                             btScalar c = (normal.dot(verticesA[0]));
+											btScalar c1 = -face.m_plane.w;
+											btAssert(c==c1);
                                             gpuFace.m_plane.x = -normal[0];
                                             gpuFace.m_plane.y = -normal[1];
                                             gpuFace.m_plane.z = -normal[2];
@@ -899,6 +979,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                                                 prevVertex = i;
                                             }
                                         }
+#endif
+
                                         convexPolyhedronA.m_numFaces = facesA.size();
 										convexPolyhedronA.m_localCenter = localCenter*(1./3.);
 
@@ -1265,11 +1347,10 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
         {
             BT_PROFILE("GPU solveContactConstraint");
             m_internalData->m_solverGPU->m_nIterations = 4;//10
-            m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU,m_internalData->m_contactCGPU,0,nContactOut );
-			//m_internalData->m_solverGPU->solveContactConstraintHost(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU, m_internalData->m_contactCGPU,0, nContactOut );
-
-			
-
+			if (gpuSolveConstraint)
+				m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU,m_internalData->m_contactCGPU,0,nContactOut );
+			else
+				m_internalData->m_solverGPU->solveContactConstraintHost(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU, m_internalData->m_contactCGPU,0, nContactOut );
             
             clFinish(m_queue);
         }

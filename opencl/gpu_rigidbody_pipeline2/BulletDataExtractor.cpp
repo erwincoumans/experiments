@@ -4,9 +4,9 @@ int NUM_OBJECTS_X = 15;
 int NUM_OBJECTS_Y = 15;
 int NUM_OBJECTS_Z = 15;
 #else
-int NUM_OBJECTS_X = 5;
-int NUM_OBJECTS_Y = 5;
-int NUM_OBJECTS_Z = 5;
+int NUM_OBJECTS_X = 15;
+int NUM_OBJECTS_Y = 15;
+int NUM_OBJECTS_Z = 15;
 #endif
 
 
@@ -1018,8 +1018,8 @@ GraphicsShape* btBulletDataExtractor::createGraphicsShapeFromWavefrontObj(objLoa
 			vertices->push_back(vtx);
 		}
 
-		//for (int f=0;f<obj->faceCount;f+=2)
-		for (int f=0;f<obj->faceCount;f++)
+		for (int f=0;f<obj->faceCount;f+=2)
+		//for (int f=0;f<obj->faceCount;f++)
 		{
 			obj_face* face = obj->faceList[f];
 			//btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);

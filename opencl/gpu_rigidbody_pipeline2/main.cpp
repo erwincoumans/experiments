@@ -45,6 +45,8 @@ extern btVector3 m_cameraTargetPosition;
 extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
+
+
 #ifdef _WIN32
 bool useInterop = false;//true;
 #else

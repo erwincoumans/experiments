@@ -65,7 +65,6 @@ protected:
 	cl_device_id m_device;
 	cl_command_queue m_queue;
 
-	btAlignedObjectArray<class objLoader*> m_concaveMeshes;
 
 public:
 
@@ -77,7 +76,8 @@ public:
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
 	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col);
-	int registerConvexHullShape(class ConvexHeightField* convexShape,class btConvexUtility* convexPtr, btCollidable& col);
+	int registerConvexHullShape(class btConvexUtility* convexPtr, btCollidable& col);
+	int registerConvexHeightfield(class ConvexHeightField* convexShape,btCollidable& col);
 	int registerRigidBody(int collidableIndex, float mass, const float* position, const float* orientation, const float* aabbMin, const float* aabbMax,bool writeToGpu);
 	void setObjectTransform(const float* position, const float* orientation , int bodyIndex);
 

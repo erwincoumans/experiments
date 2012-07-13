@@ -14,6 +14,8 @@ subject to the following restrictions:
 //Originally written by Erwin Coumans
 
 bool useSapGpuBroadphase = true;
+extern bool useConvexHeightfield;
+
 #include "OpenGLInclude.h"
 #ifdef _WIN32
 #include "windows.h"
@@ -271,7 +273,10 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		localCenter*= (1./utilPtr->m_vertices.size());
 		utilPtr->m_localCenter = localCenter;
 
-		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(s_convexHeightField,utilPtr,col);
+		if (useConvexHeightfield)
+		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHeightfield(s_convexHeightField,col);
+		else
+			col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
 	}
 
 	if (col.m_shapeIndex>=0)
