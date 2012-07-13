@@ -17,6 +17,7 @@
 //#define DISABLE_CONVEX_HEIGHTFIELD
 
 bool useConvexHeightfield = false;
+bool enableExperimentalCpuConcaveCollision = false;
 
 #include "btGpuNarrowphaseAndSolver.h"
 #include "../rendering/WavefrontObjLoader/objLoader.h"
@@ -345,14 +346,16 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass
 	body.m_pos = make_float4(position[0],position[1],position[2],0.f);
 	body.m_quat = make_float4(orientation[0],orientation[1],orientation[2],orientation[3]);
 	body.m_collidableIdx = collidableIndex;
-	body.m_shapeType = m_internalData->m_collidablesCPU.at(collidableIndex).m_shapeType;
+	if (collidableIndex>=0)
+	{
+		body.m_shapeType = m_internalData->m_collidablesCPU.at(collidableIndex).m_shapeType;
+	} else
+	{
+		body.m_shapeType = CollisionShape::SHAPE_PLANE;
+		m_planeBodyIndex = m_internalData->m_numAcceleratedRigidBodies;
+	}
 	//body.m_shapeType = shapeType;
-	/*if (shapeType==CollisionShape::SHAPE_PLANE)
-     {
-     m_planeBodyIndex = m_internalData->m_numAcceleratedRigidBodies;
-     }
-     */
-    
+	
 	
 	body.m_invMass = mass? 1.f/mass : 0.f;
     
@@ -613,7 +616,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
     
 	bool useCulling = false;
 	if (useConvexHeightfield)
-		useCulling = true;
+		useCulling = false;// @todo figure out what is broken
     
 	clFinish(m_queue);
 	numPairsTotal = numBroadphasePairs;
@@ -708,7 +711,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 
 					//convex versus concave trimesh
                     
-					if (0)//broadphasePairsGPU.size())
+					if (enableExperimentalCpuConcaveCollision && broadphasePairsGPU.size())
 					{
 						{
 							BT_PROFILE("m_pBufContactOutGPU->resize");

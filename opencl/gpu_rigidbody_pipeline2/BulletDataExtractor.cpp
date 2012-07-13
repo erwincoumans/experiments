@@ -4,9 +4,9 @@ int NUM_OBJECTS_X = 15;
 int NUM_OBJECTS_Y = 15;
 int NUM_OBJECTS_Z = 15;
 #else
-int NUM_OBJECTS_X = 15;
-int NUM_OBJECTS_Y = 15;
-int NUM_OBJECTS_Z = 15;
+int NUM_OBJECTS_X = 5;
+int NUM_OBJECTS_Y = 5;
+int NUM_OBJECTS_Z = 5;
 #endif
 
 
@@ -17,6 +17,8 @@ float Z_GAP = 2.3f;
 #include "BulletDataExtractor.h"
 #include "BulletSerialize/BulletFileLoader/btBulletFile.h"
 bool keepStaticObjects = false;
+extern bool enableExperimentalCpuConcaveCollision;
+
 #include <stdio.h>
 
 #include "OpenGLInclude.h"
@@ -270,7 +272,10 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		char* fileName = "../../bin/wavefront/plane.obj";
 		//char* fileName = "../../bin/wavefront/triangle.obj";
 #endif
-		bool loadFile = 0;//objData->load(fileName);
+		bool loadFile = false;
+
+		if (enableExperimentalCpuConcaveCollision)
+			loadFile = objData->load(fileName);
 
 		if (loadFile)
 		{
