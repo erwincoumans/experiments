@@ -85,7 +85,7 @@ public:
 	
 	//btBroadphasePair* GetPair(btBroadphasePairArray& pairArray, int idxBodyA, int idxBodyB);
 
-	virtual void computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs);
+	virtual void computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem aabbs, int numObjects);
 
 	cl_mem	getBodiesGpu();
 

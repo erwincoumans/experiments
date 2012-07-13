@@ -542,8 +542,12 @@ void	CLPhysicsDemo::stepSimulation()
 #ifndef __APPLE__
 		clBuffer = g_interopBuffer->getCLBUffer();
 		BT_PROFILE("clEnqueueAcquireGLObjects");
-		ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
-		clFinish(g_cqCommandQue);
+		{
+			BT_PROFILE("clEnqueueAcquireGLObjects");
+			ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
+			clFinish(g_cqCommandQue);
+		}
+
 #else
         assert(0);
 
@@ -632,7 +636,7 @@ void	CLPhysicsDemo::stepSimulation()
 				{
 					BT_PROFILE("computeContactsAndSolver");
 					if (narrowphaseAndSolver)
-						narrowphaseAndSolver->computeContactsAndSolver(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap);
+						narrowphaseAndSolver->computeContactsAndSolver(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap, gFpIO.m_dAABB,gFpIO.m_numObjects);
 				}
 
 				

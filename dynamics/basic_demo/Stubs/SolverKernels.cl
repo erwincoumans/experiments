@@ -505,29 +505,29 @@ void solveContact(__global Constraint4* cs,
 
  void btPlaneSpace1 (const float4* n, float4* p, float4* q)
 {
-  if (fabs(n->z) > 0.70710678f) {
+  if (fabs(n[0].z) > 0.70710678f) {
     // choose p in y-z plane
-    float a = n->y*n->y + n->z*n->z;
-    float k = 1./sqrt(a);
-    p->x = 0;
-	p->y = -n->z*k;
-	p->z = n->y*k;
+    float a = n[0].y*n[0].y + n[0].z*n[0].z;
+    float k = 1.f/sqrt(a);
+    p[0].x = 0;
+	p[0].y = -n[0].z*k;
+	p[0].z = n[0].y*k;
     // set q = n x p
-    q->x = a*k;
-	q->y = -n->x*p->z;
-	q->z = n->x*p->y;
+    q[0].x = a*k;
+	q[0].y = -n[0].x*p[0].z;
+	q[0].z = n[0].x*p[0].y;
   }
   else {
     // choose p in x-y plane
-    float a = n->x*n->x + n->y*n->y;
-    float k = 1./sqrt(a);
-    p->x = -n->y*k;
-	p->y = n->x*k;
-	p->z = 0;
+    float a = n[0].x*n[0].x + n[0].y*n[0].y;
+    float k = 1.f/sqrt(a);
+    p[0].x = -n[0].y*k;
+	p[0].y = n[0].x*k;
+	p[0].z = 0;
     // set q = n x p
-    q->x = -n->z*p->y;
-	q->y = n->z*p->x;
-	q->z = a*k;
+    q[0].x = -n[0].z*p[0].y;
+	q[0].y = n[0].z*p[0].x;
+	q[0].z = a*k;
   }
 }
 
@@ -668,7 +668,7 @@ void solveAConstraint(__global Body* gBodies, __global Shape* gShapes, __global 
 
 void solveContactConstraint(__global Body* gBodies, __global Shape* gShapes, __global Constraint4* ldsCs)
 {
-	float frictionCoeff = ldsCs[0].m_linear.w;
+	//float frictionCoeff = ldsCs[0].m_linear.w;
 	int aIdx = ldsCs[0].m_bodyA;
 	int bIdx = ldsCs[0].m_bodyB;
 
@@ -1022,7 +1022,7 @@ void BatchSolveKernel(__global Body* gBodies,
                        int nSplit
                       )
 {
-	__local int ldsBatchIdx[WG_SIZE+1];
+	//__local int ldsBatchIdx[WG_SIZE+1];
 	__local int ldsCurBatch;
 	__local int ldsNextBatch;
 	__local int ldsStart;
