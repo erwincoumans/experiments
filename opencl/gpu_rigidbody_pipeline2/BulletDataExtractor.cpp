@@ -4,9 +4,9 @@ int NUM_OBJECTS_X = 15;
 int NUM_OBJECTS_Y = 15;
 int NUM_OBJECTS_Z = 15;
 #else
-int NUM_OBJECTS_X = 15;
-int NUM_OBJECTS_Y = 15;
-int NUM_OBJECTS_Z = 15;
+int NUM_OBJECTS_X = 25;
+int NUM_OBJECTS_Y = 25;
+int NUM_OBJECTS_Z = 25;
 #endif
 
 
