@@ -630,6 +630,7 @@ void	CLPhysicsDemo::stepSimulation()
 						narrowphaseAndSolver->computeContactsAndSolver(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap);
 				}
 
+				
 				{
 					BT_PROFILE("copyBodyVelocities");
 					if (narrowphaseAndSolver)
@@ -649,36 +650,48 @@ void	CLPhysicsDemo::stepSimulation()
 
 			if (runOpenCLKernels)
 			{
-				int numObjects = m_numPhysicsInstances;
-				int offset = SHAPE_VERTEX_BUFFER_SIZE/4;
+				bool integrateOnGpu = true;
+				if (integrateOnGpu)
+				{
+					int numObjects = m_numPhysicsInstances;
+					int offset = SHAPE_VERTEX_BUFFER_SIZE/4;
 
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 0, sizeof(int), &offset);
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 1, sizeof(int), &numObjects);
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
-//debug velocity
-				//btAlignedObjectArray<btVector3> linvel;
-				//m_data->m_linVelBuf->copyToHost(linvel);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 0, sizeof(int), &offset);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 1, sizeof(int), &numObjects);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+	
+					cl_mem lv = m_data->m_linVelBuf->getBufferCL();
+					cl_mem av = m_data->m_angVelBuf->getBufferCL();
+					cl_mem btimes = m_data->m_bodyTimes->getBufferCL();
 
-				cl_mem lv = m_data->m_linVelBuf->getBufferCL();
-				cl_mem av = m_data->m_angVelBuf->getBufferCL();
-				cl_mem btimes = m_data->m_bodyTimes->getBufferCL();
-
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 3, sizeof(cl_mem), (void*)&lv);
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 4, sizeof(cl_mem), (void*)&av);
-				ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 5, sizeof(cl_mem), (void*)&btimes);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 3, sizeof(cl_mem), (void*)&lv);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 4, sizeof(cl_mem), (void*)&av);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 5, sizeof(cl_mem), (void*)&btimes);
 					
 					
 					
 
-				size_t workGroupSize = 64;
-				size_t	numWorkItems = workGroupSize*((m_numPhysicsInstances + (workGroupSize)) / workGroupSize);
+					size_t workGroupSize = 64;
+					size_t	numWorkItems = workGroupSize*((m_numPhysicsInstances + (workGroupSize)) / workGroupSize);
 				
-				if (workGroupSize>numWorkItems)
-					workGroupSize=numWorkItems;
+					if (workGroupSize>numWorkItems)
+						workGroupSize=numWorkItems;
 
-				ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_integrateTransformsKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
-				oclCHECKERROR(ciErrNum, CL_SUCCESS);
-			}
+					ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_integrateTransformsKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+					oclCHECKERROR(ciErrNum, CL_SUCCESS);
+				} else
+				{
+					//debug velocity
+					btAlignedObjectArray<btVector3> linvel;
+					m_data->m_linVelBuf->copyToHost(linvel);
+					for (int i=0;i<linvel.size();i++)
+					{
+						btAssert(_finite(linvel[i].x()));
+					}
+					btAssert(0);
+
+				}
+			} 
 		}
 			
 

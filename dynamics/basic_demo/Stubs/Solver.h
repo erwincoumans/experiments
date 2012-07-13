@@ -19,7 +19,6 @@ subject to the following restrictions:
 
 #include "../../../opencl/broadphase_benchmark/btOpenCLArray.h"
 #include "AdlConstraint4.h"
-typedef btOpenCLArray<Constraint4>* SolverData;
 
 
 //#include <AdlPhysics/TypeDefinition.h>
@@ -133,18 +132,20 @@ class Solver : public SolverBase
 		
 		void reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 		const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
-			btOpenCLArray<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
+			btOpenCLArray<Contact4>* contactsIn, btOpenCLArray<Constraint4>* contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
 		
 		void solveContactConstraint( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<RigidBodyBase::Inertia>* inertiaBuf, 
-			SolverData constraint, void* additionalData, int n );
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n );
 
+		void solveContactConstraintHost(  btOpenCLArray<RigidBodyBase::Body>* bodyBuf, btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n );
 
 
 		void convertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 			const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
-			btOpenCLArray<Contact4>* contactsIn, SolverData contactCOut, void* additionalData, 
+			btOpenCLArray<Contact4>* contactsIn, btOpenCLArray<Constraint4>* contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
 		void sortContacts( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 

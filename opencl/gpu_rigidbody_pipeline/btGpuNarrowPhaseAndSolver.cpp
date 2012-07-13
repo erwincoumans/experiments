@@ -113,7 +113,7 @@ struct	CustomDispatchData
     
 	Solver* m_solverGPU;
     
-	SolverData		m_contactCGPU;
+	btOpenCLArray<Constraint4>*		m_contactCGPU;
 	void*			m_frictionCGPU;
     
 	int m_numAcceleratedShapes;
@@ -1027,7 +1027,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
         const btOpenCLArray<RigidBodyBase::Body>* bodyBuf = m_internalData->m_bodyBufferGPU;
         void* additionalData = m_internalData->m_frictionCGPU;
         const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf = m_internalData->m_inertiaBufferGPU;
-        SolverData contactCOut = m_internalData->m_contactCGPU;
+        btOpenCLArray<Constraint4>* contactCOut = m_internalData->m_contactCGPU;
         int nContacts = nContactOut;
         
         bool useCPU=false;
@@ -1262,11 +1262,11 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
         {
             BT_PROFILE("GPU solveContactConstraint");
             m_internalData->m_solverGPU->m_nIterations = 4;//10
-            m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, 
-                                                                m_internalData->m_inertiaBufferGPU, 
-                                                                m_internalData->m_contactCGPU,
-                                                                0, 
-                                                                nContactOut );
+            m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU,m_internalData->m_contactCGPU,0,nContactOut );
+			//m_internalData->m_solverGPU->solveContactConstraintHost(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU, m_internalData->m_contactCGPU,0, nContactOut );
+
+			
+
             
             clFinish(m_queue);
         }

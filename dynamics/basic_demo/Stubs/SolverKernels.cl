@@ -503,6 +503,35 @@ void solveContact(__global Constraint4* cs,
 }
 
 
+ void btPlaneSpace1 (const float4* n, float4* p, float4* q)
+{
+  if (fabs(n->z) > 0.70710678f) {
+    // choose p in y-z plane
+    float a = n->y*n->y + n->z*n->z;
+    float k = 1./sqrt(a);
+    p->x = 0;
+	p->y = -n->z*k;
+	p->z = n->y*k;
+    // set q = n x p
+    q->x = a*k;
+	q->y = -n->x*p->z;
+	q->z = n->x*p->y;
+  }
+  else {
+    // choose p in x-y plane
+    float a = n->x*n->x + n->y*n->y;
+    float k = 1./sqrt(a);
+    p->x = -n->y*k;
+	p->y = n->x*k;
+	p->z = 0;
+    // set q = n x p
+    q->x = -n->z*p->y;
+	q->y = n->z*p->x;
+	q->z = a*k;
+  }
+}
+
+
 void solveFriction(__global Constraint4* cs,
 			float4 posA, float4* linVelA, float4* angVelA, float invMassA, Matrix3x3 invInertiaA,
 			float4 posB, float4* linVelB, float4* angVelB, float invMassB, Matrix3x3 invInertiaB,
@@ -514,11 +543,15 @@ void solveFriction(__global Constraint4* cs,
 	float4 n = -cs->m_linear;
 
 	float4 tangent[2];
+#if 1
+	btPlaneSpace1(&n,&tangent[0],&tangent[1]);
+#else
+//this code fails if cs->m_worldPos[0] == center
 	tangent[0] = cross3( n, cs->m_worldPos[0]-center );
 	tangent[1] = cross3( tangent[0], n );
 	tangent[0] = normalize3( tangent[0] );
 	tangent[1] = normalize3( tangent[1] );
-
+#endif
 	float4 angular0, angular1, linear;
 	float4 r0 = center - posA;
 	float4 r1 = center - posB;

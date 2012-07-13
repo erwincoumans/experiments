@@ -220,9 +220,8 @@ public:
 	void copyToHost(btAlignedObjectArray<T>& destArray, bool waitForCompletion=true) const
 	{
 		destArray.resize(this->size());
-
-		copyToHostPointer(&destArray[0], size(),0,waitForCompletion);
-		
+		if (size())
+			copyToHostPointer(&destArray[0], size(),0,waitForCompletion);
 	}
 
 	void copyToHostPointer(T* destPtr, int numElem, int srcFirstElem=0, bool waitForCompletion=true) const

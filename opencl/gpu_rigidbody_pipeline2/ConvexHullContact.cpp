@@ -777,7 +777,12 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 	float4 contactsOut[MAX_VERTS];
 	int contactCapacity = MAX_VERTS;
 
-	bool foundSepAxis = findSeparatingAxis(hullA,hullB,
+#ifdef _WIN32
+	btAssert(_finite(bodyBuf->at(bodyIndexA).m_pos.x));
+	btAssert(_finite(bodyBuf->at(bodyIndexB).m_pos.x));
+#endif
+	
+		bool foundSepAxis = findSeparatingAxis(hullA,hullB,
 							bodyBuf->at(bodyIndexA).m_pos,
 							bodyBuf->at(bodyIndexA).m_quat,
 							bodyBuf->at(bodyIndexB).m_pos,
