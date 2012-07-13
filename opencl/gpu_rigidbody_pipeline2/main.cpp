@@ -48,7 +48,7 @@ extern bool useConvexHeightfield;
 
 
 #ifdef _WIN32
-bool useInterop = false;//true;
+bool useInterop = true;//true;
 #else
 bool useInterop = false;
 #endif
