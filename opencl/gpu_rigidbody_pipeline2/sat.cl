@@ -1,7 +1,7 @@
 
 //keep this enum in sync with the CPU version (in AdlCollisionShape.h)
 #define SHAPE_CONVEX_HULL 3
-
+#define SHAPE_CONCAVE_TRIMESH 5
 
 typedef unsigned int u32;
 
@@ -47,6 +47,22 @@ typedef struct
 	int	m_numUniqueEdges;
 
 } ConvexPolyhedronCL;
+
+typedef struct 
+{
+	union
+	{
+		float4	m_min;
+		float   m_minElems[4];
+		int			m_minIndices[4];
+	};
+	union
+	{
+		float4	m_max;
+		float   m_maxElems[4];
+		int			m_maxIndices[4];
+	};
+} btAabbCL;
 
 typedef struct
 {
@@ -364,9 +380,14 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 																					__global const float4* uniqueEdges,
 																					__global const btGpuFace* faces,
 																					__global const int* indices,
+																					__global const btAabbCL* aabbs,
 																					__global volatile float4* separatingNormals,
 																					__global volatile int* hasSeparatingAxis,
-																					int numPairs)
+																					__global int4* concavePairsOut,
+																					__global volatile int* numConcavePairsOut,
+																					int numPairs,
+																					int maxnumConcavePairsCapacity
+																					)
 {
 
 	int i = get_global_id(0);
@@ -374,7 +395,21 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 	{
 		int bodyIndexA = pairs[i].x;
 		int bodyIndexB = pairs[i].y;
-		
+
+		if ((rigidBodies[bodyIndexA].m_shapeType==SHAPE_CONCAVE_TRIMESH) ||(rigidBodies[bodyIndexB].m_shapeType==SHAPE_CONCAVE_TRIMESH))
+		{
+			int pairIdx = atomic_inc(numConcavePairsOut);
+			if (pairIdx<maxnumConcavePairsCapacity)
+			{
+				concavePairsOut[pairIdx].x = bodyIndexA;
+				concavePairsOut[pairIdx].y = bodyIndexB;
+				concavePairsOut[pairIdx].z = 1;
+				concavePairsOut[pairIdx].w = 2;
+			}
+			//todo
+			hasSeparatingAxis[i] = 0;
+			return;
+		}		
 
 		if ((rigidBodies[bodyIndexA].m_shapeType!=SHAPE_CONVEX_HULL) ||(rigidBodies[bodyIndexB].m_shapeType!=SHAPE_CONVEX_HULL))
 		{
