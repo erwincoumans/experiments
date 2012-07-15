@@ -12,6 +12,20 @@
 #include "../gpu_rigidbody_pipeline/btCollidable.h"
 
 
+struct btYetAnotherAabb
+{
+	union
+	{
+		float m_min[4];
+		int m_minIndices[4];
+	};
+	union
+	{
+		float m_max[4];
+		//int m_signedMaxIndices[4];
+		//unsigned int m_unsignedMaxIndices[4];
+	};
+};
 
 struct GpuSatCollision
 {
@@ -38,7 +52,12 @@ struct GpuSatCollision
 			const btOpenCLArray<btVector3>& uniqueEdges,
 			const btOpenCLArray<btGpuFace>& faces,
 			const btOpenCLArray<int>& indices,
-			const btOpenCLArray<btCollidable>& gpuCollidables
+			const btOpenCLArray<btCollidable>& gpuCollidables,
+			const btOpenCLArray<btYetAnotherAabb>& clAabbs, 
+			int numObjects,
+			int maxTriConvexPairCapacity,
+			btOpenCLArray<int4>& triangleConvexPairs,
+			int& numTriConvexPairsOut
 			);
 
 	void computeConvexConvexContactsGPUSAT_sequential( const btOpenCLArray<int2>* pairs, int nPairs, 
@@ -49,7 +68,12 @@ struct GpuSatCollision
 			const btOpenCLArray<btVector3>& uniqueEdges,
 			const btOpenCLArray<btGpuFace>& faces,
 			const btOpenCLArray<int>& indices,
-			const btOpenCLArray<btCollidable>& gpuCollidables
+			const btOpenCLArray<btCollidable>& gpuCollidables,
+			const btOpenCLArray<btYetAnotherAabb>& clAabbs, 
+			int numObjects,
+			int maxTriConvexPairCapacity,
+			btOpenCLArray<int4>& triangleConvexPairs,
+			int& numTriConvexPairsOut
 			);
 
 
@@ -77,6 +101,28 @@ struct GpuSatCollision
 
 			const btAlignedObjectArray<btCollidable>& hostCollidablesA,
 			const btAlignedObjectArray<btCollidable>& gpuCollidablesB);
+
+
+		void computeConcaveConvexContactsGPUSATSingle(
+			int bodyIndexA, int bodyIndexB,
+			int collidableIndexA, int collidableIndexB,
+
+			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
+			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
+			btOpenCLArray<Contact4>* contactOut, 
+			int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
+			const btAlignedObjectArray<btVector3>& verticesB,
+			const btAlignedObjectArray<btVector3>& uniqueEdgesB,
+			const btAlignedObjectArray<btGpuFace>& facesB,
+			const btAlignedObjectArray<int>& indicesB,
+			const btAlignedObjectArray<btCollidable>& hostCollidablesB,
+			btAlignedObjectArray<btYetAnotherAabb>& clAabbs, 
+			int numObjects,
+			int maxTriConvexPairCapacity,
+			btAlignedObjectArray<int4>& triangleConvexPairs,
+			int& numTriConvexPairsOut);
+
 };
 
 #endif //_CONVEX_HULL_CONTACT_H

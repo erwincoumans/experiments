@@ -51,20 +51,7 @@ bool enableExperimentalCpuConcaveCollision = false;
 #define MAX_CONVEX_VERTICES 8192
 #define MAX_CONVEX_INDICES 8192
 
-struct btYetAnotherAabb
-{
-	union
-	{
-		float m_min[4];
-		int m_minIndices[4];
-	};
-	union
-	{
-		float m_max[4];
-		//int m_signedMaxIndices[4];
-		//unsigned int m_unsignedMaxIndices[4];
-	};
-};
+
 
 int gpuBatchContacts = 1;
 int gpuSolveConstraint = 1;
@@ -693,6 +680,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 	bool bGPU = (m_internalData != 0);
 	int maxBodyIndex = m_internalData->m_numAcceleratedRigidBodies;
     
+	btOpenCLArray<btYetAnotherAabb> clAabbArray(this->m_context,this->m_queue);
+	clAabbArray.setFromOpenCLBuffer(clAabbs,numObjects);
+
 	if (!maxBodyIndex)
 		return;
 	int numOfConvexRBodies = maxBodyIndex;
@@ -764,380 +754,47 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
             
 			if (!useConvexHeightfield)
 			{
-                
 				m_internalData->m_pBufContactOutGPU->resize(nContactOut);
-                
+				int maxTriConvexPairCapacity = 8192;
+				btOpenCLArray<int4> triangleConvexPairs(m_context,m_queue, maxTriConvexPairCapacity);
+				int numTriConvexPairsOut=0;
+
 				if (useCulling)
 				{
 					m_internalData->m_convexPairsOutGPU->resize(numPairsOut);
 					
 					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
-                                                                                         m_internalData->m_convexPairsOutGPU,numPairsOut,
-                                                                                         m_internalData->m_bodyBufferGPU,
-                                                                                         m_internalData->m_ShapeBuffer,
-                                                                                         m_internalData->m_pBufContactOutGPU,
-                                                                                         nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
-                                                                                         *m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU,*m_internalData->m_collidablesGPU);
+						m_internalData->m_convexPairsOutGPU,numPairsOut,
+						m_internalData->m_bodyBufferGPU,
+						m_internalData->m_ShapeBuffer,
+						m_internalData->m_pBufContactOutGPU,
+						nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
+						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU,*m_internalData->m_collidablesGPU,
+						clAabbArray, numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
 				} else
 				{
 					m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
                     
 					//convex versus concave convex
                     
-					
 					//m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT_sequential(
 					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
-                                                                                         &broadphasePairsGPU, numBroadphasePairs,
-                                                                                         m_internalData->m_bodyBufferGPU,
-                                                                                         m_internalData->m_ShapeBuffer,
-                                                                                         m_internalData->m_pBufContactOutGPU,
-                                                                                         nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,
-                                                                                         *m_internalData->m_convexVerticesGPU,
-                                                                                         *m_internalData->m_uniqueEdgesGPU,
-                                                                                         *m_internalData->m_convexFacesGPU,
-                                                                                         *m_internalData->m_convexIndicesGPU,
-                                                                                         
-                                                                                         *m_internalData->m_collidablesGPU);
-                    
-					
-
-					//convex versus concave trimesh
-                    
-					if (enableExperimentalCpuConcaveCollision && broadphasePairsGPU.size())
-					{
-						BT_PROFILE("concave-convex");
-
-						static int maxNumActualConcaveConvexTests = 0;
-						int numActualConcaveConvexTests = 0;
-						{
-							BT_PROFILE("m_pBufContactOutGPU->resize");
-							if (nContactOut)					
-								m_internalData->m_pBufContactOutGPU->resize(nContactOut);
-						}
-						
-						btAlignedObjectArray<int2> hostPairs;
-						{
-							BT_PROFILE("broadphasePairsGPU");
-							broadphasePairsGPU.copyToHost(hostPairs);
-						}
-						{
-							BT_PROFILE("m_internalData->m_bodyBufferGPU->copyToHost");
-							m_internalData->m_bodyBufferGPU->copyToHost(*m_internalData->m_bodyBufferCPU);
-						}
-                        
-						//concave case...
-
-						btAlignedObjectArray<btVector3> verticesB;
-						btAlignedObjectArray<btVector3> uniqueEdgesB;
-						btAlignedObjectArray<btGpuFace> facesB;
-						btAlignedObjectArray<int> indicesB;
-						btAlignedObjectArray<ConvexPolyhedronCL> convexPolyhedraB;
-						btAlignedObjectArray<btCollidable> hostCollidablesB;
-
-						{
-							BT_PROFILE("m_collidablesGPU.copyToHost");
-							m_internalData->m_collidablesGPU->copyToHost(hostCollidablesB);
-						}
-
-						{
-							BT_PROFILE("m_convexPolyhedraGPU.copyToHost");
-							m_internalData->m_convexPolyhedraGPU->copyToHost(convexPolyhedraB);
-						}
-						{
-							BT_PROFILE("gpuVerticesB.copyToHost");
-							m_internalData->m_convexVerticesGPU->copyToHost(verticesB);
-						}
-						{
-							BT_PROFILE("gpuUniqueEdgesB.copyToHost");	
-							m_internalData->m_uniqueEdgesGPU->copyToHost(uniqueEdgesB);
-						}
-	
-						{
-							BT_PROFILE("gpuFacesB.copyToHost");	
-							m_internalData->m_convexFacesGPU->copyToHost(facesB);
-						}
-						{
-							BT_PROFILE("gpuIndicesB.copyToHost");	
-							m_internalData->m_convexIndicesGPU->copyToHost(indicesB);
-						}
-
-						btOpenCLArray<btYetAnotherAabb> clAabbArray(this->m_context,this->m_queue);
-						btAlignedObjectArray<btYetAnotherAabb> hostAabbs;
-						{
-							BT_PROFILE("clAabbArray.copyToHost");
-							clAabbArray.setFromOpenCLBuffer(clAabbs,numObjects);
-							clAabbArray.copyToHost(hostAabbs);
-						}
-
-
-
-						
-						//for now, compute overlapping triangles and run convex-convex again with those pairs
-						for (int i=0;i<numBroadphasePairs;i++)
-						{
-							BT_PROFILE("each pair");
-							int2 pair = hostPairs[i];
-							RigidBodyBase::Body& bodyA = m_internalData->m_bodyBufferCPU->at(pair.x);
-							RigidBodyBase::Body& bodyB = m_internalData->m_bodyBufferCPU->at(pair.y);
-                            
-							if (bodyA.m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)
-							{
-								//bodyA.m_shapeIdx =
-                                
-								//printf("concave x\n");
-                                
-								int collidableA = bodyA.m_collidableIdx;
-								int collidableIndexB = bodyB.m_collidableIdx;
-								int shapeA = m_internalData->m_collidablesCPU[collidableA].m_shapeIndex;
-								int shapeB = m_internalData->m_collidablesCPU[collidableIndexB].m_shapeIndex;
-								
-								
-								int numFaces = convexPolyhedraB[shapeA].m_numFaces;
-								
-
-								//for (int f=0;f<numFaces;f++)
-								for (int f=0;f<numFaces;f+=2)
-								
-								{
-									BT_PROFILE("each face");	
-									btGpuFace& face = facesB[convexPolyhedraB[shapeA].m_faceOffset+f];
-
-
-                                    //for now we ignore quads, only tris are allowed
-									btAssert(face.m_numIndices==3);
-                                    
-									if (face.m_numIndices==3)
-                                    {
-                                        int bodyIndexA = pair.x;
-                                        int bodyIndexB = pair.y;
-                                        btAlignedObjectArray<btCollidable> hostCollidablesA;
-                                        btAlignedObjectArray<ConvexPolyhedronCL> hostConvexDataA;
-                                        int collidableIndexA = 0;
-                                        btAlignedObjectArray<btVector3> uniqueEdgesA;
-                                        btAlignedObjectArray<btGpuFace> facesA;
-                                        btAlignedObjectArray<int> indicesA;
-                                        
-                                        btAlignedObjectArray<btVector3> verticesA;
-                                        
-                                        
-                                        
-                                        
-                                        btCollidable colA;
-                                        colA.m_shapeIndex = 0;
-                                        colA.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
-                                        hostCollidablesA.push_back(colA);
-                                        
-                                        ConvexPolyhedronCL convexPolyhedronA;
-
-                                        //add 3 vertices of the triangle
-                                        convexPolyhedronA.m_numVertices = 3;
-                                        convexPolyhedronA.m_vertexOffset = 0;
-										btVector3 localCenter(0,0,0);
-										btVector3 triMinAabb, triMaxAabb;
-										triMinAabb.setValue(1e30,1e30,1e30);
-										triMaxAabb.setValue(-1e30,-1e30,-1e30);
-										
-										{
-											BT_PROFILE("extract triangle verts");
-											for (int i=0;i<3;i++)
-											{
-												int index = indicesB[face.m_indexOffset+i];
-												btVector3 vert = verticesB[convexPolyhedraB[shapeA].m_vertexOffset+index];
-												verticesA.push_back(vert);
-												triMinAabb.setMin(vert);
-												triMaxAabb.setMax(vert);
-												localCenter+=vert;
-											}
-										}
-                                        
-										//check for AABB overlap first
-										btVector3 convexMinAabb(hostAabbs[bodyIndexB].m_min[0],hostAabbs[bodyIndexB].m_min[1],hostAabbs[bodyIndexB].m_min[2]);
-										btVector3 convexMaxAabb(hostAabbs[bodyIndexB].m_max[0],hostAabbs[bodyIndexB].m_max[1],hostAabbs[bodyIndexB].m_max[2]);
-
-										bool overlapAabbTriConvex=false;
-										{
-											BT_PROFILE("TestAabbAgainstAabb2");
-											overlapAabbTriConvex = TestAabbAgainstAabb2(triMinAabb,triMaxAabb,convexMinAabb,convexMaxAabb);
-										}
-
-										if (!overlapAabbTriConvex)
-											continue;
-										
-										if (1)
-										{
-											BT_PROFILE("concave-convex actual test");
-											int localCC=0;
-											numActualConcaveConvexTests++;
-
-											//a triangle has 3 unique edges
-											convexPolyhedronA.m_numUniqueEdges = 3;
-											convexPolyhedronA.m_uniqueEdgesOffset = 0;
-											uniqueEdgesA.push_back(verticesA[1]-verticesA[0]);
-											uniqueEdgesA.push_back(verticesA[2]-verticesA[1]);
-											uniqueEdgesA.push_back(verticesA[0]-verticesA[2]);
-
-											convexPolyhedronA.m_faceOffset = 0;
-                                        
-											btVector3 normal(face.m_plane.x,face.m_plane.y,face.m_plane.z);
-                                        
-											//front size of triangle
-											{
-												btGpuFace gpuFace;
-												gpuFace.m_indexOffset=indicesA.size();
-												indicesA.push_back(0);
-												indicesA.push_back(1);
-												indicesA.push_back(2);
-												btScalar c = face.m_plane.w;
-												gpuFace.m_plane.x = normal[0];
-												gpuFace.m_plane.y = normal[1];
-												gpuFace.m_plane.z = normal[2];
-												gpuFace.m_plane.w = c;
-												gpuFace.m_numIndices=3;
-												facesA.push_back(gpuFace);
-											}
-
-											//back size of triangle
-	#if 1
-											{
-												btGpuFace gpuFace;
-												gpuFace.m_indexOffset=indicesA.size();
-												indicesA.push_back(2);
-												indicesA.push_back(1);
-												indicesA.push_back(0);
-												btScalar c = (normal.dot(verticesA[0]));
-												btScalar c1 = -face.m_plane.w;
-												btAssert(c==c1);
-												gpuFace.m_plane.x = -normal[0];
-												gpuFace.m_plane.y = -normal[1];
-												gpuFace.m_plane.z = -normal[2];
-												gpuFace.m_plane.w = c;
-												gpuFace.m_numIndices=3;
-												facesA.push_back(gpuFace);
-											}
-
-											bool addEdgePlanes = true;
-											if (addEdgePlanes)
-											{
-												int numVertices=3;
-												int prevVertex = numVertices-1;
-												for (int i=0;i<numVertices;i++)
-												{
-													btGpuFace gpuFace;
-                                                
-													btVector3 v0 = verticesA[i];
-													btVector3 v1 = verticesA[prevVertex];
-                                                
-													btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
-													btScalar c = -edgeNormal.dot(v0);
-
-													gpuFace.m_numIndices = 2;
-													gpuFace.m_indexOffset=indicesA.size();
-													indicesA.push_back(i);
-													indicesA.push_back(prevVertex);
-                                                
-													gpuFace.m_plane.x = edgeNormal[0];
-													gpuFace.m_plane.y = edgeNormal[1];
-													gpuFace.m_plane.z = edgeNormal[2];
-													gpuFace.m_plane.w = c;
-													facesA.push_back(gpuFace);
-													prevVertex = i;
-												}
-											}
-	#endif
-
-											convexPolyhedronA.m_numFaces = facesA.size();
-											convexPolyhedronA.m_localCenter = localCenter*(1./3.);
-
-
-                                        
-											hostConvexDataA.push_back(convexPolyhedronA);
-                                        
-											{
-												BT_PROFILE("computeConvexConvexContactsGPUSATSingle");
-
-
-										  /*  m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSATSingle(
-																													   bodyIndexA, bodyIndexB,
-																													   collidableIndexA, collidableIndexB,
-																													   m_internalData->m_bodyBufferCPU,
-																													   0,
-																													   m_internalData->m_pBufContactOutGPU,
-																													   nContactOut,cfgNP,
-																													   hostConvexDataA,
-																													   convexPolyhedraB,
-																													   verticesA,
-																													   uniqueEdgesA,
-																													   facesA,
-																													   indicesA,
-																													   verticesB,
-																														uniqueEdgesB,
-																														facesB,
-																														indicesB,
-																													   hostCollidablesA,
-																													   hostCollidablesB);
-																													   */
-
-
-											m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSATSingle(
-																													   bodyIndexB,bodyIndexA,
-																													   collidableIndexB,collidableIndexA,
-																													   m_internalData->m_bodyBufferCPU,
-																													   0,
-																													   m_internalData->m_pBufContactOutGPU,
-																													   nContactOut,cfgNP,
-																													   convexPolyhedraB,
-																													   hostConvexDataA,
-																													   verticesB,
-																														uniqueEdgesB,
-																														facesB,
-																														indicesB,
-																														 verticesA,
-																													   uniqueEdgesA,
-																													   facesA,
-																													   indicesA,
-																													   hostCollidablesB,
-																													   hostCollidablesA);
-										
-											}
-                                        
-											localCC++;
-										}//
-                                        
-                                        //indicesPtr->push_back(face->vertex_index[0]);
-                                        //indicesPtr->push_back(face->vertex_index[1]);
-                                        //indicesPtr->push_back(face->vertex_index[2]);
-                                    }
-                                    
-                                }
-                                
-                                
-                            }
-                            
-                            if (bodyB.m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)
-                            {
-                                printf("concave y!\n");
-                            }
-							
-                        }
-					
-						if (maxNumActualConcaveConvexTests<numActualConcaveConvexTests)
-						{
-							maxNumActualConcaveConvexTests=numActualConcaveConvexTests;
-							printf("maxNumActualConcaveConvexTests = %d\n",maxNumActualConcaveConvexTests);
-						}
-
-                    }//if (enableExperimentalCpuConcaveCollision && broadphasePairsGPU.size())
-					
-                    
-                    //if shapeType == concave for both
-                    //find all overlapping triangles
-                    //run convex-triangle for each pair
-                    
-                    //&broadphasePairsGPU, numBroadphasePairs,
-                    //m_internalData->m_bodyBufferGPU,
-                    
-                    
-                    
+							&broadphasePairsGPU, numBroadphasePairs,
+							m_internalData->m_bodyBufferGPU,
+							m_internalData->m_ShapeBuffer,
+							m_internalData->m_pBufContactOutGPU,
+							nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,
+							*m_internalData->m_convexVerticesGPU,
+							*m_internalData->m_uniqueEdgesGPU,
+							*m_internalData->m_convexFacesGPU,
+							*m_internalData->m_convexIndicesGPU,
+							*m_internalData->m_collidablesGPU,
+							clAabbArray, 
+							numObjects,
+							maxTriConvexPairCapacity,
+							triangleConvexPairs,
+							numTriConvexPairsOut
+							);
                 }
             }
             else

@@ -229,7 +229,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				//position[2]=3;
 
 				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1)+1;
-				position[1]=1+(j*Y_GAP)+0.2;//-NUM_OBJECTS_Y/2);
+				position[1]=1+(j*Y_GAP);//-NUM_OBJECTS_Y/2);
 				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 0.f;
 				
