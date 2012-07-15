@@ -205,6 +205,7 @@ HKLM,"Software\NVIDIA Corporation\Global\NVTweak",NvCplEnableSRS1564,%REG_DWORD%
 %NVIDIA_B% = NVIDIA_SetB_Devices,NTamd64.6.0
 
 [NVIDIA_SetB_Devices.NTamd64.6.0]
+%NVIDIA_DEV.0FD5.00F2.106B% = Section029, PCI\VEN_10DE&DEV_0FD5&SUBSYS_00F2106B
 %NVIDIA_DEV.0040%           = Section001, PCI\VEN_10DE&DEV_0040                 
 %NVIDIA_DEV.0041%           = Section001, PCI\VEN_10DE&DEV_0041                 
 %NVIDIA_DEV.0042%           = Section001, PCI\VEN_10DE&DEV_0042                 
@@ -543,6 +544,7 @@ HKLM,"Software\NVIDIA Corporation\Global\NVTweak",NvCplEnableSRS1564,%REG_DWORD%
 %NVIDIA_DEV.087F%           = Section047, PCI\VEN_10DE&DEV_087F                 
 
 [NVIDIA_SetA_Devices.NTamd64.6.1]
+%NVIDIA_DEV.0FD5.00F2.106B% = Section029, PCI\VEN_10DE&DEV_0FD5&SUBSYS_00F2106B
 %NVIDIA_DEV.0191%           = Section008, PCI\VEN_10DE&DEV_0191                 
 %NVIDIA_DEV.0193%           = Section008, PCI\VEN_10DE&DEV_0193                 
 %NVIDIA_DEV.0194%           = Section008, PCI\VEN_10DE&DEV_0194                 
@@ -778,6 +780,7 @@ HKLM,"Software\NVIDIA Corporation\Global\NVTweak",NvCplEnableSRS1564,%REG_DWORD%
 %NVIDIA_DEV.087F%           = Section048, PCI\VEN_10DE&DEV_087F                 
 
 [NVIDIA_SetA_Devices.NTamd64.6.2]
+%NVIDIA_DEV.0FD5.00F2.106B% = Section029, PCI\VEN_10DE&DEV_0FD5&SUBSYS_00F2106B
 %NVIDIA_DEV.0040%           = Section002, PCI\VEN_10DE&DEV_0040                 
 %NVIDIA_DEV.0041%           = Section002, PCI\VEN_10DE&DEV_0041                 
 %NVIDIA_DEV.0042%           = Section002, PCI\VEN_10DE&DEV_0042                 
@@ -6386,6 +6389,7 @@ NVIDIA_DEV.0F01 = "NVIDIA GeForce GT 620"
 NVIDIA_DEV.0FC0 = "NVIDIA GeForce GT 640"
 NVIDIA_DEV.0FC1 = "NVIDIA GeForce GT 640 "
 NVIDIA_DEV.0FC2 = "NVIDIA GeForce GT 630 "
+NVIDIA_DEV.0FD5.00F2.106B = "NVIDIA GeForce GT 650M"
 NVIDIA_DEV.0FFF = "NVIDIA Quadro 410"
 NVIDIA_DEV.1040 = "NVIDIA GeForce GT 520 "
 NVIDIA_DEV.1042 = "NVIDIA GeForce 510"
