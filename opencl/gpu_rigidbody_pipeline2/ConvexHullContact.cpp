@@ -1309,6 +1309,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			clFinish(m_queue);
 
 			int numConcave = numConcavePairsOut.at(0);
+			if (numConcave > maxTriConvexPairCapacity)
+				numConcave = maxTriConvexPairCapacity;
+
 			triangleConvexPairsOut.resize(numConcave);
 			btAlignedObjectArray<int4> bla;
 			triangleConvexPairsOut.copyToHost(bla);

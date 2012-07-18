@@ -1,4 +1,5 @@
 
+
 function stringifyKernel(filenameIn, filenameOut, kernelMethod)
   local BUFSIZE = 1024*1024     -- 1MB
 	local f = io.open(filenameIn,"r");
@@ -41,8 +42,37 @@ function stringifyKernel(filenameIn, filenameOut, kernelMethod)
       _,t = string.gsub(lines, "\n", "\n")
       lc = lc + t
     end
-    print("stringified " .. filenameIn .. " into " .. filenameOut .. " processed " .. lc .. " lines")
+    --print("stringified " .. filenameIn .. " into " .. filenameOut .. " processed " .. lc .. " lines")
+    print(filenameIn .. " (" .. lc .. " lines)")
+
  		f:close()
  		fw:write(";\n")
  		fw:close()
  end
+ 
+ newoption {
+    trigger     = "kernelfile",
+    value				=	"kernelpath",
+    description = "full path to the kernel source input file"
+  }
+
+ newoption {
+    trigger     = "headerfile",
+    value				=	"path",
+    description = "full path to the header output file"
+  }
+
+ newoption {
+    trigger     = "stringname",
+    value				=	"var",
+    description = "name of the kernel string variable"
+  }
+  
+ newaction {
+   trigger     = "stringify",
+   description = "stringify kernels source code into strings",
+   execute = function ()
+    stringifyKernel( _OPTIONS["kernelfile"] , _OPTIONS["headerfile"], _OPTIONS["stringname"])    
+ 
+   end
+}

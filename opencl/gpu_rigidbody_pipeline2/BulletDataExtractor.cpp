@@ -663,7 +663,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 
 	if (!keepStaticObjects)
 	{
-#if 0
+
 		int tetraShapeIndex= -1;
 		int strideInBytes = sizeof(float)*9;
 		{
@@ -694,7 +694,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 			m_physicsSim.registerPhysicsInstance(0,  posnew, orn, cubeCollisionShapeIndex2,m_physicsSim.m_numPhysicsInstances);
 			m_renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
 		}
-#endif
+
 
 	}
 

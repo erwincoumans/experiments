@@ -369,6 +369,19 @@ bool findSeparatingAxisEdgeEdge(	__global const ConvexPolyhedronCL* hullA, __glo
 }
 
 
+bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2);
+bool TestAabbAgainstAabb2Global(const btAabbCL* aabb1, __global const btAabbCL* aabb2)
+{
+	bool overlap = true;
+	overlap = (aabb1->m_min.x > aabb2->m_max.x || aabb1->m_max.x < aabb2->m_min.x) ? false : overlap;
+	overlap = (aabb1->m_min.z > aabb2->m_max.z || aabb1->m_max.z < aabb2->m_min.z) ? false : overlap;
+	overlap = (aabb1->m_min.y > aabb2->m_max.y || aabb1->m_max.y < aabb2->m_min.y) ? false : overlap;
+	return overlap;
+}
+
+
+
+
 
 
 // work-in-progress
@@ -398,13 +411,67 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 
 		if ((rigidBodies[bodyIndexA].m_shapeType==SHAPE_CONCAVE_TRIMESH) ||(rigidBodies[bodyIndexB].m_shapeType==SHAPE_CONCAVE_TRIMESH))
 		{
-			int pairIdx = atomic_inc(numConcavePairsOut);
-			if (pairIdx<maxnumConcavePairsCapacity)
+	
+				
+			int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+			int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+	
+			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+			
+			int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+			int numActualConcaveConvexTests = 0;
+			
+			//for (int f=0;f<numFacesA;f++)
+			for (int f=0;f<numFacesA;f+=2)
 			{
-				concavePairsOut[pairIdx].x = bodyIndexA;
-				concavePairsOut[pairIdx].y = bodyIndexB;
-				concavePairsOut[pairIdx].z = 1;
-				concavePairsOut[pairIdx].w = 2;
+			
+				bool overlap = false;
+				
+				btGpuFace face = faces[convexShapes[shapeIndexA].m_faceOffset+f];
+				float4 triMinAabb, triMaxAabb;
+				btAabbCL triAabb;
+				triAabb.m_min = make_float4(1e30f,1e30f,1e30f,0.f);
+				triAabb.m_max = make_float4(-1e30f,-1e30f,-1e30f,0.f);
+				
+				for (int i=0;i<3;i++)
+				{
+					int index = indices[face.m_indexOffset+i];
+					float4 vert = vertices[convexShapes[shapeIndexA].m_vertexOffset+index];
+#if 0
+//just in case some implementation doesn't support component-wise min and max for float4
+					if (triAabb.m_min.x > vert.x)
+						triAabb.m_min.x = vert.x;
+					if (triAabb.m_min.y > vert.y)
+						triAabb.m_min.y = vert.y;
+					if (triAabb.m_min.z > vert.z)
+						triAabb.m_min.z = vert.z;
+
+					if (triAabb.m_max.x < vert.x)
+						triAabb.m_max.x = vert.x;
+					if (triAabb.m_max.y < vert.y)
+						triAabb.m_max.y = vert.y;
+					if (triAabb.m_max.z < vert.z)
+						triAabb.m_max.z = vert.z;
+#else				
+					triAabb.m_min = min(triAabb.m_min,vert);		
+					triAabb.m_max = max(triAabb.m_max,vert);		
+#endif					
+				}
+
+				overlap = TestAabbAgainstAabb2Global(&triAabb, &aabbs[bodyIndexB]);
+				
+				if (overlap)
+				{
+					int pairIdx = atomic_inc(numConcavePairsOut);
+					if (pairIdx<maxnumConcavePairsCapacity)
+					{
+						concavePairsOut[pairIdx].x = bodyIndexA;
+						concavePairsOut[pairIdx].y = bodyIndexB;
+						concavePairsOut[pairIdx].z = f;
+						concavePairsOut[pairIdx].w = 2;
+					}
+				}
 			}
 			//todo
 			hasSeparatingAxis[i] = 0;
