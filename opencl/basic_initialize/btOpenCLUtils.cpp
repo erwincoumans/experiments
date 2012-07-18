@@ -293,9 +293,6 @@ cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int
 
 				btOpenCLUtils::getPlatformInfo(platform, &platformInfo);
 
-				printf("  CL_PLATFORM_VENDOR: \t\t\t%s\n",platformInfo.m_platformVendor);
-				printf("  CL_PLATFORM_NAME: \t\t\t%s\n",platformInfo.m_platformName);
-				printf("  CL_PLATFORM_VERSION: \t\t\t%s\n",platformInfo.m_platformVersion);
 
 				break;
 			}

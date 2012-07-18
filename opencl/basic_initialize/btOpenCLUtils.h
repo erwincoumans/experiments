@@ -159,6 +159,11 @@ struct btOpenCLUtils
 	
 	static void getPlatformInfo(cl_platform_id platform, btOpenCLPlatformInfo* platformInfo);
 
+	static inline void printPlatformInfo(cl_platform_id platform)
+	{
+		btOpenCLUtils_printPlatformInfo(platform);
+	}
+
 	static inline const char* getSdkVendorName()
 	{
 		return btOpenCLUtils_getSdkVendorName();
