@@ -126,7 +126,7 @@ void Win32OpenGLWindow::pumpMessage()
 {
 	MSG msg;
 		// check for messages
-		if ( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE )  )
+		while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE )  )
 		{
 			
 			// handle or dispatch messages
