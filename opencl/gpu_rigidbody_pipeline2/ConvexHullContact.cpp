@@ -1273,6 +1273,13 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
 	hasSeparatingNormals.resize(nPairs);
 	
+	int concaveCapacity=8192;
+	btOpenCLArray<float4> concaveSepNormals(m_context,m_queue);
+	concaveSepNormals.resize(concaveCapacity);
+
+	btOpenCLArray<int> numConcavePairsOut(m_context,m_queue);
+	numConcavePairsOut.push_back(0);
+
 
 	bool findSeparatingAxisOnGpu = true;
 
@@ -1281,13 +1288,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		if (findSeparatingAxisOnGpu)
 		{
 	
-			int concaveCapacity=8192;
-			btOpenCLArray<float4> concaveSepNormals(m_context,m_queue);
-			concaveSepNormals.resize(concaveCapacity);
-
-			btOpenCLArray<int> numConcavePairsOut(m_context,m_queue);
-			numConcavePairsOut.push_back(0);
-
+		
 			BT_PROFILE("findSeparatingAxisKernel");
 			btBufferInfoCL bInfo[] = { 
 				btBufferInfoCL( pairs->getBufferCL(), true ), 

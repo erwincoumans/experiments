@@ -144,9 +144,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		float sphereScaling[4] = {3,3,3,1};
 		bool noHeightField = false;
 		int sphereCollisionShapeIndex = physicsSim.registerCollisionShape(&sUnitSpherePoints[0].getX(),sizeof(btVector3), MY_UNITSPHERE_POINTS,&sphereScaling[0],noHeightField);
-		position[1] = 11120;	
-		position[1] = 1120;
-		position[1] = 11120;
+		position[0] = 11120;	
+		position[1] = -1120;
+		position[2] = 11120;
 
 		
 		float mass = 100.f;
