@@ -526,11 +526,52 @@ void	CLPhysicsDemo::setObjectLinearVelocity(const float* linVel, int objectIndex
 }
 
 
+struct ConvexPolyhedronCL2
+{
+	btVector3		m_localCenter;
+	btVector3		m_extents;
+	btVector3		mC;
+	btVector3		mE;
+
+	btScalar		m_radius;
+	int	m_faceOffset;
+	int m_numFaces;
+	int	m_numVertices;
+
+	int m_vertexOffset;
+	int	m_uniqueEdgesOffset;
+	int	m_numUniqueEdges;
+	int m_unused;	
+};
+
+#include "../../dynamics/basic_demo/Stubs/AdlRigidBody.h"
+
+struct Body2
+{
+
+	float4 m_pos;
+	Quaternion m_quat;
+	float4 m_linVel;
+	float4 m_angVel;
+
+	u32 m_collidableIdx;
+	float m_invMass;
+	float m_restituitionCoeff;
+	float m_frictionCoeff;
+			
+};
 
 
 void	CLPhysicsDemo::stepSimulation()
 {
-	
+	int sz = sizeof(ConvexPolyhedronCL2);
+	int sz1 = sizeof(ConvexPolyhedronCL);
+	btAssert(sz==sz1);
+
+	int b1 = sizeof(Body2);
+	int b2 = sizeof(RigidBodyBase::Body);
+	btAssert(b1==b2);
+
 	BT_PROFILE("simulationLoop");
 	
 	
@@ -597,11 +638,18 @@ void	CLPhysicsDemo::stepSimulation()
 		}
 		gFpIO.m_dlocalShapeAABB = (cl_mem)m_data->m_localShapeAABBGPU->getBufferCL();
 		gFpIO.m_numOverlap = 0;
+
+
 		{
 			BT_PROFILE("setupGpuAabbs");
-			setupGpuAabbsFull(gFpIO,narrowphaseAndSolver->getBodiesGpu() );
+			setupGpuAabbsFull(gFpIO,narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getCollidablesGpu() );
         //    setupGpuAabbsSimple(gFpIO);
 		}
+
+		{
+
+		}
+
 		if (1)
 		{
 			BT_PROFILE("calculateOverlappingPairs");

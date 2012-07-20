@@ -391,8 +391,6 @@ typedef struct
 	float4 m_angVel;
 
 	u32 m_shapeIdx;
-	u32 m_shapeType;
-	
 	float m_invMass;
 	float m_restituitionCoeff;
 	float m_frictionCoeff;
@@ -669,6 +667,7 @@ void SupportCullingKernel( __global int2* restrict gPairsIn, __global ShapeData*
 		counter32_t gNPairs,
 		ConstBuffer cb )
 {
+#if 0
 	int gIdx = GET_GLOBAL_IDX;
 	if( gIdx >= cb.m_nPairs ) return;
 
@@ -712,6 +711,7 @@ void SupportCullingKernel( __global int2* restrict gPairsIn, __global ShapeData*
 		if( dstIdx < capacity )
 			gPairsOut[dstIdx] = pair;
 	}
+	#endif
 }
 
 

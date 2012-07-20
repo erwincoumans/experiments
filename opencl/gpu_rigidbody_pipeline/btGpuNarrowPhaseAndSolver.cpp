@@ -386,6 +386,13 @@ const btCollidable& btGpuNarrowphaseAndSolver::getCollidableCpu(int collidableIn
 	return m_internalData->m_collidablesGPU->at(collidableIndex);
 }
 
+cl_mem btGpuNarrowphaseAndSolver::getCollidablesGpu()
+{
+	return m_internalData->m_collidablesGPU->getBufferCL();
+}
+
+
+
 
 void btGpuNarrowphaseAndSolver::setObjectTransform(const float* position, const float* orientation , int bodyIndex)
 {
@@ -427,10 +434,10 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass
 	body.m_collidableIdx = collidableIndex;
 	if (collidableIndex>=0)
 	{
-		body.m_shapeType = m_internalData->m_collidablesCPU.at(collidableIndex).m_shapeType;
+//		body.m_shapeType = m_internalData->m_collidablesCPU.at(collidableIndex).m_shapeType;
 	} else
 	{
-		body.m_shapeType = CollisionShape::SHAPE_PLANE;
+	//	body.m_shapeType = CollisionShape::SHAPE_PLANE;
 		m_planeBodyIndex = m_internalData->m_numAcceleratedRigidBodies;
 	}
 	//body.m_shapeType = shapeType;

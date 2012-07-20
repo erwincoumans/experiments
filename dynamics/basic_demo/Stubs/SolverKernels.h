@@ -374,7 +374,6 @@ static const char* solverKernelsCL= \
 "	float4 m_angVel;\n"
 "\n"
 "	u32 m_shapeIdx;\n"
-"	u32 m_shapeType;\n"
 "	float m_invMass;\n"
 "	float m_restituitionCoeff;\n"
 "	float m_frictionCoeff;\n"

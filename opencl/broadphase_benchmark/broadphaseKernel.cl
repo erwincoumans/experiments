@@ -66,12 +66,18 @@ typedef struct
 	float4 m_linVel;
 	float4 m_angVel;
 
-	u32 m_shapeIdx;
-	u32 m_shapeType;
+	u32 m_collidableIdx;
 	float m_invMass;
 	float m_restituitionCoeff;
 	float m_frictionCoeff;
 } Body;
+
+typedef struct Collidable
+{
+	int m_shapeType;
+	int m_shapeIndex;
+} Collidable;
+
 
 typedef struct
 {
@@ -271,7 +277,7 @@ __kernel void
 
 
 __kernel void 
-  initializeGpuAabbsFull( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global Body* gBodies, __global btAABBCL* plocalShapeAABB, __global btAABBCL* pAABB)
+  initializeGpuAabbsFull( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global Body* gBodies,__global Collidable* collidables, __global btAABBCL* plocalShapeAABB, __global btAABBCL* pAABB)
 {
 	int nodeID = get_global_id(0);
 		
@@ -286,12 +292,13 @@ __kernel void
 		
 	
 		
-		int shapeType = gBodies[nodeID].m_shapeType;
+	//	int shapeType = gBodies[nodeID].m_shapeType;
 		//if (shapeType==SHAPE_CONVEX_HULL)
 		{
 		
 			
-			int shapeIndex = gBodies[nodeID].m_shapeIdx;
+			int collidableIndex = gBodies[nodeID].m_collidableIdx;
+			int shapeIndex = collidables[collidableIndex].m_shapeIndex;
 			
 			if (shapeIndex>=0)
 			{

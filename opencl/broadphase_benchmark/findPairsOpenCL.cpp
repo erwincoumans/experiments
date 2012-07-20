@@ -68,7 +68,7 @@ void	findPairsOpenCLBruteForce(btFindPairsIO& fpio)
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
 
-void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies)
+void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies, cl_mem collidables)
 {
 
 			int ciErrNum = 0;
@@ -80,8 +80,9 @@ void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies)
 			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 1, sizeof(int), &numObjects);
 			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
 			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 3, sizeof(cl_mem), (void*)&bodies);
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 4, sizeof(cl_mem), (void*)&fpio.m_dlocalShapeAABB);
-			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 5, sizeof(cl_mem), (void*)&fpio.m_dAABB);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 4, sizeof(cl_mem), (void*)&collidables);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 5, sizeof(cl_mem), (void*)&fpio.m_dlocalShapeAABB);
+			ciErrNum = clSetKernelArg(fpio.m_initializeGpuAabbsKernelFull, 6, sizeof(cl_mem), (void*)&fpio.m_dAABB);
 				size_t workGroupSize = 64;
 			size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
 		

@@ -77,7 +77,7 @@ void	findPairsOpenCLBruteForce(btFindPairsIO& fpio);
 
 void	setupGpuAabbsSimple(btFindPairsIO& fpio);
 
-void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies);
+void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies, cl_mem collidables);
 
 
 void	colorPairsOpenCL(btFindPairsIO&	fpio);

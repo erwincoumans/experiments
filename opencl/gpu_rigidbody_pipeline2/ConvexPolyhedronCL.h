@@ -18,19 +18,16 @@ ATTRIBUTE_ALIGNED16(struct) ConvexPolyhedronCL
 	btVector3		m_extents;
 	btVector3		mC;
 	btVector3		mE;
-	btScalar		m_radius;
 
+	btScalar		m_radius;
 	int	m_faceOffset;
 	int m_numFaces;
-
-	//btAlignedObjectArray<btFace>	m_faces;
-
 	int	m_numVertices;
-	int m_vertexOffset;
 
+	int m_vertexOffset;
 	int	m_uniqueEdgesOffset;
 	int	m_numUniqueEdges;
-	
+	int m_unused;	
 	
 
 

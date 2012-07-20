@@ -63,9 +63,7 @@ typedef struct
 	float4 m_linVel;
 	float4 m_angVel;
 
-	u32 m_collidableIdx;
-	u32 m_collidableType;
-	
+	u32 m_collidableIdx;	
 	float m_invMass;
 	float m_restituitionCoeff;
 	float m_frictionCoeff;
@@ -78,16 +76,16 @@ typedef struct
 	float4		m_extents;
 	float4		mC;
 	float4		mE;
-	float			m_radius;
 	
+	float			m_radius;
 	int	m_faceOffset;
 	int m_numFaces;
-
 	int	m_numVertices;
+	
 	int m_vertexOffset;
-
 	int	m_uniqueEdgesOffset;
 	int	m_numUniqueEdges;
+	int m_unused;
 
 } ConvexPolyhedronCL;
 

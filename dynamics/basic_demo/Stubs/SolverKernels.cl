@@ -372,7 +372,6 @@ typedef struct
 	float4 m_angVel;
 
 	u32 m_shapeIdx;
-	u32 m_shapeType;
 	float m_invMass;
 	float m_restituitionCoeff;
 	float m_frictionCoeff;
