@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
 				CProfileManager::dumpAll();
 				printf("total broadphase pairs= %d\n", numPairsTotal);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);
-				printStats  = false;
+				//printStats  = false;
 			} else
 			{
 //				printf(".");

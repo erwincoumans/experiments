@@ -766,8 +766,7 @@ void GpuSatCollision::computeConcaveConvexContactsGPUSATSingle(
 							
 	int numActualConcaveConvexTests = 0;
 
-	//for (int f=0;f<numFaces;f++)
-	for (int f=0;f<numFaces;f+=2)
+	for (int f=0;f<numFaces;f++)
 								
 	{
 		BT_PROFILE("each face");	
@@ -1410,7 +1409,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 			triangleConvexPairsOut.resize(numConcave);
 
-			printf("numConcave  = %d\n",numConcave);
+			//printf("numConcave  = %d\n",numConcave);
 			
 		} else
 		{
@@ -1534,7 +1533,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 	
 	if (contactClippingOnGpu)
 	{
-		BT_PROFILE("clipHullHullKernel");
+		//BT_PROFILE("clipHullHullKernel");
 
 		
 		m_totalContactsOut.copyFromHostPointer(&nContacts,1,0,true);
@@ -1543,6 +1542,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 		if (numConcave)
 		{
+			BT_PROFILE("clipHullHullConcaveConvexKernel");
 			nContacts = m_totalContactsOut.at(0);
 			btBufferInfoCL bInfo[] = { 
 				btBufferInfoCL( triangleConvexPairsOut.getBufferCL(), true ), 
@@ -1569,28 +1569,32 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 		//convex-convex contact clipping
 
-		btBufferInfoCL bInfo[] = { 
-			btBufferInfoCL( pairs->getBufferCL(), true ), 
-			btBufferInfoCL( bodyBuf->getBufferCL(),true), 
-			btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
-			btBufferInfoCL( convexData.getBufferCL(),true),
-			btBufferInfoCL( gpuVertices.getBufferCL(),true),
-			btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
-			btBufferInfoCL( gpuFaces.getBufferCL(),true),
-			btBufferInfoCL( gpuIndices.getBufferCL(),true),
-			btBufferInfoCL( sepNormals.getBufferCL()),
-			btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
-			btBufferInfoCL( contactOut->getBufferCL()),
-			btBufferInfoCL( m_totalContactsOut.getBufferCL())	
-		};
-		btLauncherCL launcher(m_queue, m_clipHullHullKernel);
-		launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-		launcher.setConst( nPairs  );
-		int num = nPairs;
-		launcher.launch1D( num);
-		clFinish(m_queue);
+		{
+			BT_PROFILE("clipHullHullKernel");
+
+			btBufferInfoCL bInfo[] = { 
+				btBufferInfoCL( pairs->getBufferCL(), true ), 
+				btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+				btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
+				btBufferInfoCL( convexData.getBufferCL(),true),
+				btBufferInfoCL( gpuVertices.getBufferCL(),true),
+				btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+				btBufferInfoCL( gpuFaces.getBufferCL(),true),
+				btBufferInfoCL( gpuIndices.getBufferCL(),true),
+				btBufferInfoCL( sepNormals.getBufferCL()),
+				btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+				btBufferInfoCL( contactOut->getBufferCL()),
+				btBufferInfoCL( m_totalContactsOut.getBufferCL())	
+			};
+			btLauncherCL launcher(m_queue, m_clipHullHullKernel);
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst( nPairs  );
+			int num = nPairs;
+			launcher.launch1D( num);
+			clFinish(m_queue);
 		
-		nContacts = m_totalContactsOut.at(0);
+			nContacts = m_totalContactsOut.at(0);
+		}
 
 	} else
 	{	

@@ -646,8 +646,7 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 			int numFacesA = convexShapes[shapeIndexA].m_numFaces;
 			int numActualConcaveConvexTests = 0;
 			
-			//for (int f=0;f<numFacesA;f++)
-			for (int f=0;f<numFacesA;f+=2)
+			for (int f=0;f<numFacesA;f++)
 			{
 			
 				bool overlap = false;
