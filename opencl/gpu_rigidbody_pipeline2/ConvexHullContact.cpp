@@ -1262,23 +1262,17 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 	BT_PROFILE("computeConvexConvexContactsGPUSAT");
 
-	btOpenCLArray<float4> sepNormals(m_context,m_queue);
-	sepNormals.resize(nPairs);
-	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
-	hasSeparatingNormals.resize(nPairs);
-	
-	int concaveCapacity=8192;
-	btOpenCLArray<float4> concaveSepNormals(m_context,m_queue);
-	concaveSepNormals.resize(concaveCapacity);
-
-	
-
-
 	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
 	btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
 
 	btAlignedObjectArray<float4> hostNormals;
 	btAlignedObjectArray<int> hostHasSep;
+
+	btOpenCLArray<float4> sepNormals(m_context,m_queue);
+	sepNormals.resize(nPairs);
+	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
+	hasSeparatingNormals.resize(nPairs);
+	
 
 	bool findSeparatingAxisOnGpu = true;
 
@@ -1286,27 +1280,14 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		clFinish(m_queue);
 		if (findSeparatingAxisOnGpu)
 		{
+	
+			int concaveCapacity=8192;
+			btOpenCLArray<float4> concaveSepNormals(m_context,m_queue);
+			concaveSepNormals.resize(concaveCapacity);
+
 			btOpenCLArray<int> numConcavePairsOut(m_context,m_queue);
 			numConcavePairsOut.push_back(0);
 
-			/*
-			__kernel void   findSeparatingAxisKernel( __global const int2* pairs, 
-													__global const BodyData* rigidBodies, 
-													__global const btCollidableGpu* collidables,
-													__global const ConvexPolyhedronCL* convexShapes, 
-													__global const float4* vertices,
-													__global const float4* uniqueEdges,
-													__global const btGpuFace* faces,
-													__global const int* indices,
-													__global btAabbCL* aabbs,
-													__global volatile float4* separatingNormals,
-													__global volatile int* hasSeparatingAxis,
-													__global int4* concavePairsOut,
-													__global float4* concaveSeparatingNormalsOut,
-													__global volatile int* numConcavePairsOut,
-													int numPairs,
-													int maxnumConcavePairsCapacity
-			*/
 			BT_PROFILE("findSeparatingAxisKernel");
 			btBufferInfoCL bInfo[] = { 
 				btBufferInfoCL( pairs->getBufferCL(), true ), 
@@ -1343,15 +1324,19 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			concaveSepNormals.resize(numConcave);
 
 			concaveSepNormals.copyToHost(concaveHostNormals);
+			
 			printf("numConcave  = %d\n",numConcave);
-			for (int i=0;i<numConcave;i++)
+			/*for (int i=0;i<numConcave;i++)
 			{
 				printf("overlap for pair %d,%d\n",bla[i].x,bla[i].y);
 				printf("axis = %f,%f,%f\n",concaveHostNormals[i].x,concaveHostNormals[i].y,concaveHostNormals[i].z);
 			}
-			printf("END\n");
+			*/
+//			printf("END\n");
+			
 		} else
 		{
+
 
 			{
 
