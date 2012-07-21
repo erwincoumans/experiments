@@ -210,7 +210,7 @@ int btGpuNarrowphaseAndSolver::allocateCollidable()
 	return curSize;
 }
 
-int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btCollidable& col)
+int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btCollidable& col, const float* scaling)
 {
 
 	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);
@@ -236,9 +236,9 @@ int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btC
 	{
 		obj_face* face = obj->faceList[i];
 		
-		btVector3 vert0(obj->vertexList[face->vertex_index[0]]->e[0],obj->vertexList[face->vertex_index[0]]->e[1],obj->vertexList[face->vertex_index[0]]->e[2]);
-		btVector3 vert1(obj->vertexList[face->vertex_index[1]]->e[0],obj->vertexList[face->vertex_index[1]]->e[1],obj->vertexList[face->vertex_index[1]]->e[2]);
-		btVector3 vert2(obj->vertexList[face->vertex_index[2]]->e[0],obj->vertexList[face->vertex_index[2]]->e[1],obj->vertexList[face->vertex_index[2]]->e[2]);
+		btVector3 vert0(obj->vertexList[face->vertex_index[0]]->e[0]*scaling[0],obj->vertexList[face->vertex_index[0]]->e[1]*scaling[1],obj->vertexList[face->vertex_index[0]]->e[2]*scaling[2]);
+		btVector3 vert1(obj->vertexList[face->vertex_index[1]]->e[0]*scaling[0],obj->vertexList[face->vertex_index[1]]->e[1]*scaling[1],obj->vertexList[face->vertex_index[1]]->e[2]*scaling[2]);
+		btVector3 vert2(obj->vertexList[face->vertex_index[2]]->e[0]*scaling[0],obj->vertexList[face->vertex_index[2]]->e[1]*scaling[1],obj->vertexList[face->vertex_index[2]]->e[2]*scaling[2]);
 
 		btVector3 normal = ((vert1-vert0).cross(vert2-vert0)).normalize();
 		btScalar c = -(normal.dot(vert0));
@@ -264,7 +264,7 @@ int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btC
 	m_internalData->m_convexVertices.resize(vertexOffset+convex.m_numVertices);
 	for (int i=0;i<obj->vertexCount;i++)
 	{
-		btVector3 vert(obj->vertexList[i]->e[0],obj->vertexList[i]->e[1],obj->vertexList[i]->e[2]);
+		btVector3 vert(obj->vertexList[i]->e[0]*scaling[0],obj->vertexList[i]->e[1]*scaling[1],obj->vertexList[i]->e[2]*scaling[2]);
 		m_internalData->m_convexVertices[vertexOffset+i] = vert;
 	}
 

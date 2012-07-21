@@ -272,6 +272,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 #else
 		char* fileName = "../../bin/wavefront/plane.obj";
 		//char* fileName = "../../bin/wavefront/triangle.obj";
+		//char* fileName = "../../bin/wavefront/cornell_box.obj";
+		
+
 #endif
 		bool loadFile = false;
 
@@ -288,7 +291,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 			int shapeIndex = renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 			float groundPos[4] = {0,0,0,0};
 			renderer.registerGraphicsInstance(shapeIndex,groundPos,rotOrn,color,meshScaling);
-			int colShape = physicsSim.registerConcaveMesh(objData);
+			int colShape = physicsSim.registerConcaveMesh(objData, meshScaling);
 			
 			physicsSim.registerPhysicsInstance(0.f,groundPos, orn, colShape,colShape);
 			

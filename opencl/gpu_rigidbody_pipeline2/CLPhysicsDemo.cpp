@@ -196,13 +196,13 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
-int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj)
+int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj,const float* scaling)
 {
 	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
 	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	
 	col.m_shapeType = CollisionShape::SHAPE_CONCAVE_TRIMESH;
-	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(obj,col);
+	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(obj,col,scaling);
 
 	
 
@@ -212,7 +212,7 @@ int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj)
 
 	for (int i=0;i<obj->vertexCount;i++)
 	{
-		btVector3 vtx(obj->vertexList[i]->e[0],obj->vertexList[i]->e[1],obj->vertexList[i]->e[2]);
+		btVector3 vtx(obj->vertexList[i]->e[0]*scaling[0],obj->vertexList[i]->e[1]*scaling[1],obj->vertexList[i]->e[2]*scaling[2]);
 		myAabbMin.setMin(vtx);
 		myAabbMax.setMax(vtx);
 	}

@@ -75,7 +75,7 @@ public:
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
-	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col);
+	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col, const float* scaling);
 	int registerConvexHullShape(class btConvexUtility* convexPtr, btCollidable& col);
 	int registerConvexHeightfield(class ConvexHeightField* convexShape,btCollidable& col);
 	int registerRigidBody(int collidableIndex, float mass, const float* position, const float* orientation, const float* aabbMin, const float* aabbMax,bool writeToGpu);
