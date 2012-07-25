@@ -52,6 +52,7 @@ public:
 
 	virtual	void	exit();
 
+	virtual void runMainLoop();
 
 	virtual	void	startRendering();
 

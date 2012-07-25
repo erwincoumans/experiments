@@ -25,7 +25,8 @@
 		links {"BulletFileLoader"}
 		
 		files {
-			"../main.cpp",
+			"../main.cpp",     
+			"../satClipHullContacts.cpp",      
 			"../BulletDataExtractor.cpp",
 			"../BulletDataExtractor.h",
 			"../btGpuSapBroadphase.cpp",

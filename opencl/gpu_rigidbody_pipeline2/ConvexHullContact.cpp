@@ -1646,7 +1646,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
         if (1)
 		{
 			BT_PROFILE("clipHullHullKernel");
-#define BREAKUP_KERNEL
+//#define BREAKUP_KERNEL
 //#define DEBUG_CPU_CLIP
 #ifdef DEBUG_CPU_CLIP
             

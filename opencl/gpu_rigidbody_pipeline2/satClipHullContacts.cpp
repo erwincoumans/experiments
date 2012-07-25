@@ -131,7 +131,7 @@ float fastDiv(float numerator, float denominator)
 //	Quaternion
 ///////////////////////////////////////
 
-__inline float4 lerp3(const float4 a,const float4 b, float  t)
+__inline float4 lerp3(const float4& a,const float4& b, float  t)
 {
 	return make_float4(	a.x + (b.x - a.x) * t,
 						a.y + (b.y - a.y) * t,
@@ -144,7 +144,7 @@ __inline float4 lerp3(const float4 a,const float4 b, float  t)
 
 
 // Clips a face to the back of a plane, return the number of vertices out, stored in ppVtxOut
-int clipFace(const float4* pVtxIn, int numVertsIn, float4 planeNormalWS,float planeEqWS, float4* ppVtxOut)
+int clipFace(const float4* pVtxIn, int numVertsIn, const float4& planeNormalWS,float planeEqWS, float4* ppVtxOut)
 {
 	
 	int ve;
@@ -194,8 +194,8 @@ int clipFace(const float4* pVtxIn, int numVertsIn, float4 planeNormalWS,float pl
 }
 
 
-int clipFaceAgainstHull(const float4 separatingNormal, __global const ConvexPolyhedronCL* hullA,  
-	const float4 posA, const Quaternion ornA, float4* worldVertsB1, int numWorldVertsB1,
+int clipFaceAgainstHull(const float4& separatingNormal, __global const ConvexPolyhedronCL* hullA,  
+	const float4& posA, const Quaternion& ornA, float4* worldVertsB1, int numWorldVertsB1,
 	float4* worldVertsB2, int capacityWorldVertsB2,
 	const float minDist, float maxDist,
 	btAlignedObjectArray<float4>& vertices,
@@ -296,8 +296,8 @@ int clipFaceAgainstHull(const float4 separatingNormal, __global const ConvexPoly
 
 
 
-int clipFaceAgainstHullLocalA(const float4 separatingNormal, const ConvexPolyhedronCL* hullA,  
-	const float4 posA, const Quaternion ornA, float4* worldVertsB1, int numWorldVertsB1,
+int clipFaceAgainstHullLocalA(const float4& separatingNormal, const ConvexPolyhedronCL* hullA,  
+	const float4& posA, const Quaternion& ornA, float4* worldVertsB1, int numWorldVertsB1,
 	float4* worldVertsB2, int capacityWorldVertsB2,
 	const float minDist, float maxDist,
 	const float4* verticesA,
@@ -403,9 +403,9 @@ int clipFaceAgainstHullLocalA(const float4 separatingNormal, const ConvexPolyhed
 
 
 
-int	clipHullAgainstHull(const float4 separatingNormal,
+int	clipHullAgainstHull(const float4& separatingNormal,
 	__global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB,
-	const float4 posA, const Quaternion ornA,const float4 posB, const Quaternion ornB, 
+	const float4& posA, const Quaternion& ornA,const float4& posB, const Quaternion& ornB, 
 	float4* worldVertsB1, float4* worldVertsB2, int capacityWorldVerts,
 	const float minDist, float maxDist,
 	btAlignedObjectArray<float4>& vertices,
@@ -462,13 +462,13 @@ int	clipHullAgainstHull(const float4 separatingNormal,
 
 
 int	clipHullAgainstHullLocalA(
-                              const float4 separatingNormal,
+                              const float4& separatingNormal,
 	const ConvexPolyhedronCL* hullA,
                               __global const ConvexPolyhedronCL* hullB,
-	const float4 posA,
-                              const Quaternion ornA,
-                              const float4 posB,
-                              const Quaternion ornB,
+	const float4& posA,
+                              const Quaternion& ornA,
+                              const float4& posB,
+                              const Quaternion& ornB,
 	float4* worldVertsB1,
                               float4* worldVertsB2,
                               int capacityWorldVerts,
@@ -537,7 +537,7 @@ int	clipHullAgainstHullLocalA(
 #define REDUCE_MIN(v, n) {int i=0;\
 	for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i+offset]; }
 
-int extractManifoldSequential(const float4* p, int nPoints, float4 nearNormal, int* contactIdx)
+int extractManifoldSequential(const float4* p, int nPoints, const float4& nearNormal, int* contactIdx)
 {
 	if( nPoints == 0 ) return 0;
 
@@ -692,9 +692,9 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 }
 
 
-int	findClippingFaces(const float4 separatingNormal,
+int	findClippingFaces(const float4& separatingNormal,
                       __global const ConvexPolyhedronCL* hullA, __global const ConvexPolyhedronCL* hullB,
-                      const float4 posA, const Quaternion ornA,const float4 posB, const Quaternion ornB,
+                      const float4& posA, const Quaternion& ornA,const float4& posB, const Quaternion& ornB,
                       btAlignedObjectArray<float4>& worldVertsA1,
                       btAlignedObjectArray<float4>& worldNormalsA1,
                       btAlignedObjectArray<float4>& worldVertsB1, int capacityWorldVerts,
@@ -775,8 +775,8 @@ int	findClippingFaces(const float4 separatingNormal,
 }
 
 
-int clipFaces(const float4 separatingNormal, __global const ConvexPolyhedronCL* hullA2,
-              const float4 posA, const Quaternion ornA1,
+int clipFaces(const float4& separatingNormal, __global const ConvexPolyhedronCL* hullA2,
+              const float4& posA, const Quaternion& ornA1,
               btAlignedObjectArray<float4>& worldVertsA1,
               btAlignedObjectArray<float4>& worldNormalsA1,
               btAlignedObjectArray<float4>& worldVertsB1,

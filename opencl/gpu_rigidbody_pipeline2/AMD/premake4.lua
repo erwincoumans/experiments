@@ -25,6 +25,7 @@
 		
 		files {
 			"../main.cpp",
+			"../satClipHullContacts.cpp",      
 			"../BulletDataExtractor.cpp",
 			"../BulletDataExtractor.h",
 			"../btGpuSapBroadphase.cpp",

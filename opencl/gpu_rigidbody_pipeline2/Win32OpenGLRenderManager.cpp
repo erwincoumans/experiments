@@ -546,7 +546,10 @@ void	Win32OpenGLWindow::exit()
 }
 
 
+void Win32OpenGLWindow::runMainLoop()
+{
 
+}
 
 
 void	Win32OpenGLWindow::startRendering()
