@@ -1640,9 +1640,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
         if (1)
 		{
 			BT_PROFILE("clipHullHullKernel");
-#ifdef __APPLE__
+//#ifdef __APPLE__
 #define BREAKUP_KERNEL
-#endif
+//#endif
 
 //#define DEBUG_CPU_CLIP
 #ifdef DEBUG_CPU_CLIP
@@ -1931,11 +1931,38 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                 btLauncherCL launcher(m_queue, m_clipFacesAndContactReductionKernel);
                 launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
                 launcher.setConst(vertexFaceCapacity);
-                launcher.setConst( nPairs  );
+
+				launcher.setConst( nPairs  );
+                int debugMode = 1;
+				launcher.setConst( debugMode);
+
+				/*
+				int serializationBytes = launcher.getSerializationBufferSize();
+				unsigned char* buf = (unsigned char*)malloc(serializationBytes+1);
+				int actualWritten = launcher.serializeArguments(buf,serializationBytes+1);
+				FILE* f = fopen("clipFacesAndContactReductionKernel.bin","wb");
+				fwrite(buf,actualWritten,1,f);
+				fclose(f);
+				free(buf);
+				printf("serializationBytes=%d, actualWritten=%d\n",serializationBytes,actualWritten);
+				*/
+
                 int num = nPairs;
+
+				launcher.serializeToFile("clipFacesAndContactReductionKernel_before.bin",num);
                 launcher.launch1D( num);
                 clFinish(m_queue);
-                
+				Contact4 mycontact = contactOut->forcedAt(0);
+				unsigned char* bla = (unsigned char*)&mycontact;
+
+
+				for (int b=0;b<sizeof(Contact4);b++)
+				{
+					int val = bla[b];
+					printf("byte at %d = %d\n", b,val);
+				}
+				launcher.serializeToFile("clipFacesAndContactReductionKernel_after.bin",num);
+
 				//p = clippingFacesOutGPU.at(0);
 
                 nContacts = m_totalContactsOut.at(0);

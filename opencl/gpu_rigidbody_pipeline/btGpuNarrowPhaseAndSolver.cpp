@@ -159,7 +159,9 @@ m_queue(queue)
 	m_internalData->m_inertiaBufferCPU = new btAlignedObjectArray<RigidBodyBase::Inertia>();
 	m_internalData->m_inertiaBufferCPU->resize(MAX_CONVEX_BODIES_CL);
 	
-	m_internalData->m_pBufContactOutGPU = new btOpenCLArray<Contact4>(ctx,queue, MAX_BROADPHASE_COLLISION_CL,false);
+	m_internalData->m_pBufContactOutGPU = new btOpenCLArray<Contact4>(ctx,queue, 1024,true);//MAX_BROADPHASE_COLLISION_CL,false);
+	Contact4 test = m_internalData->m_pBufContactOutGPU->forcedAt(0);
+
 	m_internalData->m_inertiaBufferGPU = new btOpenCLArray<RigidBodyBase::Inertia>(ctx,queue,MAX_CONVEX_BODIES_CL,false);
 	m_internalData->m_collidablesGPU = new btOpenCLArray<btCollidable>(ctx,queue,MAX_CONVEX_SHAPES_CL);
     

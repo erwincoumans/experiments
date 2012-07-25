@@ -1317,7 +1317,8 @@ __kernel void   findClippingFacesKernel(  __global const int2* pairs,
                                         __global float4* worldNormalsA1,
                                         __global float4* worldVertsB1,
                                         int capacityWorldVerts,
-                                        int numPairs)
+                                        int numPairs
+                                        )
 {
     
 	int i = get_global_id(0);
@@ -1376,7 +1377,9 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
                                                    __global float4* worldVertsB2,
                                                    counter32_t nGlobalContactsOut,
                                                     int vertexFaceCapacity,
-                                                   int numPairs)
+                                                   int numPairs,
+					                                        int debugMode
+                                                   )
 {
     int i = get_global_id(0);
 	int pairIndex = i;
@@ -1428,6 +1431,11 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
                 
 				int dstIdx;
 				AppendInc( nGlobalContactsOut, dstIdx );
+
+				//in debug mode we force the output to be sorted, so we can compare it in later runs
+				if (debugMode)
+					dstIdx = pairIndex;
+					
 				//if ((dstIdx+nReducedContacts) < capacity)
 				{
 					__global Contact4* c = &globalContactsOut[dstIdx];

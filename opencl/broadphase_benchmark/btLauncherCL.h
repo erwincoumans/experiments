@@ -99,6 +99,7 @@ class btLauncherCL
         for (int i=0;i<numArguments;i++)
         {
             btKernelArgData* arg = (btKernelArgData*)&buf[index];
+
             index+=sizeof(btKernelArgData);
             if (arg->m_isBuffer)
             {
@@ -119,11 +120,105 @@ class btLauncherCL
                 cl_int status = clSetKernelArg( m_kernel, m_idx++, arg->m_argSizeInBytes, &arg->m_argData);
 				btAssert( status == CL_SUCCESS );
             }
+			m_kernelArguments.push_back(*arg);
         }
+		m_serializationSizeInBytes = index;
         return index;
     }
+
+	inline int validateResults(unsigned char* goldBuffer, int goldBufferCapacity, cl_context ctx)
+    {
+		 int index=0;
+        
+        int numArguments = *(int*) &goldBuffer[index];
+        index+=sizeof(int);
+
+		if (numArguments != m_kernelArguments.size())
+		{
+			printf("failed validation: expected %d arguments, found %d\n",numArguments, m_kernelArguments.size());
+			return -1;
+		}
+        
+        for (int ii=0;ii<numArguments;ii++)
+        {
+            btKernelArgData* argGold = (btKernelArgData*)&goldBuffer[index];
+
+			if (m_kernelArguments[ii].m_argSizeInBytes != argGold->m_argSizeInBytes)
+			{
+				printf("failed validation: argument %d sizeInBytes expected: %d, found %d\n",ii, argGold->m_argSizeInBytes, m_kernelArguments[ii].m_argSizeInBytes);
+				return -2;
+			}
+
+			{
+				int expected = argGold->m_isBuffer;
+				int found = m_kernelArguments[ii].m_isBuffer;
+
+				if (expected != found)
+				{
+					printf("failed validation: argument %d isBuffer expected: %d, found %d\n",ii,expected, found);
+					return -3;
+				}
+			}
+			index+=sizeof(btKernelArgData);
+
+			if (argGold->m_isBuffer)
+            {
+
+				unsigned char* memBuf= (unsigned char*) malloc(m_kernelArguments[ii].m_argSizeInBytes);
+				unsigned char* goldBuf = &goldBuffer[index];
+				for (int j=0;j<m_kernelArguments[j].m_argSizeInBytes;j++)
+				{
+					memBuf[j] = 0xaa;
+				}
+
+				cl_int status = 0;
+				status = clEnqueueReadBuffer( m_commandQueue, m_kernelArguments[ii].m_clBuffer, CL_TRUE, 0, m_kernelArguments[ii].m_argSizeInBytes,
+                                             memBuf, 0,0,0 );
+                btAssert( status==CL_SUCCESS );
+                clFinish(m_commandQueue);
+
+				for (int b=0;b<m_kernelArguments[ii].m_argSizeInBytes;b++)
+				{
+					int expected = goldBuf[b];
+					int found = memBuf[b];
+					if (expected != found)
+					{
+						printf("failed validation: argument %d OpenCL data at byte position %d expected: %d, found %d\n",
+							ii, b, expected, found);
+						return -4;
+					}
+				}
+
+                
+                index+=argGold->m_argSizeInBytes;
+            } else 
+            {
+				
+				//compare content
+				for (int b=0;b<m_kernelArguments[ii].m_argSizeInBytes;b++)
+				{
+					int expected = argGold->m_argData[b];
+					int found =m_kernelArguments[ii].m_argData[b];
+					if (expected != found)
+					{
+						printf("failed validation: argument %d const data at byte position %d expected: %d, found %d\n",
+							ii, b, expected, found);
+						return -5;
+					}
+				}
+
+            }
+        }
+        return index;
+  
+	}
+
     inline int serializeArguments(unsigned char* destBuffer, int destBufferCapacity)
     {
+		//initialize to known values
+		for (int i=0;i<destBufferCapacity;i++)
+			destBuffer[i] = 0xec;
+
         assert(destBufferCapacity>=m_serializationSizeInBytes);
         
         //todo: use the btSerializer for this to allow for 32/64bit, endianness etc        
@@ -153,8 +248,6 @@ class btLauncherCL
             
         }
         return curBufferSize;
-        
-    
     }
 	
 	void serializeToFile(const char* fileName, int numWorkItems)

@@ -40,9 +40,12 @@ subject to the following restrictions:
 #include "../broadphase_benchmark/sapFastKernels.h"
 #include "../broadphase_benchmark/sapKernels.h"
 #include "../../dynamics/basic_demo/Stubs/SolverKernels.h"
+#include "../../opencl/gpu_rigidbody_pipeline2/satClipKernels.h"
 
 
 #define SOLVER_KERNEL_PATH "../../dynamics/basic_demo/Stubs/SolverKernels.cl"
+
+#define CLIP_HULL_KERNEL_PATH "../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl"
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
@@ -99,6 +102,8 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 	}
     
 }
+
+
 
 
 
@@ -240,6 +245,102 @@ void testSolverKernel()
 
 }
 
+
+void testCLipHullKernel()
+{
+
+	const char* clipHullKernelSource = satClipKernelsCL;
+	cl_int pErrNum=0;
+	const char* additionalMacros = "";
+
+	cl_program clipHullProg= btOpenCLUtils::compileCLProgramFromString( g_cxMainContext, g_device, clipHullKernelSource, &pErrNum,additionalMacros, CLIP_HULL_KERNEL_PATH);
+	btAssert(clipHullProg);
+		
+	cl_kernel m_clipHullKernel= btOpenCLUtils::compileCLKernelFromString( g_cxMainContext, g_device, clipHullKernelSource, "clipFacesAndContactReductionKernel", &pErrNum, clipHullProg,additionalMacros );
+	btAssert(m_clipHullKernel);
+	
+
+	 btLauncherCL launcher(g_cqCommandQue, m_clipHullKernel);
+        const char* fileName = "clipFacesAndContactReductionKernel_before.bin";
+        FILE* fin = fopen(fileName,"rb");
+        if (fin)
+        {
+            int sizeInBytes=0;
+            if (fseek(fin, 0, SEEK_END) || (sizeInBytes = ftell(fin)) == EOF || fseek(fin, 0, SEEK_SET)) 
+            {
+                printf("error, cannot get file size\n");
+                exit(0);
+            }
+            
+            unsigned char* bufIn = (unsigned char*) malloc(sizeInBytes);
+            fread(bufIn,sizeInBytes,1,fin);
+            int serializedBytes = launcher.deserializeArgs(bufIn, sizeInBytes,g_cxMainContext);
+            int num = *(int*)&bufIn[serializedBytes];
+			fclose(fin);
+			fin=0;
+
+			launcher.serializeToFile("testbefore.bin",1);
+
+            launcher.launch1D( num);
+			clFinish(g_cqCommandQue);
+
+			launcher.serializeToFile("testafter.bin",1);
+
+
+
+			//verify with precomputed (gold) output binary
+			const char* fileNameGold = "clipFacesAndContactReductionKernel_after.bin";
+			FILE* fg = fopen(fileNameGold,"rb");
+			if (fg)
+			{
+				int sizeInBytes=0;
+				if (fseek(fg, 0, SEEK_END) || (sizeInBytes = ftell(fg)) == EOF || fseek(fg, 0, SEEK_SET)) 
+				{
+					printf("error, cannot get file size\n");
+					exit(0);
+				}
+            
+				unsigned char* bufgold = (unsigned char*) malloc(sizeInBytes);
+				fread(bufgold,sizeInBytes,1,fg);
+				unsigned char* hitdata = &bufgold[0x64a240];
+				fclose(fg);
+				fg=0;
+
+				int result = launcher.validateResults(bufgold,sizeInBytes,g_cxMainContext);
+				if (result>=0)
+				{
+					printf("computation results OK\n");
+				}
+				else
+				{
+					printf("test failed with output %d\n", result);
+				}
+			}
+			
+            /*btOpenCLArray<int> pairCount(g_cxMainContext, g_cqCommandQue);
+            int numElements = launcher.m_arrays[2]->size()/sizeof(int);
+            pairCount.setFromOpenCLBuffer(launcher.m_arrays[2]->getBufferCL(),numElements);
+            int count = pairCount.at(0);
+            printf("overlapping pairs = %d\n",count);
+           */
+
+            
+        } else {
+            printf("error: cannot find file %s\n",fileName);
+        }
+
+        
+    clFinish(g_cqCommandQue);
+        
+    clReleaseKernel(m_clipHullKernel);
+    clReleaseProgram(clipHullProg);
+    clFinish(g_cqCommandQue);
+
+}
+
+
+
+
 int actualMain(int argc, char* argv[])
 {
 	int ciErrNum = 0;
@@ -247,11 +348,13 @@ int actualMain(int argc, char* argv[])
     bool interop = false;
     InitCL(-1,-1,interop);
     
-    
-    for (int i=0;i<MAX_KERNEL_TESTS;i++)
+    testCLipHullKernel();
+
+/*    for (int i=0;i<MAX_KERNEL_TESTS;i++)
         testSapKernel_computePairsKernelOriginal(i);
 	
     testSolverKernel();
+	*/
 
 
     

@@ -91,6 +91,16 @@ public:
 		copyFromHostPointer(&_Val, 1, sz, waitForCompletion);
 		m_size++;
 	}
+
+	SIMD_FORCE_INLINE T forcedAt(int n) const
+	{
+		btAssert(n>=0);
+		btAssert(n<capacity());
+		T elem;
+		copyToHostPointer(&elem,1,n,true);
+		return elem;
+	}
+
 	SIMD_FORCE_INLINE T at(int n) const
 	{
 		btAssert(n>=0);
@@ -143,6 +153,17 @@ public:
 				int memSizeInBytes = sizeof(T)*_Count;
 				cl_mem buf = clCreateBuffer(m_clContext, CL_MEM_READ_WRITE, memSizeInBytes, NULL, &ciErrNum);
 				btAssert(ciErrNum==CL_SUCCESS);
+
+#define BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
+#ifdef BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
+				unsigned char* src = (unsigned char*)malloc(memSizeInBytes);
+				for (int i=0;i<memSizeInBytes;i++)
+					src[i] = 0xbb;
+				ciErrNum = clEnqueueWriteBuffer( m_commandQueue, buf, CL_TRUE, 0, memSizeInBytes, src, 0,0,0 );
+				btAssert(ciErrNum==CL_SUCCESS);
+				clFinish(m_commandQueue);
+				free(src);
+#endif //BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
 
 				if (copyOldContents)
 					copyToCL(buf, size());
