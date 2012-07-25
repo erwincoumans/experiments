@@ -738,6 +738,7 @@ void	CLPhysicsDemo::stepSimulation()
 					oclCHECKERROR(ciErrNum, CL_SUCCESS);
 				} else
 				{
+#ifdef _WIN32
 					//debug velocity
 					btAlignedObjectArray<btVector3> linvel;
 					m_data->m_linVelBuf->copyToHost(linvel);
@@ -745,7 +746,8 @@ void	CLPhysicsDemo::stepSimulation()
 					{
 						btAssert(_finite(linvel[i].x()));
 					}
-					btAssert(0);
+#endif
+                    btAssert(0);
 
 				}
 			} 

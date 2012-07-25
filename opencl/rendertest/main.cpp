@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
 #ifndef __APPLE__
 	GLenum err = glewInit();
 #endif
+    window->runMainLoop();
 	window->startRendering();
 	window->endRendering();
 
@@ -124,7 +125,7 @@ int main(int argc, char* argv[])
 
 	render.writeTransforms();
 
-//    window->runMainLoop();
+    window->runMainLoop();
 
 	while (!window->requestedExit())
 	{

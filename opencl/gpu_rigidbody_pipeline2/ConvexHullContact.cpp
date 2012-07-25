@@ -67,6 +67,12 @@ m_totalContactsOut(m_context, m_queue)
 		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipHullHullKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
 
+        m_findClippingFacesKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "findClippingFacesKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);
+
+        m_clipFacesAndContactReductionKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipFacesAndContactReductionKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);        
+
 		m_clipHullHullConcaveConvexKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipHullHullConcaveConvexKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
 
@@ -76,6 +82,8 @@ m_totalContactsOut(m_context, m_queue)
 	} else
 	{
 		m_clipHullHullKernel=0;
+        m_findClippingFacesKernel = 0;
+        m_clipFacesAndContactReductionKernel = 0;
 		m_clipHullHullConcaveConvexKernel = 0;
 		m_extractManifoldAndAddContactKernel = 0;
 	}
@@ -88,6 +96,13 @@ GpuSatCollision::~GpuSatCollision()
 	if (m_findSeparatingAxisKernel)
 		clReleaseKernel(m_findSeparatingAxisKernel);
 
+    
+    if (m_findClippingFacesKernel)
+        clReleaseKernel(m_findClippingFacesKernel);
+   
+    if (m_clipFacesAndContactReductionKernel)
+        clReleaseKernel(m_clipFacesAndContactReductionKernel);
+    
 	if (m_clipHullHullKernel)
 		clReleaseKernel(m_clipHullHullKernel);
 	if (m_clipHullHullConcaveConvexKernel)
@@ -1329,6 +1344,64 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 	}
 }
 
+
+ void   clipHullHullKernel( btAlignedObjectArray<int2>& pairs,
+                                   btAlignedObjectArray<struct BodyData>& rigidBodies,
+                                   const btAlignedObjectArray<struct btCollidableGpu>&collidables,
+                                   btAlignedObjectArray<struct ConvexPolyhedronCL>& convexShapes,
+                                   btAlignedObjectArray<float4>& vertices,
+                                   btAlignedObjectArray<float4>& uniqueEdges,
+                                   btAlignedObjectArray<btGpuFace>& faces,
+                                   btAlignedObjectArray<int>& indices,
+                                   btAlignedObjectArray<float4>&separatingNormals,
+                                   btAlignedObjectArray<int>& hasSeparatingAxis,
+                                   btAlignedObjectArray<Contact4>&globalContactsOut,
+                                   int* nGlobalContactsOut,
+                                   int numPairs);
+
+void   findClippingFacesKernel( btAlignedObjectArray<int2>& pairs,
+                               btAlignedObjectArray< BodyData>& rigidBodies,
+                               const btAlignedObjectArray< btCollidableGpu>&collidables,
+                               btAlignedObjectArray< ConvexPolyhedronCL>& convexShapes,
+                               btAlignedObjectArray<float4>& vertices,
+                               btAlignedObjectArray<float4>& uniqueEdges,
+                               btAlignedObjectArray<btGpuFace>& faces,
+                               btAlignedObjectArray<int>& indices,
+                               btAlignedObjectArray<float4>&separatingNormals,
+                               btAlignedObjectArray<int>& hasSeparatingAxis,
+                               btAlignedObjectArray<int4>&clippingFacesOut,
+                               btAlignedObjectArray<float4>& worldVertsA1,
+                               btAlignedObjectArray<float4>& worldNormalsA1,
+                               btAlignedObjectArray<float4>& worldVertsB1,
+                               int capacityWorldVerts,
+                               int numPairs);
+    
+
+
+void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
+                                          btAlignedObjectArray< BodyData>& rigidBodies,
+                                          const btAlignedObjectArray< btCollidableGpu>&collidables,
+                                          btAlignedObjectArray< ConvexPolyhedronCL>& convexShapes,
+                                          btAlignedObjectArray<float4>& vertices,
+                                          btAlignedObjectArray<float4>& uniqueEdges,
+                                          btAlignedObjectArray<btGpuFace>& faces,
+                                          btAlignedObjectArray<int>& indices,
+                                          btAlignedObjectArray<float4>&separatingNormals,
+                                          btAlignedObjectArray<int>& hasSeparatingAxis,
+                                          btAlignedObjectArray<Contact4>&globalContactsOut,
+                                          btAlignedObjectArray<int4>& clippingFaces,
+                                          btAlignedObjectArray<float4>& worldVertsA1,
+                                          btAlignedObjectArray<float4>& worldNormalsA1,
+                                          btAlignedObjectArray<float4>& worldVertsB1,
+                                          btAlignedObjectArray<float4>& worldVertsB2,
+                                          int* nGlobalContactsOut,
+                                          int vertexFaceCapacity,
+                                          int numPairs);
+
+extern int g_globalId;
+
+
+
 void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
@@ -1349,7 +1422,8 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		return;
 
 	BT_PROFILE("computeConvexConvexContactsGPUSAT");
-
+   // printf("nContacts = %d\n",nContacts);
+    
 	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
 	btAlignedObjectArray<RigidBodyBase::Body> hostBodyBuf;
 
@@ -1526,7 +1600,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		
 	}
 #ifdef __APPLE__
- bool contactClippingOnGpu = false;
+ bool contactClippingOnGpu = true;
 #else
  bool contactClippingOnGpu = true;
 #endif
@@ -1540,7 +1614,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 		//concave-convex contact clipping
 
-		if (numConcave)
+		if (0)//numConcave)
 		{
 			BT_PROFILE("clipHullHullConcaveConvexKernel");
 			nContacts = m_totalContactsOut.at(0);
@@ -1569,10 +1643,317 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 		//convex-convex contact clipping
 
+        if (1)
 		{
 			BT_PROFILE("clipHullHullKernel");
+#define BREAKUP_KERNEL
+//#define DEBUG_CPU_CLIP
+#ifdef DEBUG_CPU_CLIP
+            
+            btAlignedObjectArray<int2> hostPairs;
+            pairs->copyToHost(hostPairs);
+            btAlignedObjectArray<RigidBodyBase::Body> hostBodies;
+            bodyBuf->copyToHost(hostBodies);
+            btAlignedObjectArray<btCollidable> hostCollidables;
+            gpuCollidables.copyToHost(hostCollidables);
+            btAlignedObjectArray<ConvexPolyhedronCL> hostConvexShapeData;
+            convexData.copyToHost(hostConvexShapeData);
+            btAlignedObjectArray<btVector3> verticesA;
+            gpuVertices.copyToHost(verticesA);
+			btAlignedObjectArray<btGpuFace> faces;
+            gpuFaces.copyToHost(faces);
+			btAlignedObjectArray<btVector3> uniqueEdges;
+            gpuUniqueEdges.copyToHost(uniqueEdges);
+			btAlignedObjectArray<int> indices;
+            gpuIndices.copyToHost(indices);
+//            btAlignedObjectArray<float4> hostConcaveSepNormals;
+  //          concaveSepNormals.copyToHost(hostConcaveSepNormals);
+            btAlignedObjectArray<float4> hostSepNormals;
+            sepNormals.copyToHost(hostSepNormals);
+            btAlignedObjectArray<int> hostHasSepAxis;
+            hasSeparatingNormals.copyToHost(hostHasSepAxis);
+            btAlignedObjectArray<Contact4> hostContactOut;
+            contactOut->copyToHost(hostContactOut);
+            int gpuContactCapacity = contactOut->capacity();
+            
+            hostContactOut.resize(gpuContactCapacity);
+            hostHasSepAxis.resize(gpuContactCapacity);
+            
+            int nGlobalContactsOut = 0;
+            
+            int prevGlobalContactOut = nGlobalContactsOut;
+            
+            int vertexFaceCapacity = 64;
 
-			btBufferInfoCL bInfo[] = { 
+            btAlignedObjectArray<float4> worldVertsA1;
+            worldVertsA1.resizeNoInitialize(vertexFaceCapacity*nPairs);
+
+            btAlignedObjectArray<float4> worldNormalsA1;
+            worldNormalsA1.resizeNoInitialize(nPairs);
+
+            
+            btAlignedObjectArray<float4> worldVertsB1;
+            worldVertsB1.resizeNoInitialize(vertexFaceCapacity*nPairs);
+            btAlignedObjectArray<float4> worldVertsB2;
+            worldVertsB2.resizeNoInitialize(vertexFaceCapacity*nPairs);
+            
+            btAlignedObjectArray<int4> clippingFacesOut;
+            clippingFacesOut.resizeNoInitialize(nPairs);
+            
+            
+
+#ifdef BREAKUP_KERNEL
+            bool useGpu = true;
+            if (useGpu)
+            {
+                ///find clipping faces
+                {
+                    
+                    btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
+                    clippingFacesOutGPU.resize(nPairs);
+                  
+                    btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
+                    worldNormalsAGPU.resize(nPairs);
+                    
+                    btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
+                    worldVertsA1GPU.resize(vertexFaceCapacity*nPairs);
+                    
+
+                    
+                    btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
+                    worldVertsB1GPU.resize(vertexFaceCapacity*nPairs);
+          
+                    
+                    btBufferInfoCL bInfo[] = {
+                        btBufferInfoCL( pairs->getBufferCL(), true ),
+                        btBufferInfoCL( bodyBuf->getBufferCL(),true),
+                        btBufferInfoCL( gpuCollidables.getBufferCL(),true),
+                        btBufferInfoCL( convexData.getBufferCL(),true),
+                        btBufferInfoCL( gpuVertices.getBufferCL(),true),
+                        btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+                        btBufferInfoCL( gpuFaces.getBufferCL(),true),
+                        btBufferInfoCL( gpuIndices.getBufferCL(),true),
+                        btBufferInfoCL( sepNormals.getBufferCL()),
+                        btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+                        btBufferInfoCL( clippingFacesOutGPU.getBufferCL()),
+                        btBufferInfoCL( worldVertsA1GPU.getBufferCL()),
+                        btBufferInfoCL( worldNormalsAGPU.getBufferCL()),
+                        btBufferInfoCL( worldVertsB1GPU.getBufferCL())
+                    };
+                    
+                    btLauncherCL launcher(m_queue, m_findClippingFacesKernel);
+                    launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+                    launcher.setConst( vertexFaceCapacity);
+                    launcher.setConst( nPairs  );
+                    int num = nPairs;
+                    launcher.launch1D( num);
+                    clFinish(m_queue);
+                    
+                    clippingFacesOutGPU.copyToHost(clippingFacesOut);
+                    worldVertsB1GPU.copyToHost(worldVertsB1);
+                    worldVertsA1GPU.copyToHost(worldVertsA1);
+                    worldNormalsAGPU.copyToHost(worldNormalsA1);
+                    
+                    for (int i=0;i<nPairs;i++)
+                    {
+                     //   printf("num Faces A=%d\n", clippingFacesOut[i].z);
+                       // printf("num Faces A=%d\n", clippingFacesOut[i].z);
+
+                    }
+                     
+                }
+
+            } else
+            {
+                BT_PROFILE("findClippingFacesKernel");
+                for (int i=0;i<nPairs;i++)
+                {
+                    g_globalId = i;
+                    
+                    
+                    findClippingFacesKernel((btAlignedObjectArray<int2>&)hostPairs,
+                                       (btAlignedObjectArray<struct BodyData>&)hostBodies,
+                                       (btAlignedObjectArray<struct btCollidableGpu>&)hostCollidables,
+                                       (btAlignedObjectArray<struct ConvexPolyhedronCL>&)hostConvexShapeData,
+                                       (btAlignedObjectArray<float4>& )verticesA,
+                                       (btAlignedObjectArray<float4>& )uniqueEdges,
+                                       (btAlignedObjectArray<btGpuFace>&)faces,
+                                       (btAlignedObjectArray<int>&)indices,
+                                       (btAlignedObjectArray<float4>&)hostSepNormals,
+                                       (btAlignedObjectArray<int>&)hostHasSepAxis,
+                                       (btAlignedObjectArray<int4>&)clippingFacesOut,
+                                            (btAlignedObjectArray<float4>&) worldVertsA1,
+                                            (btAlignedObjectArray<float4>&) worldNormalsA1,
+                                            (btAlignedObjectArray<float4>&) worldVertsB1,
+                                        vertexFaceCapacity,
+                                       nPairs);
+                }
+            }
+            
+            {
+                BT_PROFILE("clipFacesAndContactReductionKernel");
+            for (int i=0;i<nPairs;i++)
+            {
+                g_globalId = i;
+                
+                
+                
+                clipFacesAndContactReductionKernel((btAlignedObjectArray<int2>&)hostPairs,
+                                   (btAlignedObjectArray<struct BodyData>&)hostBodies,
+                                   (btAlignedObjectArray<struct btCollidableGpu>&)hostCollidables,
+                                   (btAlignedObjectArray<struct ConvexPolyhedronCL>&)hostConvexShapeData,
+                                   (btAlignedObjectArray<float4>& )verticesA,
+                                   (btAlignedObjectArray<float4>& )uniqueEdges,
+                                   (btAlignedObjectArray<btGpuFace>&)faces,
+                                   (btAlignedObjectArray<int>&)indices,
+                                   (btAlignedObjectArray<float4>&)hostSepNormals,
+                                   (btAlignedObjectArray<int>&)hostHasSepAxis,
+                                   (btAlignedObjectArray<Contact4>&)hostContactOut,
+                                    (btAlignedObjectArray<int4>&) clippingFacesOut,
+                                                   (btAlignedObjectArray<float4>&) worldVertsA1,
+                                                   (btAlignedObjectArray<float4>&) worldNormalsA1,
+                                                   (btAlignedObjectArray<float4>&) worldVertsB1,
+                                    (btAlignedObjectArray<float4>&) worldVertsB2,
+                                   &nGlobalContactsOut,
+                                    vertexFaceCapacity,
+                                   nPairs);
+            }
+            }
+            printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);
+            
+#else//BREAKUP_KERNEL
+            for (int i=0;i<nPairs;i++)
+            {
+                g_globalId = i;
+                
+                
+                clipHullHullKernel((btAlignedObjectArray<int2>&)hostPairs,
+                               (btAlignedObjectArray<struct BodyData>&)hostBodies,
+                               (btAlignedObjectArray<struct btCollidableGpu>&)hostCollidables,
+                               (btAlignedObjectArray<struct ConvexPolyhedronCL>&)hostConvexShapeData,
+                               (btAlignedObjectArray<float4>& )verticesA,
+                               (btAlignedObjectArray<float4>& )uniqueEdges,
+                               (btAlignedObjectArray<btGpuFace>&)faces,
+                               (btAlignedObjectArray<int>&)indices,
+                               (btAlignedObjectArray<float4>&)hostSepNormals,
+                               (btAlignedObjectArray<int>&)hostHasSepAxis,
+                               (btAlignedObjectArray<Contact4>&)hostContactOut,
+                               &nGlobalContactsOut,
+                               nPairs);
+                printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);                
+            }
+#endif//BREAKUP_KERNEL
+            
+            
+            hostContactOut.resize(nGlobalContactsOut);
+            if (nGlobalContactsOut != prevGlobalContactOut)
+            {
+                contactOut->copyFromHost(hostContactOut);
+            }
+            
+            nContacts = nGlobalContactsOut;
+            m_totalContactsOut.copyFromHostPointer(&nContacts,1,0,true);
+            
+            
+#else//DEBUG_CPU_CLIP
+
+            
+#ifdef BREAKUP_KERNEL
+
+            
+            btOpenCLArray<int4> clippingFacesOut(m_context,m_queue);
+            clippingFacesOut.resize(nPairs);
+            
+            int vertexFaceCapacity = 64;
+            
+            btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
+            worldVertsB1GPU.resize(vertexFaceCapacity*nPairs);
+          
+            btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
+            worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
+            
+            
+            btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
+            clippingFacesOutGPU.resize(nPairs);
+            
+            btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
+            worldNormalsAGPU.resize(nPairs);
+            
+            btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
+            worldVertsA1GPU.resize(vertexFaceCapacity*nPairs);
+            
+            
+            {
+            btBufferInfoCL bInfo[] = {
+                btBufferInfoCL( pairs->getBufferCL(), true ),
+                btBufferInfoCL( bodyBuf->getBufferCL(),true),
+                btBufferInfoCL( gpuCollidables.getBufferCL(),true),
+                btBufferInfoCL( convexData.getBufferCL(),true),
+                btBufferInfoCL( gpuVertices.getBufferCL(),true),
+                btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+                btBufferInfoCL( gpuFaces.getBufferCL(),true),
+                btBufferInfoCL( gpuIndices.getBufferCL(),true),
+                btBufferInfoCL( sepNormals.getBufferCL()),
+                btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+                btBufferInfoCL( clippingFacesOutGPU.getBufferCL()),
+                btBufferInfoCL( worldVertsA1GPU.getBufferCL()),
+                btBufferInfoCL( worldNormalsAGPU.getBufferCL()),
+                btBufferInfoCL( worldVertsB1GPU.getBufferCL())
+            };
+            
+            btLauncherCL launcher(m_queue, m_findClippingFacesKernel);
+            launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+            launcher.setConst( vertexFaceCapacity);
+            launcher.setConst( nPairs  );
+            int num = nPairs;
+            launcher.launch1D( num);
+            clFinish(m_queue);
+
+            }
+            
+            
+            
+              
+            
+            ///clip face B against face A, reduce contacts and append them to a global contact array
+            if (1)
+            {
+                btBufferInfoCL bInfo[] = {
+                    btBufferInfoCL( pairs->getBufferCL(), true ),
+                    btBufferInfoCL( bodyBuf->getBufferCL(),true),
+                    btBufferInfoCL( gpuCollidables.getBufferCL(),true),
+                    btBufferInfoCL( convexData.getBufferCL(),true),
+                    btBufferInfoCL( gpuVertices.getBufferCL(),true),
+                    btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+                    btBufferInfoCL( gpuFaces.getBufferCL(),true),
+                    btBufferInfoCL( gpuIndices.getBufferCL(),true),
+                    btBufferInfoCL( sepNormals.getBufferCL()),
+                    btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+                    btBufferInfoCL( contactOut->getBufferCL()),
+                    btBufferInfoCL( m_totalContactsOut.getBufferCL()),
+                    btBufferInfoCL( clippingFacesOut.getBufferCL()),
+                    btBufferInfoCL( worldVertsA1GPU.getBufferCL()),
+                    btBufferInfoCL( worldNormalsAGPU.getBufferCL()),
+                    btBufferInfoCL( worldVertsB1GPU.getBufferCL()),
+                    btBufferInfoCL( worldVertsB2GPU.getBufferCL())
+                };
+                
+                btLauncherCL launcher(m_queue, m_clipFacesAndContactReductionKernel);
+                launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+                launcher.setConst(vertexFaceCapacity);
+                launcher.setConst( nPairs  );
+                int num = nPairs;
+                launcher.launch1D( num);
+                clFinish(m_queue);
+                
+                nContacts = m_totalContactsOut.at(0);
+            }
+            
+       
+            
+#else
+            
+			btBufferInfoCL bInfo[] = {
 				btBufferInfoCL( pairs->getBufferCL(), true ), 
 				btBufferInfoCL( bodyBuf->getBufferCL(),true), 
 				btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
@@ -1594,6 +1975,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			clFinish(m_queue);
 		
 			nContacts = m_totalContactsOut.at(0);
+#endif
+            
+#endif//DEBUG_CPU_CLIP
+            
 		}
 
 	} else
@@ -1683,7 +2068,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 
 #ifdef __APPLE__
-		bool reductionOnGpu = false;
+		bool reductionOnGpu = true;
 #else
 		bool reductionOnGpu = true;
 #endif
@@ -2049,7 +2434,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 						}
 					
 						btAssert(numPoints);
-					
+                        m_hostContactOut.resize(nContacts+1);
 						Contact4& contact = m_hostContactOut[nContacts];
 						contact.m_batchIdx = 0;//i;
 						contact.m_bodyAPtrAndSignBit = (hostBodyBuf[indexA].m_invMass==0)? -m_hostPairs[i].x:m_hostPairs[i].x;

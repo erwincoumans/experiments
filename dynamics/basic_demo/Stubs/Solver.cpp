@@ -293,9 +293,10 @@ void solveContact(Constraint4& cs,
 			float4 linImp1 = invMassB*(-linear)*rambdaDt;
 			float4 angImp0 = mtMul1(invInertiaA, angular0)*rambdaDt;
 			float4 angImp1 = mtMul1(invInertiaB, angular1)*rambdaDt;
-			btAssert(_finite(linImp0.x));
+#ifdef _WIN32
+            btAssert(_finite(linImp0.x));
 			btAssert(_finite(linImp1.x));
-
+#endif
 			if( JACOBI )
 			{
 				dLinVelA += linImp0;
@@ -399,10 +400,10 @@ void solveContact(Constraint4& cs,
 			float4 linImp1 = invMassB*(-linear)*rambdaDt;
 			float4 angImp0 = mtMul1(invInertiaA, angular0)*rambdaDt;
 			float4 angImp1 = mtMul1(invInertiaB, angular1)*rambdaDt;
-
+#ifdef _WIN32
 			btAssert(_finite(linImp0.x));
 			btAssert(_finite(linImp1.x));
-
+#endif
 			linVelA += linImp0;
 			angVelA += angImp0;
 			linVelB += linImp1;

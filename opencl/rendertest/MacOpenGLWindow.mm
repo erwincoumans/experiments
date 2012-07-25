@@ -171,6 +171,8 @@ void MacOpenGLWindow::init(int width, int height)
         exit();
     
     
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    
     m_internalData = new MacOpenGLWindowInternalData;
     m_internalData->m_width = width;
     m_internalData->m_height = height;
@@ -186,16 +188,61 @@ void MacOpenGLWindow::init(int width, int height)
     id appMenuItem = [[NSMenuItem new] autorelease];
     [menubar addItem:appMenuItem];
     [NSApp setMainMenu:menubar];
-    NSString* appNameString = @"étape";
-    NSString* menuItemString = @"mymenu";
+    
     id appMenu = [[NSMenu new] autorelease];
-    id appName = appNameString;//[[NSProcessInfo processInfo] processName];
+    id appName = [[NSProcessInfo processInfo] processName];
     id quitTitle = [@"Quit " stringByAppendingString:appName];
     id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle
                                                   action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+    
     [appMenu addItem:quitMenuItem];
     [appMenuItem setSubmenu:appMenu];
+ 
+    NSMenuItem *fileMenuItem = [[NSMenuItem new] autorelease];
+    NSMenu *fileMenu = [[NSMenu alloc] initWithTitle:@"File"];
+    [fileMenuItem setSubmenu: fileMenu]; // was setMenu:
     
+    NSMenuItem *newMenu = [[NSMenuItem alloc] initWithTitle:@"New" action:NULL keyEquivalent:@""];
+    NSMenuItem *openMenu = [[NSMenuItem alloc] initWithTitle:@"Open" action:NULL keyEquivalent:@""];
+    NSMenuItem *saveMenu = [[NSMenuItem alloc] initWithTitle:@"Save" action:NULL keyEquivalent:@""];
+
+    [fileMenu addItem: newMenu];
+    [fileMenu addItem: openMenu];
+    [fileMenu addItem: saveMenu];
+    [menubar addItem: fileMenuItem];
+        
+    
+    // add Edit menu
+    NSMenuItem *editMenuItem = [[NSMenuItem new] autorelease];
+    NSMenu *menu = [[NSMenu allocWithZone:[NSMenu menuZone]]initWithTitle:@"Edit"];
+    [editMenuItem setSubmenu: menu];
+    
+    NSMenuItem *copyItem = [[NSMenuItem allocWithZone:[NSMenu menuZone]]initWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
+    
+    [menu addItem:copyItem];
+    [menubar addItem:editMenuItem];
+    
+   // [mainMenu setSubmenu:menu forItem:menuItem];
+    
+    
+    //NSMenuItem *fileMenuItem = [[NSMenuItem alloc] initWithTitle: @"File"];
+    /*[fileMenuItem setSubmenu: fileMenu]; // was setMenu:
+    [fileMenuItem release];
+    */
+    
+    /*NSMenu *newMenu;
+    NSMenuItem *newItem;
+    
+    // Add the submenu
+    newItem = [[NSMenuItem allocWithZone:[NSMenu menuZone]]
+               initWithTitle:@"Flashy" action:NULL keyEquivalent:@""];
+    newMenu = [[NSMenu allocWithZone:[NSMenu menuZone]]
+               initWithTitle:@"Flashy"];
+    [newItem setSubmenu:newMenu];
+    [newMenu release];
+    [[NSApp mainMenu] addItem:newItem];
+    [newItem release];
+    */
     
 	NSRect frame = NSMakeRect(0., 0., width, height);
 	
@@ -240,6 +287,9 @@ void MacOpenGLWindow::init(int width, int height)
     [NSApp activateIgnoringOtherApps:YES];
     glGenBuffers(n, vbo);
     checkError("glGenBuffers");
+    
+     [m_internalData->m_myApp finishLaunching];
+    [pool release];
 
 }
 
@@ -249,7 +299,7 @@ void MacOpenGLWindow::runMainLoop()
     // FILE* dump = fopen ("/Users/erwincoumans/yes.txt","wb");
     // fclose(dump);
     
-    [m_internalData->m_myApp finishLaunching];
+   
 #if 0 
     bool shouldKeepRunning = YES;
     do
@@ -315,7 +365,7 @@ void MacOpenGLWindow::startRendering()
          //		  inMode:NSEventTrackingRunLoopMode
          dequeue:YES];
         
-        if ([event type] == NSKeyDown)
+        /*if ([event type] == NSKeyDown)
         {
             uint32 keycode = [event keyCode];
             if (keycode==12)//'q'
@@ -325,6 +375,8 @@ void MacOpenGLWindow::startRendering()
                 m_azi += 0.1;
         //    input::doSomeWork(keycode);
         }
+         */
+        
         if ([event type] == NSLeftMouseDragged)
         {
             CGMouseDelta dx1, dy1;

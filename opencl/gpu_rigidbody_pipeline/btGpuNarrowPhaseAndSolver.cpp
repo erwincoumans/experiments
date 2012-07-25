@@ -17,7 +17,7 @@
 //#define DISABLE_CONVEX_HEIGHTFIELD
 
 bool useConvexHeightfield = false;
-bool enableExperimentalCpuConcaveCollision = true;
+bool enableExperimentalCpuConcaveCollision = false;
 
 #include "btGpuNarrowphaseAndSolver.h"
 #include "../rendering/WavefrontObjLoader/objLoader.h"

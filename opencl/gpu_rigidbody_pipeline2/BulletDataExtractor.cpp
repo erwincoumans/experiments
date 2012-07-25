@@ -1,8 +1,8 @@
 #ifdef __APPLE__
 //my macbook pro retina GPU (650m) isn't that powerful
-int NUM_OBJECTS_X = 15;
-int NUM_OBJECTS_Y = 15;
-int NUM_OBJECTS_Z = 15;
+int NUM_OBJECTS_X = 1;
+int NUM_OBJECTS_Y = 20;
+int NUM_OBJECTS_Z = 1;
 #else
 int NUM_OBJECTS_X = 25;
 int NUM_OBJECTS_Y = 25;
