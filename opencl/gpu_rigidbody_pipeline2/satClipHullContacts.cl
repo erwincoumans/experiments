@@ -859,6 +859,7 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
 			
 
+
 		
 			int numLocalContactsOut = clipHullAgainstHull(separatingNormals[i],
 														&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],
@@ -1143,7 +1144,7 @@ int	findClippingFaces(const float4 separatingNormal,
                       __global const float4* vertices,
                       __global const btGpuFace* faces,
                       __global const int* indices,
-                      __global const int4* clippingFaces, int pairIndex)
+                      __global int4* clippingFaces, int pairIndex)
 {
 	int numContactsOut = 0;
 	int numWorldVertsB1= 0;
@@ -1217,16 +1218,12 @@ int	findClippingFaces(const float4 separatingNormal,
 
 
 
-int clipFaces(const float4 separatingNormal, __global const ConvexPolyhedronCL* hullA,
-              const float4 posA, __global const Quaternion* ornAPtr,
-              __global float4* worldVertsA1,
+int clipFaces(__global float4* worldVertsA1,
               __global float4* worldNormalsA1,
               __global float4* worldVertsB1,
-              __global float4* worldVertsB2, int capacityWorldVertsB2,
+              __global float4* worldVertsB2, 
+              int capacityWorldVertsB2,
               const float minDist, float maxDist,
-              __global const float4* vertices,
-              __global const btGpuFace* faces,
-              __global const int* indices,
               __global const int4* clippingFaces,
                float4* contactsOut,
               int contactCapacity, int pairIndex)
@@ -1253,14 +1250,14 @@ int clipFaces(const float4 separatingNormal, __global const ConvexPolyhedronCL* 
 	for(int e0=0;e0<numVertsInA;e0++)
 	{
 		const float4 aw = worldVertsA1[pairIndex*capacityWorldVertsB2+e0];
-        const float4 bw = worldVertsA1[pairIndex*capacityWorldVertsB2+((e0+1)%numVertsInA)];
+		const float4 bw = worldVertsA1[pairIndex*capacityWorldVertsB2+((e0+1)%numVertsInA)];
 		const float4 WorldEdge0 = aw - bw;
 		
 		float4 worldPlaneAnormal1 = worldNormalsA1[pairIndex];
         
 		float4 planeNormalWS1 = -cross3(WorldEdge0,worldPlaneAnormal1);
 		float4 worldA1 = aw;
-        float planeEqWS1 = -dot3F4(worldA1,planeNormalWS1);
+		float planeEqWS1 = -dot3F4(worldA1,planeNormalWS1);
 		
 		float4 planeNormalWS = planeNormalWS1;
 		float planeEqWS=planeEqWS1;
@@ -1280,7 +1277,7 @@ int clipFaces(const float4 separatingNormal, __global const ConvexPolyhedronCL* 
 	
 	// only keep points that are behind the witness face
 	{
-        float4 planeNormalWS = worldNormalsA1[pairIndex];
+    float4 planeNormalWS = worldNormalsA1[pairIndex];
 		float planeEqWS=-dot3F4(planeNormalWS,worldVertsA1[pairIndex*capacityWorldVertsB2]);
 		for (int i=0;i<numVertsInB;i++)
 		{
@@ -1293,7 +1290,6 @@ int clipFaces(const float4 separatingNormal, __global const ConvexPolyhedronCL* 
 			if (depth <=maxDist)
 			{
 				float4 pointInWorld = pVtxIn[i];
-				//resultOut.addContactPoint(separatingNormal,point,depth);
 				contactsOut[numContactsOut++] = make_float4(pointInWorld.x,pointInWorld.y,pointInWorld.z,depth);
 			}
 		}
@@ -1370,15 +1366,9 @@ __kernel void   findClippingFacesKernel(  __global const int2* pairs,
 
 __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
                                                    __global const BodyData* rigidBodies,
-                                                   __global const btCollidableGpu* collidables,
-                                                   __global const ConvexPolyhedronCL* convexShapes,
-                                                   __global const float4* vertices,
-                                                   __global const float4* uniqueEdges,
-                                                   __global const btGpuFace* faces,
-                                                   __global const int* indices,
                                                    __global const float4* separatingNormals,
                                                    __global const int* hasSeparatingAxis,
-                                                     __global Contact4* restrict globalContactsOut,
+                                                     __global Contact4* globalContactsOut,
                                                    __global int4* clippingFacesOut,
                                                    __global float4* worldVertsA1,
                                                    __global float4* worldNormalsA1,
@@ -1407,29 +1397,23 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
 			int bodyIndexA = pairs[i].x;
 			int bodyIndexB = pairs[i].y;
 			
-			int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
-			int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
-			
-			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
-			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
-			
-          
+		       
             
             
-			int numLocalContactsOut = clipFaces( separatingNormals[i],
-                                                &convexShapes[shapeIndexA],
-                                                rigidBodies[bodyIndexA].m_pos,&rigidBodies[bodyIndexA].m_quat,
-                                                worldVertsA1,worldNormalsA1,
+			int numLocalContactsOut = clipFaces( worldVertsA1,worldNormalsA1,
                                                 worldVertsB1,worldVertsB2,vertexFaceCapacity,
                                                 minDist, maxDist,
-                                                vertices,faces,indices,
                                                 clippingFacesOut,
                                                 localContactsOut,localContactCapacity,i);
             
+      for (int c=0;c<numLocalContactsOut;c++)
+      {
+      	worldVertsB2[pairIndex*vertexFaceCapacity+c]=localContactsOut[c];
+      }
+      clippingFacesOut[pairIndex].w = numLocalContactsOut;
             
-            
-            if (numLocalContactsOut>0)
-            {
+		if (numLocalContactsOut>0)
+    {
 				float4 normal = -separatingNormals[i];
 				int nPoints = numLocalContactsOut;
 				float4* pointsIn = localContactsOut;
@@ -1467,4 +1451,3 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
 	}//	if (i<numPairs)
     
 }
-

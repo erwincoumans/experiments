@@ -1380,13 +1380,7 @@ void   findClippingFacesKernel( btAlignedObjectArray<int2>& pairs,
 
 void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
                                           btAlignedObjectArray< BodyData>& rigidBodies,
-                                          const btAlignedObjectArray< btCollidableGpu>&collidables,
-                                          btAlignedObjectArray< ConvexPolyhedronCL>& convexShapes,
-                                          btAlignedObjectArray<float4>& vertices,
-                                          btAlignedObjectArray<float4>& uniqueEdges,
-                                          btAlignedObjectArray<btGpuFace>& faces,
-                                          btAlignedObjectArray<int>& indices,
-                                          btAlignedObjectArray<float4>&separatingNormals,
+											btAlignedObjectArray<float4>&separatingNormals,
                                           btAlignedObjectArray<int>& hasSeparatingAxis,
                                           btAlignedObjectArray<Contact4>&globalContactsOut,
                                           btAlignedObjectArray<int4>& clippingFaces,
@@ -1646,7 +1640,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
         if (1)
 		{
 			BT_PROFILE("clipHullHullKernel");
-//#define BREAKUP_KERNEL
+#ifdef __APPLE__
+#define BREAKUP_KERNEL
+#endif
+
 //#define DEBUG_CPU_CLIP
 #ifdef DEBUG_CPU_CLIP
             
@@ -1800,12 +1797,6 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                 
                 clipFacesAndContactReductionKernel((btAlignedObjectArray<int2>&)hostPairs,
                                    (btAlignedObjectArray<struct BodyData>&)hostBodies,
-                                   (btAlignedObjectArray<struct btCollidableGpu>&)hostCollidables,
-                                   (btAlignedObjectArray<struct ConvexPolyhedronCL>&)hostConvexShapeData,
-                                   (btAlignedObjectArray<float4>& )verticesA,
-                                   (btAlignedObjectArray<float4>& )uniqueEdges,
-                                   (btAlignedObjectArray<btGpuFace>&)faces,
-                                   (btAlignedObjectArray<int>&)indices,
                                    (btAlignedObjectArray<float4>&)hostSepNormals,
                                    (btAlignedObjectArray<int>&)hostHasSepAxis,
                                    (btAlignedObjectArray<Contact4>&)hostContactOut,
@@ -1860,30 +1851,32 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
             
 #ifdef BREAKUP_KERNEL
 
-            
-            btOpenCLArray<int4> clippingFacesOut(m_context,m_queue);
-            clippingFacesOut.resize(nPairs);
+			
+
+			static btAlignedObjectArray<int4> clippingFacesCPU;
+            clippingFacesCPU.resize(nPairs);
             
             int vertexFaceCapacity = 64;
             
-            btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
+            static btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
             worldVertsB1GPU.resize(vertexFaceCapacity*nPairs);
           
-            btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
+            static btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
             worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
             
             
-            btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
+            static btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
             clippingFacesOutGPU.resize(nPairs);
             
-            btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
+            static btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
             worldNormalsAGPU.resize(nPairs);
             
-            btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
+            static btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
             worldVertsA1GPU.resize(vertexFaceCapacity*nPairs);
             
             
             {
+				BT_PROFILE("findClippingFacesKernel");
             btBufferInfoCL bInfo[] = {
                 btBufferInfoCL( pairs->getBufferCL(), true ),
                 btBufferInfoCL( bodyBuf->getBufferCL(),true),
@@ -1891,7 +1884,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                 btBufferInfoCL( convexData.getBufferCL(),true),
                 btBufferInfoCL( gpuVertices.getBufferCL(),true),
                 btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
-                btBufferInfoCL( gpuFaces.getBufferCL(),true),
+                btBufferInfoCL( gpuFaces.getBufferCL(),true), 
                 btBufferInfoCL( gpuIndices.getBufferCL(),true),
                 btBufferInfoCL( sepNormals.getBufferCL()),
                 btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
@@ -1911,31 +1904,28 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
             }
             
-            
-            
-              
-            
+  
+			//clippingFacesOutGPU.copyToHost(clippingFacesCPU);
+
             ///clip face B against face A, reduce contacts and append them to a global contact array
             if (1)
             {
+				BT_PROFILE("clipFacesAndContactReductionKernel");
+				//nContacts = m_totalContactsOut.at(0);
+				//int h = hasSeparatingNormals.at(0);
+				//int4 p = clippingFacesOutGPU.at(0);
                 btBufferInfoCL bInfo[] = {
                     btBufferInfoCL( pairs->getBufferCL(), true ),
                     btBufferInfoCL( bodyBuf->getBufferCL(),true),
-                    btBufferInfoCL( gpuCollidables.getBufferCL(),true),
-                    btBufferInfoCL( convexData.getBufferCL(),true),
-                    btBufferInfoCL( gpuVertices.getBufferCL(),true),
-                    btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
-                    btBufferInfoCL( gpuFaces.getBufferCL(),true),
-                    btBufferInfoCL( gpuIndices.getBufferCL(),true),
                     btBufferInfoCL( sepNormals.getBufferCL()),
                     btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
-                    btBufferInfoCL( contactOut->getBufferCL()),
-                    btBufferInfoCL( m_totalContactsOut.getBufferCL()),
-                    btBufferInfoCL( clippingFacesOut.getBufferCL()),
+					btBufferInfoCL( contactOut->getBufferCL()),
+                    btBufferInfoCL( clippingFacesOutGPU.getBufferCL()),
                     btBufferInfoCL( worldVertsA1GPU.getBufferCL()),
                     btBufferInfoCL( worldNormalsAGPU.getBufferCL()),
                     btBufferInfoCL( worldVertsB1GPU.getBufferCL()),
-                    btBufferInfoCL( worldVertsB2GPU.getBufferCL())
+                    btBufferInfoCL( worldVertsB2GPU.getBufferCL()),
+					btBufferInfoCL( m_totalContactsOut.getBufferCL())	
                 };
                 
                 btLauncherCL launcher(m_queue, m_clipFacesAndContactReductionKernel);
@@ -1946,6 +1936,8 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                 launcher.launch1D( num);
                 clFinish(m_queue);
                 
+				//p = clippingFacesOutGPU.at(0);
+
                 nContacts = m_totalContactsOut.at(0);
             }
             

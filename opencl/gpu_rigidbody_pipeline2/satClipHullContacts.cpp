@@ -775,16 +775,11 @@ int	findClippingFaces(const float4& separatingNormal,
 }
 
 
-int clipFaces(const float4& separatingNormal, __global const ConvexPolyhedronCL* hullA2,
-              const float4& posA, const Quaternion& ornA1,
-              btAlignedObjectArray<float4>& worldVertsA1,
+int clipFaces(btAlignedObjectArray<float4>& worldVertsA1,
               btAlignedObjectArray<float4>& worldNormalsA1,
               btAlignedObjectArray<float4>& worldVertsB1,
               btAlignedObjectArray<float4>& worldVertsB2, int capacityWorldVertsB2,
               const float minDist, float maxDist,
-              btAlignedObjectArray<float4>& vertices,
-              btAlignedObjectArray<btGpuFace>& faces,
-              btAlignedObjectArray<int>& indices,
               btAlignedObjectArray<int4>& clippingFaces,
               float4* contactsOut,
               int contactCapacity, int pairIndex)
@@ -925,12 +920,6 @@ void   findClippingFacesKernel( btAlignedObjectArray<int2>& pairs,
 
 void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
                           btAlignedObjectArray< BodyData>& rigidBodies,
-                          const btAlignedObjectArray< btCollidableGpu>&collidables,
-                          btAlignedObjectArray< ConvexPolyhedronCL>& convexShapes,
-                          btAlignedObjectArray<float4>& vertices,
-                          btAlignedObjectArray<float4>& uniqueEdges,
-                          btAlignedObjectArray<btGpuFace>& faces,
-                          btAlignedObjectArray<int>& indices,
                           btAlignedObjectArray<float4>&separatingNormals,
                           btAlignedObjectArray<int>& hasSeparatingAxis,
                           btAlignedObjectArray<Contact4>&globalContactsOut,
@@ -962,20 +951,11 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 			int bodyIndexA = pairs[i].x;
 			int bodyIndexB = pairs[i].y;
 			
-			int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
-			int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
-			
-			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
-			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
-			
+				
             
-			int numLocalContactsOut = clipFaces(separatingNormals[i],
-                                                          &convexShapes[shapeIndexA],
-                                                          rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
-                                                        worldVertsA1,worldNormalsA1,
+			int numLocalContactsOut = clipFaces(worldVertsA1,worldNormalsA1,
                                                         worldVertsB1,worldVertsB2,vertexFaceCapacity,
                                                           minDist, maxDist,
-                                                          vertices,faces,indices,
                                                             clippingFaces,
                                                           localContactsOut,localContactCapacity,i);
           
