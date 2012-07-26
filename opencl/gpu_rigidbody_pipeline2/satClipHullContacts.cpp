@@ -1386,7 +1386,7 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 
 
 // Clips a face to the back of a plane, return the number of vertices out, stored in ppVtxOut
-int clipFaceGlobal(__global const float4* pVtxIn, int numVertsIn, float4 planeNormalWS,float planeEqWS, __global float4* ppVtxOut)
+int clipFaceGlobal(__global const float4* pVtxIn, int numVertsIn, float4& planeNormalWS,float planeEqWS, __global float4* ppVtxOut)
 {
 	
 	int ve;
