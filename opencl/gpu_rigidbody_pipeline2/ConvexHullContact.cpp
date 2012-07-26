@@ -79,10 +79,18 @@ m_totalContactsOut(m_context, m_queue)
 		m_extractManifoldAndAddContactKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "extractManifoldAndAddContactKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
 
+        m_newContactReductionKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip,
+                            "newContactReductionKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);
+
+        
+        
+
 	} else
 	{
 		m_clipHullHullKernel=0;
         m_findClippingFacesKernel = 0;
+        m_newContactReductionKernel=0;
         m_clipFacesAndContactReductionKernel = 0;
 		m_clipHullHullConcaveConvexKernel = 0;
 		m_extractManifoldAndAddContactKernel = 0;
@@ -102,6 +110,8 @@ GpuSatCollision::~GpuSatCollision()
    
     if (m_clipFacesAndContactReductionKernel)
         clReleaseKernel(m_clipFacesAndContactReductionKernel);
+    if (m_newContactReductionKernel)
+        clReleaseKernel(m_newContactReductionKernel);
     
 	if (m_clipHullHullKernel)
 		clReleaseKernel(m_clipHullHullKernel);
@@ -1392,11 +1402,23 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
                                           int vertexFaceCapacity,
                                           int numPairs);
 
+
+void   newContactReductionKernel( btAlignedObjectArray<int2>& pairs,
+                                 btAlignedObjectArray< BodyData>& rigidBodies,
+                                 btAlignedObjectArray<float4>&separatingNormals,
+                                 btAlignedObjectArray<int>& hasSeparatingAxis,
+                                 btAlignedObjectArray<Contact4>&globalContactsOut,
+                                 btAlignedObjectArray<int4>& clippingFaces,
+                                 btAlignedObjectArray<float4>& worldVertsB2,
+                                 int* nGlobalContactsOut,
+                                 int vertexFaceCapacity,
+                                 int numPairs);
+
 extern int g_globalId;
 
 
 
-void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
+void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs,
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btOpenCLArray<ConvexPolyhedronCL>& convexData,
@@ -1786,31 +1808,81 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                                        nPairs);
                 }
             }
+#define FURTHER_BREAK_UP_KERNEL
+#ifdef FURTHER_BREAK_UP_KERNEL
+            {
+                for (int i=0;i<nPairs;i++)
+                {
+                    g_globalId = i;
+                    
+                    
+                    
+                    clipFacesAndContactReductionKernel((btAlignedObjectArray<int2>&)hostPairs,
+                                                       (btAlignedObjectArray<struct BodyData>&)hostBodies,
+                                                       (btAlignedObjectArray<float4>&)hostSepNormals,
+                                                       (btAlignedObjectArray<int>&)hostHasSepAxis,
+                                                       (btAlignedObjectArray<Contact4>&)hostContactOut,
+                                                       (btAlignedObjectArray<int4>&) clippingFacesOut,
+                                                       (btAlignedObjectArray<float4>&) worldVertsA1,
+                                                       (btAlignedObjectArray<float4>&) worldNormalsA1,
+                                                       (btAlignedObjectArray<float4>&) worldVertsB1,
+                                                       (btAlignedObjectArray<float4>&) worldVertsB2,
+                                                       &nGlobalContactsOut,
+                                                       vertexFaceCapacity,
+                                                       nPairs);
+                }
+
             
+            }
             {
+                for (int i=0;i<nPairs;i++)
+                {
+                    g_globalId = i;
+                    
+                    newContactReductionKernel( hostPairs,
+                                              (btAlignedObjectArray< BodyData>&) hostBodies,
+                                              (btAlignedObjectArray<float4>&)hostSepNormals,
+                                              hostHasSepAxis,
+                                              hostContactOut,
+                                              clippingFacesOut,
+                                              worldVertsB2,
+                                              &nGlobalContactsOut,
+                                              vertexFaceCapacity,
+                                              nPairs);
+                }
+
+            
+            }
+            
+#else//FUTHER_BREAK_UP_KERNEL
+            {
+                btAssert(0);
+                
                 BT_PROFILE("clipFacesAndContactReductionKernel");
-            for (int i=0;i<nPairs;i++)
-            {
-                g_globalId = i;
-                
-                
-                
-                clipFacesAndContactReductionKernel((btAlignedObjectArray<int2>&)hostPairs,
-                                   (btAlignedObjectArray<struct BodyData>&)hostBodies,
-                                   (btAlignedObjectArray<float4>&)hostSepNormals,
-                                   (btAlignedObjectArray<int>&)hostHasSepAxis,
-                                   (btAlignedObjectArray<Contact4>&)hostContactOut,
-                                    (btAlignedObjectArray<int4>&) clippingFacesOut,
-                                                   (btAlignedObjectArray<float4>&) worldVertsA1,
-                                                   (btAlignedObjectArray<float4>&) worldNormalsA1,
-                                                   (btAlignedObjectArray<float4>&) worldVertsB1,
-                                    (btAlignedObjectArray<float4>&) worldVertsB2,
-                                   &nGlobalContactsOut,
-                                    vertexFaceCapacity,
-                                   nPairs);
+                for (int i=0;i<nPairs;i++)
+                {
+                    g_globalId = i;
+                    
+                    
+                    
+                    clipFacesAndContactReductionKernel((btAlignedObjectArray<int2>&)hostPairs,
+                                       (btAlignedObjectArray<struct BodyData>&)hostBodies,
+                                       (btAlignedObjectArray<float4>&)hostSepNormals,
+                                       (btAlignedObjectArray<int>&)hostHasSepAxis,
+                                       (btAlignedObjectArray<Contact4>&)hostContactOut,
+                                        (btAlignedObjectArray<int4>&) clippingFacesOut,
+                                                       (btAlignedObjectArray<float4>&) worldVertsA1,
+                                                       (btAlignedObjectArray<float4>&) worldNormalsA1,
+                                                       (btAlignedObjectArray<float4>&) worldVertsB1,
+                                        (btAlignedObjectArray<float4>&) worldVertsB2,
+                                       &nGlobalContactsOut,
+                                        vertexFaceCapacity,
+                                       nPairs);
+                }
             }
-            }
-            printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);
+#endif //FURTHER_BREAK_UP_KERNEL
+
+     //       printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);
             
 #else//BREAKUP_KERNEL
             for (int i=0;i<nPairs;i++)
@@ -1831,7 +1903,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                                (btAlignedObjectArray<Contact4>&)hostContactOut,
                                &nGlobalContactsOut,
                                nPairs);
-                printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);                
+           //     printf("nGlobalContactsOut=%d\n",nGlobalContactsOut);
             }
 #endif//BREAKUP_KERNEL
             
@@ -1853,25 +1925,23 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 			
 
-			static btAlignedObjectArray<int4> clippingFacesCPU;
-            clippingFacesCPU.resize(nPairs);
+//			 btAlignedObjectArray<int4> clippingFacesCPU;
+  //          clippingFacesCPU.resize(nPairs);
             
             int vertexFaceCapacity = 64;
             
-            static btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
+             static btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
             worldVertsB1GPU.resize(vertexFaceCapacity*nPairs);
           
-            static btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
-            worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
             
             
-            static btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
+             static btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
             clippingFacesOutGPU.resize(nPairs);
             
-            static btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
+             static btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
             worldNormalsAGPU.resize(nPairs);
             
-            static btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
+            static  btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
             worldVertsA1GPU.resize(vertexFaceCapacity*nPairs);
             
             
@@ -1905,7 +1975,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
             }
             
   
-			//clippingFacesOutGPU.copyToHost(clippingFacesCPU);
+            static btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
+            worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
+          
+            
 
             ///clip face B against face A, reduce contacts and append them to a global contact array
             if (1)
@@ -1925,7 +1998,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                     btBufferInfoCL( worldNormalsAGPU.getBufferCL()),
                     btBufferInfoCL( worldVertsB1GPU.getBufferCL()),
                     btBufferInfoCL( worldVertsB2GPU.getBufferCL()),
-					btBufferInfoCL( m_totalContactsOut.getBufferCL())	
+					btBufferInfoCL( m_totalContactsOut.getBufferCL())
                 };
                 
                 btLauncherCL launcher(m_queue, m_clipFacesAndContactReductionKernel);
@@ -1933,7 +2006,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
                 launcher.setConst(vertexFaceCapacity);
 
 				launcher.setConst( nPairs  );
-                int debugMode = 1;
+                int debugMode = 0;
 				launcher.setConst( debugMode);
 
 				/*
@@ -1949,23 +2022,91 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
                 int num = nPairs;
 
-				launcher.serializeToFile("clipFacesAndContactReductionKernel_before.bin",num);
                 launcher.launch1D( num);
                 clFinish(m_queue);
-				Contact4 mycontact = contactOut->forcedAt(0);
-				unsigned char* bla = (unsigned char*)&mycontact;
+//#define FORCE_HOST_NEW_CONTACT_REDUCTION
+#ifdef FORCE_HOST_NEW_CONTACT_REDUCTION
+                {
+                    btAlignedObjectArray<int2> hostPairs;
+                    pairs->copyToHost(hostPairs);
+                    btAlignedObjectArray<RigidBodyBase::Body> hostBodies;
+                    bodyBuf->copyToHost(hostBodies);
+                    btAlignedObjectArray<int> hostHasSepAxis;
+                    hasSeparatingNormals.copyToHost(hostHasSepAxis);
+                    btAlignedObjectArray<float4> hostSepNormals;
+                    sepNormals.copyToHost(hostSepNormals);
+                    btAlignedObjectArray<Contact4> hostContactOut;
+                    contactOut->copyToHost(hostContactOut);
+                    hostContactOut.resize(nContacts+nPairs);
+                    
+                    btAlignedObjectArray<int4> clippingFacesOut;
+                    btAlignedObjectArray<float4> worldVertsB2CPU;
+                    worldVertsB2GPU.copyToHost(worldVertsB2CPU);
+                    
+                    clippingFacesOutGPU.copyToHost(clippingFacesCPU);
 
+                    for (int i=0;i<nPairs;i++)
+                    {
+                        g_globalId = i;
+                        
+                        newContactReductionKernel( hostPairs,
+                                                  (btAlignedObjectArray< BodyData>&) hostBodies,
+                                                  (btAlignedObjectArray<float4>&)hostSepNormals,
+                                                  hostHasSepAxis,
+                                                  hostContactOut,
+                                                  clippingFacesCPU,
+                                                  worldVertsB2CPU,
+                                                  &nContacts,
+                                                  vertexFaceCapacity,
+                                                  nPairs);
+                    }
+                    
+                    hostContactOut.resize(nContacts);
+                    contactOut->copyFromHost(hostContactOut);
+                    
+                    m_totalContactsOut.copyFromHostPointer(&nContacts,1,0,true);
+                    
+                    
+                }
 
-				for (int b=0;b<sizeof(Contact4);b++)
-				{
-					int val = bla[b];
-					printf("byte at %d = %d\n", b,val);
-				}
-				launcher.serializeToFile("clipFacesAndContactReductionKernel_after.bin",num);
-
-				//p = clippingFacesOutGPU.at(0);
-
-                nContacts = m_totalContactsOut.at(0);
+#else//FORCE_HOST_NEW_CONTACT_REDUCTION
+                {
+//                    nContacts = m_totalContactsOut.at(0);
+  //                  printf("nContacts = %d\n",nContacts);
+                    
+                    contactOut->reserve(nContacts+nPairs);
+                    
+                    {
+                        BT_PROFILE("newContactReductionKernel");
+                            btBufferInfoCL bInfo[] =
+                        {
+                            btBufferInfoCL( pairs->getBufferCL(), true ),
+                            btBufferInfoCL( bodyBuf->getBufferCL(),true),
+                            btBufferInfoCL( sepNormals.getBufferCL()),
+                            btBufferInfoCL( hasSeparatingNormals.getBufferCL()),
+                            btBufferInfoCL( contactOut->getBufferCL()),
+                            btBufferInfoCL( clippingFacesOutGPU.getBufferCL()),
+                            btBufferInfoCL( worldVertsB2GPU.getBufferCL()),
+                            btBufferInfoCL( m_totalContactsOut.getBufferCL())
+                        };
+                        
+                        btLauncherCL launcher(m_queue, m_newContactReductionKernel);
+                        launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+                        launcher.setConst(vertexFaceCapacity);
+                        launcher.setConst( nPairs  );
+                        int num = nPairs;
+                        
+                        launcher.launch1D( num);
+                    }
+                    nContacts = m_totalContactsOut.at(0);
+                    contactOut->resize(nContacts);
+                    
+//                    Contact4 pt = contactOut->at(0);
+                    
+  //                  printf("nContacts = %d\n",nContacts);
+                }
+#endif //FORCE_HOST_NEW_CONTACT_REDUCTION
+                
             }
             
        

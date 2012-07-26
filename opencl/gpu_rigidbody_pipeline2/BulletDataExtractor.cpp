@@ -1,13 +1,6 @@
-#ifdef __APPLE__
-//my macbook pro retina GPU (650m) isn't that powerful
-int NUM_OBJECTS_X = 1;
-int NUM_OBJECTS_Y = 20;
-int NUM_OBJECTS_Z = 1;
-#else
-int NUM_OBJECTS_X = 5;
-int NUM_OBJECTS_Y = 5;
-int NUM_OBJECTS_Z = 5;
-#endif
+int NUM_OBJECTS_X = 25;
+int NUM_OBJECTS_Y = 25;
+int NUM_OBJECTS_Z = 25;
 
 
 
@@ -230,7 +223,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				//position[2]=3;
 
 				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1)+1;
-				position[1]=1+(j*Y_GAP);//-NUM_OBJECTS_Y/2);
+				position[1]=1+(j*Y_GAP);//-(NUM_OBJECTS_Y/2);
 				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
 				position[3] = 0.f;
 				

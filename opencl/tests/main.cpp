@@ -344,7 +344,9 @@ void testCLipHullKernel()
 int actualMain(int argc, char* argv[])
 {
 	int ciErrNum = 0;
-  
+    FILE* f = fopen("where.bin","wb");
+    fclose(f);
+    
     bool interop = false;
     InitCL(-1,-1,interop);
     

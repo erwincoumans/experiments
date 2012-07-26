@@ -54,6 +54,27 @@ static const char* spPlatformVendor =
 #endif //_WIN32
 #endif
 
+void MyFatalBreakAPPLE(   const char *  errstr ,
+                       const void *  private_info ,
+                       size_t        cb ,
+                       void *        user_data  )
+{
+    printf("Error: %s\n", errstr);
+    
+    const char* patloc = strstr(errstr, "Warning");
+    //find out if it is a warning or error, exit if error
+    
+    if (patloc)
+    {
+        printf("warning\n");
+    } else
+    {
+        printf("error\n");
+        btAssert(0);
+    }
+    
+    
+}
 
 
 int btOpenCLUtils_getNumPlatforms(cl_int* pErrNum)
@@ -126,26 +147,7 @@ void btOpenCLUtils_printPlatformInfo(cl_platform_id platform)
 	printf("  CL_PLATFORM_VERSION: \t\t\t%s\n",platformInfo.m_platformVersion);
 }
 
-void MyFatalBreakAPPLE(   const char *  errstr , 
-                                       const void *  private_info , 
-                                       size_t        cb , 
-                                       void *        user_data  )
-{
-    printf("Error: %s\n", errstr);
-    
-    const char* patloc = strstr(errstr, "Warning");
-    //find out if it is a warning or error, exit if error
-    
-    if (patloc)
-    {
-        printf("warning\n");
-    } else 
-    {
-        printf("error\n");
-    }
-    
-  
-}
+
 
 cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC, int preferredDeviceIndex, int preferredPlatformIndex)
 {

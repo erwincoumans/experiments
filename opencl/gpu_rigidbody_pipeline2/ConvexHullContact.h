@@ -40,6 +40,8 @@ struct GpuSatCollision
     
 	cl_kernel				m_clipHullHullConcaveConvexKernel;
 	cl_kernel				m_extractManifoldAndAddContactKernel;
+    cl_kernel               m_newContactReductionKernel;
+    
 
 	btOpenCLArray<int>		m_totalContactsOut;
 	btAlignedObjectArray<Contact4>	m_hostContactOut;

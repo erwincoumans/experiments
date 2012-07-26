@@ -33,6 +33,8 @@
 
 typedef unsigned int u32;
 
+
+
 typedef struct
 {
 	float4 m_worldPos[4];
@@ -129,13 +131,16 @@ float4 cross3(float4 a, float4 b)
 	return cross(a,b);
 }
 
-__inline
+#define dot3F4 dot
+
+/*__inline
 float dot3F4(float4 a, float4 b)
 {
 	float4 a1 = make_float4(a.xyz,0.f);
 	float4 b1 = make_float4(b.xyz,0.f);
 	return dot(a1, b1);
 }
+*/
 
 __inline
 float4 fastNormalize4(float4 v)
@@ -245,14 +250,12 @@ int clipFaceGlobal(__global const float4* pVtxIn, int numVertsIn, float4 planeNo
 	float4 firstVertex=pVtxIn[numVertsIn-1];
 	float4 endVertex = pVtxIn[0];
 	
-	ds = dot3F4(planeNormalWS,firstVertex)+planeEqWS;
+	ds = dot(planeNormalWS,firstVertex)+planeEqWS;
     
 	for (ve = 0; ve < numVertsIn; ve++)
 	{
 		endVertex=pVtxIn[ve];
-        
-		de = dot3F4(planeNormalWS,endVertex)+planeEqWS;
-        
+		de = dot(planeNormalWS,endVertex)+planeEqWS;
 		if (ds<0)
 		{
 			if (de<0)
@@ -652,14 +655,128 @@ int	clipHullAgainstHullLocalA(const float4 separatingNormal,
 	return numContactsOut;
 }
 
-
-
 #define PARALLEL_SUM(v, n) for(int j=1; j<n; j++) v[0] += v[j];
 #define PARALLEL_DO(execution, n) for(int ie=0; ie<n; ie++){execution;}
 #define REDUCE_MAX(v, n) {int i=0;\
-	for(int offset=0; offset<n; offset++) v[i] = (v[i].y > v[i+offset].y)? v[i]: v[i+offset]; }
+for(int offset=0; offset<n; offset++) v[i] = (v[i].y > v[i+offset].y)? v[i]: v[i+offset]; }
 #define REDUCE_MIN(v, n) {int i=0;\
-	for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i+offset]; }
+for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i+offset]; }
+
+int extractManifoldSequentialGlobal(__global const float4* p, int nPoints, float4 nearNormal, int4* contactIdx)
+{
+    if( nPoints == 0 )
+        return 0;
+    
+    if (nPoints>4)
+        nPoints=4;
+    return nPoints;
+    
+#if 0
+    
+	if (nPoints>64)
+        nPoints = 64;
+    
+	float4 center = make_float4(0.f,0.f,0.f,0.f);
+
+	{
+		float4 v=make_float4(0.f,0.f,0.f,0.f);
+	    for(int j=0; j<nPoints; j++)
+            v += p[j];        
+		center = v/(float)nPoints;
+	}
+    
+	
+	{	//	sample 4 directions
+		if( nPoints <= 4 )
+		{
+			return nPoints;
+		}
+        
+		float4 aVector = p[0] - center;
+		float4 u = cross3( nearNormal, aVector );
+		float4 v = cross3( nearNormal, u );
+		u = normalize3( u );
+		v = normalize3( v );
+        
+		int idx[4];
+        
+		float2 max00 = make_float2(0,FLT_MAX);
+		{
+			//	idx, distance
+			{
+				{
+					int4 a[64];
+					for(int ie = 0; ie<nPoints; ie++ )
+					{
+						float f;
+						float4 r = p[ie]-center;
+						f = dot3F4( u, r );
+						a[ie].x = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+                        
+						f = dot3F4( -u, r );
+						a[ie].y = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+                        
+						f = dot3F4( v, r );
+						a[ie].z = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+                        
+						f = dot3F4( -v, r );
+						a[ie].w = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+					}
+                    
+					for(int ie=0; ie<nPoints; ie++)
+					{
+						a[0].x = (a[0].x > a[ie].x )? a[0].x: a[ie].x;
+						a[0].y = (a[0].y > a[ie].y )? a[0].y: a[ie].y;
+						a[0].z = (a[0].z > a[ie].z )? a[0].z: a[ie].z;
+						a[0].w = (a[0].w > a[ie].w )? a[0].w: a[ie].w;
+					}
+                    
+					idx[0] = (int)a[0].x & 0xff;
+					idx[1] = (int)a[0].y & 0xff;
+					idx[2] = (int)a[0].z & 0xff;
+					idx[3] = (int)a[0].w & 0xff;
+				}
+			}
+            
+			{
+				float2 h[64];
+				PARALLEL_DO( h[ie] = make_float2((float)ie, p[ie].w), nPoints );
+				REDUCE_MIN( h, nPoints );
+				max00 = h[0];
+			}
+		}
+        
+		contactIdx->x = idx[0];
+		contactIdx->y = idx[1];
+		contactIdx->z = idx[2];
+		contactIdx->w = idx[3];
+        
+        //		if( max00.y < 0.0f )
+        //			contactIdx[0] = (int)max00.x;
+        
+		//does this sort happen on GPU too?
+		//std::sort( contactIdx, contactIdx+4 );
+        
+		return 4;
+	}
+#endif
+}
+
+int extractManifoldSequentialGlobalFake(__global const float4* p, int nPoints, float4 nearNormal, int* contactIdx)
+{
+    contactIdx[0] = 0;
+    contactIdx[1] = 1;
+    contactIdx[2] = 2;
+    contactIdx[3] = 3;
+    
+	if( nPoints == 0 ) return 0;
+    
+	nPoints = min2( nPoints, 4 );
+    return nPoints;
+    
+}
+
+
 
 int extractManifoldSequential(const float4* p, int nPoints, float4 nearNormal, int* contactIdx)
 {
@@ -1224,9 +1341,8 @@ int clipFaces(__global float4* worldVertsA1,
               __global float4* worldVertsB2, 
               int capacityWorldVertsB2,
               const float minDist, float maxDist,
-              __global const int4* clippingFaces,
-               float4* contactsOut,
-              int contactCapacity, int pairIndex)
+              __global int4* clippingFaces,
+              int pairIndex)
 {
 	int numContactsOut = 0;
     
@@ -1252,21 +1368,13 @@ int clipFaces(__global float4* worldVertsA1,
 		const float4 aw = worldVertsA1[pairIndex*capacityWorldVertsB2+e0];
 		const float4 bw = worldVertsA1[pairIndex*capacityWorldVertsB2+((e0+1)%numVertsInA)];
 		const float4 WorldEdge0 = aw - bw;
-		
 		float4 worldPlaneAnormal1 = worldNormalsA1[pairIndex];
-        
 		float4 planeNormalWS1 = -cross3(WorldEdge0,worldPlaneAnormal1);
 		float4 worldA1 = aw;
 		float planeEqWS1 = -dot3F4(worldA1,planeNormalWS1);
-		
 		float4 planeNormalWS = planeNormalWS1;
 		float planeEqWS=planeEqWS1;
-		
-		//clip face
-		//clipFace(*pVtxIn, *pVtxOut,planeNormalWS,planeEqWS);
 		numVertsOut = clipFaceGlobal(pVtxIn, numVertsInB, planeNormalWS,planeEqWS, pVtxOut);
-        
-		//btSwap(pVtxIn,pVtxOut);
 		__global float4* tmp = pVtxOut;
 		pVtxOut = pVtxIn;
 		pVtxIn = tmp;
@@ -1274,26 +1382,41 @@ int clipFaces(__global float4* worldVertsA1,
 		numVertsOut = 0;
 	}
     
+    //float4 planeNormalWS = worldNormalsA1[pairIndex];
+    //float planeEqWS=-dot3F4(planeNormalWS,worldVertsA1[pairIndex*capacityWorldVertsB2]);
+
+
+    
+    /*for (int i=0;i<numVertsInB;i++)
+    {
+        pVtxOut[i] = pVtxIn[i];
+    }*/
+    
+    
+    
+    
+    //numVertsInB=0;
 	
-	// only keep points that are behind the witness face
-	{
     float4 planeNormalWS = worldNormalsA1[pairIndex];
-		float planeEqWS=-dot3F4(planeNormalWS,worldVertsA1[pairIndex*capacityWorldVertsB2]);
-		for (int i=0;i<numVertsInB;i++)
-		{
-			float depth = dot3F4(planeNormalWS,pVtxIn[i])+planeEqWS;
-			if (depth <=minDist)
-			{
-				depth = minDist;
-			}
-            
-			if (depth <=maxDist)
-			{
-				float4 pointInWorld = pVtxIn[i];
-				contactsOut[numContactsOut++] = make_float4(pointInWorld.x,pointInWorld.y,pointInWorld.z,depth);
-			}
-		}
-	}
+    float planeEqWS=-dot3F4(planeNormalWS,worldVertsA1[pairIndex*capacityWorldVertsB2]);
+
+    for (int i=0;i<numVertsInB;i++)
+    {
+        float depth = dot3F4(planeNormalWS,pVtxIn[i])+planeEqWS;
+        if (depth <=minDist)
+        {
+            depth = minDist;
+        }
+        
+        if (depth <=maxDist)
+        {
+            float4 pointInWorld = pVtxIn[i];
+            pVtxOut[numContactsOut++] = make_float4(pointInWorld.x,pointInWorld.y,pointInWorld.z,depth);
+        }
+    }
+   
+    clippingFaces[pairIndex].w =numContactsOut;
+   
     
 	return numContactsOut;
 
@@ -1385,9 +1508,6 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
 	int pairIndex = i;
 	
     
-	float4 localContactsOut[64];
-	int localContactCapacity=64;
-	
 	float minDist = -1e30f;
 	float maxDist = 0.02f;
     
@@ -1399,44 +1519,131 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
             
 			int bodyIndexA = pairs[i].x;
 			int bodyIndexB = pairs[i].y;
-			
-		       
-            
-            
-			int numLocalContactsOut = clipFaces( worldVertsA1,worldNormalsA1,
-                                                worldVertsB1,worldVertsB2,vertexFaceCapacity,
-                                                minDist, maxDist,
-                                                clippingFacesOut,
-                                                localContactsOut,localContactCapacity,i);
-            
-      for (int c=0;c<numLocalContactsOut;c++)
-      {
-      	worldVertsB2[pairIndex*vertexFaceCapacity+c]=localContactsOut[c];
-      }
-      clippingFacesOut[pairIndex].w = numLocalContactsOut;
-            
-		if (numLocalContactsOut>0)
-    {
-				float4 normal = -separatingNormals[i];
-				int nPoints = numLocalContactsOut;
-				float4* pointsIn = localContactsOut;
-				int contactIdx[4];// = {-1,-1,-1,-1};
-                
-				contactIdx[0] = -1;
-				contactIdx[1] = -1;
-				contactIdx[2] = -1;
-				contactIdx[3] = -1;
-                
-				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
-                
-				int dstIdx;
-				AppendInc( nGlobalContactsOut, dstIdx );
+		    
+            int numLocalContactsOut = 0;
 
-				//in debug mode we force the output to be sorted, so we can compare it in later runs
-				if (debugMode)
-					dstIdx = pairIndex;
-					
-				//if ((dstIdx+nReducedContacts) < capacity)
+            int capacityWorldVertsB2 = vertexFaceCapacity;
+            
+            __global float4* pVtxIn = &worldVertsB1[pairIndex*capacityWorldVertsB2];
+            __global float4* pVtxOut = &worldVertsB2[pairIndex*capacityWorldVertsB2];
+            
+
+            {
+                __global int4* clippingFaces = clippingFacesOut;
+            
+                
+                int closestFaceA = clippingFaces[pairIndex].x;
+                int closestFaceB = clippingFaces[pairIndex].y;
+                int numVertsInA = clippingFaces[pairIndex].z;
+                int numVertsInB = clippingFaces[pairIndex].w;
+                
+                int numVertsOut = 0;
+                
+                if (closestFaceA>=0)
+                {
+                    
+                    
+                    
+                    // clip polygon to back of planes of all faces of hull A that are adjacent to witness face
+                    
+                    for(int e0=0;e0<numVertsInA;e0++)
+                    {
+                        const float4 aw = worldVertsA1[pairIndex*capacityWorldVertsB2+e0];
+                        const float4 bw = worldVertsA1[pairIndex*capacityWorldVertsB2+((e0+1)%numVertsInA)];
+                        const float4 WorldEdge0 = aw - bw;
+                        float4 worldPlaneAnormal1 = worldNormalsA1[pairIndex];
+                        float4 planeNormalWS1 = -cross3(WorldEdge0,worldPlaneAnormal1);
+                        float4 worldA1 = aw;
+                        float planeEqWS1 = -dot3F4(worldA1,planeNormalWS1);
+                        float4 planeNormalWS = planeNormalWS1;
+                        float planeEqWS=planeEqWS1;
+                        numVertsOut = clipFaceGlobal(pVtxIn, numVertsInB, planeNormalWS,planeEqWS, pVtxOut);
+                        __global float4* tmp = pVtxOut;
+                        pVtxOut = pVtxIn;
+                        pVtxIn = tmp;
+                        numVertsInB = numVertsOut;
+                        numVertsOut = 0;
+                    }
+                    
+                    float4 planeNormalWS = worldNormalsA1[pairIndex];
+                    float planeEqWS=-dot3F4(planeNormalWS,worldVertsA1[pairIndex*capacityWorldVertsB2]);
+                    
+                    for (int i=0;i<numVertsInB;i++)
+                    {
+                        float depth = dot3F4(planeNormalWS,pVtxIn[i])+planeEqWS;
+                        if (depth <=minDist)
+                        {
+                            depth = minDist;
+                        }
+                        
+                        if (depth <=maxDist)
+                        {
+                            float4 pointInWorld = pVtxIn[i];
+                            pVtxOut[numLocalContactsOut++] = make_float4(pointInWorld.x,pointInWorld.y,pointInWorld.z,depth);
+                        }
+                    }
+                    
+                }
+                clippingFaces[pairIndex].w =numLocalContactsOut;
+                
+
+            }
+            
+            for (int i=0;i<numLocalContactsOut;i++)
+                pVtxIn[i] = pVtxOut[i];
+                
+		}//		if (hasSeparatingAxis[i])
+	}//	if (i<numPairs)
+    
+}
+
+
+
+
+
+__kernel void   newContactReductionKernel( __global const int2* pairs,
+                                                   __global const BodyData* rigidBodies,
+                                                   __global const float4* separatingNormals,
+                                                   __global const int* hasSeparatingAxis,
+                                                   __global Contact4* globalContactsOut,
+                                                   __global int4* clippingFaces,
+                                                   __global float4* worldVertsB2,
+                                                   volatile __global int* nGlobalContactsOut,
+                                                   int vertexFaceCapacity,
+                                                   int numPairs
+                                                   )
+{
+    int i = get_global_id(0);
+	int pairIndex = i;
+	
+    int4 contactIdx;
+    contactIdx=make_int4(0,1,2,3);
+    
+	if (i<numPairs)
+	{
+        
+		if (hasSeparatingAxis[i])
+		{
+            
+			
+            
+            
+			int nPoints = clippingFaces[pairIndex].w;
+           
+            if (nPoints>0)
+            {
+
+                 __global float4* pointsIn = &worldVertsB2[pairIndex*vertexFaceCapacity];
+                float4 normal = -separatingNormals[i];
+                
+                int nReducedContacts = extractManifoldSequentialGlobal(pointsIn, nPoints, normal, &contactIdx);
+            
+                int dstIdx;
+                AppendInc( nGlobalContactsOut, dstIdx );
+				
+//#if 0
+                
+				if (dstIdx < numPairs)
 				{
 					__global Contact4* c = &globalContactsOut[dstIdx];
 					c->m_worldNormal = normal;
@@ -1447,15 +1654,32 @@ __kernel void   clipFacesAndContactReductionKernel( __global const int2* pairs,
 					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
 					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
                     
-					for (int i=0;i<nReducedContacts;i++)
-					{
-						c->m_worldPos[i] = pointsIn[contactIdx[i]];
-					}
+                    switch (nReducedContacts)
+                    {
+                        case 4:
+                            c->m_worldPos[3] = pointsIn[contactIdx.w];
+                        case 3:
+                            c->m_worldPos[2] = pointsIn[contactIdx.z];
+                        case 2:
+                            c->m_worldPos[1] = pointsIn[contactIdx.y];
+                        case 1:
+                            c->m_worldPos[0] = pointsIn[contactIdx.x];
+                        default:
+                        {
+                        }
+                    };
+                    
 					GET_NPOINTS(*c) = nReducedContacts;
-				}
+                    
+                 }
+                 
+                
+//#endif
 				
 			}//		if (numContactsOut>0)
 		}//		if (hasSeparatingAxis[i])
 	}//	if (i<numPairs)
+
+    
     
 }
