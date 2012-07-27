@@ -12,7 +12,10 @@
 #include <string.h>
 
 
-
+extern bool pauseSimulation;
+extern bool shootObject;
+extern int m_glutScreenWidth;
+extern int m_glutScreenHeight;
 
 /* report GL errors, if any, to stderr */
 static void checkError(const char *functionName)
@@ -48,6 +51,11 @@ void display(void)
 void reshape(int w, int h)
 {
 	glViewport(0,0,(GLsizei)w,(GLsizei)h);
+    if (w>0 && h>0)
+    {
+        m_glutScreenWidth = w;
+        m_glutScreenHeight = h;
+    }
 }
 
 
@@ -63,6 +71,8 @@ void reshape(int w, int h)
 -(void)drawRect:(NSRect)rect;
 -(void) MakeContext:(NSView*) view;
 -(void) MakeCurrent;
+-(float) GetWindowWidth;
+-(float) GetWindowHeight;
 
 @end
 
@@ -71,6 +81,15 @@ float loop;
 #define Pi 3.1415
 
 @implementation TestView
+
+-(float) GetWindowWidth
+{
+    return m_lastWidth;
+}
+-(float) GetWindowHeight
+{
+    return m_lastHeight;
+}
 
 -(void)drawRect:(NSRect)rect
 {
@@ -153,7 +172,9 @@ struct MacOpenGLWindowInternalData
 };
 
 MacOpenGLWindow::MacOpenGLWindow()
-:m_internalData(0)
+:m_internalData(0),
+m_mouseX(0),
+m_mouseY(0)
 {
 }
 
@@ -288,6 +309,16 @@ void MacOpenGLWindow::init(int width, int height)
     glGenBuffers(n, vbo);
     checkError("glGenBuffers");
     
+    //see http://stackoverflow.com/questions/8238473/cant-get-nsmousemoved-events-from-nexteventmatchingmask-with-an-nsopenglview
+   /*
+    ProcessSerialNumber psn;
+    GetCurrentProcess(&psn);
+    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+    SetFrontProcess(&psn);
+    
+    [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask];
+    */
+    
      [m_internalData->m_myApp finishLaunching];
     [pool release];
 
@@ -365,24 +396,67 @@ void MacOpenGLWindow::startRendering()
          //		  inMode:NSEventTrackingRunLoopMode
          dequeue:YES];
         
-        /*if ([event type] == NSKeyDown)
+        if ([event type] == NSKeyDown)
         {
             uint32 keycode = [event keyCode];
-            if (keycode==12)//'q'
-                [NSApp terminate:m_internalData->m_myApp];
+            //printf("keycode = %d\n", keycode);
+            if (keycode==49)
+            {
+                pauseSimulation = !pauseSimulation;
+            }
+         //   if (keycode==12)//'q'
+           //     [NSApp terminate:m_internalData->m_myApp];
             
-            if (keycode == 0)
-                m_azi += 0.1;
+      //      if (keycode == 0)
+        //        m_azi += 0.1;
         //    input::doSomeWork(keycode);
         }
-         */
+         
+        
+        if ([event type]== NSRightMouseDown)
+        {
+           // printf("right mouse!");
+            float mouseX,mouseY;
+            
+            NSPoint eventLocation = [event locationInWindow];
+            NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+            m_mouseX = center.x;
+            m_mouseY = center.y;
+            shootObject = 1;
+            
+           // printf("mouse coord = %f, %f\n",mouseX,mouseY);
+            
+            
+        }
+        
+        if ([event type] == NSMouseMoved)
+        {
+            NSPoint eventLocation = [event locationInWindow];
+            NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+            m_mouseX = center.x;
+            m_mouseY = center.y;
+           // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
+        }
         
         if ([event type] == NSLeftMouseDragged)
         {
             CGMouseDelta dx1, dy1;
             CGGetLastMouseDelta (&dx1, &dy1);
-            m_azi += dx1*0.1;
-            m_ele += dy1*0.1;
+            
+            //hack to avoid first time skip in delta mouse event
+            static bool firstTime = true;
+            if (!firstTime)
+            {
+                m_azi += dx1*0.1;
+                m_ele += dy1*0.1;
+            }
+            firstTime = false;
+            
+            NSPoint eventLocation = [event locationInWindow];
+            NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+            m_mouseX = center.x;
+            m_mouseY = center.y;
+          //  printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
         }
         
         if ([event type] == NSScrollWheel)
@@ -391,6 +465,7 @@ void MacOpenGLWindow::startRendering()
             dy = [ event deltaY ];
             dx = [ event deltaX ];
             m_cameraDistance -= dy*0.1;
+             m_azi += dx*0.1;
             
         }
         [m_internalData->m_myApp sendEvent:event];
@@ -444,6 +519,15 @@ bool MacOpenGLWindow::requestedExit()
 
 void MacOpenGLWindow::getMouseCoordinates(int& x, int& y)
 {
+    
+    NSPoint pt = [m_internalData->m_window mouseLocationOutsideOfEventStream];
+    m_mouseX = pt.x;
+    m_mouseY = pt.y;
+    
+    x = m_mouseX;
+    //our convention is x,y is upper left hand side
+    y = [m_internalData->m_myview GetWindowHeight]-m_mouseY;
+
     
 }
 

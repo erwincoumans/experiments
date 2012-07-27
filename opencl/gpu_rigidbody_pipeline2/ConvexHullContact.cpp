@@ -36,6 +36,7 @@ typedef btAlignedObjectArray<btVector3> btVertexArray;
 #include "satClipKernels.h"
 #include "LinearMath/btAabbUtil2.h"
 
+#include "../gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"//for MAX_CONVEX_BODIES_CL
 
 GpuSatCollision::GpuSatCollision(cl_context ctx,cl_device_id device, cl_command_queue  q )
 :m_context(ctx),
@@ -1427,7 +1428,12 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			const btOpenCLArray<btGpuFace>& gpuFaces,
 			const btOpenCLArray<int>& gpuIndices,
 			const btOpenCLArray<btCollidable>& gpuCollidables,
-			const btOpenCLArray<btYetAnotherAabb>& clAabbs, 
+			const btOpenCLArray<btYetAnotherAabb>& clAabbs,
+            btOpenCLArray<float4>& worldVertsB1GPU,
+            btOpenCLArray<int4>& clippingFacesOutGPU,
+            btOpenCLArray<float4>& worldNormalsAGPU,
+            btOpenCLArray<float4>& worldVertsA1GPU,
+            btOpenCLArray<float4>& worldVertsB2GPU,     
 			int numObjects,
 			int maxTriConvexPairCapacity,
 			btOpenCLArray<int4>& triangleConvexPairsOut,
@@ -1930,19 +1936,21 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
             
             int vertexFaceCapacity = 64;
             
-             static btOpenCLArray<float4> worldVertsB1GPU(m_context,m_queue);
+            
             worldVertsB1GPU.resize(vertexFaceCapacity*nPairs);
-          
             
             
-             static btOpenCLArray<int4> clippingFacesOutGPU(m_context,m_queue);
             clippingFacesOutGPU.resize(nPairs);
             
-             static btOpenCLArray<float4> worldNormalsAGPU(m_context,m_queue);
+            
             worldNormalsAGPU.resize(nPairs);
             
-            static  btOpenCLArray<float4> worldVertsA1GPU(m_context,m_queue);
+            
             worldVertsA1GPU.resize(vertexFaceCapacity*nPairs);
+            
+             
+            worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
+        
             
             
             {
@@ -1975,8 +1983,6 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
             }
             
   
-            static btOpenCLArray<float4> worldVertsB2GPU(m_context,m_queue);
-            worldVertsB2GPU.resize(vertexFaceCapacity*nPairs);
           
             
 

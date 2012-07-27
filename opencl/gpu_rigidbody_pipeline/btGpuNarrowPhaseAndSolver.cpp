@@ -91,6 +91,13 @@ struct	CustomDispatchData
 	btOpenCLArray<btVector3>* m_convexVerticesGPU;
 	btOpenCLArray<int>* m_convexIndicesGPU;
     
+    btOpenCLArray<float4>* m_worldVertsB1GPU;
+    btOpenCLArray<int4>* m_clippingFacesOutGPU;
+    btOpenCLArray<float4>* m_worldNormalsAGPU;
+    btOpenCLArray<float4>* m_worldVertsA1GPU;
+    btOpenCLArray<float4>* m_worldVertsB2GPU;
+    
+    
     
 	btAlignedObjectArray<btGpuFace> m_convexFaces;
 	btOpenCLArray<btGpuFace>* m_convexFacesGPU;
@@ -159,7 +166,7 @@ m_queue(queue)
 	m_internalData->m_inertiaBufferCPU = new btAlignedObjectArray<RigidBodyBase::Inertia>();
 	m_internalData->m_inertiaBufferCPU->resize(MAX_CONVEX_BODIES_CL);
 	
-	m_internalData->m_pBufContactOutGPU = new btOpenCLArray<Contact4>(ctx,queue, MAX_BROADPHASE_COLLISION_CL,false);
+	m_internalData->m_pBufContactOutGPU = new btOpenCLArray<Contact4>(ctx,queue, MAX_BROADPHASE_COLLISION_CL,true);
 	Contact4 test = m_internalData->m_pBufContactOutGPU->forcedAt(0);
 
 	m_internalData->m_inertiaBufferGPU = new btOpenCLArray<RigidBodyBase::Inertia>(ctx,queue,MAX_CONVEX_BODIES_CL,false);
@@ -177,6 +184,13 @@ m_queue(queue)
 	m_internalData->m_uniqueEdgesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_UNIQUE_EDGES,true);
 	m_internalData->m_convexVerticesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_VERTICES,true);
 	m_internalData->m_convexIndicesGPU = new btOpenCLArray<int>(ctx,queue,MAX_CONVEX_INDICES,true);
+    
+    
+    m_internalData->m_worldVertsB1GPU = new btOpenCLArray<float4>(ctx,queue,MAX_CONVEX_BODIES_CL*MAX_VERTICES_PER_FACE);
+    m_internalData->m_clippingFacesOutGPU = new  btOpenCLArray<int4>(ctx,queue,MAX_CONVEX_BODIES_CL);
+    m_internalData->m_worldNormalsAGPU = new  btOpenCLArray<float4>(ctx,queue,MAX_CONVEX_BODIES_CL);
+    m_internalData->m_worldVertsA1GPU = new btOpenCLArray<float4>(ctx,queue,MAX_CONVEX_BODIES_CL*MAX_VERTICES_PER_FACE);
+    m_internalData->m_worldVertsB2GPU = new  btOpenCLArray<float4>(ctx,queue,MAX_CONVEX_BODIES_CL*MAX_VERTICES_PER_FACE);
     
     
 	//m_internalData->m_Data = adl::ChNarrowphase<adl::TYPE_CL>::allocate(m_internalData->m_deviceCL);
@@ -547,6 +561,16 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_uniqueEdgesGPU;
 		delete m_internalData->m_convexVerticesGPU;
 		delete m_internalData->m_convexIndicesGPU;
+        
+        delete m_internalData->m_worldVertsB1GPU;
+        delete m_internalData->m_clippingFacesOutGPU;
+        delete m_internalData->m_worldNormalsAGPU;
+        delete m_internalData->m_worldVertsA1GPU;
+        delete m_internalData->m_worldVertsB2GPU;
+    
+        
+        
+        
 		delete m_internalData;
         
 	}
@@ -777,9 +801,18 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 						m_internalData->m_bodyBufferGPU,
 						m_internalData->m_ShapeBuffer,
 						m_internalData->m_pBufContactOutGPU,
-						nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,*m_internalData->m_convexVerticesGPU,*m_internalData->m_uniqueEdgesGPU,
+						nContactOut, cfgNP,
+                        *m_internalData->m_convexPolyhedraGPU,
+                        *m_internalData->m_convexVerticesGPU,
+                        *m_internalData->m_uniqueEdgesGPU,
 						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU,*m_internalData->m_collidablesGPU,
-						clAabbArray, numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+						clAabbArray,
+                        *m_internalData->m_worldVertsB1GPU,
+                        *m_internalData->m_clippingFacesOutGPU,
+                        *m_internalData->m_worldNormalsAGPU,
+                        *m_internalData->m_worldVertsA1GPU,
+                        *m_internalData->m_worldVertsB2GPU,
+                        numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
 				} else
 				{
 					m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
@@ -798,7 +831,13 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 							*m_internalData->m_convexFacesGPU,
 							*m_internalData->m_convexIndicesGPU,
 							*m_internalData->m_collidablesGPU,
-							clAabbArray, 
+							clAabbArray,
+                             *m_internalData->m_worldVertsB1GPU,
+                             *m_internalData->m_clippingFacesOutGPU,
+                             *m_internalData->m_worldNormalsAGPU,
+                             *m_internalData->m_worldVertsA1GPU,
+                             *m_internalData->m_worldVertsB2GPU,
+
 							numObjects,
 							maxTriConvexPairCapacity,
 							triangleConvexPairs,

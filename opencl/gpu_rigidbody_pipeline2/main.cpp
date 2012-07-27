@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 			count--;
 			if (count<0)
 			{
-				count = 100;
+				count = 1;
 				CProfileManager::dumpAll();
 				printf("total broadphase pairs= %d\n", numPairsTotal);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);

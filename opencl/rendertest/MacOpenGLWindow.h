@@ -4,6 +4,8 @@
 class MacOpenGLWindow
 {
     struct MacOpenGLWindowInternalData* m_internalData;
+    float m_mouseX;
+    float m_mouseY;
     
 public:
     
