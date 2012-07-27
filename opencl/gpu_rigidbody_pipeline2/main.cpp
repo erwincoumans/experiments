@@ -37,7 +37,7 @@ subject to the following restrictions:
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
 #include "OpenGLInclude.h"
 
-static bool printStats  = true;
+bool printStats  = true;
 bool pauseSimulation = false;
 bool shootObject = false;
 extern btVector3 m_cameraPosition;
@@ -212,11 +212,11 @@ int main(int argc, char* argv[])
 			count--;
 			if (count<0)
 			{
-				count = 1;
+
 				CProfileManager::dumpAll();
 				printf("total broadphase pairs= %d\n", numPairsTotal);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);
-				//printStats  = false;
+				printStats  = false;
 			} else
 			{
 //				printf(".");

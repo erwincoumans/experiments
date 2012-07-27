@@ -131,16 +131,15 @@ float4 cross3(float4 a, float4 b)
 	return cross(a,b);
 }
 
-#define dot3F4 dot
+//#define dot3F4 dot
 
-/*__inline
+__inline
 float dot3F4(float4 a, float4 b)
 {
 	float4 a1 = make_float4(a.xyz,0.f);
 	float4 b1 = make_float4(b.xyz,0.f);
 	return dot(a1, b1);
 }
-*/
 
 __inline
 float4 fastNormalize4(float4 v)
@@ -250,12 +249,12 @@ int clipFaceGlobal(__global const float4* pVtxIn, int numVertsIn, float4 planeNo
 	float4 firstVertex=pVtxIn[numVertsIn-1];
 	float4 endVertex = pVtxIn[0];
 	
-	ds = dot(planeNormalWS,firstVertex)+planeEqWS;
+	ds = dot3F4(planeNormalWS,firstVertex)+planeEqWS;
     
 	for (ve = 0; ve < numVertsIn; ve++)
 	{
 		endVertex=pVtxIn[ve];
-		de = dot(planeNormalWS,endVertex)+planeEqWS;
+		de = dot3F4(planeNormalWS,endVertex)+planeEqWS;
 		if (ds<0)
 		{
 			if (de<0)
@@ -1138,7 +1137,7 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 			indicesA[4]=1;
 			indicesA[5]=0;
 			curUsedIndices+=3;
-			float c = dot(normal,verticesA[0]);
+			float c = dot3F4(normal,verticesA[0]);
 			float c1 = -face.m_plane.w;
 			facesA[fidx].m_plane.x = -normal.x;
 			facesA[fidx].m_plane.y = -normal.y;
@@ -1159,7 +1158,7 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 				float4 v1 = verticesA[prevVertex];
                                             
 				float4 edgeNormal = normalize(cross(normal,v1-v0));
-				float c = -dot(edgeNormal,v0);
+				float c = -dot3F4(edgeNormal,v0);
 
 				facesA[fidx].m_numIndices = 2;
 				facesA[fidx].m_indexOffset=curUsedIndices;

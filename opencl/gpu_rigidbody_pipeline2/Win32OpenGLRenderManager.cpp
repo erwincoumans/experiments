@@ -28,7 +28,7 @@ extern btScalar m_cameraDistance;
 extern btVector3 m_cameraUp;
 extern float m_azi;
 extern float m_ele;
-
+extern bool printStats;
 extern bool pauseSimulation;
 extern bool shootObject;
 extern int m_glutScreenWidth;
@@ -176,12 +176,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch ( wParam )
 			{
 			case ' ':
+			case 'P':
 			case 'p':
 				{
 					pauseSimulation = !pauseSimulation;
 					break;
 				}
-
+			case 'S':
+			case 's':
+				{
+					printStats=true;
+					break;
+				}
 				case 'Q':
 				case VK_ESCAPE:
 					{
