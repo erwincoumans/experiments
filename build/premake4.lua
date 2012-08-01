@@ -79,6 +79,7 @@ end
 if not _OPTIONS["with-nacl"] then
 
 --	include "../opencl/c_api"
+
 	include "../opencl/basic_initialize"
 	include "../opencl/compiler"
 --	include "../opencl/vector_add"
@@ -116,6 +117,8 @@ if _OPTIONS["with-pe"] then
 	include "../physics_effects/sample_api_physics_effects/4_motion_type"
 	include "../physics_effects/sample_api_physics_effects/5_raycast"
 	include "../physics_effects/sample_api_physics_effects/6_joint"
+
+	include "../opencl/physics_effects_pipeline"
 
 end
 	

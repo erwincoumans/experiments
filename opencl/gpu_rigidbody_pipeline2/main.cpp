@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 	window->startRendering();
 	window->endRendering();
 
-	GLInstancingRenderer render;
+	GLInstancingRenderer render(MAX_CONVEX_BODIES_CL);
 
 	
 		
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
 			float pos[4] = {m_cameraPosition[0],m_cameraPosition[1],m_cameraPosition[2],1};
 			
 //			demo.setObjectTransform(pos,orn,0);
-			render.writeSingleTransform(pos,orn,0);
+			render.writeSingleInstanceTransformToGPU(pos,orn,0);
 //			createScene(render, demo);
 //			printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
 //			printf("numDynamicPhysicsInstances= %d\n", demo.m_numDynamicPhysicsInstances);

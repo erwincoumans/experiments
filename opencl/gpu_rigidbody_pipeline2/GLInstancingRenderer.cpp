@@ -25,7 +25,8 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btMatrix3x3.h"
 
-#include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowphaseAndSolver.h"//for MAX_CONVEX_BODIES_CL
+
+//#include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowphaseAndSolver.h"//for m_maxObjectCapacity
 
 
 struct btGraphicsInstance
@@ -110,15 +111,16 @@ static GLint ProjectionMatrix;
 
 
 
-GLInstancingRenderer::GLInstancingRenderer()
+GLInstancingRenderer::GLInstancingRenderer(int maxObjectCapacity)
+	:m_maxObjectCapacity(maxObjectCapacity)
 {
 
 	m_data = new InternalDataRenderer;
 
-	m_data->m_instance_positions_ptr = (GLfloat*)new float[MAX_CONVEX_BODIES_CL*4];
-	m_data->m_instance_quaternion_ptr = (GLfloat*)new float[MAX_CONVEX_BODIES_CL*4];
-	m_data->m_instance_colors_ptr = (GLfloat*)new float[MAX_CONVEX_BODIES_CL*4];
-	m_data->m_instance_scale_ptr = (GLfloat*)new float[MAX_CONVEX_BODIES_CL*3];
+	m_data->m_instance_positions_ptr = (GLfloat*)new float[m_maxObjectCapacity*4];
+	m_data->m_instance_quaternion_ptr = (GLfloat*)new float[m_maxObjectCapacity*4];
+	m_data->m_instance_colors_ptr = (GLfloat*)new float[m_maxObjectCapacity*4];
+	m_data->m_instance_scale_ptr = (GLfloat*)new float[m_maxObjectCapacity*3];
 
 }
 
@@ -344,11 +346,43 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
 
 	return hReturn;  
 }   
-void GLInstancingRenderer::writeSingleTransform(float* position, float* orientation, int objectIndex)
+
+void GLInstancingRenderer::writeSingleInstanceTransformToCPU(float* position, float* orientation, int srcIndex)
+{
+	m_data->m_instance_positions_ptr[srcIndex*4+0]=position[0];
+	m_data->m_instance_positions_ptr[srcIndex*4+1]=position[1];
+	m_data->m_instance_positions_ptr[srcIndex*4+2]=position[2];
+	m_data->m_instance_positions_ptr[srcIndex*4+3]=1;
+
+	m_data->m_instance_quaternion_ptr[srcIndex*4+0]=orientation[0];
+	m_data->m_instance_quaternion_ptr[srcIndex*4+1]=orientation[1];
+	m_data->m_instance_quaternion_ptr[srcIndex*4+2]=orientation[2];
+	m_data->m_instance_quaternion_ptr[srcIndex*4+3]=orientation[3];
+
+/*	m_data->m_instance_colors_ptr[srcIndex*4+0]=color[0];
+	m_data->m_instance_colors_ptr[srcIndex*4+1]=color[1];
+	m_data->m_instance_colors_ptr[srcIndex*4+2]=color[2];
+	m_data->m_instance_colors_ptr[srcIndex*4+3]=color[3];
+	*/
+}
+
+
+void GLInstancingRenderer::writeSingleInstanceColorToCPU(float* color, int srcIndex)
+{
+
+	m_data->m_instance_colors_ptr[srcIndex*4+0]=color[0];
+	m_data->m_instance_colors_ptr[srcIndex*4+1]=color[1];
+	m_data->m_instance_colors_ptr[srcIndex*4+2]=color[2];
+	m_data->m_instance_colors_ptr[srcIndex*4+3]=color[3];
+}
+
+
+
+void GLInstancingRenderer::writeSingleInstanceTransformToGPU(float* position, float* orientation, int objectIndex)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
 	glFlush();
-	
+
 	char* orgBase =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);
 	//btGraphicsInstance* gfxObj = m_graphicsInstances[k];
 	int totalNumInstances= 0;
@@ -379,6 +413,7 @@ void GLInstancingRenderer::writeSingleTransform(float* position, float* orientat
 	glUnmapBuffer( GL_ARRAY_BUFFER);
 	glFlush();
 }
+
 
 void GLInstancingRenderer::writeTransforms()
 {
@@ -459,6 +494,8 @@ void GLInstancingRenderer::writeTransforms()
 int GLInstancingRenderer::registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling)
 {
 	btAssert(shapeIndex == (m_graphicsInstances.size()-1));
+	btAssert(m_graphicsInstances.size()<m_maxObjectCapacity-1);
+
 	btGraphicsInstance* gfxObj = m_graphicsInstances[shapeIndex];
 
 	int index = gfxObj->m_numGraphicsInstances + gfxObj->m_instanceOffset;
@@ -541,10 +578,10 @@ int GLInstancingRenderer::registerShape(const float* vertices, int numvertices, 
 void GLInstancingRenderer::InitShaders()
 {
 	
-	int POSITION_BUFFER_SIZE = (MAX_CONVEX_BODIES_CL*sizeof(float)*4);
-	int ORIENTATION_BUFFER_SIZE = (MAX_CONVEX_BODIES_CL*sizeof(float)*4);
-	int COLOR_BUFFER_SIZE = (MAX_CONVEX_BODIES_CL*sizeof(float)*4);
-	int SCALE_BUFFER_SIZE = (MAX_CONVEX_BODIES_CL*sizeof(float)*3);
+	int POSITION_BUFFER_SIZE = (m_maxObjectCapacity*sizeof(float)*4);
+	int ORIENTATION_BUFFER_SIZE = (m_maxObjectCapacity*sizeof(float)*4);
+	int COLOR_BUFFER_SIZE = (m_maxObjectCapacity*sizeof(float)*4);
+	int SCALE_BUFFER_SIZE = (m_maxObjectCapacity*sizeof(float)*3);
 
 
 	instancingShader = gltLoadShaderPair(vertexShader,fragmentShader);
