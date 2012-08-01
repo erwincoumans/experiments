@@ -28,7 +28,7 @@ subject to the following restrictions:
 #include "../gpu_rigidbody_pipeline2/GLInstancingRenderer.h"
 
 #ifdef __APPLE__
-#include "MacOpenGLWindow.h"
+#include "../rendertest/MacOpenGLWindow.h"
 #else
 #include "../gpu_rigidbody_pipeline2/Win32OpenGLRenderManager.h"
 #endif
@@ -355,7 +355,8 @@ int main(int argc, char* argv[])
 
 		{
 			BT_PROFILE("glFinish");
-			glFinish();
+			//glFinish();
+        //    glFlush();
 		}
 
 		CProfileManager::Increment_Frame_Counter();

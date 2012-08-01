@@ -331,33 +331,7 @@ void MacOpenGLWindow::runMainLoop()
     // fclose(dump);
     
    
-#if 0 
-    bool shouldKeepRunning = YES;
-    do
-    {
-        [pool release];
-        pool = [[NSAutoreleasePool alloc] init];
-        printf(".");
-        NSEvent *event =
-        [m_internalData->m_myApp
-         nextEventMatchingMask:NSAnyEventMask
-         untilDate:[NSDate distantPast]
-         inMode:NSDefaultRunLoopMode
-         //		  inMode:NSEventTrackingRunLoopMode
-         dequeue:YES];
-        usleep(10000);
-        //nanosleep(10000000);
-        if ([event type] == NSKeyDown)
-        {
-            shouldKeepRunning=NO;
-            //[NSApp terminate:self];
-            //       printf("keydown\n");
-        }        
-        
-        [m_internalData->m_myApp sendEvent:event];
-        [m_internalData->m_myApp updateWindows];
-    } while (shouldKeepRunning);
-#endif
+
     
     [pool release];
 
@@ -465,7 +439,7 @@ void MacOpenGLWindow::startRendering()
             dy = [ event deltaY ];
             dx = [ event deltaX ];
             m_cameraDistance -= dy*0.1;
-             m_azi += dx*0.1;
+             m_azi -= dx*0.1;
             
         }
         [m_internalData->m_myApp sendEvent:event];

@@ -24,7 +24,7 @@ Physics Effects under the filename: physics_effects_license.txt
 
 #define NUM_RIGIDBODIES 5000
 #define NUM_JOINTS    5000
-#define NUM_CONTACTS  4000
+#define NUM_CONTACTS  16000
 
 const float timeStep = 0.016f;
 const float separateBias = 0.1f;
@@ -79,7 +79,7 @@ int numContactIdPool;
 
 //J 一時バッファ
 //E Temporary buffers
-#define POOL_BYTES (5*1024*1024)
+#define POOL_BYTES (16*1024*1024)
 unsigned char SCE_PFX_ALIGNED(128) poolBuff[POOL_BYTES];
 
 //J 一時バッファ用スタックアロケータ
@@ -428,7 +428,7 @@ void physics_simulate()
 	
 	frame++;
 	
-	//if(frame%100 == 0) 
+	if (0)////if(frame%100 == 0)
 	{
 		float broadphaseTime = pc.getCountTime(0);
 		float collisionTime  = pc.getCountTime(2);
@@ -742,7 +742,7 @@ void createSceneStacking()
        createWall(PfxVector3(10.0f,0.0f,0.0f),12,PfxVector3(cubeSize,cubeSize,cubeSize));
        createTowerCircle(PfxVector3(25.0f,0.0f,0.0f),8,24,PfxVector3(cubeSize,cubeSize,cubeSize));
 */
-	createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),8,24,PfxVector3(1));
+	createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),48,24,PfxVector3(1));
 }
 
 void createSceneBoxGround()
