@@ -121,6 +121,7 @@ if _OPTIONS["with-pe"] then
 	include "../opencl/physics_effects_pipeline"
 
 end
+	include "../opencl/bullet2_pipeline"
 	
 	include "../dynamics/testbed"
 	--include "../dynamics/position_based_dynamics"

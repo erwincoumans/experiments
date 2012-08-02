@@ -27,8 +27,8 @@ Physics Effects under the filename: physics_effects_license.txt
 #define NUM_CONTACTS  16000
 
 const float timeStep = 0.016f;
-const float separateBias = 0.1f;
-int iteration = 5;
+const float separateBias = 0.01f;
+int iteration = 10;
 
 //J ワールドサイズ
 //E World size
@@ -467,6 +467,24 @@ void createBrick(int id,const PfxVector3 &pos,const PfxQuat &rot,const PfxVector
 	states[id].setRigidBodyId(id);
 }
 
+void createStack(const PfxVector3 &offsetPosition,int stackSize,const PfxVector3 &boxSize)
+{
+	PfxFloat bodyMass = 0.5f;
+    
+	PfxFloat diffX = boxSize[0] * 1.0f;
+	PfxFloat diffY = boxSize[1] * 1.0f;
+	PfxFloat diffZ = boxSize[2] * 1.0f;
+    
+	PfxVector3 pos(0.0f, diffY, 0.0f);
+    
+    for(int i=0;i<stackSize;i++) {
+        createBrick(numRigidBodies++,offsetPosition+pos,PfxQuat::identity(),boxSize,bodyMass);
+    	pos[1] += (diffY * 2.0f);
+    }
+	
+}
+
+
 void createWall(const PfxVector3 &offsetPosition,int stackSize,const PfxVector3 &boxSize)
 {
 	PfxFloat bodyMass = 0.5f;
@@ -742,7 +760,10 @@ void createSceneStacking()
        createWall(PfxVector3(10.0f,0.0f,0.0f),12,PfxVector3(cubeSize,cubeSize,cubeSize));
        createTowerCircle(PfxVector3(25.0f,0.0f,0.0f),8,24,PfxVector3(cubeSize,cubeSize,cubeSize));
 */
-	createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),48,24,PfxVector3(1));
+	//createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),48,24,PfxVector3(1));
+    
+    createStack(PfxVector3(0.0f,0.00f,0.0f),10,PfxVector3(cubeSize,cubeSize,cubeSize));
+    
 }
 
 void createSceneBoxGround()

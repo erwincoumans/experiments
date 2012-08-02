@@ -23,6 +23,7 @@ subject to the following restrictions:
 #endif
 
 #include "physics_func.h"
+#include "btBulletDynamicsCommon.h"
 
 
 #include "../gpu_rigidbody_pipeline2/GLInstancingRenderer.h"
@@ -88,134 +89,72 @@ void stepSimulation(float dt)
 void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly)
 {
 
-	int cubeShapeIndex  = -1;
+    int cubeShapeIndex  = -1;
 	int strideInBytes = sizeof(float)*9;
-
+    
 	if (!syncTransformsOnly)
 	{
 		int numVertices = sizeof(cube_vertices)/strideInBytes;
 		int numIndices = sizeof(cube_indices)/sizeof(int);
 		cubeShapeIndex = renderer.registerShape(&cube_vertices[0],numVertices,cube_indices,numIndices);
 	}
+    
 
+    
+    int numColObj = physics_get_num_rigidbodies();
+    int curGraphicsIndex = 0;
+    
+    for (int i=0;i<numColObj;i++)
+    {
+        btCollisionObject* colObj = physics_get_collision_object(i);
 
-	int curGraphicsIndex=0;
+        btVector4 pos = colObj->getWorldTransform().getOrigin();
+        btQuaternion orn = colObj->getWorldTransform().getRotation();
+        
+        float position[4] = {pos.getX(),pos.getY(),pos.getZ(),0.f};
+        float orientation[4] = {orn.getX(),orn.getY(),orn.getZ(),orn.getW()};
+        float color[4] = {0,0,0,1};
+        btVector3 localScaling = colObj->getCollisionShape()->getLocalScaling();
+        
+       
+        if (colObj->isStaticOrKinematicObject())
+        {
+            color[0]=1.f;
+        }else
+        {
+            color[1]=1.f;
+        }
+        
+        switch (colObj->getCollisionShape()->getShapeType())
+        {
+            case BOX_SHAPE_PROXYTYPE:
+            {
+                btBoxShape* box = (btBoxShape*)colObj->getCollisionShape();
 
-	for(int i=0;i<physics_get_num_rigidbodies();i++) 
-	{
-		const PfxRigidState &state = physics_get_state(i);
-		const PfxCollidable &coll = physics_get_collidable(i);
-		const PfxRigidBody& body = physics_get_body(i);
+                btVector3 halfExtents = box->getHalfExtentsWithMargin();
+                
+                float cubeScaling[4] = {halfExtents.getX(),halfExtents.getY(), halfExtents.getZ(),1};
+                
+                if (!syncTransformsOnly)
+                {
+                    renderer.registerGraphicsInstance(cubeShapeIndex,position,orientation,color,cubeScaling);
+                }
+                else
+                {
+                    renderer.writeSingleInstanceTransformToCPU(position,orientation,curGraphicsIndex);
+                
+                }
+                
+                curGraphicsIndex++;
+            }
+            break;
+                
+            default:
+                break;
+        }
+        //convert it now!
+    }
 	
-
-		float color[4]={0,0,0,1};
-
-		if (body.getMass()==0.f)
-		{
-			color[0]=1.f;
-		} else
-		{
-			color[1]=1.f;
-		}
-
-
-		PfxTransform3 rbT(state.getOrientation(), state.getPosition());
-
-		PfxShapeIterator itrShape(coll);
-		for(int j=0;j<coll.getNumShapes();j++,++itrShape) {
-			const PfxShape &shape = *itrShape;
-			
-	
-			PfxTransform3 offsetT = shape.getOffsetTransform();
-			PfxTransform3 worldT = rbT * offsetT;
-
-			    PfxQuat ornWorld( worldT.getUpper3x3());
-
-			switch(shape.getType()) {
-				case kPfxShapeSphere:
-					printf("render sphere\n");
-				/*render_sphere(
-					worldT,
-					PfxVector3(1,1,1),
-					PfxFloatInVec(shape.getSphere().m_radius));
-					*/
-				break;
-
-				case kPfxShapeBox:
-					{
-				//	printf("render box\n");
-					float cubeScaling[4] = {shape.getBox().m_half.getX(),shape.getBox().m_half.getY(),shape.getBox().m_half.getZ(),1};
-					
-					float rotOrn[4] = {ornWorld.getX(),ornWorld.getY(),ornWorld.getZ(),ornWorld.getW()};
-					float position[4]={worldT.getTranslation().getX(),worldT.getTranslation().getY(),worldT.getTranslation().getZ(),0};
-					if (!syncTransformsOnly)
-					{
-						renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);
-					}
-					else
-					{
-						renderer.writeSingleInstanceTransformToCPU(position,rotOrn,curGraphicsIndex);
-					}
-					curGraphicsIndex++;
-/*				render_box(
-					worldT,
-					PfxVector3(1,1,1),
-					shape.getBox().m_half);
-	*/
-					break;
-					}
-				case kPfxShapeCapsule:
-
-					printf("render_capsule\n");
-
-					/*render_capsule(
-					worldT,
-					PfxVector3(1,1,1),
-					PfxFloatInVec(shape.getCapsule().m_radius),
-					PfxFloatInVec(shape.getCapsule().m_halfLen));
-					*/
-				break;
-
-				case kPfxShapeCylinder:
-					printf("render_cylinder\n");
-
-/*				render_cylinder(
-					worldT,
-					PfxVector3(1,1,1),
-					PfxFloatInVec(shape.getCylinder().m_radius),
-					PfxFloatInVec(shape.getCylinder().m_halfLen));
-					*/
-				break;
-
-				case kPfxShapeConvexMesh:
-						printf("render_mesh\n");
-
-					/*
-				render_mesh(
-					worldT,
-					PfxVector3(1,1,1),
-					convexMeshId);
-					*/
-				break;
-
-				case kPfxShapeLargeTriMesh:
-					printf("render_mesh\n");
-
-					/*
-				render_mesh(
-					worldT,
-					PfxVector3(1,1,1),
-					landscapeMeshId);
-					*/
-				break;
-
-				default:
-				break;
-			}
-		}
-	}
-
-
 }
 
 void create_graphics_from_physics_objects(GLInstancingRenderer& renderer)
