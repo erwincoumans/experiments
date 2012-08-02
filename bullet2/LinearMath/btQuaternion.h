@@ -875,4 +875,3 @@ shortestArcQuatNormalize2(btVector3& v0,btVector3& v1)
 
 
 
-
