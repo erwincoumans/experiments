@@ -23,10 +23,11 @@ class GLInstancingRenderer
 	
 	btAlignedObjectArray<struct btGraphicsInstance*> m_graphicsInstances;
 
+	int		m_maxObjectCapacity;
 	struct InternalDataRenderer* m_data;
 
 public:
-	GLInstancingRenderer();
+	GLInstancingRenderer(int m_maxObjectCapacity);
 	virtual ~GLInstancingRenderer();
 
 	void InitShaders();
@@ -41,7 +42,11 @@ public:
 
 	void writeTransforms();
 
-	void writeSingleTransform(float* position, float* orientation, int objectIndex);
+	void writeSingleInstanceTransformToCPU(float* position, float* orientation, int srcIndex);
+
+	void writeSingleInstanceTransformToGPU(float* position, float* orientation, int srcIndex);
+
+	void writeSingleInstanceColorToCPU(float* color, int srcIndex);
 
 	void getMouseDirection(float* dir, int mouseX, int mouseY);
 };

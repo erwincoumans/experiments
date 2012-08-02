@@ -39,9 +39,9 @@ static const char* spPlatformVendor =
 #if defined(CL_PLATFORM_MINI_CL)
 "MiniCL, SCEA";
 #elif defined(CL_PLATFORM_AMD)
-"bdvanced Micro Devices, Inc.";
+"Advanced Micro Devices, Inc.";
 #elif defined(CL_PLATFORM_NVIDIA)
-"bVIDIA Corporation";
+"NVIDIA Corporation";
 #elif defined(CL_PLATFORM_INTEL)
 "Intel(R) Corporation";
 #else

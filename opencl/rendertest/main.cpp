@@ -35,7 +35,7 @@ subject to the following restrictions:
 
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
 
-
+bool printStats = false;
 bool pauseSimulation = false;
 bool shootObject = false;
 extern btVector3 m_cameraPosition;
@@ -113,7 +113,8 @@ int main(int argc, char* argv[])
 	window->startRendering();
 	window->endRendering();
 
-	GLInstancingRenderer render;
+	int maxObjectCapacity=128*1024;
+	GLInstancingRenderer render(maxObjectCapacity);
 
 	
 		
@@ -149,7 +150,7 @@ int main(int argc, char* argv[])
 			float pos[4] = {m_cameraPosition[0],m_cameraPosition[1],m_cameraPosition[2],1};
 			
 //			demo.setObjectTransform(pos,orn,0);
-			render.writeSingleTransform(pos,orn,0);
+			render.writeSingleInstanceTransformToGPU(pos,orn,0);
 //			createScene(render, demo);
 //			printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
 //			printf("numDynamicPhysicsInstances= %d\n", demo.m_numDynamicPhysicsInstances);
