@@ -174,7 +174,9 @@ struct MacOpenGLWindowInternalData
 MacOpenGLWindow::MacOpenGLWindow()
 :m_internalData(0),
 m_mouseX(0),
-m_mouseY(0)
+m_mouseY(0),
+m_mouseCallback(0),
+m_keyboardCallback(0)
 {
 }
 
@@ -421,8 +423,8 @@ void MacOpenGLWindow::startRendering()
             static bool firstTime = true;
             if (!firstTime)
             {
-                m_azi += dx1*0.1;
-                m_ele += dy1*0.1;
+          //      m_azi += dx1*0.1;
+            //    m_ele += dy1*0.1;
             }
             firstTime = false;
             
@@ -430,6 +432,10 @@ void MacOpenGLWindow::startRendering()
             NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
             m_mouseX = center.x;
             m_mouseY = center.y;
+            
+            if (m_mouseCallback)
+                (*m_mouseCallback)(1,0,m_mouseX,m_mouseY);
+
           //  printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
         }
         
@@ -438,8 +444,8 @@ void MacOpenGLWindow::startRendering()
             float dy, dx;
             dy = [ event deltaY ];
             dx = [ event deltaX ];
-            m_cameraDistance -= dy*0.1;
-             m_azi -= dx*0.1;
+          //  m_cameraDistance -= dy*0.1;
+            // m_azi -= dx*0.1;
             
         }
         [m_internalData->m_myApp sendEvent:event];
@@ -504,4 +510,6 @@ void MacOpenGLWindow::getMouseCoordinates(int& x, int& y)
 
     
 }
+
+
 

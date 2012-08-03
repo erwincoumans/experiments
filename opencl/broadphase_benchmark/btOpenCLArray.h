@@ -154,7 +154,7 @@ public:
 				cl_mem buf = clCreateBuffer(m_clContext, CL_MEM_READ_WRITE, memSizeInBytes, NULL, &ciErrNum);
 				btAssert(ciErrNum==CL_SUCCESS);
 
-#define BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
+//#define BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
 #ifdef BT_ALWAYS_INITIALIZE_OPENCL_BUFFERS
 				unsigned char* src = (unsigned char*)malloc(memSizeInBytes);
 				for (int i=0;i<memSizeInBytes;i++)
