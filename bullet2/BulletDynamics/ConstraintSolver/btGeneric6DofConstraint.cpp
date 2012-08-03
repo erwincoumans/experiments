@@ -153,7 +153,7 @@ int btRotationalLimitMotor::testLimitValue(btScalar test_value)
 }
 
 
-
+#if 0
 btScalar btRotationalLimitMotor::solveAngularLimits(
 	btScalar timeStep,btVector3& axis,btScalar jacDiagABInv,
 	btRigidBody * body0, btRigidBody * body1 )
@@ -174,10 +174,8 @@ btScalar btRotationalLimitMotor::solveAngularLimits(
 
 	// current velocity difference
 
-	btVector3 angVelA;
-	body0->internalGetAngularVelocity(angVelA);
-	btVector3 angVelB;
-	body1->internalGetAngularVelocity(angVelB);
+	btVector3 angVelA = body0->getAngularVelocity();
+	btVector3 angVelB = body1->getAngularVelocity();
 
 	btVector3 vel_diff;
 	vel_diff = angVelA-angVelB;
@@ -236,6 +234,7 @@ btScalar btRotationalLimitMotor::solveAngularLimits(
 
 
 }
+#endif
 
 //////////////////////////// End btRotationalLimitMotor ////////////////////////////////////
 
@@ -275,7 +274,7 @@ int btTranslationalLimitMotor::testLimitValue(int limitIndex, btScalar test_valu
 }
 
 
-
+#if 0
 btScalar btTranslationalLimitMotor::solveLinearAxis(
 	btScalar timeStep,
 	btScalar jacDiagABInv,
@@ -361,6 +360,7 @@ btScalar btTranslationalLimitMotor::solveLinearAxis(
 
 	return normalImpulse;
 }
+#endif
 
 //////////////////////////// btTranslationalLimitMotor ////////////////////////////////////
 

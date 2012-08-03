@@ -222,6 +222,16 @@ void	btCollisionWorld::performDiscreteCollisionDetection()
 		m_broadphasePairCache->calculateOverlappingPairs(m_dispatcher1);
 	}
 
+	
+	int numPairs = m_broadphasePairCache->getOverlappingPairCache()->getNumOverlappingPairs();
+	printf("numPairs = %d\n",numPairs);
+	for (int i=0;i<m_broadphasePairCache->getOverlappingPairCache()->getNumOverlappingPairs();i++)
+	{
+		int idA = m_broadphasePairCache->getOverlappingPairCache()->getOverlappingPairArray()[i].m_pProxy0->getUid();
+		int idB = m_broadphasePairCache->getOverlappingPairCache()->getOverlappingPairArray()[i].m_pProxy1->getUid();
+					
+		printf("pair[%d] bodyIdA = %d, bodyIdB = %d\n",i,idA,idB);
+	}
 
 	btDispatcher* dispatcher = getDispatcher();
 	{

@@ -24,6 +24,11 @@ RM_DECLARE_HANDLE(RenderObjectHandle);
 
 struct InternalData2;
 
+
+typedef void (*btMouseCallback)(int button, int state, float x, float y);
+typedef void (*btKeyboardCallback)(unsigned char key, int x, int y);
+
+
 class Win32OpenGLWindow
 {
 	protected:
@@ -37,7 +42,7 @@ class Win32OpenGLWindow
 		void pumpMessage();
 	
 		
-
+	
 public:
 
 	Win32OpenGLWindow();
@@ -52,7 +57,7 @@ public:
 
 	virtual	void	exit();
 
-	virtual void runMainLoop();
+	virtual void	runMainLoop();
 
 	virtual	void	startRendering();
 
@@ -67,6 +72,10 @@ public:
 	virtual bool requestedExit();
 
 	virtual void getMouseCoordinates(int& x, int& y);
+
+	void setMouseCallback(btMouseCallback	mouseCallback);
+
+	void setKeyboardCallback( btKeyboardCallback	keyboardCallback);
 
 };
 

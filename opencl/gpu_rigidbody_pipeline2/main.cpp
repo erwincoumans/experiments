@@ -40,8 +40,7 @@ subject to the following restrictions:
 bool printStats  = true;
 bool pauseSimulation = false;
 bool shootObject = false;
-extern btVector3 m_cameraPosition;
-extern btVector3 m_cameraTargetPosition;
+
 extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
@@ -158,6 +157,9 @@ int main(int argc, char* argv[])
     window->startRendering();
     render.RenderScene();
     window->endRendering();
+
+	window->setMouseCallback(btDefaultMouseCallback);
+	window->setKeyboardCallback(btDefaultKeyboardCallback);
     
 	while (!window->requestedExit())
 	{
@@ -178,7 +180,8 @@ int main(int argc, char* argv[])
 //			btVector3 startPos;
 			demo.setObjectLinearVelocity(&linVel[0],0);
 			float orn[4] = {0,0,0,1};
-			float pos[4] = {m_cameraPosition[0],m_cameraPosition[1],m_cameraPosition[2],1};
+			float pos[4];
+			render.getCameraPosition(pos);
 			
 //			demo.setObjectTransform(pos,orn,0);
 			render.writeSingleInstanceTransformToGPU(pos,orn,0);

@@ -91,7 +91,7 @@ void physics_create_scene(int sceneId)
         if (isDynamic)
             colShape->calculateLocalInertia(mass,localInertia);
         
-        for(int j = 0;j<10;j++)
+        for(int j = 0;j<2;j++)
         {
             startTransform.setOrigin(btVector3(
                                                        btScalar(0),

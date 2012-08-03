@@ -58,16 +58,10 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverConstraint
 		int			m_frictionIndex;
 		btScalar	m_unusedPadding1;
 	};
-	union
-	{
-		btRigidBody*	m_solverBodyA;
-		int				m_companionIdA;
-	};
-	union
-	{
-		btRigidBody*	m_solverBodyB;
-		int				m_companionIdB;
-	};
+	
+	int m_solverBodyIdA;
+	
+	int m_solverBodyIdB;
 	
 	union
 	{

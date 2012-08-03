@@ -214,7 +214,47 @@ void broadphase()
 		for(PfxUInt32 i=0;i<numOutNewPairs;i++) {
 			currentPairs[numCurrentPairs++] = outNewPairs[i];
 		}
+		printf("===============================================\n");
+		printf("num bodies/states = %d\n", physics_get_num_rigidbodies());
+		for (int i=0;i<physics_get_num_rigidbodies();i++)
+		{
+			PfxVector3 pos = physics_get_state(i).getPosition();
+			printf("body %d has position %f,%f,%f\n",i,pos.getX(),pos.getY(),pos.getZ());
+		}
+		printf("numCurrentPairs (total) = %d\n", numCurrentPairs);
+
+		for (int i=0;i<numCurrentPairs;i++)
+		{
+			int idA = pfxGetObjectIdA(currentPairs[i]);
+			int idB = pfxGetObjectIdB(currentPairs[i]);
+			printf("pfx pair[%d] idA = %d, idB = %d\n", i, idA,idB);
+			int cId = pfxGetContactId(currentPairs[i]);
+			printf("contact duration = %d\n", contacts[cId].getDuration());
+
+			
+			printf("num contacts = %d\n", contacts[cId].getNumContacts());
+			for (int c=0;c<contacts[cId].getNumContacts();c++)
+			{
+				const PfxContactPoint& cp = contacts[cId].getContactPoint(c);
+				printf("localPosA = %f,%f,%f\n", cp.m_localPointA[0],cp.m_localPointA[1],cp.m_localPointA[2]);
+				printf("localPosB = %f,%f,%f\n", cp.m_localPointB[0],cp.m_localPointB[1],cp.m_localPointB[2]);
+				for (int r=0;r<3;r++)
+				{
+					printf("row %d accumImpulse = %f\n", r, cp.m_constraintRow[r].m_accumImpulse);
+					printf("row %d normal = %f,%f,%f\n", r, cp.m_constraintRow[r].m_normal[0],cp.m_constraintRow[r].m_normal[1],cp.m_constraintRow[r].m_normal[2]);
+					printf("row %d distance %f and duration %d\n", r, cp.m_distance,cp.m_duration);
+
+				}
+			}
+
+
+		}
+
 		
+		//printf("numOutRemovePairs = %d\n", numOutRemovePairs);
+		//printf("numOutNewPairs = %d\n",numOutNewPairs);
+
+
 		pool.deallocate(decomposePairsParam.pairBuff);
 		pool.deallocate(findPairsParam.pairBuff);
 	}
@@ -762,7 +802,7 @@ void createSceneStacking()
 */
 	//createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),48,24,PfxVector3(1));
     
-    createStack(PfxVector3(0.0f,0.00f,0.0f),10,PfxVector3(cubeSize,cubeSize,cubeSize));
+    createStack(PfxVector3(0.0f,0.00f,0.0f),2,PfxVector3(cubeSize,cubeSize,cubeSize));
     
 }
 

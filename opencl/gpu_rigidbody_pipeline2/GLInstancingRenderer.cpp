@@ -28,6 +28,7 @@ subject to the following restrictions:
 
 //#include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowphaseAndSolver.h"//for m_maxObjectCapacity
 
+static InternalDataRenderer* sData2;
 
 struct btGraphicsInstance
 {
@@ -70,13 +71,6 @@ static void checkError(const char *functionName)
 extern int gShapeIndex;
 
 
-btVector3 m_cameraPosition(0,0,0);//will be overridden by a position computed from azi/ele
-btVector3 m_cameraTargetPosition(15,-5,-10);
-float m_cameraDistance = 125;
-btVector3 m_cameraUp(0,1,0);
-float m_azi=135.f;
-float m_ele=15.f;
-
 
 
 
@@ -92,11 +86,65 @@ struct InternalDataRenderer
 	GLfloat* m_instance_colors_ptr;
 	GLfloat* m_instance_scale_ptr;
 
-	InternalDataRenderer() :m_instance_positions_ptr (0),m_instance_quaternion_ptr(0),m_instance_colors_ptr(0),m_instance_scale_ptr(0)
+
+	btVector3 m_cameraPosition;
+	btVector3 m_cameraTargetPosition;
+	float m_cameraDistance;
+	btVector3 m_cameraUp;
+	float m_azi;
+	float m_ele;
+
+	float m_mouseXpos;
+	float m_mouseYpos;
+	bool m_mouseInitialized;
+	
+	InternalDataRenderer() :m_instance_positions_ptr (0),m_instance_quaternion_ptr(0),m_instance_colors_ptr(0),m_instance_scale_ptr(0),
+		m_cameraPosition(btVector3(0,0,0)),
+		m_cameraTargetPosition(btVector3(15,-5,-10)),
+		m_cameraDistance(125),
+		m_cameraUp(0,1,0),
+		m_azi(135.f),
+		m_ele(25.f),
+		m_mouseInitialized(false)
 	{
+		
+
+	}
+
+	void mouseCallback(int button, int state, float x, float y)
+	{
+		if (m_mouseInitialized)
+		{
+			if (button)
+			{
+				float xDelta = x-m_mouseXpos;
+				float yDelta = y-m_mouseYpos;
+				m_azi += xDelta*0.1;
+				m_ele += yDelta*0.1;
+				//printf("m_azi=%f\n",m_azi);
+			}
+		}
+		m_mouseXpos = x;
+		m_mouseYpos = y;
+		m_mouseInitialized = true;
+	}
+	void keyboardCallback(unsigned char key, int x, int y)
+	{
+	//	printf("world\n");
 	}
 
 };
+
+void btDefaultMouseCallback(int button, int state, float x, float y)
+{
+	if (sData2)
+		sData2->mouseCallback(button, state, x, y);
+}
+void btDefaultKeyboardCallback(unsigned char key, int x, int y)
+{
+	//printf("world\n");
+}
+
 
 static GLuint               instancingShader;        // The instancing renderer
 
@@ -116,6 +164,7 @@ GLInstancingRenderer::GLInstancingRenderer(int maxObjectCapacity)
 {
 
 	m_data = new InternalDataRenderer;
+	sData2 = m_data;
 
 	m_data->m_instance_positions_ptr = (GLfloat*)new float[m_maxObjectCapacity*4];
 	m_data->m_instance_quaternion_ptr = (GLfloat*)new float[m_maxObjectCapacity*4];
@@ -126,6 +175,7 @@ GLInstancingRenderer::GLInstancingRenderer(int maxObjectCapacity)
 
 GLInstancingRenderer::~GLInstancingRenderer()
 {
+	sData2=0;
 	delete m_data;
 }
 
@@ -828,7 +878,7 @@ void    btCreateLookAt(const btVector3& eye, const btVector3& center,const btVec
 
 
 
-void updateCamera() 
+void GLInstancingRenderer::updateCamera() 
 {
 
     GLint err = glGetError();
@@ -846,30 +896,30 @@ void updateCamera()
     
 
 //    m_azi=m_azi+0.01;
-	btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
-	btScalar razi = m_azi * btScalar(0.01745329251994329547);// rads per deg
+	btScalar rele = m_data->m_ele * btScalar(0.01745329251994329547);// rads per deg
+	btScalar razi = m_data->m_azi * btScalar(0.01745329251994329547);// rads per deg
 
 
-	btQuaternion rot(m_cameraUp,razi);
+	btQuaternion rot(m_data->m_cameraUp,razi);
 
 
 	btVector3 eyePos(0,0,0);
-	eyePos[m_forwardAxis] = -m_cameraDistance;
+	eyePos[m_forwardAxis] = -m_data->m_cameraDistance;
 
 	btVector3 forward(eyePos[0],eyePos[1],eyePos[2]);
 	if (forward.length2() < SIMD_EPSILON)
 	{
 		forward.setValue(1.f,0.f,0.f);
 	}
-	btVector3 right = m_cameraUp.cross(forward);
+	btVector3 right = m_data->m_cameraUp.cross(forward);
 	btQuaternion roll(right,-rele);
 
 	eyePos = btMatrix3x3(rot) * btMatrix3x3(roll) * eyePos;
 
-	m_cameraPosition[0] = eyePos.getX();
-	m_cameraPosition[1] = eyePos.getY();
-	m_cameraPosition[2] = eyePos.getZ();
-	m_cameraPosition += m_cameraTargetPosition;
+	m_data->m_cameraPosition[0] = eyePos.getX();
+	m_data->m_cameraPosition[1] = eyePos.getY();
+	m_data->m_cameraPosition[2] = eyePos.getZ();
+	m_data->m_cameraPosition += m_data->m_cameraTargetPosition;
 
 	if (m_glutScreenWidth == 0 && m_glutScreenHeight == 0)
 		return;
@@ -886,9 +936,9 @@ void updateCamera()
 		// reset matrix
 		
 		
-		extents *= m_cameraDistance;
-		btVector3 lower = m_cameraTargetPosition - extents;
-		btVector3 upper = m_cameraTargetPosition + extents;
+		extents *= m_data->m_cameraDistance;
+		btVector3 lower = m_data->m_cameraTargetPosition - extents;
+		btVector3 upper = m_data->m_cameraTargetPosition + extents;
 		//gluOrtho2D(lower.x, upper.x, lower.y, upper.y);
 				//glTranslatef(100,210,0);
 	} else
@@ -899,21 +949,24 @@ void updateCamera()
     
     if (m_glutScreenWidth > m_glutScreenHeight)
     {
-        //      glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
         btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
     } else
     {
-        //      glFrustum (-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar);
         btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projectionMatrix);
     }
-    /*gluLookAt(m_cameraPosition[0], m_cameraPosition[1], m_cameraPosition[2],
-     m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2],
-     m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
-     */
 
-    btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,modelviewMatrix);
+    btCreateLookAt(m_data->m_cameraPosition,m_data->m_cameraTargetPosition,m_data->m_cameraUp,modelviewMatrix);
     
 
+}
+
+
+void	GLInstancingRenderer::getCameraPosition(float cameraPos[4])
+{
+	cameraPos[0] = m_data->m_cameraPosition.x();
+	cameraPos[1] = m_data->m_cameraPosition.y();
+	cameraPos[2] = m_data->m_cameraPosition.z();
+	cameraPos[3] = 1.f;
 }
 
 void GLInstancingRenderer::getMouseDirection(float* dir, int x, int y)
@@ -924,14 +977,14 @@ void GLInstancingRenderer::getMouseDirection(float* dir, int x, int y)
 	float tanFov = (top-bottom)*0.5f / nearPlane;
 	float fov = btScalar(2.0) * btAtan(tanFov);
 
-	btVector3	rayFrom = m_cameraPosition;
-	btVector3 rayForward = (m_cameraTargetPosition-m_cameraPosition);
+	btVector3	rayFrom = m_data->m_cameraPosition;
+	btVector3 rayForward = (m_data->m_cameraTargetPosition-m_data->m_cameraPosition);
 	rayForward.normalize();
 	float farPlane = 10000.f;
 	rayForward*= farPlane;
 
 	btVector3 rightOffset;
-	btVector3 vertical = m_cameraUp;
+	btVector3 vertical = m_data->m_cameraUp;
 
 	btVector3 hor;
 	hor = rayForward.cross(vertical);

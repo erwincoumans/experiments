@@ -43,8 +43,8 @@ subject to the following restrictions:
 bool printStats = false;
 bool pauseSimulation = false;
 bool shootObject = false;
-extern btVector3 m_cameraPosition;
-extern btVector3 m_cameraTargetPosition;
+//extern btVector3 m_cameraPosition;
+//extern btVector3 m_cameraTargetPosition;
 
 
 bool useInterop = false;
@@ -108,7 +108,7 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
     {
         btCollisionObject* colObj = physics_get_collision_object(i);
 
-        btVector4 pos = colObj->getWorldTransform().getOrigin();
+        btVector3 pos = colObj->getWorldTransform().getOrigin();
         btQuaternion orn = colObj->getWorldTransform().getRotation();
         
         float position[4] = {pos.getX(),pos.getY(),pos.getZ(),0.f};
@@ -166,6 +166,8 @@ void sync_graphics_to_physics_objects(GLInstancingRenderer& renderer)
 {
 	graphics_from_physics(renderer,true);
 }
+
+
 
 int main(int argc, char* argv[])
 {
@@ -253,7 +255,8 @@ int main(int argc, char* argv[])
 //			btVector3 startPos;
 			
 			float orn[4] = {0,0,0,1};
-			float pos[4] = {m_cameraPosition[0],m_cameraPosition[1],m_cameraPosition[2],1};
+			float pos[4];
+			render.getCameraPosition(pos);
 			
 //			demo.setObjectTransform(pos,orn,0);
 //			render.writeSingleTransformInstanceToCPU(pos,orn,0);

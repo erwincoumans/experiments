@@ -18,6 +18,9 @@ subject to the following restrictions:
 
 #include "LinearMath/btAlignedObjectArray.h"
 
+void btDefaultMouseCallback( int button, int state, float x, float y);
+void btDefaultKeyboardCallback(unsigned char key, int x, int y);
+
 class GLInstancingRenderer
 {
 	
@@ -26,6 +29,7 @@ class GLInstancingRenderer
 	int		m_maxObjectCapacity;
 	struct InternalDataRenderer* m_data;
 
+	
 public:
 	GLInstancingRenderer(int m_maxObjectCapacity);
 	virtual ~GLInstancingRenderer();
@@ -49,6 +53,11 @@ public:
 	void writeSingleInstanceColorToCPU(float* color, int srcIndex);
 
 	void getMouseDirection(float* dir, int mouseX, int mouseY);
+
+	void updateCamera();
+
+	void	getCameraPosition(float cameraPos[4]);
+
 };
 
 #endif //GL_INSTANCING_RENDERER_H

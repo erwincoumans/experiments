@@ -22,12 +22,8 @@ subject to the following restrictions:
 
 static InternalData2* sData = 0;
 
-extern btVector3 m_cameraPosition;
-extern btVector3 m_cameraTargetPosition;
-extern btScalar m_cameraDistance;
-extern btVector3 m_cameraUp;
-extern float m_azi;
-extern float m_ele;
+
+
 extern bool printStats;
 extern bool pauseSimulation;
 extern bool shootObject;
@@ -53,6 +49,11 @@ struct InternalData2
 	int m_mouseXpos;
 	int m_mouseYpos;
 
+	btMouseCallback	m_mouseCallback;
+	btKeyboardCallback	m_keyboardCallback;
+
+	
+	
 	InternalData2()
 	{
 		m_hWnd = 0;
@@ -70,6 +71,10 @@ struct InternalData2
 		m_oldHeight = 0;
 		m_oldBitsPerPel = 0;
 		m_quit = false;
+
+		m_keyboardCallback = 0;
+		m_mouseCallback = 0;
+
 	}
 };
 
@@ -145,7 +150,6 @@ void Win32OpenGLWindow::pumpMessage()
 
 		};
 }
-
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -256,7 +260,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int  zDelta = (short)HIWORD(wParam);
 		int xPos = LOWORD(lParam); 
 		int yPos = HIWORD(lParam); 
-		m_cameraDistance -= zDelta*0.01;
+		//m_cameraDistance -= zDelta*0.01;
 		break;
 	}
 
@@ -264,20 +268,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 				int xPos = LOWORD(lParam); 
 				int yPos = HIWORD(lParam); 
-				if (sData)
-				{
-					if (sData->m_mouseLButton)
-					{
-						float xDelta = xPos-sData->m_mouseXpos;
-						float yDelta = yPos-sData->m_mouseYpos;
-						m_azi += xDelta*0.1;
-						m_ele += yDelta*0.1;
-					}
-					sData->m_mouseXpos = xPos;
-					sData->m_mouseYpos = yPos;
-				}
 
-				//gDemoApplication->mouseMotionFunc(xPos,yPos);
+				if (sData && sData->m_mouseCallback)
+					(*sData->m_mouseCallback)(sData->m_mouseLButton,0,xPos,yPos);
+
 			break;
 		}
 	case WM_RBUTTONUP:
@@ -350,6 +344,8 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 	// get handle to exe file
 	HINSTANCE hInstance = GetModuleHandle(0);
 
+
+
 	// create the window if we need to and we do not use the null device
 	if (!windowHandle)
 	{
@@ -406,6 +402,8 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 
 		m_data->m_hWnd = CreateWindow( ClassName, "", style, windowLeft, windowTop,
 					m_data->m_width, m_data->m_height, NULL, NULL, hInstance, NULL);
+
+		
 
 		ShowWindow(m_data->m_hWnd, SW_SHOW);
 		UpdateWindow(m_data->m_hWnd);
@@ -531,12 +529,17 @@ Win32OpenGLWindow::Win32OpenGLWindow()
 {
 	m_data = new InternalData2();
 	sData = m_data;
+	
 }
 
 Win32OpenGLWindow::~Win32OpenGLWindow()
 {
-	delete m_data;
+	setKeyboardCallback(0);
+	setMouseCallback(0);
+	
 	sData = 0;
+	delete m_data;
+	
 }
 
 void	Win32OpenGLWindow::init()
@@ -547,6 +550,11 @@ void	Win32OpenGLWindow::init()
 
 void	Win32OpenGLWindow::exit()
 {
+	setKeyboardCallback(0);
+	setMouseCallback(0);
+
+	
+	
 	disableOpenGL();
 	DestroyWindow(this->m_data->m_hWnd);
 }
@@ -571,16 +579,13 @@ void	Win32OpenGLWindow::startRendering()
 
 
 		float aspect;
-		//btVector3 extents;
 
 		if (m_data->m_width > m_data->m_height) 
 		{
 			aspect = (float)m_data->m_width / (float)m_data->m_height;
-			//extents.setValue(aspect * 1.0f, 1.0f,0);
 		} else 
 		{
 			aspect = (float)m_data->m_height / (float)m_data->m_width;
-			//extents.setValue(1.0f, aspect*1.f,0);
 		}
 	
 		glMatrixMode(GL_PROJECTION);
@@ -621,3 +626,18 @@ bool Win32OpenGLWindow::requestedExit()
 {
 	return m_data->m_quit;
 }
+
+void Win32OpenGLWindow::setMouseCallback(btMouseCallback	mouseCallback)
+{
+	m_data->m_mouseCallback = mouseCallback;
+	
+}
+
+void Win32OpenGLWindow::setKeyboardCallback( btKeyboardCallback	keyboardCallback)
+{
+	m_data->m_keyboardCallback = keyboardCallback;
+	
+}
+
+
+	
