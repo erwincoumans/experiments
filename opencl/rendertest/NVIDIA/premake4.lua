@@ -22,12 +22,15 @@
 		}
 		
 			
-		links {"BulletFileLoader"}
 		
 		files {
 			"../main.cpp",
 			"../renderscene.cpp",
 			"../renderscene.h",
+			"../fontstash.cpp",
+			"../fontstash.h",
+			"../stb_image_write.h",
+			"../stb_truetype.h",
 			"../../gpu_rigidbody_pipeline2/GLInstancingRenderer.cpp",
 			"../../gpu_rigidbody_pipeline2/GLInstancingRenderer.h",
 			"../../gpu_rigidbody_pipeline2/Win32OpenGLRenderManager.cpp",

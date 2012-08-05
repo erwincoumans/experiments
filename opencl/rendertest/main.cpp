@@ -29,6 +29,8 @@ subject to the following restrictions:
 #endif
 
 #include "RenderScene.h"
+#include "fontstash.h"
+
 
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
@@ -103,7 +105,10 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
-	window->init(1024,768);
+	int width = 1024;
+	int height=768;
+
+	window->init(width,height);
 #ifndef __APPLE__
 	GLenum err = glewInit();
 #endif
@@ -125,6 +130,55 @@ int main(int argc, char* argv[])
 	render.writeTransforms();
 
     window->runMainLoop();
+
+	window->setMouseCallback(btDefaultMouseCallback);
+	window->setKeyboardCallback(btDefaultKeyboardCallback);
+
+
+
+#ifdef _WIN32
+
+
+		int done;
+	struct sth_stash* stash = 0;
+	FILE* fp = 0;
+	int datasize;
+	unsigned char* data;
+	float sx,sy,dx,dy,lh;
+	int droidRegular, droidItalic, droidBold, droidJapanese, dejavu;
+	GLuint texture;
+
+	stash = sth_create(256,256);//,1024);//512,512);
+	if (!stash)
+	{
+		fprintf(stderr, "Could not create stash.\n");
+		return -1;
+	}
+
+	// Load the first truetype font from memory (just because we can).
+	fp = fopen("../../bin/DroidSerif-Regular.ttf", "rb");
+	if (!fp) goto error_add_font;
+	fseek(fp, 0, SEEK_END);
+	datasize = (int)ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	data = (unsigned char*)malloc(datasize);
+	if (data == NULL) goto error_add_font;
+	fread(data, 1, datasize, fp);
+	fclose(fp);
+	fp = 0;
+	
+	if (!(droidRegular = sth_add_font_from_memory(stash, data)))
+		goto error_add_font;
+
+	// Load the remaining truetype fonts directly.
+	if (!(droidItalic = sth_add_font(stash,"../../bin/DroidSerif-Italic.ttf")))
+		goto error_add_font;
+	if (!(droidBold = sth_add_font(stash,"../../bin/DroidSerif-Bold.ttf")))
+		goto error_add_font;
+	if (!(droidJapanese = sth_add_font(stash,"../../bin/DroidSansJapanese.ttf")))
+		goto error_add_font;
+#endif//_WIN32
+
 
 	while (!window->requestedExit())
 	{
@@ -160,6 +214,73 @@ int main(int argc, char* argv[])
 
 		window->startRendering();
 		render.RenderScene();
+
+			glUseProgram(0);
+	glBindBuffer(GL_ARRAY_BUFFER,0);
+	glBindVertexArray(0);
+//	glFinish();
+	glClearColor(0,0,0,1);
+#ifdef _WIN32
+	if (1)
+	{
+		BT_PROFILE("font stash rendering");
+				// Update and render
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDisable(GL_TEXTURE_2D);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0,width,0,height,-1,1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glDisable(GL_DEPTH_TEST);
+		glColor4ub(255,0,0,255);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+		sx = 0; sy = height-96;
+		
+		sth_begin_draw(stash);
+		
+		dx = sx; dy = sy;
+		static int once=0;
+
+		for (int i=0;i<1;i++)
+		{
+			dx = sx;
+			if (once!=1)
+			{
+				//need to save this file as UTF-8 without signature, codepage 650001 in Visual Studio
+				glColor4f(1,1,1,1);
+				
+				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
+//				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "私はガラスを食べられます。それは私を傷つけません。",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
+				
+				dx = sx;
+
+				sth_flush_draw(stash);
+				glColor4f(0,0,0,1);
+				//sth_draw_text(stash, droidRegular,32.f, dx-2, dy+2, "abcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx);
+				sth_flush_draw(stash);
+
+			}	else
+			{
+				dx = sx;
+				dy = height;
+				glColor4f(1,1,1,1);
+
+				sth_draw_texture(stash, droidRegular, 32.f, 0, 0,width,height, "a", &dx);
+			}
+			once++;
+		}
+
+		sth_end_draw(stash);
+		
+		glEnable(GL_DEPTH_TEST);
+		//glFinish();
+	}
+#endif //_WIN32
+
 		window->endRendering();
 
 		{
@@ -191,7 +312,10 @@ int main(int argc, char* argv[])
 
 	}
 
-	
+#ifdef _WIN32
+	sth_delete(stash);
+	free(data);
+#endif
 
 	render.CleanupShaders();
 	window->exit();
@@ -200,4 +324,15 @@ int main(int argc, char* argv[])
 	
 	
 	return 0;
+
+#ifdef _WIN32
+error_add_font:
+	fprintf(stderr, "Could not add font.\n");
+
+	render.CleanupShaders();
+	window->exit();
+	delete window;
+	return -1;
+#endif
+
 }
