@@ -10,16 +10,16 @@ float Z_GAP = 2.3f;
 bool keepStaticObjects = false;
 #include <stdio.h>
 
-#include "../gpu_rigidbody_pipeline2/OpenGLInclude.h"
+#include "../../rendering/rendertest/OpenGLInclude.h"
 
 #include "RenderScene.h"
 
-#include "../gpu_rigidbody_pipeline2/GLInstancingRenderer.h"
+#include "../../rendering/rendertest/GLInstancingRenderer.h"
 //#include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
 #include "LinearMath/btMatrix3x3.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
-#include "../gpu_rigidbody_pipeline2/ShapeData.h"
+#include "ShapeData.h"
 ///work-in-progress 
 ///This ReadBulletSample is kept as simple as possible without dependencies to the Bullet SDK.
 ///It can be used to load .bullet data for other physics SDKs

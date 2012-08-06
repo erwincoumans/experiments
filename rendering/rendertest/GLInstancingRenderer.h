@@ -27,11 +27,12 @@ class GLInstancingRenderer
 	btAlignedObjectArray<struct btGraphicsInstance*> m_graphicsInstances;
 
 	int		m_maxObjectCapacity;
+	int		m_maxShapeCapacity;
 	struct InternalDataRenderer* m_data;
 
 	
 public:
-	GLInstancingRenderer(int m_maxObjectCapacity);
+	GLInstancingRenderer(int m_maxObjectCapacity, int maxShapeCapacity = 512*1024);
 	virtual ~GLInstancingRenderer();
 
 	void InitShaders();
@@ -58,6 +59,10 @@ public:
 
 	void	getCameraPosition(float cameraPos[4]);
 
+	int getMaxShapeCapacity() const
+	{
+		return m_maxShapeCapacity;
+	}
 };
 
 #endif //GL_INSTANCING_RENDERER_H

@@ -19,13 +19,12 @@ subject to the following restrictions:
 #include <GL/glew.h>
 #endif
 
-#include "../gpu_rigidbody_pipeline2/GLInstancingRenderer.h"
+#include "GLInstancingRenderer.h"
 
-#include "../opengl_interop/btOpenCLGLInteropBuffer.h"
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
 #else
-#include "../gpu_rigidbody_pipeline2/Win32OpenGLRenderManager.h"
+#include "Win32OpenGLRenderManager.h"
 #endif
 
 #include "RenderScene.h"
