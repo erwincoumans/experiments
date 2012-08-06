@@ -17,14 +17,17 @@
 		initGlew()
 
 		includedirs {
+		"../../../rendering/rendertest",
 		"../../primitives",
 		"../../../bullet2",
 		"../../../dynamics/basic_demo"
 		}
 		
+		
 		links {"BulletFileLoader"}
-		 links { "Cocoa.framework" }
-	
+		
+		links { "Cocoa.framework" }
+		
 		files {
 			"../main.cpp",
 			"../satClipHullContacts.cpp",
@@ -36,12 +39,6 @@
 			"../CLPhysicsDemo.h",
 			"../GLInstancingRenderer.cpp",
 			"../GLInstancingRenderer.h",
-			"../../rendertest/MacOpenGLWindow.mm",
-			"../../rendertest/MacOpenGLWindow.h",
-			--"../GlutRenderer.cpp",
-			--"../GlutRenderer.h",
-			--"../Win32OpenGLRenderManager.cpp",
-			--"../Win32OpenGLRenderManager.h",	
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
@@ -91,8 +88,11 @@
 			"../../../rendering/WavefrontObjLoader/obj_parser.cpp",
 			"../../../rendering/WavefrontObjLoader/obj_parser.h",
 			"../../../rendering/WavefrontObjLoader/list.cpp",
-			"../../../rendering/WavefrontObjLoader/list.h"
-
+			"../../../rendering/WavefrontObjLoader/list.h",
+			"../../../rendering/rendertest/MacOpenGLWindow.mm",
+			"../../../rendering/rendertest/MacOpenGLWindow.h",
+			"../../../rendering/rendertest/GLInstancingRenderer.cpp",
+			"../../../rendering/rendertest/GLInstancingRenderer.h"
 		}
 		
 	end

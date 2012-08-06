@@ -18,14 +18,14 @@
 
 		includedirs {
 		"../../primitives",
+		"../../../rendering/rendertest",
 		"../../../bullet2"
 		}
 		
-			
 		links {"BulletFileLoader"}
 		
 		files {
-			"../main.cpp",     
+			"../main.cpp",
 			"../satClipHullContacts.cpp",      
 			"../BulletDataExtractor.cpp",
 			"../BulletDataExtractor.h",
@@ -33,14 +33,8 @@
 			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
 			"../CLPhysicsDemo.h",
-			"../GLInstancingRenderer.cpp",
-			"../GLInstancingRenderer.h",
-			"../GlutRenderer.cpp",
-			"../GlutRenderer.h",
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
-			"../Win32OpenGLRenderManager.cpp",
-			"../Win32OpenGLRenderManager.h",	
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
 			"../../broadphase_benchmark/btPrefixScanCL.h",
 			"../../broadphase_benchmark/btRadixSort32CL.cpp",
@@ -88,7 +82,12 @@
 			"../../../rendering/WavefrontObjLoader/obj_parser.cpp",
 			"../../../rendering/WavefrontObjLoader/obj_parser.h",
 			"../../../rendering/WavefrontObjLoader/list.cpp",
-			"../../../rendering/WavefrontObjLoader/list.h"
+			"../../../rendering/WavefrontObjLoader/list.h",
+			"../../../rendering/rendertest/GLInstancingRenderer.cpp",
+			"../../../rendering/rendertest/GLInstancingRenderer.h",
+			"../../../rendering/rendertest/Win32OpenGLRenderManager.cpp",
+			"../../../rendering/rendertest/Win32OpenGLRenderManager.h",	
+
 		}
 		
 	end

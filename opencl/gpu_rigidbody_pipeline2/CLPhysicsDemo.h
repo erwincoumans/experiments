@@ -38,6 +38,7 @@ struct CLPhysicsDemo
 
 	int m_numPhysicsInstances;
 	int m_numDynamicPhysicsInstances;
+	int m_maxShapeBufferCapacity;
 	
 	
 
@@ -45,9 +46,9 @@ struct CLPhysicsDemo
 
 	struct InternalData* m_data;
 #ifdef _WIN32
-	CLPhysicsDemo(Win32OpenGLWindow*	renderer);
+	CLPhysicsDemo(Win32OpenGLWindow*	renderer, int maxShapeBufferCapacity);
 #else
-    CLPhysicsDemo(MacOpenGLWindow*	renderer);
+    CLPhysicsDemo(MacOpenGLWindow*	renderer, int maxShapeBufferCapacity);
 #endif
     
 	virtual ~CLPhysicsDemo();

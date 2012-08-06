@@ -18,6 +18,7 @@
 
 		includedirs {
 		"../../primitives",
+		"../../../rendering/rendertest",
 		"../../../bullet2"
 		}
 		
@@ -32,12 +33,6 @@
 			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
 			"../CLPhysicsDemo.h",
-			"../GLInstancingRenderer.cpp",
-			"../GLInstancingRenderer.h",
-			"../GlutRenderer.cpp",
-			"../GlutRenderer.h",
-			"../Win32OpenGLRenderManager.cpp",
-			"../Win32OpenGLRenderManager.h",	
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
@@ -87,7 +82,12 @@
 			"../../../rendering/WavefrontObjLoader/obj_parser.cpp",
 			"../../../rendering/WavefrontObjLoader/obj_parser.h",
 			"../../../rendering/WavefrontObjLoader/list.cpp",
-			"../../../rendering/WavefrontObjLoader/list.h"
+			"../../../rendering/WavefrontObjLoader/list.h",
+			"../../../rendering/rendertest/GLInstancingRenderer.cpp",
+			"../../../rendering/rendertest/GLInstancingRenderer.h",
+			"../../../rendering/rendertest/Win32OpenGLRenderManager.cpp",
+			"../../../rendering/rendertest/Win32OpenGLRenderManager.h",	
+
 		}
 		
 	end

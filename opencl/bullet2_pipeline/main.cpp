@@ -16,7 +16,7 @@ subject to the following restrictions:
 //
 //#include "vld.h"
 
-#include "../gpu_rigidbody_pipeline2/ShapeData.h"
+#include "ShapeData.h"
 
 #ifndef __APPLE__
 #include <GL/glew.h>
@@ -26,12 +26,12 @@ subject to the following restrictions:
 #include "btBulletDynamicsCommon.h"
 
 
-#include "../gpu_rigidbody_pipeline2/GLInstancingRenderer.h"
+#include "../../rendering/rendertest/GLInstancingRenderer.h"
 
 #ifdef __APPLE__
-#include "../rendertest/MacOpenGLWindow.h"
+#include "../../rendering/rendertest/MacOpenGLWindow.h"
 #else
-#include "../gpu_rigidbody_pipeline2/Win32OpenGLRenderManager.h"
+#include "../../rendering/rendertest/Win32OpenGLRenderManager.h"
 #endif
 
 

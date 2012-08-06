@@ -23,7 +23,6 @@ extern bool useConvexHeightfield;
 
 #include "CLPhysicsDemo.h"
 #include "LinearMath/btAlignedObjectArray.h"
-#include "DemoSettings.h"
 #include "../basic_initialize/btOpenCLUtils.h"
 #ifdef _WIN32
 #include "../opengl_interop/btOpenCLGLInteropBuffer.h"
@@ -165,12 +164,12 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 
 
 #ifdef _WIN32
-CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer)
+CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer, int maxShapeBufferCapacity)
 #else
-CLPhysicsDemo::CLPhysicsDemo(MacOpenGLWindow*	renderer)
+CLPhysicsDemo::CLPhysicsDemo(MacOpenGLWindow*	renderer, int maxShapeBufferCapacity)
 #endif
 {
-
+	m_maxShapeBufferCapacity = maxShapeBufferCapacity;
 	m_numPhysicsInstances=0;
 	m_numDynamicPhysicsInstances = 0;
 
@@ -627,7 +626,7 @@ void	CLPhysicsDemo::stepSimulation()
 	{
 
 		gFpIO.m_numObjects = m_numPhysicsInstances;
-		gFpIO.m_positionOffset = SHAPE_VERTEX_BUFFER_SIZE/4;
+		gFpIO.m_positionOffset = m_maxShapeBufferCapacity/4;
 		gFpIO.m_clObjectsBuffer = clBuffer;
 		if (useSapGpuBroadphase)
 		{
@@ -711,7 +710,7 @@ void	CLPhysicsDemo::stepSimulation()
 				if (integrateOnGpu)
 				{
 					int numObjects = m_numPhysicsInstances;
-					int offset = SHAPE_VERTEX_BUFFER_SIZE/4;
+					int offset = m_maxShapeBufferCapacity/4;
 
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 0, sizeof(int), &offset);
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 1, sizeof(int), &numObjects);

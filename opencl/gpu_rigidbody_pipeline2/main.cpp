@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 		
 
 
-	CLPhysicsDemo demo(window);
+	CLPhysicsDemo demo(window, render.getMaxShapeCapacity());
 	
 	
 	demo.init(-1,-1,useInterop);
