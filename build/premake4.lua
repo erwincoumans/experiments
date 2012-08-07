@@ -97,6 +97,7 @@ if not _OPTIONS["with-nacl"] then
 --	include "../opencl/gpu_rigidbody_pipeline"
 	include "../opencl/gpu_rigidbody_pipeline2"
 	include "../rendering/rendertest"
+	include "../rendering/OpenGLTrueTypeFont"
 	include "../opencl/tests"
 	
 	

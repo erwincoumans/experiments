@@ -37,26 +37,6 @@ void dumpInfo(void)
 }
 
 
-void display(void)
-{
-	checkError("pre display");
-    
-	// clear the screen
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-		
-	checkError("display");
-}
-
-void reshape(int w, int h)
-{
-	glViewport(0,0,(GLsizei)w,(GLsizei)h);
-    if (w>0 && h>0)
-    {
-        m_glutScreenWidth = w;
-        m_glutScreenHeight = h;
-    }
-}
 
 
 
@@ -101,14 +81,19 @@ float loop;
 		// Only needed on resize:
 		[m_context clearDrawable];
 		
-		reshape([self frame].size.width, [self frame].size.height);
+//		reshape([self frame].size.width, [self frame].size.height);
+        float width = [self frame].size.width;
+        float height = [self frame].size.height;
+        
+        glViewport(0,0,(GLsizei)width,(GLsizei)height);
+
 	}
 	
 	[m_context setView: self];
 	[m_context makeCurrentContext];
 	
 	// Draw
-	display();
+	//display();
 	
 	[m_context flushBuffer];
 	[NSOpenGLContext clearCurrentContext];
@@ -453,12 +438,14 @@ void MacOpenGLWindow::startRendering()
     } while (event);
   
     [m_internalData->m_myview MakeCurrent];
+    GLint err = glGetError();
+    assert(err==GL_NO_ERROR);
     
     
-    //glClearColor(1.f,0.f,0.f,1.f);
+    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);     //clear buffers
 
-    GLint err = glGetError();
+    err = glGetError();
     assert(err==GL_NO_ERROR);
     
     //glCullFace(GL_BACK);

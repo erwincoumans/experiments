@@ -37,8 +37,6 @@
 			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
 			"../CLPhysicsDemo.h",
-			"../GLInstancingRenderer.cpp",
-			"../GLInstancingRenderer.h",
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
