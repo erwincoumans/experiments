@@ -59,7 +59,7 @@ int sth_add_font(struct sth_stash* stash, const char* path);
 int sth_add_font_from_memory(struct sth_stash* stash, unsigned char* buffer);
 
 int sth_add_bitmap_font(struct sth_stash* stash, int ascent, int descent, int line_gap);
-int sth_add_glyph(struct sth_stash* stash, int idx, GLuint id, const char* s,
+void sth_add_glyph(struct sth_stash* stash, int idx, GLuint id, const char* s,
                   short size, short base, int x, int y, int w, int h,
                   float xoffset, float yoffset, float xadvance);
 
@@ -76,7 +76,7 @@ void sth_flush_draw(struct sth_stash* stash);
 
 void sth_draw_text(struct sth_stash* stash,
 				   int idx, float size,
-				   float x, float y, const char* string, float* dx);
+				   float x, float y, const char* string, float* dx, int screenwidth, int screenheight);
 
 void sth_dim_text(struct sth_stash* stash, int idx, float size, const char* string,
 				  float* minx, float* miny, float* maxx, float* maxy);

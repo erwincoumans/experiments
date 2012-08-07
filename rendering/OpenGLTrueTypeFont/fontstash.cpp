@@ -25,6 +25,7 @@
 #include <Windows.h>
 
 #endif
+#include "fontstash.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -49,7 +50,8 @@
 #define HASH_LUT_SIZE 256
 #define MAX_ROWS 128
 #define VERT_COUNT (6*128)
-#define VERT_STRIDE (sizeof(float)*4)
+#define INDEX_COUNT (VERT_COUNT*2)
+
 
 #define TTFONT_FILE 1
 #define TTFONT_MEM  2
@@ -105,15 +107,22 @@ struct sth_font
 	struct sth_font* next;
 };
 
+static unsigned int s_indexData[INDEX_COUNT];
+GLuint s_indexArrayObject, s_indexBuffer;
+GLuint s_vertexArrayObject,s_vertexBuffer;
+
+
 struct sth_texture
 {
 	GLuint id;
+    
 	// TODO: replace rows with pointer
 	struct sth_row rows[MAX_ROWS];
 	int nrows;
-	float verts[4*VERT_COUNT];
 	int nverts;
-	struct sth_texture* next;
+	
+    Vertex newverts[VERT_COUNT];
+  	struct sth_texture* next;
 };
 
 struct sth_stash
@@ -206,6 +215,39 @@ struct sth_stash* sth_create(int cachew, int cacheh)
 	free(bmp);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+    
+    ////////////////////////////
+    //create the other data
+    {
+        glGenVertexArrays(1, &s_vertexArrayObject);
+        glBindVertexArray(s_vertexArrayObject);
+        
+        glGenBuffers(1, &s_vertexBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, VERT_COUNT * sizeof(Vertex), texture->newverts, GL_DYNAMIC_DRAW);
+        GLuint err = glGetError();
+        assert(err==GL_NO_ERROR);
+        
+        for (int i=0;i<INDEX_COUNT;i++)
+        {
+            s_indexData[i] = i;
+        }
+            
+        glGenBuffers(1, &s_indexBuffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_indexBuffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,INDEX_COUNT*sizeof(int), s_indexData,GL_STATIC_DRAW);
+        
+        err = glGetError();
+        assert(err==GL_NO_ERROR);
+    }
+    ////////////////////////////
+
+    
+    
+    
+    
+    
+    
 	return stash;
 	
 }
@@ -471,6 +513,7 @@ static struct sth_glyph* get_glyph(struct sth_stash* stash, struct sth_font* fnt
 						glBindTexture(GL_TEXTURE_2D, texture->id);
 						glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, stash->tw,stash->th, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                        
 					}
 					continue;
 				}
@@ -557,14 +600,94 @@ static int get_quad(struct sth_stash* stash, struct sth_font* fnt, struct sth_gl
 	return 1;
 }
 
-static float* setv(float* v, float x, float y, float s, float t)
+static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, float height)
 {
-	v[0] = x;
-	v[1] = y;
-	v[2] = s;
-	v[3] = t;
-	return v+4;
+	v->position.p[0] = (x-width)/width;
+	v->position.p[1] = (y)/height;
+    v->position.p[2] = 0.f;
+    v->position.p[3] = 1.f;
+    
+	v->uv.p[0] = s;
+    v->uv.p[1] = t;
+
+    v->colour.p[0] = 0.f;
+    v->colour.p[1] = 0.f;
+    v->colour.p[2] = 0.f;
+    v->colour.p[3] = 1.f;
+    
+	return v+1;
 }
+
+
+
+extern GLuint m_texturehandle;
+extern GLuint shaderProgram;
+extern GLuint positionUniform;
+extern GLint colourAttribute, positionAttribute,textureAttribute;
+extern GLuint vertexArrayObject,vertexBuffer;
+extern GLuint  indexBuffer;
+
+
+void display2() {
+    
+    GLint err = glGetError();
+    assert(err==GL_NO_ERROR);
+   // glViewport(0,0,10,10);
+    
+	const float timeScale = 0.008f;
+	
+    glUseProgram(shaderProgram);
+    glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
+    glBindVertexArray(s_vertexArrayObject);
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    
+    //   glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+    
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
+    glUniform2fv(positionUniform, 1, (const GLfloat *)&p);
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+	err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    glEnableVertexAttribArray(positionAttribute);
+	err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    glEnableVertexAttribArray(colourAttribute);
+	err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+	glEnableVertexAttribArray(textureAttribute);
+    
+    glVertexAttribPointer(positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+	err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    
+    //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    int indexCount = 6;
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    //	glutSwapBuffers();
+}
+
 
 static void flush_draw(struct sth_stash* stash)
 {
@@ -573,45 +696,35 @@ static void flush_draw(struct sth_stash* stash)
 	{
 		if (texture->nverts > 0)
 		{
+            display2();
+
             GLint err;
 			glBindTexture(GL_TEXTURE_2D, texture->id);
             err = glGetError();
             assert(err==GL_NO_ERROR);
-		//	glEnableClientState(GL_VERTEX_ARRAY);
+          //  glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
+           // glBindVertexArray(s_vertexArrayObject);
+            glBufferData(GL_ARRAY_BUFFER, texture->nverts * sizeof(Vertex), &texture->newverts[0].position.p[0], GL_DYNAMIC_DRAW);
             err = glGetError();
             assert(err==GL_NO_ERROR);
-		//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+            
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_indexBuffer);
+            
+            //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+            int indexCount = texture->nverts;
             err = glGetError();
             assert(err==GL_NO_ERROR);
-			glVertexPointer(2, GL_FLOAT, VERT_STRIDE, texture->verts);
- //           glVertexAttribPointer(2, GL_FLOAT,
+            
+            glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
             err = glGetError();
             assert(err==GL_NO_ERROR);
-			glTexCoordPointer(2, GL_FLOAT, VERT_STRIDE, texture->verts+2);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-
-			glDrawArrays(GL_TRIANGLES, 0, texture->nverts);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-
-            glDisable(GL_TEXTURE_2D);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-
+		
 			texture->nverts = 0;
 		}
 		texture = texture->next;
 	}
 }
+
 
 void sth_begin_draw(struct sth_stash* stash)
 {
@@ -664,7 +777,7 @@ void sth_draw_texture(struct sth_stash* stash,
 	unsigned int state = 0;
 	struct sth_quad q;
 	short isize = (short)(size*10.0f);
-	float* v;
+	Vertex* v;
 	struct sth_font* fnt = NULL;
 	
 	if (stash == NULL) return;
@@ -691,19 +804,19 @@ void sth_draw_texture(struct sth_stash* stash,
 		if (!get_quad(stash, fnt, glyph, isize, &x, &y, &q)) 
 			continue;
 		
-		v = &texture->verts[texture->nverts*4];
+		v = &texture->newverts[texture->nverts];
 		q.x0 = 0;
 		q.y0 = 0;
 		q.x1 = q.x0+width;
 		q.y1 = q.y0+height;
 
-		v = setv(v, q.x0, q.y0, 0,0);
-		v = setv(v, q.x1, q.y0, 1,0);
-		v = setv(v, q.x1, q.y1, 1,1);
+		v = setv(v, q.x0, q.y0, 0,0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y0, 1,0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y1, 1,1,screenwidth,screenheight);
 
-		v = setv(v, q.x0, q.y0, 0,0);
-		v = setv(v, q.x1, q.y1, 1,1);
-		v = setv(v, q.x0, q.y1, 0,1);
+		v = setv(v, q.x0, q.y0, 0,0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y1, 1,1,screenwidth,screenheight);
+		v = setv(v, q.x0, q.y1, 0,1,screenwidth,screenheight);
 	
 
 
@@ -719,7 +832,7 @@ void sth_draw_texture(struct sth_stash* stash,
 	}
 	
 	flush_draw(stash);
-#if 1
+#if 0
 	glBindTexture(GL_TEXTURE_2D, texture->id);
 
 
@@ -764,7 +877,7 @@ void sth_flush_draw(struct sth_stash* stash)
 void sth_draw_text(struct sth_stash* stash,
 				   int idx, float size,
 				   float x, float y,
-				   const char* s, float* dx)
+				   const char* s, float* dx, int screenwidth, int screenheight)
 {
 	unsigned int codepoint;
 	struct sth_glyph* glyph = NULL;
@@ -772,7 +885,7 @@ void sth_draw_text(struct sth_stash* stash,
 	unsigned int state = 0;
 	struct sth_quad q;
 	short isize = (short)(size*10.0f);
-	float* v;
+	Vertex* v;
 	struct sth_font* fnt = NULL;
 	
 	if (stash == NULL) return;
@@ -795,15 +908,15 @@ void sth_draw_text(struct sth_stash* stash,
 		
 		if (!get_quad(stash, fnt, glyph, isize, &x, &y, &q)) continue;
 		
-		v = &texture->verts[texture->nverts*4];
+		v = &texture->newverts[texture->nverts];
 		
-		v = setv(v, q.x0, q.y0, q.s0, q.t0);
-		v = setv(v, q.x1, q.y0, q.s1, q.t0);
-		v = setv(v, q.x1, q.y1, q.s1, q.t1);
+		v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y0, q.s1, q.t0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
 
-		v = setv(v, q.x0, q.y0, q.s0, q.t0);
-		v = setv(v, q.x1, q.y1, q.s1, q.t1);
-		v = setv(v, q.x0, q.y1, q.s0, q.t1);
+		v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
+		v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
+		v = setv(v, q.x0, q.y1, q.s0, q.t1,screenwidth,screenheight);
 		
 		texture->nverts += 6;
 	}

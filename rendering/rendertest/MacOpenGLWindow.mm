@@ -85,7 +85,19 @@ float loop;
         float width = [self frame].size.width;
         float height = [self frame].size.height;
         
-        glViewport(0,0,(GLsizei)width,(GLsizei)height);
+        
+        // Get view dimensions in pixels
+        NSRect backingBounds = [self convertRectToBacking:[self bounds]];
+        
+        GLsizei backingPixelWidth  = (GLsizei)(backingBounds.size.width),
+        backingPixelHeight = (GLsizei)(backingBounds.size.height);
+        
+        // Set viewport
+       // glViewport(0, 0, backingPixelWidth, backingPixelHeight);
+     //   glViewport(0,0,10,10);
+        
+        
+        //glViewport(0,0,(GLsizei)width,(GLsizei)height);
 
 	}
 	
@@ -267,6 +279,11 @@ void MacOpenGLWindow::init(int width, int height)
 	// OpenGL init!
 	[m_internalData->m_myview MakeContext];
 
+   // https://developer.apple.com/library/mac/#documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/CapturingScreenContents/CapturingScreenContents.html#//apple_ref/doc/uid/TP40012302-CH10-SW1
+    //support HighResolutionOSX
+   [m_internalData->m_myview  setWantsBestResolutionOpenGLSurface:YES];
+
+    
     dumpInfo();
     
 
@@ -442,7 +459,7 @@ void MacOpenGLWindow::startRendering()
     assert(err==GL_NO_ERROR);
     
     
-    
+    glClearColor(1,1,1,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);     //clear buffers
 
     err = glGetError();

@@ -51,22 +51,36 @@ GLuint shaderProgram;
 GLuint positionUniform;
 GLint colourAttribute, positionAttribute,textureAttribute;
 GLuint vertexArrayObject,vertexBuffer;
-GLuint indexArrayObject, indexBuffer;
-
+GLuint  indexBuffer;
 
 
 
 
 void loadShader();
-  unsigned int indexData[6] = {0,1,2,0,2,3};
+unsigned int indexData[6] = {0,1,2,0,2,3};
 
 void loadBufferData(){
-    Vertex vertexData[4] = {
+    Vertex vertexDataOrg[4] = {
         { vec4(-0.5, -0.5, 0.0, 1.0 ), vec4( 1.0, 0.0, 0.0, 1.0 ) ,vec2(0,0)},
         { vec4(-0.5,  0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0,1)},
         { vec4( 0.5,  0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(1,1)},
         { vec4( 0.5, -0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(1,0)}
     };
+
+    Vertex vertexData[4] = {
+        { vec4(-0.5, -0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.0078125,0.015625)},
+        { vec4(-0.5,  0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.101562,0.015625)},
+        { vec4( 0.5,  0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.101562,0.105469)},
+        { vec4( 0.5, -0.5, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.0078125,0.105469)}
+    };
+    
+    Vertex vertexData2[4] = {
+        { vec4(0, 0.901042, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.0078125,0.015625)},
+        { vec4(0.0234375, 0.901042, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.101562,0.015625)},
+        { vec4( 0.0234375,  0.871094, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.101562,0.105469)},
+        { vec4( 0., 0.871094, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.0078125,0.105469)}
+    };
+
     
     glGenVertexArrays(1, &vertexArrayObject);
     glBindVertexArray(vertexArrayObject);
@@ -167,7 +181,7 @@ static const char* vertexShader= \
 "void main (void)\n"
 "{\n"
 "    colourV = colour;\n"
-"	gl_Position = vec4(p.x+position.x, -p.y-position.y,0.f,1.f);\n"
+"	gl_Position = vec4(p.x+position.x, p.y+position.y,0.f,1.f);\n"
 "	texuvV=texuv;\n"
 "}\n";
 
@@ -183,7 +197,8 @@ static const char* fragmentShader= \
 "void main(void)\n"
 "{\n"
 "	vec4 texcolorred = texture(Diffuse,texuvV);\n"
-"	vec4 texcolor = vec4(texcolorred.x,texcolorred.x,texcolorred.x,1.f);\n"
+"//	vec4 texcolor = vec4(texcolorred.x,texcolorred.x,texcolorred.x,texcolorred.x);\n"
+"	vec4 texcolor = vec4(1,1,1,texcolorred.x);\n"
 "\n"
 "    fragColour = colourV*texcolor;\n"
 "}\n";
@@ -285,7 +300,7 @@ void loadShader(){
 
 void display() {
    
-    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClearColor(.4, .4, 0.4, 1.0);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     GLint err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -300,14 +315,13 @@ void display() {
     assert(err==GL_NO_ERROR);
     
     
-    glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+ //   glBindTexture(GL_TEXTURE_2D,m_texturehandle);
     
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
-//    GLfloat timeValue = glutGet(GLUT_ELAPSED_TIME)*timeScale;
-    vec2 p( -0.5,-0.5);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
+    vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
     glUniform2fv(positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
@@ -530,7 +544,7 @@ int main(int argc, char* argv[])
         err = glGetError();
         assert(err==GL_NO_ERROR);
         
-        display();
+    //    display();
       
         err = glGetError();
         assert(err==GL_NO_ERROR);
@@ -538,12 +552,12 @@ int main(int argc, char* argv[])
         
         //render.RenderScene();
 
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindVertexArray(0);
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
+//	glBindBuffer(GL_ARRAY_BUFFER,0);
+//	glBindVertexArray(0);
+  //     err = glGetError();
+     //   assert(err==GL_NO_ERROR);
         
-    if (0)
+    if (1)
 	{
 		BT_PROFILE("font stash rendering");
 				// Update and render
@@ -576,7 +590,7 @@ int main(int argc, char* argv[])
         err = glGetError();
         assert(err==GL_NO_ERROR);
         
-		sx = 0; sy = height-96;
+		sx = 0; sy = height-16;
 		
 		sth_begin_draw(stash);
 		
@@ -592,7 +606,8 @@ int main(int argc, char* argv[])
 			    err = glGetError();
                 assert(err==GL_NO_ERROR);
 
-				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
+				sth_draw_text(stash, droidJapanese,32.f, dx, dy-10, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
+                              width,height);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 //				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "私はガラスを食べられます。それは私を傷つけません。",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 				
 				dx = sx;
@@ -601,7 +616,7 @@ int main(int argc, char* argv[])
                 assert(err==GL_NO_ERROR);
 				sth_flush_draw(stash);
 			
-				//sth_draw_text(stash, droidRegular,32.f, dx-2, dy+2, "abcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx);
+			//	sth_draw_text(stash, droidRegular,32.f, dx, dy, "abcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
 				sth_flush_draw(stash);
                 err = glGetError();
                 assert(err==GL_NO_ERROR);
