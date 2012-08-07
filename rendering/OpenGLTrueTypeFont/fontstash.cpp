@@ -26,7 +26,7 @@
 
 #endif
 
-#ifdef __MACOSX__
+#ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
 #include <GL/gl.h>
@@ -169,13 +169,21 @@ struct sth_stash* sth_create(int cachew, int cacheh)
 
 	// Allocate memory for the font stash.
 	stash = (struct sth_stash*)malloc(sizeof(struct sth_stash));
-	if (stash == NULL) goto error;
+	if (stash == NULL)
+    {
+        assert(0);
+        return NULL;
+    }
 	memset(stash,0,sizeof(struct sth_stash));
 
 	// Allocate memory for the first texture
 	texture = (struct sth_texture*)malloc(sizeof(struct sth_texture));
-	if (texture == NULL) goto error;
-	memset(texture,0,sizeof(struct sth_texture));
+	if (texture == NULL)
+    {
+        assert(0);
+        free(stash);
+    }
+    memset(texture,0,sizeof(struct sth_texture));
 
 	// Create first texture for the cache.
 	stash->tw = cachew;
@@ -184,44 +192,56 @@ struct sth_stash* sth_create(int cachew, int cacheh)
 	stash->ith = 1.0f/cacheh;
 	stash->textures = texture;
 	glGenTextures(1, &texture->id);
-	if (!texture->id) goto error;
+	if (!texture->id)
+    {
+        free(stash);
+        free(texture);
+        assert(0);
+        return NULL;
+    }
 	glBindTexture(GL_TEXTURE_2D, texture->id);
 	unsigned char* bmp = (unsigned char*)malloc(stash->tw*stash->th);
 	memset(bmp,0,stash->tw*stash->th);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, stash->tw,stash->th, 0, GL_ALPHA, GL_UNSIGNED_BYTE, bmp);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, stash->tw,stash->th, 0, GL_RED, GL_UNSIGNED_BYTE, bmp);
 	free(bmp);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	return stash;
 	
-error:
-	if (stash != NULL)
-		free(stash);
-	if (texture != NULL)
-		free(texture);
-	return NULL;
 }
 
 int sth_add_font_from_memory(struct sth_stash* stash, unsigned char* buffer)
 {
 	int i, ascent, descent, fh, lineGap;
+    GLint err;
 	struct sth_font* fnt = NULL;
 
 	fnt = (struct sth_font*)malloc(sizeof(struct sth_font));
 	if (fnt == NULL) goto error;
 	memset(fnt,0,sizeof(struct sth_font));
 
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 	// Init hash lookup.
-	for (i = 0; i < HASH_LUT_SIZE; ++i) fnt->lut[i] = -1;
+	for (i = 0; i < HASH_LUT_SIZE; ++i)
+        fnt->lut[i] = -1;
 
 	fnt->data = buffer;
 
 	// Init stb_truetype
-	if (!stbtt_InitFont(&fnt->font, fnt->data, 0)) goto error;
+	if (!stbtt_InitFont(&fnt->font, fnt->data, 0))
+        goto error;
 	
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
 	// Store normalized line height. The real line height is got
 	// by multiplying the lineh by font size.
 	stbtt_GetFontVMetrics(&fnt->font, &ascent, &descent, &lineGap);
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+
 	fh = ascent - descent;
 	fnt->ascender = (float)ascent / (float)fh;
 	fnt->descender = (float)descent / (float)fh;
@@ -449,7 +469,7 @@ static struct sth_glyph* get_glyph(struct sth_stash* stash, struct sth_font* fnt
 						glGenTextures(1, &texture->id);
 						if (!texture->id) goto error;
 						glBindTexture(GL_TEXTURE_2D, texture->id);
-						glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, stash->tw,stash->th, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
+						glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, stash->tw,stash->th, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 					}
 					continue;
@@ -500,7 +520,7 @@ static struct sth_glyph* get_glyph(struct sth_stash* stash, struct sth_font* fnt
 		// Update texture
 		glBindTexture(GL_TEXTURE_2D, texture->id);
 		glPixelStorei(GL_UNPACK_ALIGNMENT,1);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, glyph->x0_,glyph->y0, gw,gh, GL_ALPHA,GL_UNSIGNED_BYTE,bmp); 
+		glTexSubImage2D(GL_TEXTURE_2D, 0, glyph->x0_,glyph->y0, gw,gh, GL_RED,GL_UNSIGNED_BYTE,bmp);
 		free(bmp);
 	}
 	
@@ -552,17 +572,41 @@ static void flush_draw(struct sth_stash* stash)
 	while (texture)
 	{
 		if (texture->nverts > 0)
-		{			
+		{
+            GLint err;
 			glBindTexture(GL_TEXTURE_2D, texture->id);
-			glEnable(GL_TEXTURE_2D);
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+		//	glEnableClientState(GL_VERTEX_ARRAY);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+		//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
 			glVertexPointer(2, GL_FLOAT, VERT_STRIDE, texture->verts);
+ //           glVertexAttribPointer(2, GL_FLOAT,
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
 			glTexCoordPointer(2, GL_FLOAT, VERT_STRIDE, texture->verts+2);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
 			glDrawArrays(GL_TRIANGLES, 0, texture->nverts);
-			glDisable(GL_TEXTURE_2D);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
+            glDisable(GL_TEXTURE_2D);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
 			glDisableClientState(GL_VERTEX_ARRAY);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
 			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
 			texture->nverts = 0;
 		}
 		texture = texture->next;

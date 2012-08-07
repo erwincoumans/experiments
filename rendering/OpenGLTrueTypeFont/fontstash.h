@@ -20,6 +20,39 @@
 #ifndef FONTSTASH_H
 #define FONTSTASH_H
 
+#include "OpenGLInclude.h"
+
+struct vec2
+{
+	vec2(float x, float y)
+	{
+		p[0] = x;
+		p[1] = y;
+	}
+	float p[2];
+};
+
+struct vec4
+{
+	vec4(float x,float y, float z, float w)
+	{
+		p[0] = x;
+		p[1] = y;
+		p[2] = z;
+		p[3] = w;
+        
+	}
+    
+	float p[4];
+};
+
+typedef struct
+{
+    vec4 position;
+    vec4 colour;
+	vec2 uv;
+} Vertex;
+
 struct sth_stash* sth_create(int cachew, int cacheh);
 
 int sth_add_font(struct sth_stash* stash, const char* path);
