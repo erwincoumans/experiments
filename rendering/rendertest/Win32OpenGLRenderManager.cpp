@@ -33,8 +33,12 @@ extern int m_glutScreenHeight;
 struct InternalData2
 {
 	HWND m_hWnd;;
-	int m_width;
-	int m_height;
+	int m_fullWindowWidth;//includes borders etc
+	int m_fullWindowHeight;
+
+	int m_openglViewportWidth;//just the 3d viewport/client area
+	int m_openglViewportHeight;
+
 	HDC m_hDC;
 	HGLRC m_hRC;
 	bool m_OpenGLInitialized;
@@ -62,8 +66,10 @@ struct InternalData2
 		m_mouseRButton=0;
 		m_mouseMButton=0;
 	
-		m_width = 0;
-		m_height = 0;
+		m_fullWindowWidth = 0;
+		m_fullWindowHeight= 0;
+		m_openglViewportHeight=0;
+		m_openglViewportWidth=0;
 		m_hDC = 0;
 		m_hRC = 0;
 		m_OpenGLInitialized = false;
@@ -268,6 +274,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 				int xPos = LOWORD(lParam); 
 				int yPos = HIWORD(lParam); 
+				sData->m_mouseXpos = xPos;
+				sData->m_mouseYpos = yPos;
 
 				if (sData && sData->m_mouseCallback)
 					(*sData->m_mouseCallback)(sData->m_mouseLButton,0,xPos,yPos);
@@ -295,35 +303,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_SIZE:													// Size Action Has Taken Place
 
+			RECT clientRect;
+			GetClientRect(hWnd,&clientRect);
+
 			switch (wParam)												// Evaluate Size Action
 			{
+
 				case SIZE_MINIMIZED:									// Was Window Minimized?
 				return 0;												// Return
 
 				case SIZE_MAXIMIZED:									// Was Window Maximized?
-
-					sData->m_width = LOWORD (lParam);
-					sData->m_height = HIWORD (lParam);
-					m_glutScreenWidth = sData->m_width;
-					m_glutScreenHeight = sData->m_height;
+				case SIZE_RESTORED:										// Was Window Restored?
+					RECT wr;
+					GetWindowRect(hWnd,&wr);
+					
+					sData->m_fullWindowWidth = wr.right-wr.left;
+					sData->m_fullWindowHeight = wr.bottom-wr.top;//LOWORD (lParam) HIWORD (lParam);
+					sData->m_openglViewportWidth = clientRect.right;
+					sData->m_openglViewportHeight = clientRect.bottom;
+					m_glutScreenWidth = sData->m_openglViewportWidth;
+					m_glutScreenHeight = sData->m_openglViewportHeight;
 					//if (sOpenGLInitialized)
 					//{
 					//	//gDemoApplication->reshape(sWidth,sHeight);
 					//}
-					glViewport(0, 0, sData->m_width, sData->m_height);
-				return 0;												// Return
-
-				case SIZE_RESTORED:										// Was Window Restored?
-					sData->m_width = LOWORD (lParam);
-					sData->m_height = HIWORD (lParam);
-					m_glutScreenWidth = sData->m_width;
-					m_glutScreenHeight = sData->m_height;
-
-					//if (sOpenGLInitialized)
-					//{
-					//	gDemoApplication->reshape(sWidth,sHeight);
-					//}
-					glViewport(0, 0, sData->m_width, sData->m_height);
+					glViewport(0, 0, sData->m_openglViewportWidth, sData->m_openglViewportHeight);
 				return 0;												// Return
 			}
 		break;
@@ -339,11 +343,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 
-void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBitsPerPixel, void* windowHandle)
+void	Win32OpenGLWindow::init(int oglViewportWidth,int oglViewportHeight, bool fullscreen,int colorBitsPerPixel, void* windowHandle)
 {
 	// get handle to exe file
 	HINSTANCE hInstance = GetModuleHandle(0);
-
 
 
 	// create the window if we need to and we do not use the null device
@@ -367,7 +370,7 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		wcex.hIconSm		= 0;
 
 		// if there is an icon, load it
-		wcex.hIcon = (HICON)LoadImage(hInstance, "irrlicht.ico", IMAGE_ICON, 0,0, LR_LOADFROMFILE);
+//		wcex.hIcon = (HICON)LoadImage(hInstance, "bullet.ico", IMAGE_ICON, 0,0, LR_LOADFROMFILE);
 
 		RegisterClassEx(&wcex);
 
@@ -376,21 +379,21 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		RECT clientSize;
 		clientSize.top = 0;
 		clientSize.left = 0;
-		clientSize.right = width;
-		clientSize.bottom = height;
+		clientSize.right = oglViewportWidth;
+		clientSize.bottom = oglViewportHeight;
 
 		DWORD style = WS_POPUP;
 
 		if (!fullscreen)
 			style = WS_SYSMENU | WS_BORDER | WS_CAPTION | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SIZEBOX;
 
-		AdjustWindowRect(&clientSize, style, FALSE);
+		AdjustWindowRect(&clientSize, style, false);
+		
+		m_data->m_fullWindowWidth = clientSize.right - clientSize.left;
+		m_data->m_fullWindowHeight = clientSize.bottom - clientSize.top;
 
-		m_data->m_width = clientSize.right - clientSize.left;
-		m_data->m_height = clientSize.bottom - clientSize.top;
-
-		int windowLeft = (GetSystemMetrics(SM_CXSCREEN) - m_data->m_width) / 2;
-		int windowTop = (GetSystemMetrics(SM_CYSCREEN) - m_data->m_height) / 2;
+		int windowLeft = (GetSystemMetrics(SM_CXSCREEN) - m_data->m_fullWindowWidth) / 2;
+		int windowTop = (GetSystemMetrics(SM_CYSCREEN) - m_data->m_fullWindowHeight) / 2;
 
 		if (fullscreen)
 		{
@@ -401,14 +404,24 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		// create window
 
 		m_data->m_hWnd = CreateWindow( ClassName, "", style, windowLeft, windowTop,
-					m_data->m_width, m_data->m_height, NULL, NULL, hInstance, NULL);
+			m_data->m_fullWindowWidth, m_data->m_fullWindowHeight,NULL, NULL, hInstance, NULL);
 
 		
+		RECT clientRect;
+		GetClientRect(m_data->m_hWnd,&clientRect);
+
+
 
 		ShowWindow(m_data->m_hWnd, SW_SHOW);
 		UpdateWindow(m_data->m_hWnd);
 
-		MoveWindow(m_data->m_hWnd, windowLeft, windowTop, m_data->m_width, m_data->m_height, TRUE);
+		MoveWindow(m_data->m_hWnd, windowLeft, windowTop, m_data->m_fullWindowWidth, m_data->m_fullWindowHeight, TRUE);
+
+		GetClientRect(m_data->m_hWnd,&clientRect);
+		int w = clientRect.right-clientRect.left;
+		int h = clientRect.bottom-clientRect.top;
+		printf("actual client OpenGL viewport width / height = %d, %d\n",w,h);
+		
 	}
 	else if (windowHandle)
 	{
@@ -416,10 +429,11 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		m_data->m_hWnd = static_cast<HWND>(windowHandle);
 		RECT r;
 		GetWindowRect(m_data->m_hWnd, &r);
-		m_data->m_width = r.right - r.left;
-		m_data->m_height = r.bottom - r.top;
-		m_glutScreenWidth = sData->m_width;
-		m_glutScreenHeight = sData->m_height;
+		m_data->m_fullWindowWidth = r.right - r.left;
+		m_data->m_fullWindowHeight= r.bottom - r.top;
+
+		m_glutScreenWidth = sData->m_openglViewportWidth;
+		m_glutScreenHeight = sData->m_openglViewportHeight;
 
 		//sFullScreen = false;
 		//sExternalWindow = true;
@@ -437,8 +451,8 @@ void	Win32OpenGLWindow::init(int width,int height, bool fullscreen,int colorBits
 		m_data->m_oldHeight = dm.dmPelsHeight;
 		m_data->m_oldBitsPerPel = dm.dmBitsPerPel;
 
-		dm.dmPelsWidth = width;
-		dm.dmPelsHeight = height;
+		dm.dmPelsWidth = oglViewportWidth;
+		dm.dmPelsHeight = oglViewportHeight;
 		if (colorBitsPerPixel)
 		{
 			dm.dmBitsPerPel = colorBitsPerPixel;
@@ -497,8 +511,8 @@ void	Win32OpenGLWindow::switchFullScreen(bool fullscreen,int width,int height,in
 			dm.dmPelsHeight = height;
 		} else
 		{
-			dm.dmPelsWidth = m_data->m_width;
-			dm.dmPelsHeight = m_data->m_height;
+			dm.dmPelsWidth = m_data->m_fullWindowWidth;
+			dm.dmPelsHeight = m_data->m_fullWindowHeight;
 		}
 		if (colorBitsPerPixel)
 		{
@@ -580,18 +594,18 @@ void	Win32OpenGLWindow::startRendering()
 
 		float aspect;
 
-		if (m_data->m_width > m_data->m_height) 
+		if (m_data->m_openglViewportWidth > m_data->m_openglViewportHeight) 
 		{
-			aspect = (float)m_data->m_width / (float)m_data->m_height;
+			aspect = (float)m_data->m_openglViewportWidth / (float)m_data->m_openglViewportHeight;
 		} else 
 		{
-			aspect = (float)m_data->m_height / (float)m_data->m_width;
+			aspect = (float)m_data->m_openglViewportHeight / (float)m_data->m_openglViewportWidth;
 		}
 	
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 
-		if (m_data->m_width > m_data->m_height) 
+		if (m_data->m_openglViewportWidth> m_data->m_openglViewportHeight) 
 		{
 			glFrustum (-aspect, aspect, -1.0, 1.0, 1.0, 10000.0);
 		} else 

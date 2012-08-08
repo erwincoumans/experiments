@@ -602,8 +602,16 @@ static int get_quad(struct sth_stash* stash, struct sth_font* fnt, struct sth_gl
 
 static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, float height)
 {
-	v->position.p[0] = (x-width)/width;
-	v->position.p[1] = (y)/height;
+	bool scale=true;
+	if (scale)
+	{
+		v->position.p[0] = (x-width)/(width);
+		v->position.p[1] = (y)/(height);
+	} else
+	{
+		v->position.p[0] = (x-width/2)/(width/2);
+		v->position.p[1] = (y-height/2)/(height/2);
+	}
     v->position.p[2] = 0.f;
     v->position.p[3] = 1.f;
     

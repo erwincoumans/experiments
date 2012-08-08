@@ -370,7 +370,7 @@ void Usage()
 
 int main(int argc, char* argv[])
 {
-		
+	GLint err;
    CommandLineArgs args(argc,argv);
 
 	if (args.CheckCmdLineFlag("help"))
@@ -404,12 +404,12 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
-	int width = 1024;
-	int height=768;
+	int width = 512;
+	int height= 512;
 
 	window->init(width,height);
 #ifndef __APPLE__
-	GLenum err = glewInit();
+	err = glewInit();
 #endif
     window->runMainLoop();
     
@@ -423,7 +423,7 @@ int main(int argc, char* argv[])
 	window->endRendering();
 
 	
-    GLint err = glGetError();
+    err = glGetError();
     assert(err==GL_NO_ERROR);
     
 		
@@ -450,7 +450,7 @@ int main(int argc, char* argv[])
 	int droidRegular, droidItalic, droidBold, droidJapanese, dejavu;
 	GLuint texture;
 
-	stash = sth_create(256,256);//,1024);//512,512);
+	stash = sth_create(512,512);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -468,7 +468,7 @@ int main(int argc, char* argv[])
 #endif
     
     char fullFontFileName[1024];
-    sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");
+    sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//cour.ttf");//times.ttf");//DroidSerif-Regular.ttf");
     
 	fp = fopen(fullFontFileName, "rb");
 
@@ -544,18 +544,13 @@ int main(int argc, char* argv[])
         err = glGetError();
         assert(err==GL_NO_ERROR);
         
-    //    display();
+		    glClearColor(1,1,1,1);//.4, .4, 0.4, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+        //display();
       
         err = glGetError();
         assert(err==GL_NO_ERROR);
-      
-        
-        //render.RenderScene();
-
-//	glBindBuffer(GL_ARRAY_BUFFER,0);
-//	glBindVertexArray(0);
-  //     err = glGetError();
-     //   assert(err==GL_NO_ERROR);
         
     if (1)
 	{
@@ -590,7 +585,7 @@ int main(int argc, char* argv[])
         err = glGetError();
         assert(err==GL_NO_ERROR);
         
-		sx = 0; sy = height-16;
+		sx = 0; sy = height;
 		
 		sth_begin_draw(stash);
 		
@@ -606,7 +601,7 @@ int main(int argc, char* argv[])
 			    err = glGetError();
                 assert(err==GL_NO_ERROR);
 
-				sth_draw_text(stash, droidJapanese,32.f, dx, dy-10, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
+				sth_draw_text(stash, droidJapanese,32.f, dx, dy-36, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
                               width,height);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 //				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "私はガラスを食べられます。それは私を傷つけません。",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 				
@@ -615,8 +610,19 @@ int main(int argc, char* argv[])
                 err = glGetError();
                 assert(err==GL_NO_ERROR);
 				sth_flush_draw(stash);
-			
-			//	sth_draw_text(stash, droidRegular,32.f, dx, dy, "abcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
+				dx=0;			
+				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "How does this OpenGL True Type font look? ", &dx,width,height);
+				dx=0;
+				dy-=30;
+				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", &dx,width,height);
+				dx=0;
+				dy-=30;
+				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
+
+				dx=0;
+			//	sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
+				//sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
+
 				sth_flush_draw(stash);
                 err = glGetError();
                 assert(err==GL_NO_ERROR);
@@ -676,7 +682,7 @@ int main(int argc, char* argv[])
 			if (count<0)
 			{
 				count = 100;
-				CProfileManager::dumpAll();
+//				CProfileManager::dumpAll();
 				//printStats  = false;
 			} else
 			{
@@ -696,18 +702,6 @@ int main(int argc, char* argv[])
 	window->exit();
 	delete window;
 	
-	
-	
 	return 0;
-
-#ifdef _WIN32
-error_add_font:
-	fprintf(stderr, "Could not add font.\n");
-
-	render.CleanupShaders();
-	window->exit();
-	delete window;
-	return -1;
-#endif
 
 }
