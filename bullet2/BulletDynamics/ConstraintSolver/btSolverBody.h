@@ -19,7 +19,7 @@ subject to the following restrictions:
 class	btRigidBody;
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btMatrix3x3.h"
-#include "BulletDynamics/Dynamics/btRigidBody.h"
+//#include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btAlignedAllocator.h"
 #include "LinearMath/btTransformUtil.h"
 
@@ -113,10 +113,12 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	btVector3		m_deltaAngularVelocity;
 	btVector3		m_angularFactor;
 	btVector3		m_invMass;
-	btRigidBody*	m_originalBody;
 	btVector3		m_pushVelocity;
 	btVector3		m_turnVelocity;
+	btVector3		m_linearVelocity;
+	btVector3		m_angularVelocity;
 
+	btRigidBody*	m_originalBody;
 	void	setWorldTransform(const btTransform& worldTransform)
 	{
 		m_worldTransform = worldTransform;
@@ -130,7 +132,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	SIMD_FORCE_INLINE void	getVelocityInLocalPointObsolete(const btVector3& rel_pos, btVector3& velocity ) const
 	{
 		if (m_originalBody)
-			velocity = m_originalBody->getLinearVelocity()+m_deltaLinearVelocity + (m_originalBody->getAngularVelocity()+m_deltaAngularVelocity).cross(rel_pos);
+			velocity = m_linearVelocity+m_deltaLinearVelocity + (m_angularVelocity+m_deltaAngularVelocity).cross(rel_pos);
 		else
 			velocity.setValue(0,0,0);
 	}
@@ -138,7 +140,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	SIMD_FORCE_INLINE void	getAngularVelocity(btVector3& angVel) const
 	{
 		if (m_originalBody)
-			angVel = m_originalBody->getAngularVelocity()+m_deltaAngularVelocity;
+			angVel =m_angularVelocity+m_deltaAngularVelocity;
 		else
 			angVel.setValue(0,0,0);
 	}
@@ -226,12 +228,12 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 
 	SIMD_FORCE_INLINE void	internalGetVelocityInLocalPointObsolete(const btVector3& rel_pos, btVector3& velocity ) const
 	{
-		velocity = m_originalBody->getLinearVelocity()+m_deltaLinearVelocity + (m_originalBody->getAngularVelocity()+m_deltaAngularVelocity).cross(rel_pos);
+		velocity = m_linearVelocity+m_deltaLinearVelocity + (m_angularVelocity+m_deltaAngularVelocity).cross(rel_pos);
 	}
 
 	SIMD_FORCE_INLINE void	internalGetAngularVelocity(btVector3& angVel) const
 	{
-		angVel = m_originalBody->getAngularVelocity()+m_deltaAngularVelocity;
+		angVel = m_angularVelocity+m_deltaAngularVelocity;
 	}
 
 
@@ -252,26 +254,26 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	{
 		if (m_originalBody)
 		{
-			m_originalBody->setLinearVelocity(m_originalBody->getLinearVelocity()+ m_deltaLinearVelocity);
-			m_originalBody->setAngularVelocity(m_originalBody->getAngularVelocity()+m_deltaAngularVelocity);
+			m_linearVelocity +=m_deltaLinearVelocity;
+			m_angularVelocity += m_deltaAngularVelocity;
 			
 			//m_originalBody->setCompanionId(-1);
 		}
 	}
 
 
-	void	writebackVelocity(btScalar timeStep)
+	void	writebackVelocityAndTransform(btScalar timeStep)
 	{
         (void) timeStep;
 		if (m_originalBody)
 		{
-			m_originalBody->setLinearVelocity(m_originalBody->getLinearVelocity()+ m_deltaLinearVelocity);
-			m_originalBody->setAngularVelocity(m_originalBody->getAngularVelocity()+m_deltaAngularVelocity);
+			m_linearVelocity += m_deltaLinearVelocity;
+			m_angularVelocity += m_deltaAngularVelocity;
 			
 			//correct the position/orientation based on push/turn recovery
 			btTransform newTransform;
-			btTransformUtil::integrateTransform(m_originalBody->getWorldTransform(),m_pushVelocity,m_turnVelocity,timeStep,newTransform);
-			m_originalBody->setWorldTransform(newTransform);
+			btTransformUtil::integrateTransform(m_worldTransform,m_pushVelocity,m_turnVelocity,timeStep,newTransform);
+			m_worldTransform = newTransform;
 			
 			//m_originalBody->setCompanionId(-1);
 		}

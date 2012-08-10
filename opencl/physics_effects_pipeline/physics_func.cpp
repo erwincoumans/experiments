@@ -16,6 +16,8 @@ Physics Effects under the filename: physics_effects_license.txt
 
 #include "physics_func.h"
 #include "LinearMath/btQuickprof.h"
+#include "btPgsSolver.h"
+#include "BulletCollision/NarrowPhaseCollision/btPersistentManifold.h"
 
 //#include "sample_api_physics_effects/common/perf_func.h"
 
@@ -322,6 +324,65 @@ void collision()
 
 }
 
+#include "btFakeRigidBody.h"
+
+void BulletConstraintSolver()
+{
+	btPgsSolver pgs;
+	btContactSolverInfo info;
+	btAlignedObjectArray<btRigidBody> rbs;
+	for (int i=0;i<numRigidBodies;i++)
+	{
+		btRigidBody& rb = rbs.expandNonInitializing();
+
+		rb.m_companionId=-1;
+		rb.m_angularFactor.setValue(1,1,1);
+		rb.m_anisotropicFriction.setValue(1,1,1);
+		
+		rb.m_invMass = bodies[i].getMassInv();
+		rb.m_linearFactor.setValue(1,1,1);
+		btVector3 pos(states[i].getPosition().getX(),states[i].getPosition().getY(),states[i].getPosition().getZ());
+		rb.m_worldTransform.setIdentity();
+		btQuaternion orn(states[i].getOrientation().getX(),states[i].getOrientation().getY(),states[i].getOrientation().getZ(),states[i].getOrientation().getW());
+		rb.m_worldTransform.setRotation(orn);
+		rb.m_worldTransform.setOrigin(pos);
+		PfxMatrix3 ori(states[i].getOrientation());
+		rb.m_worldTransform.setRotation(orn);
+
+		PfxMatrix3 inertiaInvWorld = ori * bodies[i].getInertiaInv() * transpose(ori);
+		rb.m_invInertiaWorld.setIdentity();
+
+		if (rb.m_invMass)
+		{
+			for (int row=0;row<3;row++)
+			{
+				for (int col=0;col<3;col++)
+				{
+					rb.m_invInertiaWorld[col][row] = inertiaInvWorld.getElem(col,row);
+				}
+			}
+		} else
+		{
+			rb.m_invInertiaWorld = btMatrix3x3(0,0,0,0,0,0,0,0,0);
+		}
+		rb.m_linearVelocity.setValue(states[i].getLinearVelocity().getX(),states[i].getLinearVelocity().getY(),states[i].getLinearVelocity().getZ());
+		rb.m_angularVelocity.setValue(states[i].getAngularVelocity().getX(),states[i].getAngularVelocity().getY(),states[i].getAngularVelocity().getZ());
+		printf("body added\n");
+	}
+
+	btAlignedObjectArray<btCollisionObject*> bodyPtrs;
+	bodyPtrs.resize(rbs.size());
+	for (int i=0;i<rbs.size();i++)
+	{
+		bodyPtrs[i] = &rbs[i];
+	}
+	btAlignedObjectArray<btPersistentManifold> manifolds;
+	btAlignedObjectArray<btPersistentManifold*> manifoldPtrs;
+	if (bodyPtrs.size() && manifoldPtrs.size())
+	{
+		pgs.solveGroup(&bodyPtrs[0],bodyPtrs.size(),&manifoldPtrs[0],manifoldPtrs.size(),0,0,info,0,0,0);
+	}
+}
 void constraintSolver()
 {
 	PfxPerfCounter pc;
@@ -453,6 +514,7 @@ void physics_simulate()
 	{
 		BT_PROFILE("constraintSolver");
 		constraintSolver();
+		BulletConstraintSolver();
 	}
 //	pc.countEnd();
 //	perf_pop_marker();

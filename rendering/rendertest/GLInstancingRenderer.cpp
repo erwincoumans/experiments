@@ -970,6 +970,16 @@ void	GLInstancingRenderer::getCameraPosition(float cameraPos[4])
 	cameraPos[3] = 1.f;
 }
 
+void	GLInstancingRenderer::setCameraDistance(float dist)
+{
+	m_data->m_cameraDistance = dist;
+}
+float	GLInstancingRenderer::getCameraDistance() const
+{
+	return m_data->m_cameraDistance;
+}
+
+
 void GLInstancingRenderer::getMouseDirection(float* dir, int x, int y)
 {
 	float top = 1.f;

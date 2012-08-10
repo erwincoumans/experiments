@@ -22,7 +22,13 @@ Physics Effects under the filename: physics_effects_license.txt
 btDefaultCollisionConfiguration* g_collisionConfiguration=0;
 btCollisionDispatcher* g_dispatcher=0;
 btDbvtBroadphase* g_broadphase=0;
+
+#if USE_PGS_SOLVER
+#include "../physics_effects_pipeline/btPgsSolver.h"
+btPgsSolver* g_solver=0;
+#else
 btSequentialImpulseConstraintSolver* g_solver=0;
+#endif//USE_PGS_SOLVER
 btDiscreteDynamicsWorld* g_dynamicsWorld=0;
 btAlignedObjectArray<btCollisionShape*> g_collisionShapes;
 
@@ -43,7 +49,11 @@ void physics_create_scene(int sceneId)
     g_collisionConfiguration = new btDefaultCollisionConfiguration();
     g_dispatcher = new      btCollisionDispatcher(g_collisionConfiguration);
     g_broadphase = new btDbvtBroadphase();
-    g_solver = new btSequentialImpulseConstraintSolver;
+#ifdef USE_PGS_SOLVER
+    g_solver = new btPgsSolver;
+#else
+	g_solver = new btSequentialImpulseConstraintSolver;
+#endif
     g_dynamicsWorld = new btDiscreteDynamicsWorld(g_dispatcher,g_broadphase,g_solver,g_collisionConfiguration);
     g_dynamicsWorld->setGravity(btVector3(0,-10,0));
     

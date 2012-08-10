@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
 	int maxObjectCapacity=128*1024;
 
 	GLInstancingRenderer render(maxObjectCapacity);
-
+	render.setCameraDistance(30);
 	
 		
 	render.InitShaders();
