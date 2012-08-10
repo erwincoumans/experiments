@@ -164,7 +164,7 @@ PfxInt32 pfxSetupContactConstraints(PfxSetupContactConstraintsParam &param)
 				cp.m_constraintRow[0],
 				cp.m_constraintRow[1],
 				cp.m_constraintRow[2],
-				cp.m_distance,
+				cp.m_distance1,
 				restitution,
 				friction,
 				pfxReadVector3(cp.m_constraintRow[0].m_normal),

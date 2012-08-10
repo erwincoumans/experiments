@@ -18,6 +18,11 @@ Physics Effects under the filename: physics_effects_license.txt
 #include "LinearMath/btQuickprof.h"
 #include "btPgsSolver.h"
 #include "BulletCollision/NarrowPhaseCollision/btPersistentManifold.h"
+#include "btFakeRigidBody.h"
+btAlignedObjectArray<btRigidBody> rbs;
+btAlignedObjectArray<btPersistentManifold> manifolds;
+bool peSolverEnabled=false;
+
 
 //#include "sample_api_physics_effects/common/perf_func.h"
 
@@ -216,40 +221,47 @@ void broadphase()
 		for(PfxUInt32 i=0;i<numOutNewPairs;i++) {
 			currentPairs[numCurrentPairs++] = outNewPairs[i];
 		}
-		printf("===============================================\n");
-		printf("num bodies/states = %d\n", physics_get_num_rigidbodies());
-		for (int i=0;i<physics_get_num_rigidbodies();i++)
-		{
-			PfxVector3 pos = physics_get_state(i).getPosition();
-			printf("body %d has position %f,%f,%f\n",i,pos.getX(),pos.getY(),pos.getZ());
-		}
-		printf("numCurrentPairs (total) = %d\n", numCurrentPairs);
 
-		for (int i=0;i<numCurrentPairs;i++)
+		bool verboseStats = true;
+		if (verboseStats)
 		{
-			int idA = pfxGetObjectIdA(currentPairs[i]);
-			int idB = pfxGetObjectIdB(currentPairs[i]);
-			printf("pfx pair[%d] idA = %d, idB = %d\n", i, idA,idB);
-			int cId = pfxGetContactId(currentPairs[i]);
-			printf("contact duration = %d\n", contacts[cId].getDuration());
+			printf("===============================================\n");
+			printf("num bodies/states = %d\n", physics_get_num_rigidbodies());
+			for (int i=0;i<physics_get_num_rigidbodies();i++)
+			{
+				PfxVector3 pos = physics_get_state(i).getPosition();
+				printf("body %d has position %f,%f,%f\n",i,pos.getX(),pos.getY(),pos.getZ());
+			}
+			printf("numCurrentPairs (total) = %d\n", numCurrentPairs);
+
+			for (int i=0;i<numCurrentPairs;i++)
+			{
+				int idA = pfxGetObjectIdA(currentPairs[i]);
+				int idB = pfxGetObjectIdB(currentPairs[i]);
+				printf("pfx pair[%d] idA = %d, idB = %d\n", i, idA,idB);
+				int cId = pfxGetContactId(currentPairs[i]);
+				printf("contact duration = %d\n", contacts[cId].getDuration());
 
 			
-			printf("num contacts = %d\n", contacts[cId].getNumContacts());
-			for (int c=0;c<contacts[cId].getNumContacts();c++)
-			{
-				const PfxContactPoint& cp = contacts[cId].getContactPoint(c);
-				printf("localPosA = %f,%f,%f\n", cp.m_localPointA[0],cp.m_localPointA[1],cp.m_localPointA[2]);
-				printf("localPosB = %f,%f,%f\n", cp.m_localPointB[0],cp.m_localPointB[1],cp.m_localPointB[2]);
-				for (int r=0;r<3;r++)
+				if (1)
 				{
-					printf("row %d accumImpulse = %f\n", r, cp.m_constraintRow[r].m_accumImpulse);
-					printf("row %d normal = %f,%f,%f\n", r, cp.m_constraintRow[r].m_normal[0],cp.m_constraintRow[r].m_normal[1],cp.m_constraintRow[r].m_normal[2]);
-					printf("row %d distance %f and duration %d\n", r, cp.m_distance,cp.m_duration);
+					printf("num contacts = %d\n", contacts[cId].getNumContacts());
+					for (int c=0;c<contacts[cId].getNumContacts();c++)
+					{
+						const PfxContactPoint& cp = contacts[cId].getContactPoint(c);
+						printf("localPosA = %f,%f,%f. ", cp.m_localPointA[0],cp.m_localPointA[1],cp.m_localPointA[2]);
+						printf("localPosB = %f,%f,%f. ", cp.m_localPointB[0],cp.m_localPointB[1],cp.m_localPointB[2]);
+						for (int r=0;r<3;r++)
+						{
+							printf("row %d accumImpulse = %f. ", r, cp.m_constraintRow[r].m_accumImpulse);
+							printf("row %d normal = %f,%f,%f. ", r, cp.m_constraintRow[r].m_normal[0],cp.m_constraintRow[r].m_normal[1],cp.m_constraintRow[r].m_normal[2]);
+							printf("row %d distance %f and duration %d\n", r, cp.m_distance1,cp.m_duration);
 
+						}
+					}
 				}
+
 			}
-
-
 		}
 
 		
@@ -324,13 +336,196 @@ void collision()
 
 }
 
-#include "btFakeRigidBody.h"
+
+
+
+PfxInt32 BulletSetupContactConstraints(PfxSetupContactConstraintsParam &param)
+{
+//	PfxInt32 ret = pfxCheckParamOfSetupContactConstraints(param);
+	//if(ret != SCE_PFX_OK) return ret;
+	
+	SCE_PFX_PUSH_MARKER("pfxSetupContactConstraints");
+
+	PfxConstraintPair *contactPairs = param.contactPairs;
+	PfxUInt32 numContactPairs = param.numContactPairs;
+	PfxContactManifold *offsetContactManifolds = param.offsetContactManifolds;
+	PfxRigidState *offsetRigidStates = param.offsetRigidStates;
+	PfxRigidBody *offsetRigidBodies = param.offsetRigidBodies;
+	PfxSolverBody *offsetSolverBodies = param.offsetSolverBodies;
+	manifolds.resize(0);
+
+	for(PfxUInt32 i=0;i<numContactPairs;i++) {
+		PfxConstraintPair &pair = contactPairs[i];
+
+//		if(!sce::PhysicsEffects::pfxCheckSolver(pair)) {
+	//		continue;
+		//}
+
+		PfxUInt16 iA = pfxGetObjectIdA(pair);
+		PfxUInt16 iB = pfxGetObjectIdB(pair);
+		PfxUInt32 iConstraint = pfxGetConstraintId(pair);
+
+		PfxContactManifold &contact = offsetContactManifolds[iConstraint];
+
+		btPersistentManifold& manifold = manifolds.expand();
+		memset(&manifold,0xff,sizeof(btPersistentManifold));
+
+		manifold.m_body0 = &rbs[iA];
+		manifold.m_body1 = &rbs[iB];
+		manifold.m_cachedPoints = contact.getNumContacts();
+
+		if (!contact.getNumContacts())
+			continue;
+
+
+		SCE_PFX_ALWAYS_ASSERT(iA==contact.getRigidBodyIdA());
+		SCE_PFX_ALWAYS_ASSERT(iB==contact.getRigidBodyIdB());
+
+		PfxRigidState &stateA = offsetRigidStates[iA];
+		PfxRigidBody &bodyA = offsetRigidBodies[iA];
+		PfxSolverBody &solverBodyA = offsetSolverBodies[iA];
+
+		PfxRigidState &stateB = offsetRigidStates[iB];
+		PfxRigidBody &bodyB = offsetRigidBodies[iB];
+		PfxSolverBody &solverBodyB = offsetSolverBodies[iB];
+	
+		contact.setInternalFlag(0);
+		
+		PfxFloat restitution = 0.5f * (bodyA.getRestitution() + bodyB.getRestitution());
+		if(contact.getDuration() > 1) restitution = 0.0f;
+		
+		PfxFloat friction = sqrtf(bodyA.getFriction() * bodyB.getFriction());
+		
+		manifold.m_cachedPoints = contact.getNumContacts();
+	
+
+		manifold.m_contactProcessingThreshold = 0.01f;//SCE_PFX_CONTACT_THRESHOLD_NORMAL;
+		manifold.m_contactBreakingThreshold = 0.01f;
+
+		for(int j=0;j<contact.getNumContacts();j++) {
+			PfxContactPoint &cp = contact.getContactPoint(j);
+
+			PfxVector3 ptA = pfxReadVector3(cp.m_localPointA);
+			manifold.m_pointCache[j].m_localPointA.setValue(ptA.getX(),ptA.getY(),ptA.getZ());
+			PfxVector3 ptB = pfxReadVector3(cp.m_localPointB);
+			manifold.m_pointCache[j].m_localPointB.setValue(ptB.getX(),ptB.getY(),ptB.getZ());
+			
+			manifold.m_pointCache[j].m_normalWorldOnB.setValue(
+						cp.m_constraintRow[0].m_normal[0],
+						cp.m_constraintRow[0].m_normal[1],
+						cp.m_constraintRow[0].m_normal[2]);
+			manifold.m_pointCache[j].m_distance1 = cp.m_distance1;
+			manifold.m_pointCache[j].m_combinedFriction = friction;
+			manifold.m_pointCache[j].m_combinedRestitution = restitution;
+			manifold.m_pointCache[j].m_appliedImpulse = cp.m_constraintRow[0].m_accumImpulse;
+			manifold.m_pointCache[j].m_lateralFrictionDir1.setValue(
+						cp.m_constraintRow[1].m_normal[0],
+						cp.m_constraintRow[1].m_normal[1],
+						cp.m_constraintRow[1].m_normal[2]);
+			manifold.m_pointCache[j].m_appliedImpulseLateral1 = cp.m_constraintRow[1].m_accumImpulse;
+
+			manifold.m_pointCache[j].m_lateralFrictionDir2.setValue(
+						cp.m_constraintRow[2].m_normal[0],
+						cp.m_constraintRow[2].m_normal[1],
+						cp.m_constraintRow[2].m_normal[2]);
+			manifold.m_pointCache[j].m_appliedImpulseLateral2 = cp.m_constraintRow[2].m_accumImpulse;
+			manifold.m_pointCache[j].m_lateralFrictionInitialized = true;
+			manifold.m_pointCache[j].m_lifeTime = cp.m_duration;
+
+			btTransform trA = manifold.m_body0->getWorldTransform();
+			btTransform trB = manifold.m_body1->getWorldTransform();
+
+			manifold.m_pointCache[j].m_positionWorldOnA = trA( manifold.m_pointCache[j].m_localPointA );
+			manifold.m_pointCache[j].m_positionWorldOnB = trB( manifold.m_pointCache[j].m_localPointB );
+
+
+
+
+						//btVector3 m_localPointA;			
+			//btVector3 m_localPointB;			
+			//btVector3	m_positionWorldOnB;
+			//m_positionWorldOnA is redundant information, see getPositionWorldOnA(), but for clarity
+			//btVector3	m_positionWorldOnA;
+
+
+
+
+			/*
+			pfxSetupContactConstraint(
+				cp.m_constraintRow[0],
+				cp.m_constraintRow[1],
+				cp.m_constraintRow[2],
+				cp.m_distance,
+				restitution,
+				friction,
+				pfxReadVector3(cp.m_constraintRow[0].m_normal),
+				pfxReadVector3(cp.m_localPointA),
+				pfxReadVector3(cp.m_localPointB),
+				stateA,
+				stateB,
+				solverBodyA,
+				solverBodyB,
+				param.separateBias,
+				param.timeStep
+				);
+				*/
+
+		}
+
+		contact.setCompositeFriction(friction);
+	}
+
+	SCE_PFX_POP_MARKER();
+
+	return SCE_PFX_OK;
+}
+
+
+
+
+PfxInt32 BulletWriteWarmstartContactConstraints(PfxSetupContactConstraintsParam &param)
+{
+//	PfxInt32 ret = pfxCheckParamOfSetupContactConstraints(param);
+	//if(ret != SCE_PFX_OK) return ret;
+	
+	SCE_PFX_PUSH_MARKER("pfxSetupContactConstraints");
+
+	PfxConstraintPair *contactPairs = param.contactPairs;
+	PfxUInt32 numContactPairs = param.numContactPairs;
+	PfxContactManifold *offsetContactManifolds = param.offsetContactManifolds;
+	PfxRigidState *offsetRigidStates = param.offsetRigidStates;
+	PfxRigidBody *offsetRigidBodies = param.offsetRigidBodies;
+	PfxSolverBody *offsetSolverBodies = param.offsetSolverBodies;
+
+	for(PfxUInt32 i=0;i<numContactPairs;i++) 
+	{
+		PfxConstraintPair &pair = contactPairs[i];
+
+		PfxUInt16 iA = pfxGetObjectIdA(pair);
+		PfxUInt16 iB = pfxGetObjectIdB(pair);
+		PfxUInt32 iConstraint = pfxGetConstraintId(pair);
+
+		PfxContactManifold &contact = offsetContactManifolds[iConstraint];
+		btPersistentManifold& manifold = manifolds[i];
+		for (int c=0;c<manifold.m_cachedPoints;c++)
+		{
+			contact.getContactPoint(c).m_constraintRow[0].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulse;
+			contact.getContactPoint(c).m_constraintRow[1].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulseLateral1;
+			contact.getContactPoint(c).m_constraintRow[2].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulseLateral2;
+		}
+
+
+	}
+	return 0;
+}
+
 
 void BulletConstraintSolver()
 {
 	btPgsSolver pgs;
 	btContactSolverInfo info;
-	btAlignedObjectArray<btRigidBody> rbs;
+	rbs.resize(0);
+
 	for (int i=0;i<numRigidBodies;i++)
 	{
 		btRigidBody& rb = rbs.expandNonInitializing();
@@ -367,7 +562,7 @@ void BulletConstraintSolver()
 		}
 		rb.m_linearVelocity.setValue(states[i].getLinearVelocity().getX(),states[i].getLinearVelocity().getY(),states[i].getLinearVelocity().getZ());
 		rb.m_angularVelocity.setValue(states[i].getAngularVelocity().getX(),states[i].getAngularVelocity().getY(),states[i].getAngularVelocity().getZ());
-		printf("body added\n");
+//		printf("body added\n");
 	}
 
 	btAlignedObjectArray<btCollisionObject*> bodyPtrs;
@@ -376,12 +571,49 @@ void BulletConstraintSolver()
 	{
 		bodyPtrs[i] = &rbs[i];
 	}
-	btAlignedObjectArray<btPersistentManifold> manifolds;
+
+
+	unsigned int numCurrentPairs = numPairs[pairSwap];
+	PfxBroadphasePair *currentPairs = pairsBuff[pairSwap];
+
+	PfxSetupContactConstraintsParam param;
+	param.contactPairs = currentPairs;
+	param.numContactPairs = numCurrentPairs;
+	param.offsetContactManifolds = contacts;
+	param.offsetRigidStates = states;
+	param.offsetRigidBodies = bodies;
+	param.offsetSolverBodies = solverBodies;
+	param.numRigidBodies = numRigidBodies;
+	param.timeStep = timeStep;
+	param.separateBias = separateBias;
+
+	BulletSetupContactConstraints(param);
+
 	btAlignedObjectArray<btPersistentManifold*> manifoldPtrs;
+	manifoldPtrs.resize(manifolds.size());
+
+	for (int i=0;i<manifolds.size();i++)
+	{
+		manifoldPtrs[i] = &manifolds[i];
+	}
+
 	if (bodyPtrs.size() && manifoldPtrs.size())
 	{
 		pgs.solveGroup(&bodyPtrs[0],bodyPtrs.size(),&manifoldPtrs[0],manifoldPtrs.size(),0,0,info,0,0,0);
+
+		for (int i=0;i<numRigidBodies;i++)
+		{
+			btVector3 linvel = rbs[i].getLinearVelocity();
+			btVector3 angvel = rbs[i].getAngularVelocity();
+			states[i].setLinearVelocity(PfxVector3(linvel.getX(),linvel.getY(),linvel.getZ()));
+			states[i].setAngularVelocity(PfxVector3(angvel.getX(),angvel.getY(),angvel.getZ()));
+		}
 	}
+
+	BulletWriteWarmstartContactConstraints(param);
+
+
+
 }
 void constraintSolver()
 {
@@ -458,9 +690,11 @@ void constraintSolver()
 		param.numRigidBodies = numRigidBodies;
 		param.iteration = iteration;
 
-		int ret = pfxSolveConstraints(param);
-		if(ret != SCE_PFX_OK) SCE_PFX_PRINTF("pfxSolveConstraints failed %d\n",ret);
-		
+		if (peSolverEnabled)
+		{
+			int ret = pfxSolveConstraints(param);
+			if(ret != SCE_PFX_OK) SCE_PFX_PRINTF("pfxSolveConstraints failed %d\n",ret);
+		}
 		pool.deallocate(param.workBuff);
 	}
 	pc.countEnd();
@@ -514,7 +748,10 @@ void physics_simulate()
 	{
 		BT_PROFILE("constraintSolver");
 		constraintSolver();
-		BulletConstraintSolver();
+		if (!peSolverEnabled)
+			BulletConstraintSolver();
+			
+
 	}
 //	pc.countEnd();
 //	perf_pop_marker();
@@ -864,7 +1101,7 @@ void createSceneStacking()
 */
 	//createTowerCircle(PfxVector3(0.0f,0.0f,0.0f),48,24,PfxVector3(1));
     
-    createStack(PfxVector3(0.0f,0.00f,0.0f),2,PfxVector3(cubeSize,cubeSize,cubeSize));
+    createStack(PfxVector3(0.0f,0.0,0.0f),2,PfxVector3(cubeSize,cubeSize,cubeSize));
     
 }
 

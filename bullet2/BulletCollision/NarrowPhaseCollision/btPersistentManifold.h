@@ -54,6 +54,7 @@ enum btContactManifoldTypes
 ATTRIBUTE_ALIGNED128( class) btPersistentManifold : public btTypedObject
 //ATTRIBUTE_ALIGNED16( class) btPersistentManifold : public btTypedObject
 {
+public:
 
 	btManifoldPoint m_pointCache[MANIFOLD_CACHE_SIZE];
 
@@ -72,14 +73,13 @@ ATTRIBUTE_ALIGNED128( class) btPersistentManifold : public btTypedObject
 
 	int		findContactPoint(const btManifoldPoint* unUsed, int numUnused,const btManifoldPoint& pt);
 
-public:
 
 	BT_DECLARE_ALIGNED_ALLOCATOR();
 
-	int	m_companionIdA;
-	int	m_companionIdB;
+//	int	m_companionIdA;
+	//int	m_companionIdB;
 
-	int m_index1a;
+//	int m_index1a;
 
 	btPersistentManifold();
 
@@ -143,9 +143,9 @@ public:
 			m_pointCache[index] = m_pointCache[lastUsedIndex]; 
 			//get rid of duplicated userPersistentData pointer
 			m_pointCache[lastUsedIndex].m_userPersistentData = 0;
-			m_pointCache[lastUsedIndex].mConstraintRow[0].m_accumImpulse = 0.f;
-			m_pointCache[lastUsedIndex].mConstraintRow[1].m_accumImpulse = 0.f;
-			m_pointCache[lastUsedIndex].mConstraintRow[2].m_accumImpulse = 0.f;
+//			m_pointCache[lastUsedIndex].mConstraintRow[0].m_accumImpulse = 0.f;
+	//		m_pointCache[lastUsedIndex].mConstraintRow[1].m_accumImpulse = 0.f;
+//			m_pointCache[lastUsedIndex].mConstraintRow[2].m_accumImpulse = 0.f;
 
 			m_pointCache[lastUsedIndex].m_appliedImpulse = 0.f;
 			m_pointCache[lastUsedIndex].m_lateralFrictionInitialized = false;
@@ -161,7 +161,7 @@ public:
 	{
 		btAssert(validContactDistance(newPoint));
 
-#define MAINTAIN_PERSISTENCY 1
+//#define MAINTAIN_PERSISTENCY 
 #ifdef MAINTAIN_PERSISTENCY
 		int	lifeTime = m_pointCache[insertIndex].getLifeTime();
 		btScalar	appliedImpulse = m_pointCache[insertIndex].mConstraintRow[0].m_accumImpulse;
@@ -181,9 +181,9 @@ public:
 		m_pointCache[insertIndex].m_appliedImpulseLateral1 = appliedLateralImpulse1;
 		m_pointCache[insertIndex].m_appliedImpulseLateral2 = appliedLateralImpulse2;
 		
-		m_pointCache[insertIndex].mConstraintRow[0].m_accumImpulse =  appliedImpulse;
-		m_pointCache[insertIndex].mConstraintRow[1].m_accumImpulse = appliedLateralImpulse1;
-		m_pointCache[insertIndex].mConstraintRow[2].m_accumImpulse = appliedLateralImpulse2;
+//		m_pointCache[insertIndex].mConstraintRow[0].m_accumImpulse =  appliedImpulse;
+	//	m_pointCache[insertIndex].mConstraintRow[1].m_accumImpulse = appliedLateralImpulse1;
+		//m_pointCache[insertIndex].mConstraintRow[2].m_accumImpulse = appliedLateralImpulse2;
 
 
 		m_pointCache[insertIndex].m_lifeTime = lifeTime;

@@ -44,9 +44,9 @@ int PfxContactManifold::sort4ContactPoints(const PfxPoint3 &newCP,PfxFloat newDi
 
 	// 最も深い衝突点は排除対象からはずす
 	for(int i=0;i<SCE_PFX_NUMCONTACTS_PER_BODIES;i++) {
-		if(m_contactPoints[i].m_distance < maxPenetration) {
+		if(m_contactPoints[i].m_distance1 < maxPenetration) {
 			maxPenetrationIndex = i;
-			maxPenetration = m_contactPoints[i].m_distance;
+			maxPenetration = m_contactPoints[i].m_distance1;
 		}
 	}
 	
@@ -125,7 +125,7 @@ void PfxContactManifold::addContactPoint(
 		m_contactPoints[id].reset();
 	}
 
-	m_contactPoints[id].m_distance = newDistance;
+	m_contactPoints[id].m_distance1 = newDistance;
 	m_contactPoints[id].m_subData = subData;
 	pfxStorePoint3(newPointA,m_contactPoints[id].m_localPointA);
 	pfxStorePoint3(newPointB,m_contactPoints[id].m_localPointB);
@@ -144,7 +144,7 @@ void PfxContactManifold::addContactPoint(const PfxContactPoint &cp)
 		PfxVector3 nml2(pfxReadVector3(cp.m_constraintRow[0].m_normal));
 		if(fabsf(dot(nml1,nml2)) > 0.99f ) {
 			// 同一点を発見、蓄積された情報を継続
-			m_contactPoints[id].m_distance = cp.m_distance;
+			m_contactPoints[id].m_distance1 = cp.m_distance1;
 			m_contactPoints[id].m_localPointA[0] = cp.m_localPointA[0];
 			m_contactPoints[id].m_localPointA[1] = cp.m_localPointA[1];
 			m_contactPoints[id].m_localPointA[2] = cp.m_localPointA[2];
@@ -181,7 +181,7 @@ void PfxContactManifold::addContactPoint(const PfxContactPoint &cp)
 	}
 	else {
 		// ソート
-		id = sort4ContactPoints(pA,cp.m_distance);
+		id = sort4ContactPoints(pA,cp.m_distance1);
 		
 		// コンタクトポイント入れ替え
 		m_contactPoints[id] = cp;
@@ -215,10 +215,10 @@ void PfxContactManifold::refresh(const PfxVector3 &pA,const PfxQuat &qA,const Pf
 				i--;
 				continue;
 			}
-			m_contactPoints[i].m_distance = distance;
+			m_contactPoints[i].m_distance1 = distance;
 
 			// 深度方向を除去して両点の距離をチェック
-			cpA = cpA - m_contactPoints[i].m_distance * normal;
+			cpA = cpA - m_contactPoints[i].m_distance1 * normal;
 			PfxFloat distanceAB = lengthSqr(cpA - cpB);
 			if(distanceAB > SCE_PFX_CONTACT_THRESHOLD_TANGENT) {
 				removeContactPoint(i);

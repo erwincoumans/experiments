@@ -69,6 +69,7 @@ struct btContactSolverInfo : public btContactSolverInfoData
 		m_tau = btScalar(0.6);
 		m_damping = btScalar(1.0);
 		m_friction = btScalar(0.3);
+		m_timeStep = btScalar(1.f/60.f);
 		m_restitution = btScalar(0.);
 		m_maxErrorReduction = btScalar(20.);
 		m_numIterations = 10;
@@ -79,8 +80,8 @@ struct btContactSolverInfo : public btContactSolverInfoData
 		m_splitImpulse = false;
 		m_splitImpulsePenetrationThreshold = -0.02f;
 		m_linearSlop = btScalar(0.0);
-		m_warmstartingFactor=btScalar(0.85);
-		m_solverMode = SOLVER_USE_WARMSTARTING | SOLVER_SIMD;// | SOLVER_RANDMIZE_ORDER;
+		m_warmstartingFactor=btScalar(1.f);//0.85);
+		m_solverMode = SOLVER_USE_WARMSTARTING | SOLVER_SIMD | SOLVER_USE_FRICTION_WARMSTARTING|SOLVER_USE_2_FRICTION_DIRECTIONS;// | SOLVER_RANDMIZE_ORDER;
 		m_restingContactRestitutionThreshold = 2;//resting contact lifetime threshold to disable restitution
 		m_minimumSolverBatchSize = 128; //try to combine islands until the amount of constraints reaches this limit
 	}

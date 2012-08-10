@@ -534,9 +534,12 @@ void btPgsSolver::setupContactConstraint(btSolverConstraint& solverConstraint,
 
 
 
+				btVector3 vel1,vel2;
 
-			btVector3 vel1 = rb0 ? rb0->getVelocityInLocalPoint(rel_pos1) : btVector3(0,0,0);
-			btVector3 vel2 = rb1 ? rb1->getVelocityInLocalPoint(rel_pos2) : btVector3(0,0,0);
+				bodyA->internalGetVelocityInLocalPointObsolete(rel_pos1, vel1);
+				bodyB->internalGetVelocityInLocalPointObsolete(rel_pos2, vel2);
+
+//			btVector3 vel2 = rb1 ? rb1->getVelocityInLocalPoint(rel_pos2) : btVector3(0,0,0);
 			vel  = vel1 - vel2;
 			rel_vel = cp.m_normalWorldOnB.dot(vel);
 
@@ -577,10 +580,10 @@ void btPgsSolver::setupContactConstraint(btSolverConstraint& solverConstraint,
 
 				{
 					btScalar rel_vel;
-					btScalar vel1Dotn = solverConstraint.m_contactNormal.dot(rb0?rb0->getLinearVelocity():btVector3(0,0,0)) 
-						+ solverConstraint.m_relpos1CrossNormal.dot(rb0?rb0->getAngularVelocity():btVector3(0,0,0));
-					btScalar vel2Dotn = -solverConstraint.m_contactNormal.dot(rb1?rb1->getLinearVelocity():btVector3(0,0,0)) 
-						+ solverConstraint.m_relpos2CrossNormal.dot(rb1?rb1->getAngularVelocity():btVector3(0,0,0));
+					btScalar vel1Dotn = solverConstraint.m_contactNormal.dot(rb0?bodyA->m_linearVelocity:btVector3(0,0,0)) 
+						+ solverConstraint.m_relpos1CrossNormal.dot(rb0?bodyA->m_angularVelocity:btVector3(0,0,0));
+					btScalar vel2Dotn = -solverConstraint.m_contactNormal.dot(rb1?bodyB->m_linearVelocity:btVector3(0,0,0)) 
+						+ solverConstraint.m_relpos2CrossNormal.dot(rb1?bodyB->m_angularVelocity:btVector3(0,0,0));
 
 					rel_vel = vel1Dotn+vel2Dotn;
 
@@ -757,7 +760,7 @@ void	btPgsSolver::convertContact(btPersistentManifold* manifold,const btContactS
 				} else
 				{
 					//re-calculate friction direction every frame, todo: check if this is really needed
-					btPlaneSpace1(cp.m_normalWorldOnB,cp.m_lateralFrictionDir1,cp.m_lateralFrictionDir2);
+					//btPlaneSpace1(cp.m_normalWorldOnB,cp.m_lateralFrictionDir1,cp.m_lateralFrictionDir2);
 					if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
 					{
 						applyAnisotropicFriction(colObj0,cp.m_lateralFrictionDir2);
@@ -1271,7 +1274,10 @@ btScalar btPgsSolver::solveGroupCacheFriendlyFinish(const btContactSolverInfo& i
 		if (infoGlobal.m_solverMode & SOLVER_USE_FRICTION_WARMSTARTING)
 		{
 			pt->m_appliedImpulseLateral1 = m_tmpSolverContactFrictionConstraintPool[solveManifold.m_frictionIndex].m_appliedImpulse;
-			pt->m_appliedImpulseLateral2 = m_tmpSolverContactFrictionConstraintPool[solveManifold.m_frictionIndex+1].m_appliedImpulse;
+			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
+			{
+				pt->m_appliedImpulseLateral2 = m_tmpSolverContactFrictionConstraintPool[solveManifold.m_frictionIndex+1].m_appliedImpulse;
+			}
 		}
 
 		//do a callback here?

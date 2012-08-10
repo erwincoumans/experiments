@@ -76,6 +76,10 @@ void pfxSetupContactConstraint(
 		PfxVector3 normal = contactNormal;
 
 		PfxFloat denom = dot(K*normal,normal);
+		if (penetrationDepth>0)
+		{
+			//printf("penetrationDepth=%f\n", penetrationDepth);
+		}
 
 		constraintResponse.m_rhs = -(1.0f+restitution)*dot(vAB,normal); // velocity error
 		constraintResponse.m_rhs -= (separateBias * SCE_PFX_MIN(0.0f,penetrationDepth+SCE_PFX_CONTACT_SLOP)) / timeStep; // position error

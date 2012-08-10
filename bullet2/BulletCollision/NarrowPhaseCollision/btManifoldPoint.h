@@ -76,9 +76,9 @@ class btManifoldPoint
 					m_contactCFM2(0.f),
 					m_lifeTime(0)
 			{
-				mConstraintRow[0].m_accumImpulse = 0.f;
-				mConstraintRow[1].m_accumImpulse = 0.f;
-				mConstraintRow[2].m_accumImpulse = 0.f;
+//				mConstraintRow[0].m_accumImpulse = 0.f;
+	//			mConstraintRow[1].m_accumImpulse = 0.f;
+		//		mConstraintRow[2].m_accumImpulse = 0.f;
 			}
 
 			
@@ -118,7 +118,7 @@ class btManifoldPoint
 
 
 
-			btConstraintRow mConstraintRow[3];
+//			btConstraintRow mConstraintRow[3];
 
 
 			btScalar getDistance() const

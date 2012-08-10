@@ -37,7 +37,7 @@ struct PfxContactPoint
 	PfxUInt8 m_shapeIdB;
 	SCE_PFX_PADDING(1,1)
 	PfxSubData m_subData;
-	PfxFloat m_distance;
+	PfxFloat m_distance1;
 	PfxFloat m_localPointA[3];
 	PfxFloat m_localPointB[3];
 	SCE_PFX_PADDING(2,8)
@@ -48,7 +48,7 @@ struct PfxContactPoint
 		m_duration = 0;
 		m_shapeIdA = m_shapeIdB = 0;
 		m_subData = PfxSubData();
-		m_distance = SCE_PFX_FLT_MAX;
+		m_distance1 = SCE_PFX_FLT_MAX;
 		m_constraintRow[0].m_accumImpulse = 0.0f;
 		m_constraintRow[1].m_accumImpulse = 0.0f;
 		m_constraintRow[2].m_accumImpulse = 0.0f;
