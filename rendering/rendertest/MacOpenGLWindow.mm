@@ -314,14 +314,30 @@ void MacOpenGLWindow::init(int width, int height)
     checkError("glGenBuffers");
     
     //see http://stackoverflow.com/questions/8238473/cant-get-nsmousemoved-events-from-nexteventmatchingmask-with-an-nsopenglview
-   /*
     ProcessSerialNumber psn;
     GetCurrentProcess(&psn);
     TransformProcessType(&psn, kProcessTransformToForegroundApplication);
     SetFrontProcess(&psn);
     
-    [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask];
-    */
+//[m_internalData->m_window setLevel:NSMainMenuWindowLevel];
+    
+//    [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask];
+    
+    [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask handler:^(NSEvent *event)
+    {
+        //[window setFrameOrigin:[NSEvent mouseLocation]];
+        
+        NSPoint eventLocation = [event locationInWindow];
+        NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+        m_mouseX = center.x;
+        m_mouseY = center.y;
+        
+        
+        // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
+        if (m_mouseCallback)
+            (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
+        
+    }];
     
      [m_internalData->m_myApp finishLaunching];
     [pool release];
@@ -409,11 +425,16 @@ void MacOpenGLWindow::startRendering()
         
         if ([event type] == NSMouseMoved)
         {
+            
             NSPoint eventLocation = [event locationInWindow];
             NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
             m_mouseX = center.x;
             m_mouseY = center.y;
+       
+            
            // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
+            if (m_mouseCallback)
+                (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
         }
         
         if ([event type] == NSLeftMouseDragged)
@@ -446,6 +467,7 @@ void MacOpenGLWindow::startRendering()
             float dy, dx;
             dy = [ event deltaY ];
             dx = [ event deltaX ];
+            
             if (m_wheelCallback)
                 (*m_wheelCallback)(dx,dy);
           //  m_cameraDistance -= dy*0.1;

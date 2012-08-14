@@ -1622,7 +1622,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		
 	}
 #ifdef __APPLE__
- bool contactClippingOnGpu = true;
+ bool contactClippingOnGpu = false;
 #else
  bool contactClippingOnGpu = true;
 #endif
@@ -2234,7 +2234,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 
 #ifdef __APPLE__
-		bool reductionOnGpu = true;
+		bool reductionOnGpu = false;
 #else
 		bool reductionOnGpu = true;
 #endif

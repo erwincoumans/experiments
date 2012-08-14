@@ -113,8 +113,15 @@ struct InternalDataRenderer
 
 	void wheelCallback( float deltax, float deltay)
     {
-        m_cameraDistance -= deltay*0.1;
-         m_azi -= deltax*0.1;
+        if (btFabs(deltax)>btFabs(deltay))
+        {
+            m_azi -= deltax*0.1;
+            
+        } else
+        {
+            m_cameraDistance -= deltay*0.1;
+            
+        }
         
 	}
 	void mouseCallback(int button, int state, float x, float y)
@@ -125,6 +132,7 @@ struct InternalDataRenderer
 			{
 				float xDelta = x-m_mouseXpos;
 				float yDelta = y-m_mouseYpos;
+                
 				m_azi += xDelta*0.1;
 				m_ele += yDelta*0.1;
 				//printf("m_azi=%f\n",m_azi);
