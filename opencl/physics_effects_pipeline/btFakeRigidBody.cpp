@@ -84,3 +84,12 @@ btRigidBody* btRigidBody::upcast(btCollisionObject* obj)
 	return (btRigidBody*)obj;
 }
 
+const btVector3&	btRigidBody::getTotalForce() const
+{
+	return m_accumulatedForce;
+}
+
+const btVector3&	btRigidBody::getTotalTorque() const
+{
+	return m_accumulatedTorque;
+}

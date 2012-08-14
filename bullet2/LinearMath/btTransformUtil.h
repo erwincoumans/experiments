@@ -48,7 +48,9 @@ public:
 		btQuaternion predictedOrn = curTrans.getRotation();
 		predictedOrn += (angvel * predictedOrn) * (timeStep * btScalar(0.5));
 		predictedOrn.normalize();
-	#else
+		predictedTransform.setRotation(predictedOrn);
+
+#else
 		//Exponential map
 		//google for "Practical Parameterization of Rotations Using the Exponential Map", F. Sebastian Grassia
 
@@ -70,13 +72,21 @@ public:
 			// sync(fAngle) = sin(c*fAngle)/t
 			axis   = angvel*( btSin(btScalar(0.5)*fAngle*timeStep)/fAngle );
 		}
-		btQuaternion dorn (axis.x(),axis.y(),axis.z(),btCos( fAngle*timeStep*btScalar(0.5) ));
-		btQuaternion orn0 = curTrans.getRotation();
+		
+		if (fAngle!=0.f)
+		{
+			btQuaternion dorn (axis.x(),axis.y(),axis.z(),btCos( fAngle*timeStep*btScalar(0.5) ));
+			btQuaternion orn0 = curTrans.getRotation();
 
-		btQuaternion predictedOrn = dorn * orn0;
-		predictedOrn.normalize();
-	#endif
-		predictedTransform.setRotation(predictedOrn);
+			btQuaternion predictedOrn = dorn * orn0;
+			predictedOrn.normalize();
+			predictedTransform.setRotation(predictedOrn);
+		} else
+		{
+			predictedTransform.setBasis(curTrans.getBasis());
+		}
+
+#endif
 	}
 
 	static void	calculateVelocityQuaternion(const btVector3& pos0,const btVector3& pos1,const btQuaternion& orn0,const btQuaternion& orn1,btScalar timeStep,btVector3& linVel,btVector3& angVel)

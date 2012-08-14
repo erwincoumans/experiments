@@ -26,11 +26,13 @@ class btRigidBody : public btCollisionObject
 	btVector3	m_linearFactor;
 	btVector3	m_angularVelocity;
 	btVector3	m_linearVelocity;
-
+	btVector3	m_accumulatedForce;
+	btVector3	m_accumulatedTorque;
 	btScalar	m_invMass;
 
 	
-	
+	const btVector3&	getTotalForce() const;
+	const btVector3&	getTotalTorque() const;
 	const btVector3& getAngularFactor() const;
 	const btVector3& getLinearFactor() const;
 	const btMatrix3x3& getInvInertiaTensorWorld() const;

@@ -273,7 +273,7 @@ int main(int argc, char* argv[])
 	int maxObjectCapacity=128*1024;
 
 	GLInstancingRenderer render(maxObjectCapacity);
-	render.setCameraDistance(30);
+	render.setCameraDistance(25);
 	
 		
 	render.InitShaders();
@@ -374,7 +374,7 @@ int main(int argc, char* argv[])
 			if (count<0)
 			{
 				count = 100;
-				CProfileManager::dumpAll();
+//				CProfileManager::dumpAll();
 				//printStats  = false;
 			} else
 			{

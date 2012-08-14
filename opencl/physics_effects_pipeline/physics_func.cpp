@@ -21,7 +21,7 @@ Physics Effects under the filename: physics_effects_license.txt
 #include "btFakeRigidBody.h"
 btAlignedObjectArray<btRigidBody> rbs;
 btAlignedObjectArray<btPersistentManifold> manifolds;
-bool peSolverEnabled=false;
+bool peSolverEnabled=true;//true;//true;//;//true;//false;
 
 
 //#include "sample_api_physics_effects/common/perf_func.h"
@@ -222,7 +222,7 @@ void broadphase()
 			currentPairs[numCurrentPairs++] = outNewPairs[i];
 		}
 
-		bool verboseStats = true;
+		bool verboseStats = false;
 		if (verboseStats)
 		{
 			printf("===============================================\n");
@@ -437,6 +437,10 @@ PfxInt32 BulletSetupContactConstraints(PfxSetupContactConstraintsParam &param)
 
 			manifold.m_pointCache[j].m_positionWorldOnA = trA( manifold.m_pointCache[j].m_localPointA );
 			manifold.m_pointCache[j].m_positionWorldOnB = trB( manifold.m_pointCache[j].m_localPointB );
+			manifold.m_pointCache[j].m_contactMotion1 = 0.f;
+			manifold.m_pointCache[j].m_contactMotion2 = 0.f;
+			manifold.m_pointCache[j].m_contactCFM1 = 0.f;
+			manifold.m_pointCache[j].m_contactCFM2 = 0.f;
 
 
 
@@ -524,6 +528,8 @@ void BulletConstraintSolver()
 {
 	btPgsSolver pgs;
 	btContactSolverInfo info;
+	info.m_erp = separateBias;
+
 	rbs.resize(0);
 
 	for (int i=0;i<numRigidBodies;i++)
@@ -533,8 +539,11 @@ void BulletConstraintSolver()
 		rb.m_companionId=-1;
 		rb.m_angularFactor.setValue(1,1,1);
 		rb.m_anisotropicFriction.setValue(1,1,1);
-		
 		rb.m_invMass = bodies[i].getMassInv();
+		btVector3 grav_acceleration(0,-10,0);
+		rb.m_accumulatedForce=grav_acceleration*rb.m_invMass*1./60.;
+		rb.m_accumulatedTorque.setValue(0,0,0);
+
 		rb.m_linearFactor.setValue(1,1,1);
 		btVector3 pos(states[i].getPosition().getX(),states[i].getPosition().getY(),states[i].getPosition().getZ());
 		rb.m_worldTransform.setIdentity();
@@ -607,6 +616,9 @@ void BulletConstraintSolver()
 			btVector3 angvel = rbs[i].getAngularVelocity();
 			states[i].setLinearVelocity(PfxVector3(linvel.getX(),linvel.getY(),linvel.getZ()));
 			states[i].setAngularVelocity(PfxVector3(angvel.getX(),angvel.getY(),angvel.getZ()));
+			states[i].setPosition(PfxVector3(rbs[i].getWorldTransform().getOrigin().getX(),rbs[i].getWorldTransform().getOrigin().getY(),rbs[i].getWorldTransform().getOrigin().getZ()));
+			btQuaternion orn = rbs[i].getWorldTransform().getRotation();
+			states[i].setOrientation(PfxQuat(orn.getX(),orn.getY(),orn.getZ(),orn.getW()));
 		}
 	}
 
@@ -804,6 +816,9 @@ void createBrick(int id,const PfxVector3 &pos,const PfxQuat &rot,const PfxVector
 	states[id].setOrientation(rot);
 	states[id].setMotionType(kPfxMotionTypeActive);
 	states[id].setRigidBodyId(id);
+	//states[id].setLinearDamping(0.99f);
+	//states[id].setAngularDamping(0.95f);  
+
 }
 
 void createStack(const PfxVector3 &offsetPosition,int stackSize,const PfxVector3 &boxSize)

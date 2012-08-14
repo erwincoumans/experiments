@@ -53,6 +53,7 @@ struct InternalData2
 	int m_mouseXpos;
 	int m_mouseYpos;
 
+	btWheelCallback m_wheelCallback;
 	btMouseCallback	m_mouseCallback;
 	btKeyboardCallback	m_keyboardCallback;
 
@@ -267,6 +268,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int xPos = LOWORD(lParam); 
 		int yPos = HIWORD(lParam); 
 		//m_cameraDistance -= zDelta*0.01;
+		if (sData && sData->m_wheelCallback)
+			(*sData->m_wheelCallback)(xPos,yPos,zDelta);
+
 		break;
 	}
 
@@ -420,7 +424,7 @@ void	Win32OpenGLWindow::init(int oglViewportWidth,int oglViewportHeight, bool fu
 		GetClientRect(m_data->m_hWnd,&clientRect);
 		int w = clientRect.right-clientRect.left;
 		int h = clientRect.bottom-clientRect.top;
-		printf("actual client OpenGL viewport width / height = %d, %d\n",w,h);
+//		printf("actual client OpenGL viewport width / height = %d, %d\n",w,h);
 		
 	}
 	else if (windowHandle)
@@ -639,6 +643,11 @@ void	Win32OpenGLWindow::setDebugMessage(int x,int y,const char* message)
 bool Win32OpenGLWindow::requestedExit()
 {
 	return m_data->m_quit;
+}
+
+void Win32OpenGLWindow::setWheelCallback(btWheelCallback wheelCallback)
+{
+	m_data->m_wheelCallback = wheelCallback;
 }
 
 void Win32OpenGLWindow::setMouseCallback(btMouseCallback	mouseCallback)

@@ -73,16 +73,16 @@ struct btContactSolverInfo : public btContactSolverInfoData
 		m_restitution = btScalar(0.);
 		m_maxErrorReduction = btScalar(20.);
 		m_numIterations = 10;
-		m_erp = btScalar(0.2);
-		m_erp2 = btScalar(0.1);
+		m_erp = btScalar(0.1);
+		m_erp2 = btScalar(0.2);
 		m_globalCfm = btScalar(0.);
 		m_sor = btScalar(1.);
-		m_splitImpulse = false;
-		m_splitImpulsePenetrationThreshold = -0.02f;
+		m_splitImpulse = true;//false;
+		m_splitImpulsePenetrationThreshold = -.04f;//;//-0.21f;//0;//-0.01f;//-0.41f;
 		m_linearSlop = btScalar(0.0);
 		m_warmstartingFactor=btScalar(1.f);//0.85);
-		m_solverMode = SOLVER_USE_WARMSTARTING | SOLVER_SIMD | SOLVER_USE_FRICTION_WARMSTARTING|SOLVER_USE_2_FRICTION_DIRECTIONS;// | SOLVER_RANDMIZE_ORDER;
-		m_restingContactRestitutionThreshold = 2;//resting contact lifetime threshold to disable restitution
+		m_solverMode = SOLVER_USE_WARMSTARTING | SOLVER_SIMD | SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION|SOLVER_USE_FRICTION_WARMSTARTING|SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_ENABLE_FRICTION_DIRECTION_CACHING;// | SOLVER_RANDMIZE_ORDER;
+		m_restingContactRestitutionThreshold = 00;//resting contact lifetime threshold to disable restitution
 		m_minimumSolverBatchSize = 128; //try to combine islands until the amount of constraints reaches this limit
 	}
 };

@@ -1,6 +1,6 @@
-int NUM_OBJECTS_X = 15;
-int NUM_OBJECTS_Y = 15;
-int NUM_OBJECTS_Z = 15;
+int NUM_OBJECTS_X = 1;
+int NUM_OBJECTS_Y = 5;
+int NUM_OBJECTS_Z = 1;
 
 
 
@@ -222,9 +222,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				//position[1]=3;
 				//position[2]=3;
 
-				position[0]=(i*X_GAP-NUM_OBJECTS_X/2)+(j&1)+1;
+				position[0]=(i*X_GAP-NUM_OBJECTS_X/2);//+(j&1)+1;
 				position[1]=1+(j*Y_GAP);//-(NUM_OBJECTS_Y/2);
-				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2)+(j&1);
+				position[2]=(k*Z_GAP-NUM_OBJECTS_Z/2);//+(j&1);
 				position[3] = 0.f;
 				
 				renderer.registerGraphicsInstance(cubeShapeIndex,position,rotOrn,color,cubeScaling);

@@ -159,6 +159,7 @@ int main(int argc, char* argv[])
     window->endRendering();
 
 	window->setMouseCallback(btDefaultMouseCallback);
+	window->setWheelCallback(btDefaultWheelCallback);
 	window->setKeyboardCallback(btDefaultKeyboardCallback);
     
 	while (!window->requestedExit())

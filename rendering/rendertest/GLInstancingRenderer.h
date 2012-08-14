@@ -20,7 +20,7 @@ subject to the following restrictions:
 
 void btDefaultMouseCallback( int button, int state, float x, float y);
 void btDefaultKeyboardCallback(unsigned char key, int x, int y);
-
+void btDefaultWheelCallback( float x, float y, float delta);
 class GLInstancingRenderer
 {
 	

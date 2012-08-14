@@ -272,9 +272,13 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 			
 			//correct the position/orientation based on push/turn recovery
 			btTransform newTransform;
-			btTransformUtil::integrateTransform(m_worldTransform,m_pushVelocity,m_turnVelocity,timeStep,newTransform);
-			m_worldTransform = newTransform;
-			
+			if (m_pushVelocity[0]!=0.f || m_pushVelocity[1]!=0 || m_pushVelocity[2]!=0 || m_turnVelocity[0]!=0.f || m_turnVelocity[1]!=0 || m_turnVelocity[2]!=0)
+			{
+				btQuaternion orn = m_worldTransform.getRotation();
+				btTransformUtil::integrateTransform(m_worldTransform,m_pushVelocity,m_turnVelocity*0.1,timeStep,newTransform);
+				m_worldTransform = newTransform;
+			}
+			//m_worldTransform.setRotation(orn);
 			//m_originalBody->setCompanionId(-1);
 		}
 	}
