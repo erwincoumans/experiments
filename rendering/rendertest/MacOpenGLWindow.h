@@ -3,7 +3,7 @@
 
 typedef void (*btMouseCallback)(int button, int state, float x, float y);
 typedef void (*btKeyboardCallback)(unsigned char key, int x, int y);
-
+typedef void (*btWheelCallback)(float deltax, float deltay);
 
 class MacOpenGLWindow
 {
@@ -12,7 +12,9 @@ class MacOpenGLWindow
     float m_mouseY;
     
     btMouseCallback m_mouseCallback;
+    btWheelCallback m_wheelCallback;
     btKeyboardCallback m_keyboardCallback;
+    
 public:
     
     MacOpenGLWindow();
@@ -40,6 +42,11 @@ public:
 	void setKeyboardCallback( btKeyboardCallback	keyboardCallback)
     {
         m_keyboardCallback = keyboardCallback;
+    }
+    
+    void setWheelCallback (btWheelCallback wheelCallback)
+    {
+        m_wheelCallback = wheelCallback;
     }
 
 

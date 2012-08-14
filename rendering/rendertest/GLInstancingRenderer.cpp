@@ -111,9 +111,11 @@ struct InternalDataRenderer
 
 	}
 
-	void wheelCallback( float x, float y, float delta)
-	{
-		m_cameraDistance -= delta*0.01;
+	void wheelCallback( float deltax, float deltay)
+    {
+        m_cameraDistance -= deltay*0.1;
+         m_azi -= deltax*0.1;
+        
 	}
 	void mouseCallback(int button, int state, float x, float y)
 	{
@@ -139,10 +141,10 @@ struct InternalDataRenderer
 
 };
 
-void btDefaultWheelCallback(float x, float y, float delta)
+void btDefaultWheelCallback(float deltax, float deltay)
 {
 	if (sData2)
-		sData2->wheelCallback(x,y,delta);
+		sData2->wheelCallback(deltax,deltay);
 }
 void btDefaultMouseCallback(int button, int state, float x, float y)
 {

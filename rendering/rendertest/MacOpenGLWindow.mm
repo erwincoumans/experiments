@@ -446,6 +446,8 @@ void MacOpenGLWindow::startRendering()
             float dy, dx;
             dy = [ event deltaY ];
             dx = [ event deltaX ];
+            if (m_wheelCallback)
+                (*m_wheelCallback)(dx,dy);
           //  m_cameraDistance -= dy*0.1;
             // m_azi -= dx*0.1;
             
