@@ -537,102 +537,96 @@ int	clipHullAgainstHullLocalA(
 #define REDUCE_MIN(v, n) {int i=0;\
 	for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i+offset]; }
 
-int extractManifoldSequential(const float4* p, int nPoints, const float4& nearNormal, int* contactIdx)
+int extractManifoldSequential(const float4* p, int nPoints, const float4& nearNormal, int4* contactIdx)
 {
 	if( nPoints == 0 ) return 0;
+
+    if (nPoints <=4)
+        return nPoints;
+    
 
     if (nPoints >64)
         nPoints = 64;
     
 	float4 center = make_float4(0.f);
 	{
-		float4 v[64];
+		
 		for (int i=0;i<nPoints;i++)
-			v[i] = p[i];
-		//memcpy( v, p, nPoints*sizeof(float4) );
-		PARALLEL_SUM( v, nPoints );
-		center = v[0]/(float)nPoints;
+			center += p[i];
+		center /= (float)nPoints;
 	}
 
 	
 
-	{	//	sample 4 directions
-		if( nPoints < 4 )
-		{
-			for(int i=0; i<nPoints; i++) 
-				contactIdx[i] = i;
-			return nPoints;
-		}
+	//	sample 4 directions
 
-		float4 aVector = p[0] - center;
-		float4 u = cross3( nearNormal, aVector );
-		float4 v = cross3( nearNormal, u );
-		u = normalize3( u );
-		v = normalize3( v );
+    float4 aVector = p[0] - center;
+    float4 u = cross3( nearNormal, aVector );
+    float4 v = cross3( nearNormal, u );
+    u = normalize3( u );
+    v = normalize3( v );
 
-		int idx[4];
+    
+    //keep point with deepest penetration
+    float minW= FLT_MAX;
+    
+    int minIndex=-1;
+    
+    float4 maxDots;
+    maxDots.x = FLT_MIN;
+    maxDots.y = FLT_MIN;
+    maxDots.z = FLT_MIN;
+    maxDots.w = FLT_MIN;
+    
+    //	idx, distance
+    for(int ie = 0; ie<nPoints; ie++ )
+    {
+        if (p[ie].w<minW)
+        {
+            minW = p[ie].w;
+            minIndex=ie;
+        }
+        float f;
+        float4 r = p[ie]-center;
+        f = dot3F4( u, r );
+        if (f<maxDots.x)
+        {
+            maxDots.x = f;
+            contactIdx[0].x = ie;
+        }
+        
+        f = dot3F4( -u, r );
+        if (f<maxDots.y)
+        {
+            maxDots.y = f;
+            contactIdx[0].y = ie;
+        }
+        
 
-		float2 max00 = make_float2(0,FLT_MAX);
-		{
-			//	idx, distance
-			{
-				{
-					int4 a[64];
-					for(int ie = 0; ie<nPoints; ie++ )
-					{
-						
-						
-						float f;
-						float4 r = p[ie]-center;
-						f = dot3F4( u, r );
-						a[ie].x = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+        f = dot3F4( v, r );
+        if (f<maxDots.z)
+        {
+            maxDots.z = f;
+            contactIdx[0].z = ie;
+        }
 
-						f = dot3F4( -u, r );
-						a[ie].y = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+        f = dot3F4( -v, r );
+        if (f<maxDots.w)
+        {
+            maxDots.w = f;
+            contactIdx[0].w = ie;
+        }
+        
+    }
 
-						f = dot3F4( v, r );
-						a[ie].z = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
+    if (contactIdx[0].x != minIndex && contactIdx[0].y != minIndex && contactIdx[0].z != minIndex && contactIdx[0].w != minIndex)
+    {
+        //replace the first contact with minimum (todo: replace contact with least penetration)
+        contactIdx[0].x = minIndex;
+    }
 
-						f = dot3F4( -v, r );
-						a[ie].w = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
-					}
+    return 4;
 
-					for(int ie=0; ie<nPoints; ie++)
-					{
-						a[0].x = (a[0].x > a[ie].x )? a[0].x: a[ie].x;
-						a[0].y = (a[0].y > a[ie].y )? a[0].y: a[ie].y;
-						a[0].z = (a[0].z > a[ie].z )? a[0].z: a[ie].z;
-						a[0].w = (a[0].w > a[ie].w )? a[0].w: a[ie].w;
-					}
-
-					idx[0] = (int)a[0].x & 0xff;
-					idx[1] = (int)a[0].y & 0xff;
-					idx[2] = (int)a[0].z & 0xff;
-					idx[3] = (int)a[0].w & 0xff;
-				}
-			}
-
-			{
-				float2 h[64];
-				PARALLEL_DO( h[ie] = make_float2((float)ie, p[ie].w), nPoints );
-				REDUCE_MIN( h, nPoints );
-				max00 = h[0];
-			}
-		}
-
-		contactIdx[0] = idx[0];
-		contactIdx[1] = idx[1];
-		contactIdx[2] = idx[2];
-		contactIdx[3] = idx[3];
-
-//		if( max00.y < 0.0f )
-//			contactIdx[0] = (int)max00.x;
-
-		//does this sort happen on GPU too?
-		//std::sort( contactIdx, contactIdx+4 );
-
-		return 4;
-	}
 }
 
 
@@ -650,6 +644,8 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 																	)
 {
 	int idx = get_global_id(0);
+    
+    int4 contactIdx = make_int4(0,1,2,3);
 	
 	if (idx<numPairs)
 	{
@@ -661,14 +657,9 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 		{
 			localPoints[i] = pointsIn[i];
 		}
-//		int contactIdx[4] = {-1,-1,-1,-1};
-		int contactIdx[4];// = {-1,-1,-1,-1};
-		contactIdx[0] = -1;
-		contactIdx[1] = -1;
-		contactIdx[2] = -1;
-		contactIdx[3] = -1;
 
-		int nContacts = extractManifoldSequential(localPoints, nPoints, normal, contactIdx);
+
+		int nContacts = extractManifoldSequential(localPoints, nPoints, normal, &contactIdx);
 
 		int dstIdx;
 		AppendInc( nContactsOut, dstIdx );
@@ -682,10 +673,23 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 			int bodyB = pairs[pairIndex].y;
 			c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0 ? -bodyA:bodyA;
 			c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0 ? -bodyB:bodyB;
-			for (int i=0;i<nContacts;i++)
-			{
-				c->m_worldPos[i] = localPoints[contactIdx[i]];
-			}
+			
+            switch (nContacts)
+            {
+                case 4:
+                    c->m_worldPos[3] = pointsIn[contactIdx.w];
+                case 3:
+                    c->m_worldPos[2] = pointsIn[contactIdx.z];
+                case 2:
+                    c->m_worldPos[1] = pointsIn[contactIdx.y];
+                case 1:
+                    c->m_worldPos[0] = pointsIn[contactIdx.x];
+                default:
+                {
+                    assert(0);
+                }
+            };
+
 			GET_NPOINTS(*c) = nContacts;
 		}
 	}
@@ -942,6 +946,9 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 	float minDist = -1e30f;
 	float maxDist = 0.02f;
     
+    int4 contactIdx = make_int4(0,1,2,3);
+
+    
 	if (i<numPairs)
 	{
         
@@ -965,14 +972,9 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 				float4 normal = -separatingNormals[i];
 				int nPoints = numLocalContactsOut;
 				float4* pointsIn = localContactsOut;
-				int contactIdx[4];// = {-1,-1,-1,-1};
+				
                 
-				contactIdx[0] = -1;
-				contactIdx[1] = -1;
-				contactIdx[2] = -1;
-				contactIdx[3] = -1;
-                
-				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
+				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, &contactIdx);
                 
 				int dstIdx;
 				AppendInc( nGlobalContactsOut, dstIdx );
@@ -987,10 +989,23 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
 					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
                     
-					for (int i=0;i<nReducedContacts;i++)
-					{
-						c->m_worldPos[i] = pointsIn[contactIdx[i]];
-					}
+					
+                    switch (nReducedContacts)
+                    {
+                        case 4:
+                            c->m_worldPos[3] = pointsIn[contactIdx.w];
+                        case 3:
+                            c->m_worldPos[2] = pointsIn[contactIdx.z];
+                        case 2:
+                            c->m_worldPos[1] = pointsIn[contactIdx.y];
+                        case 1:
+                            c->m_worldPos[0] = pointsIn[contactIdx.x];
+                        default:
+                        {
+                            assert(0);
+                        }
+                    };
+                    
 					GET_NPOINTS(*c) = nReducedContacts;
 				}
 				
@@ -1017,6 +1032,8 @@ void   newContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 	int pairIndex = i;
 	
     
+    int4 contactIdx = make_int4(0,1,2,3);
+    
 	if (i<numPairs)
 	{
         
@@ -1035,15 +1052,15 @@ void   newContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 				int nPoints = numLocalContactsOut;
 				float4* pointsIn = &worldVertsB2[pairIndex*vertexFaceCapacity];
                 
-				int contactIdx[4];// = {-1,-1,-1,-1};
                 
-				contactIdx[0] = -1;
-				contactIdx[1] = -1;
-				contactIdx[2] = -1;
-				contactIdx[3] = -1;
+				
                 
-				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
-                
+				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, &contactIdx);
+                if (contactIdx.x == contactIdx.y|| contactIdx.x == contactIdx.z || contactIdx.x == contactIdx.w ||
+                    contactIdx.y == contactIdx.z || contactIdx.y == contactIdx.w || contactIdx.z == contactIdx.w)
+                {
+                   // printf("duplicate\n");
+                }
 				int dstIdx;
 				AppendInc( nGlobalContactsOut, dstIdx );
 				//if ((dstIdx+nReducedContacts) < capacity)
@@ -1057,11 +1074,26 @@ void   newContactReductionKernel( btAlignedObjectArray<int2>& pairs,
 					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
 					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
                     
-					for (int i=0;i<nReducedContacts;i++)
-					{
-						c->m_worldPos[i] = pointsIn[contactIdx[i]];
-					}
-					GET_NPOINTS(*c) = nReducedContacts;
+					
+                    switch (nReducedContacts)
+                    {
+                        case 4:
+                            c->m_worldPos[3] = pointsIn[contactIdx.w];
+                        case 3:
+                            c->m_worldPos[2] = pointsIn[contactIdx.z];
+                        case 2:
+                            c->m_worldPos[1] = pointsIn[contactIdx.y];
+                        case 1:
+                            c->m_worldPos[0] = pointsIn[contactIdx.x];
+                            break;
+                        default:
+                        {
+                            assert(0);
+                        }
+                    };
+
+					
+                    GET_NPOINTS(*c) = nReducedContacts;
 				}
 				
 			}//		if (numContactsOut>0)
@@ -1130,14 +1162,11 @@ void   clipHullHullKernel( btAlignedObjectArray<int2>& pairs,
 				float4 normal = -separatingNormals[i];
 				int nPoints = numLocalContactsOut;
 				float4* pointsIn = localContactsOut;
-				int contactIdx[4];// = {-1,-1,-1,-1};
+				
+            int4 contactIdx = make_int4(0,1,2,3);
 
-				contactIdx[0] = -1;
-				contactIdx[1] = -1;
-				contactIdx[2] = -1;
-				contactIdx[3] = -1;
 		
-				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
+            int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, &contactIdx);
 		
 				int dstIdx;
 				AppendInc( nGlobalContactsOut, dstIdx );
@@ -1152,10 +1181,24 @@ void   clipHullHullKernel( btAlignedObjectArray<int2>& pairs,
 					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
 					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
 
-					for (int i=0;i<nReducedContacts;i++)
-					{
-						c->m_worldPos[i] = pointsIn[contactIdx[i]];
-					}
+                    switch (nReducedContacts)
+                    {
+                        case 4:
+                            c->m_worldPos[3] = pointsIn[contactIdx.w];
+                        case 3:
+                            c->m_worldPos[2] = pointsIn[contactIdx.z];
+                        case 2:
+                            c->m_worldPos[1] = pointsIn[contactIdx.y];
+                        case 1:
+                            c->m_worldPos[0] = pointsIn[contactIdx.x];
+                        default:
+                        {
+                            assert(0);
+                        }
+                    };
+
+                    
+					
 					GET_NPOINTS(*c) = nReducedContacts;
 				}
 				
@@ -1350,14 +1393,11 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 			float4 normal = -separatingNormals[i];
 			int nPoints = numLocalContactsOut;
 			float4* pointsIn = localContactsOut;
-			int contactIdx[4];// = {-1,-1,-1,-1};
-
-			contactIdx[0] = -1;
-			contactIdx[1] = -1;
-			contactIdx[2] = -1;
-			contactIdx[3] = -1;
+			
+            int4 contactIdx = make_int4(0,1,2,3);
+            
 	
-			int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
+			int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, &contactIdx);
 	
 			int dstIdx;
 			AppendInc( nGlobalContactsOut, dstIdx );
@@ -1372,10 +1412,23 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 				c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
 				c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
 
-				for (int i=0;i<nReducedContacts;i++)
-				{
-					c->m_worldPos[i] = pointsIn[contactIdx[i]];
-				}
+                switch (nReducedContacts)
+                {
+                    case 4:
+                        c->m_worldPos[3] = pointsIn[contactIdx.w];
+                    case 3:
+                        c->m_worldPos[2] = pointsIn[contactIdx.z];
+                    case 2:
+                        c->m_worldPos[1] = pointsIn[contactIdx.y];
+                    case 1:
+                        c->m_worldPos[0] = pointsIn[contactIdx.x];
+                    default:
+                    {
+                        assert(0);
+                    }
+                };
+
+                
 				GET_NPOINTS(*c) = nReducedContacts;
 			}
 				

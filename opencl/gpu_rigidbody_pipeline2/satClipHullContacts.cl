@@ -663,103 +663,97 @@ for(int offset=0; offset<n; offset++) v[i] = (v[i].y < v[i+offset].y)? v[i]: v[i
 
 int extractManifoldSequentialGlobal(__global const float4* p, int nPoints, float4 nearNormal, int4* contactIdx)
 {
-    if( nPoints == 0 )
+	if( nPoints == 0 )
         return 0;
     
-    if (nPoints>4)
-        nPoints=4;
-    return nPoints;
+    if (nPoints <=4)
+        return nPoints;
     
-#if 0
     
-	if (nPoints>64)
+    if (nPoints >64)
         nPoints = 64;
     
-	float4 center = make_float4(0.f,0.f,0.f,0.f);
-
+	float4 center = make_float4(0.f);
 	{
-		float4 v=make_float4(0.f,0.f,0.f,0.f);
-	    for(int j=0; j<nPoints; j++)
-            v += p[j];        
-		center = v/(float)nPoints;
+		
+		for (int i=0;i<nPoints;i++)
+			center += p[i];
+		center /= (float)nPoints;
 	}
     
 	
-	{	//	sample 4 directions
-		if( nPoints <= 4 )
-		{
-			return nPoints;
-		}
+    
+	//	sample 4 directions
+    
+    float4 aVector = p[0] - center;
+    float4 u = cross3( nearNormal, aVector );
+    float4 v = cross3( nearNormal, u );
+    u = normalize3( u );
+    v = normalize3( v );
+    
+    
+    //keep point with deepest penetration
+    float minW= FLT_MAX;
+    
+    int minIndex=-1;
+    
+    float4 maxDots;
+    maxDots.x = FLT_MIN;
+    maxDots.y = FLT_MIN;
+    maxDots.z = FLT_MIN;
+    maxDots.w = FLT_MIN;
+    
+    //	idx, distance
+    for(int ie = 0; ie<nPoints; ie++ )
+    {
+        if (p[ie].w<minW)
+        {
+            minW = p[ie].w;
+            minIndex=ie;
+        }
+        float f;
+        float4 r = p[ie]-center;
+        f = dot3F4( u, r );
+        if (f<maxDots.x)
+        {
+            maxDots.x = f;
+            contactIdx[0].x = ie;
+        }
         
-		float4 aVector = p[0] - center;
-		float4 u = cross3( nearNormal, aVector );
-		float4 v = cross3( nearNormal, u );
-		u = normalize3( u );
-		v = normalize3( v );
+        f = dot3F4( -u, r );
+        if (f<maxDots.y)
+        {
+            maxDots.y = f;
+            contactIdx[0].y = ie;
+        }
         
-		int idx[4];
         
-		float2 max00 = make_float2(0,FLT_MAX);
-		{
-			//	idx, distance
-			{
-				{
-					int4 a[64];
-					for(int ie = 0; ie<nPoints; ie++ )
-					{
-						float f;
-						float4 r = p[ie]-center;
-						f = dot3F4( u, r );
-						a[ie].x = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
-                        
-						f = dot3F4( -u, r );
-						a[ie].y = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
-                        
-						f = dot3F4( v, r );
-						a[ie].z = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
-                        
-						f = dot3F4( -v, r );
-						a[ie].w = ((*(u32*)&f) & 0xffffff00) | (0xff & ie);
-					}
-                    
-					for(int ie=0; ie<nPoints; ie++)
-					{
-						a[0].x = (a[0].x > a[ie].x )? a[0].x: a[ie].x;
-						a[0].y = (a[0].y > a[ie].y )? a[0].y: a[ie].y;
-						a[0].z = (a[0].z > a[ie].z )? a[0].z: a[ie].z;
-						a[0].w = (a[0].w > a[ie].w )? a[0].w: a[ie].w;
-					}
-                    
-					idx[0] = (int)a[0].x & 0xff;
-					idx[1] = (int)a[0].y & 0xff;
-					idx[2] = (int)a[0].z & 0xff;
-					idx[3] = (int)a[0].w & 0xff;
-				}
-			}
-            
-			{
-				float2 h[64];
-				PARALLEL_DO( h[ie] = make_float2((float)ie, p[ie].w), nPoints );
-				REDUCE_MIN( h, nPoints );
-				max00 = h[0];
-			}
-		}
+        f = dot3F4( v, r );
+        if (f<maxDots.z)
+        {
+            maxDots.z = f;
+            contactIdx[0].z = ie;
+        }
         
-		contactIdx->x = idx[0];
-		contactIdx->y = idx[1];
-		contactIdx->z = idx[2];
-		contactIdx->w = idx[3];
+        f = dot3F4( -v, r );
+        if (f<maxDots.w)
+        {
+            maxDots.w = f;
+            contactIdx[0].w = ie;
+        }
         
-        //		if( max00.y < 0.0f )
-        //			contactIdx[0] = (int)max00.x;
-        
-		//does this sort happen on GPU too?
-		//std::sort( contactIdx, contactIdx+4 );
-        
-		return 4;
-	}
-#endif
+    }
+    
+    if (contactIdx[0].x != minIndex && contactIdx[0].y != minIndex && contactIdx[0].z != minIndex && contactIdx[0].w != minIndex)
+    {
+        //replace the first contact with minimum (todo: replace contact with least penetration)
+        contactIdx[0].x = minIndex;
+    }
+    
+    return 4;
+    
 }
+
 
 int extractManifoldSequentialGlobalFake(__global const float4* p, int nPoints, float4 nearNormal, int* contactIdx)
 {

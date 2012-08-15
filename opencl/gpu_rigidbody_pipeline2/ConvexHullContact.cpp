@@ -1622,7 +1622,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		
 	}
 #ifdef __APPLE__
- bool contactClippingOnGpu = false;
+ bool contactClippingOnGpu = true;
 #else
  bool contactClippingOnGpu = true;
 #endif
@@ -1931,8 +1931,8 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 			
 
-//			 btAlignedObjectArray<int4> clippingFacesCPU;
-  //          clippingFacesCPU.resize(nPairs);
+			 btAlignedObjectArray<int4> clippingFacesCPU;
+            clippingFacesCPU.resize(nPairs);
             
             int vertexFaceCapacity = 64;
             
