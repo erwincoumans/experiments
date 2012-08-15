@@ -269,7 +269,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int yPos = HIWORD(lParam); 
 		//m_cameraDistance -= zDelta*0.01;
 		if (sData && sData->m_wheelCallback)
-			(*sData->m_wheelCallback)(xPos,yPos,zDelta);
+			(*sData->m_wheelCallback)(0,zDelta);
 
 		break;
 	}
