@@ -15,7 +15,7 @@
 		includedirs {"..",projectRootDir .. "bullet2"}
 		
 		links {
-			"bullet2"
+			"LinearMath"
 		}
 		
 		files {

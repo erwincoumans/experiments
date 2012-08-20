@@ -597,6 +597,7 @@ int main(int argc, char* argv[])
 			dx = sx;
 			if (once!=1)
 			{
+				glColor3f(1,0,0);
 				//need to save this file as UTF-8 without signature, codepage 650001 in Visual Studio
 			    err = glGetError();
                 assert(err==GL_NO_ERROR);

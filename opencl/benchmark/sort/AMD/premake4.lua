@@ -19,7 +19,7 @@
 		includedirs {"..",projectRootDir .. "bullet2"}
 		
 		links {
-			"OpenCL","bullet2"
+			"OpenCL","LinearMath"
 		}
 		
 		files {

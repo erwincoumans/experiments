@@ -15,7 +15,11 @@
 			projectRootDir .. "bullet2",
 		}
 		
-		links {"bullet2"}
+		links {
+		"BulletDynamics",
+		"BulletCollision",
+		"LinearMath"
+		}
 
 		language "C"
 		files {

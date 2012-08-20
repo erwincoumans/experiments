@@ -81,7 +81,7 @@ struct InternalData2
 
 		m_keyboardCallback = 0;
 		m_mouseCallback = 0;
-
+		m_wheelCallback = 0;
 	}
 };
 
@@ -269,7 +269,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int yPos = HIWORD(lParam); 
 		//m_cameraDistance -= zDelta*0.01;
 		if (sData && sData->m_wheelCallback)
-			(*sData->m_wheelCallback)(0,zDelta);
+			(*sData->m_wheelCallback)(0,float(zDelta)*0.05f);
 
 		break;
 	}

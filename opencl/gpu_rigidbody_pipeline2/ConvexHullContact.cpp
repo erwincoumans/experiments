@@ -1636,7 +1636,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 		//concave-convex contact clipping
 
-		if (0)//numConcave)
+		if (numConcave)
 		{
 			BT_PROFILE("clipHullHullConcaveConvexKernel");
 			nContacts = m_totalContactsOut.at(0);
