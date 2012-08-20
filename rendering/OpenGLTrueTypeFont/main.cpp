@@ -33,6 +33,7 @@ subject to the following restrictions:
 #include "LinearMath/btQuaternion.h"
 
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
+#include "../rendertest/LoadShader.h"
 
 bool printStats = false;
 bool pauseSimulation = false;
@@ -42,6 +43,7 @@ int m_glutScreenWidth;
 int m_glutScreenHeight;
 
 bool useInterop = false;
+
 
 
 
@@ -156,14 +158,6 @@ void initTestTexture()
 
 }
 
-// Load the shader from the source text
-void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
-{
-	GLchar *fsStringPtr[1];
-    
-	fsStringPtr[0] = (GLchar *)szShaderSrc;
-	glShaderSource(shader, 1, (const GLchar **)fsStringPtr, NULL);
-}
 
 static const char* vertexShader= \
 "#version 150   \n"
@@ -203,78 +197,6 @@ static const char* fragmentShader= \
 "    fragColour = colourV*texcolor;\n"
 "}\n";
 
-GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
-{
-	// Temporary Shader objects
-	GLuint hVertexShader;
-	GLuint hFragmentShader;
-	GLuint hReturn = 0;
-	GLint testVal;
-    
-	// Create shader objects
-	hVertexShader = glCreateShader(GL_VERTEX_SHADER);
-	hFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    
-	gltLoadShaderSrc(vertexShader, hVertexShader);
-	gltLoadShaderSrc(fragmentShader, hFragmentShader);
-	
-	// Compile them
-	glCompileShader(hVertexShader);
-	GLuint err = glGetError();
-    assert(err==GL_NO_ERROR);
-    
-    glCompileShader(hFragmentShader);
-    err = glGetError();
-    assert(err==GL_NO_ERROR);
-    
-	// Check for errors
-	glGetShaderiv(hVertexShader, GL_COMPILE_STATUS, &testVal);
-	if(testVal == GL_FALSE)
-	{
-        char temp[256] = "";
-        glGetShaderInfoLog( hVertexShader, 256, NULL, temp);
-        fprintf( stderr, "Compile failed:\n%s\n", temp);
-        assert(0);
-        exit(0);
-		glDeleteShader(hVertexShader);
-		glDeleteShader(hFragmentShader);
-		return (GLuint)NULL;
-	}
-    
-	glGetShaderiv(hFragmentShader, GL_COMPILE_STATUS, &testVal);
-	if(testVal == GL_FALSE)
-	{
-        char temp[256] = "";
-        glGetShaderInfoLog( hFragmentShader, 256, NULL, temp);
-        fprintf( stderr, "Compile failed:\n%s\n", temp);
-        assert(0);
-        exit(0);
-		glDeleteShader(hVertexShader);
-		glDeleteShader(hFragmentShader);
-		return (GLuint)NULL;
-	}
-    
-	// Link them - assuming it works...
-	hReturn = glCreateProgram();
-	glAttachShader(hReturn, hVertexShader);
-	glAttachShader(hReturn, hFragmentShader);
-    
-	glLinkProgram(hReturn);
-    
-	// These are no longer needed
-	glDeleteShader(hVertexShader);
-	glDeleteShader(hFragmentShader);
-    
-	// Make sure link worked too
-	glGetProgramiv(hReturn, GL_LINK_STATUS, &testVal);
-	if(testVal == GL_FALSE)
-	{
-		glDeleteProgram(hReturn);
-		return (GLuint)NULL;
-	}
-    
-	return hReturn;  
-}
 
 void loadShader(){
 	shaderProgram = gltLoadShaderPair(vertexShader,fragmentShader);

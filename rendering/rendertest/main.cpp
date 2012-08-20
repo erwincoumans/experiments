@@ -27,6 +27,9 @@ subject to the following restrictions:
 #include "Win32OpenGLRenderManager.h"
 #endif
 
+#include "GLPrimitiveRenderer.h"
+
+
 #include "RenderScene.h"
 
 
@@ -133,6 +136,8 @@ int main(int argc, char* argv[])
 	window->setKeyboardCallback(btDefaultKeyboardCallback);
 
 
+    GLPrimitiveRenderer prender(width,height);
+    
 
 	while (!window->requestedExit())
 	{
@@ -167,8 +172,10 @@ int main(int argc, char* argv[])
 
 
 		window->startRendering();
-		render.RenderScene();
+		//render.RenderScene();
 
+        prender.drawLine();
+        
 	
 
 

@@ -125,11 +125,11 @@ end
 	include "../opencl/bullet2_pipeline"
 	
 	include "../dynamics/testbed"
-	--include "../dynamics/position_based_dynamics"
+	include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"
 	--include "../dynamics/bullet_serialize"
 
-	--include "../dynamics/exact-ccd"
+	include "../dynamics/exact-ccd"
 	
 --	include "../dynamics/corotational_fem"
 	--include "../dynamics/nncg_test"
