@@ -209,7 +209,7 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 		} else
 		{
 			//create a context of all devices
-#if defined (__APPLE__) && defined (_DEBUG)
+#if defined (__APPLE__)
 			retContext = clCreateContext(cprops,num_devices,devices,MyFatalBreakAPPLE,NULL,&ciErrNum);
 #else
 			retContext = clCreateContext(cprops,num_devices,devices,NULL,NULL,&ciErrNum);

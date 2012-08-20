@@ -15,7 +15,10 @@
 		
 
 		links { "testbed",
-			"bullet2",
+			"BulletSoftBody",
+			"BulletDynamics",
+			"BulletCollision",
+			"LinearMath",
 			"gwen"
 		}
 		

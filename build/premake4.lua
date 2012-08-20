@@ -126,7 +126,7 @@ end
 	include "../opencl/bullet3_pipeline"
 	
 	include "../dynamics/testbed"
-	--include "../dynamics/position_based_dynamics"
+	include "../dynamics/position_based_dynamics"
 	include "../dynamics/basic_demo"
 --	include "../dynamics/bullet_serialize"
 

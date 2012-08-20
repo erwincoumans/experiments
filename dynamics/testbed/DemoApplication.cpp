@@ -1130,7 +1130,7 @@ float DemoApplication::showProfileInfo(int& xOffset,int& yStart, int yIncr)
 //
 void	DemoApplication::renderscene(int pass)
 {
-	btScalar	m[16];
+	ATTRIBUTE_ALIGNED16(btScalar)m[16];
 	btMatrix3x3	rot;rot.setIdentity();
 	const int	numObjects=m_dynamicsWorld->getNumCollisionObjects();
 	btVector3 wireColor(1,0,0);

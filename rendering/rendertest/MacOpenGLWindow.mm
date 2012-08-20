@@ -173,6 +173,7 @@ MacOpenGLWindow::MacOpenGLWindow()
 m_mouseX(0),
 m_mouseY(0),
 m_mouseCallback(0),
+m_wheelCallback(0),
 m_keyboardCallback(0)
 {
 }

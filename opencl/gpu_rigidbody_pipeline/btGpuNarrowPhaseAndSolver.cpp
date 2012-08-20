@@ -53,7 +53,13 @@ bool enableExperimentalCpuConcaveCollision = false;
 
 
 
+#ifdef __APPLE__
+//the GPU batching is slower than CPU and not reliable on my Macbook
+int gpuBatchContacts = 0;
+#else
 int gpuBatchContacts = 1;
+#endif
+
 int gpuSolveConstraint = 1;
 
 int numPairsOut =0;
@@ -631,11 +637,12 @@ int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchDa
 				int bodyAS = cs[idx].m_bodyAPtrAndSignBit;
 				int bodyBS = cs[idx].m_bodyBPtrAndSignBit;
                 
-				if (bodyAS<0)
+				/*if (bodyAS<0)
 					printf("A static\n");
                 
 				if (bodyBS<0)
 					printf("B static\n");
+                */
                 
 				int bodyA = abs(bodyAS);
 				int bodyB = abs(bodyBS);
