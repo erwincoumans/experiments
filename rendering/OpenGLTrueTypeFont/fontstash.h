@@ -20,7 +20,11 @@
 #ifndef FONTSTASH_H
 #define FONTSTASH_H
 
-#include "../rendertest/OpenGLInclude.h"
+
+#define MAX_ROWS 128
+#define VERT_COUNT (6*128)
+#define INDEX_COUNT (VERT_COUNT*2)
+
 
 struct vec2
 {
@@ -53,15 +57,61 @@ typedef struct
 	vec2 uv;
 } Vertex;
 
-struct sth_stash* sth_create(int cachew, int cacheh);
+struct sth_quad
+{
+	float x0,y0,s0,t0;
+	float x1,y1,s1,t1;
+};
+
+struct sth_row
+{
+	short x,y,h;
+};
+
+struct sth_glyph
+{
+	unsigned int codepoint;
+	short size;
+	struct sth_texture* texture;
+	int x0_,y0,x1,y1;
+	float xadv,xoff,yoff;
+	int next;
+};
+
+
+struct sth_texture
+{
+	union
+	{
+		void* m_userData;
+		int m_userId;
+	};
+	
+	unsigned char* m_texels;
+    
+	// TODO: replace rows with pointer
+	struct sth_row rows[MAX_ROWS];
+	int nrows;
+	int nverts;
+	
+    Vertex newverts[VERT_COUNT];
+  	struct sth_texture* next;
+};
+
+
+typedef void (*btUpdateTextureCallback)(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight);
+typedef void (*btRenderCallback)(sth_texture* texture);
+
+struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btRenderCallback renderCallback);
 
 int sth_add_font(struct sth_stash* stash, const char* path);
 int sth_add_font_from_memory(struct sth_stash* stash, unsigned char* buffer);
 
 int sth_add_bitmap_font(struct sth_stash* stash, int ascent, int descent, int line_gap);
-void sth_add_glyph(struct sth_stash* stash, int idx, GLuint id, const char* s,
+/*void sth_add_glyph(struct sth_stash* stash, int idx, unsigned int uid, const char* s,
                   short size, short base, int x, int y, int w, int h,
                   float xoffset, float yoffset, float xadvance);
+				  */
 
 void sth_begin_draw(struct sth_stash* stash);
 void sth_end_draw(struct sth_stash* stash);

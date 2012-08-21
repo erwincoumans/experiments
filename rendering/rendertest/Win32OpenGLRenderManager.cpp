@@ -595,7 +595,6 @@ void	Win32OpenGLWindow::startRendering()
 {
 		pumpMessage();
 
-		//glClearColor(1.f,0.f,0.f,1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);	//clear buffers
 		
 		//glCullFace(GL_BACK);
@@ -603,28 +602,6 @@ void	Win32OpenGLWindow::startRendering()
 		glEnable(GL_DEPTH_TEST);
 
 
-		float aspect;
-
-		if (m_data->m_openglViewportWidth > m_data->m_openglViewportHeight) 
-		{
-			aspect = (float)m_data->m_openglViewportWidth / (float)m_data->m_openglViewportHeight;
-		} else 
-		{
-			aspect = (float)m_data->m_openglViewportHeight / (float)m_data->m_openglViewportWidth;
-		}
-	
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
-		if (m_data->m_openglViewportWidth> m_data->m_openglViewportHeight) 
-		{
-			glFrustum (-aspect, aspect, -1.0, 1.0, 1.0, 10000.0);
-		} else 
-		{
-			glFrustum (-1.0, 1.0, -aspect, aspect, 1.0, 10000.0);
-		}
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
 
 }
 

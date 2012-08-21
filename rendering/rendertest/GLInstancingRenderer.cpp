@@ -649,108 +649,110 @@ void myinit()
     err = glGetError();
 	assert(err==GL_NO_ERROR);
     
-	if(m_textureenabled)
 	{
-		if(!m_textureinitialized)
+		BT_PROFILE("texture");
+		if(m_textureenabled)
 		{
-			glActiveTexture(GL_TEXTURE0);
-
-			GLubyte*	image=new GLubyte[256*256*3];
-			for(int y=0;y<256;++y)
+			if(!m_textureinitialized)
 			{
-				const int	t=y>>5;
-				GLubyte*	pi=image+y*256*3;
-				for(int x=0;x<256;++x)
+				glActiveTexture(GL_TEXTURE0);
+
+				GLubyte*	image=new GLubyte[256*256*3];
+				for(int y=0;y<256;++y)
 				{
-					if (x<2||y<2||x>253||y>253)
+					const int	t=y>>5;
+					GLubyte*	pi=image+y*256*3;
+					for(int x=0;x<256;++x)
 					{
-						pi[0]=0;
-						pi[1]=0;
-						pi[2]=0;
-					} else
-					{
-						pi[0]=255;
-						pi[1]=255;
-						pi[2]=255;
+						if (x<2||y<2||x>253||y>253)
+						{
+							pi[0]=0;
+							pi[1]=0;
+							pi[2]=0;
+						} else
+						{
+							pi[0]=255;
+							pi[1]=255;
+							pi[2]=255;
+						}
+
+						/*
+						const int		s=x>>5;
+						const GLubyte	b=180;					
+						GLubyte			c=b+((s+t&1)&1)*(255-b);
+						pi[0]=c;
+						pi[1]=c;
+						pi[2]=c;
+						*/
+
+						pi+=3;
 					}
-
-					/*
-					const int		s=x>>5;
-					const GLubyte	b=180;					
-					GLubyte			c=b+((s+t&1)&1)*(255-b);
-					pi[0]=c;
-					pi[1]=c;
-					pi[2]=c;
-					*/
-
-					pi+=3;
 				}
-			}
 
-			glGenTextures(1,(GLuint*)&m_texturehandle);
-			glBindTexture(GL_TEXTURE_2D,m_texturehandle);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
-#if 0
+				glGenTextures(1,(GLuint*)&m_texturehandle);
+				glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+	#if 0
 
-			glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-            glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
           
-#endif
-			 err = glGetError();
-            assert(err==GL_NO_ERROR);
-			int filter=1;
-			// Build2DMipmaps(3,256,256,GL_RGB,image,filter);
-             //gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
+	#endif
+				 err = glGetError();
+				assert(err==GL_NO_ERROR);
+				int filter=1;
+				// Build2DMipmaps(3,256,256,GL_RGB,image,filter);
+				 //gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
 
 			
-			//glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256,256,0,GL_RGB,GL_UNSIGNED_BYTE,image);
-			glGenerateMipmap(GL_TEXTURE_2D);
+				//glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256,256,0,GL_RGB,GL_UNSIGNED_BYTE,image);
+				glGenerateMipmap(GL_TEXTURE_2D);
 			
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-            delete[] image;
-			m_textureinitialized=true;
+				delete[] image;
+				m_textureinitialized=true;
+			}
+			//		glMatrixMode(GL_TEXTURE);
+			//		glLoadIdentity();
+			//		glMatrixMode(GL_MODELVIEW);
+
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
+        
+			glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
+        
+
+		} else
+		{
+			glDisable(GL_TEXTURE_2D);
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
 		}
-		//		glMatrixMode(GL_TEXTURE);
-		//		glLoadIdentity();
-		//		glMatrixMode(GL_MODELVIEW);
-
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        
-        glBindTexture(GL_TEXTURE_2D,m_texturehandle);
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        
-
-	} else
-	{
-		glDisable(GL_TEXTURE_2D);
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
 	}
-
 	//glEnable(GL_COLOR_MATERIAL);
 	 
 	err = glGetError();
@@ -975,15 +977,20 @@ void GLInstancingRenderer::getMouseDirection(float* dir, int x, int y)
 
 void GLInstancingRenderer::RenderScene(void)
 {
-	 BT_PROFILE("GlutDisplayFunc");
+	 BT_PROFILE("GLInstancingRenderer::RenderScene");
 
-	myinit();
+	 {
+		BT_PROFILE("myinit");
+		myinit();
+	 }
 
     GLint err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	updateCamera();
-
+	{
+		BT_PROFILE("updateCamera");
+		updateCamera();
+	}
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -1013,9 +1020,12 @@ void GLInstancingRenderer::RenderScene(void)
 
 
 	//	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
-	glFlush();
+	{
+		BT_PROFILE("glFlush2");
 
+		glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+		glFlush();
+	}
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -1086,8 +1096,10 @@ void GLInstancingRenderer::RenderScene(void)
 
 		glUniform1i(uniform_texture_diffuse, 0);
 
-		glFlush();
-
+		{
+			BT_PROFILE("glFlush");
+			glFlush();
+		}
 		if (gfxObj->m_numGraphicsInstances)
 		{
 			int indexCount = gfxObj->m_numIndices;
@@ -1104,10 +1116,12 @@ void GLInstancingRenderer::RenderScene(void)
 	}
     err = glGetError();
     assert(err==GL_NO_ERROR);
-	glUseProgram(0);
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindVertexArray(0);
-
+	{
+		BT_PROFILE("glUseProgram(0);");
+		glUseProgram(0);
+		glBindBuffer(GL_ARRAY_BUFFER,0);
+		glBindVertexArray(0);
+	}
 	
 	err = glGetError();
 	assert(err==GL_NO_ERROR);

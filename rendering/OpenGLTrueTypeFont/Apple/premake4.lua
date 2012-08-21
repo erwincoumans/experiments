@@ -36,9 +36,11 @@
 			"../../../bullet2/LinearMath/btQuickprof.cpp",
 			"../../../bullet2/LinearMath/btQuickprof.h" ,
 			"../fontstash.cpp",
-                        "../fontstash.h",
-                        "../stb_image_write.h",
-                        "../stb_truetype.h",
+      "../fontstash.h",
+      "../opengl_fontstashcallbacks.cpp",
+      "../opengl_fontstashcallbacks.h",
+			"../stb_image_write.h",
+      "../stb_truetype.h",
 			}
 		
 	end

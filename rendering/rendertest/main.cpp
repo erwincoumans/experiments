@@ -39,6 +39,7 @@ subject to the following restrictions:
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
 
 #include "../OpenGLTrueTypeFont/fontstash.h"
+#include "../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
 
 bool printStats = false;
 bool pauseSimulation = false;
@@ -110,7 +111,7 @@ sth_stash* initFont()
 	float sx,sy,dx,dy,lh;
 	GLuint texture;
 
-	stash = sth_create(512,512);//256,256);//,1024);//512,512);
+	stash = sth_create(512,512,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -291,7 +292,10 @@ int main(int argc, char* argv[])
 	while (!window->requestedExit())
 	{
 		CProfileManager::Reset();
-		
+	
+		{
+		BT_PROFILE("loop");
+
 		if (shootObject)
 		{
 			shootObject = false;
@@ -320,92 +324,107 @@ int main(int argc, char* argv[])
 
 
 
-		window->startRendering();
+		{
+			BT_PROFILE("startRendering");
+			window->startRendering();
+		}
 		render.RenderScene();
 		float col[4]={0,1,0,1};
 		prender.drawRect(10,50,120,60,col);
 //             glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 		//glEnable(GL_TEXTURE_2D);
     
-			glEnable(GL_BLEND);
-        GLint err = glGetError();
-        assert(err==GL_NO_ERROR);
-
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        
-		glDisable(GL_DEPTH_TEST);
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        
-		//glColor4ub(255,0,0,255);
-		
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        
-		
-        err = glGetError();
-        assert(err==GL_NO_ERROR);
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     
 
 		float x = 10;
 		float y=100;
 		float  dx=0;
-		sth_begin_draw(stash);
-		sth_flush_draw(stash);
-		sth_draw_text(stash, droidRegular,40.f, x, y, "How does this OpenGL True Type font look like? ", &dx,width,height);
-		sth_flush_draw(stash);
-		
-		sth_end_draw(stash);
-
-
-		if (pCanvas)
+	
 		{
-		//	saveOpenGLState(width,height);//m_glutScreenWidth,m_glutScreenHeight);
+			BT_PROFILE("font sth_draw_text");
+	
+			sth_begin_draw(stash);
+			sth_flush_draw(stash);
+			sth_draw_text(stash, droidRegular,40.f, x, y, "How does this OpenGL True Type font look like? ", &dx,width,height);
+			sth_flush_draw(stash);
+		
+			sth_end_draw(stash);
+		}
+
+		{
+			BT_PROFILE("gwen RenderCanvas");
+	
+			if (pCanvas)
+			{
+				glEnable(GL_BLEND);
+				GLint err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+        
+				glDisable(GL_DEPTH_TEST);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+        
+				//glColor4ub(255,0,0,255);
+		
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+        
+		
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+				glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+			//	saveOpenGLState(width,height);//m_glutScreenWidth,m_glutScreenHeight);
 			
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
 
 			
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
 
-            glDisable(GL_CULL_FACE);
+				glDisable(GL_CULL_FACE);
 
-			glDisable(GL_DEPTH_TEST);
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				glDisable(GL_DEPTH_TEST);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
 
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
-			glEnable(GL_BLEND);
+				glEnable(GL_BLEND);
 
             
-            err = glGetError();
-            assert(err==GL_NO_ERROR);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
             
  
             
-			pCanvas->RenderCanvas();
-			//restoreOpenGLState();
+				pCanvas->RenderCanvas();
+				//restoreOpenGLState();
+			}
+
 		}
 
-
 		window->endRendering();
+
+		}
 
 
 		CProfileManager::Increment_Frame_Counter();
 
+
 		static bool printStats  = true;
 
-		
 		
 		 if (printStats && !pauseSimulation)
 		 {

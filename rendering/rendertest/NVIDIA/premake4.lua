@@ -42,6 +42,8 @@
 			"../gwenWindow.h",
 			"../../OpenGLTrueTypeFont/fontstash.cpp",
 			"../../OpenGLTrueTypeFont/fontstash.h",
+			"../../OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
+ 			"../../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",
 			"../../../bullet2/LinearMath/btConvexHullComputer.h",
 			"../../../bullet2/LinearMath/btSerializer.cpp",
