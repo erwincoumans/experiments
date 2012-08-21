@@ -17,11 +17,14 @@
 		initGlew()
 
 		includedirs {
-		"../../primitives",
-		"../../../bullet2"
+			"../../primitives",
+			"../../../bullet2",
+		 	"../../Gwen",
 		}
 		
-			
+		links {
+			"gwen"
+		}
 		
 		files {
 			"../main.cpp",
@@ -31,6 +34,14 @@
 			"../GLInstancingRenderer.h",
 			"../Win32OpenGLRenderManager.cpp",
 			"../Win32OpenGLRenderManager.h",	
+			"../GLPrimitiveRenderer.h",
+			"../GLPrimitiveRenderer.cpp",
+			"../LoadShader.cpp",
+			"../LoadShader.h",
+			"../gwenWindow.cpp",
+			"../gwenWindow.h",
+			"../../OpenGLTrueTypeFont/fontstash.cpp",
+			"../../OpenGLTrueTypeFont/fontstash.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",
 			"../../../bullet2/LinearMath/btConvexHullComputer.h",
 			"../../../bullet2/LinearMath/btSerializer.cpp",

@@ -29,6 +29,8 @@
 			"../main.cpp",
 			"../../rendertest/Win32OpenGLRenderManager.cpp",
 			"../../rendertest/Win32OpenGLRenderManager.h",
+			"../../rendertest/LoadShader.cpp",
+			"../../rendertest/LoadShader.h",
 			"../../../bullet2/LinearMath/btAlignedAllocator.cpp",
 			"../../../bullet2/LinearMath/btQuickprof.cpp",
 			"../../../bullet2/LinearMath/btQuickprof.h" ,

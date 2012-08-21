@@ -20,7 +20,7 @@
 #ifndef FONTSTASH_H
 #define FONTSTASH_H
 
-#include "OpenGLInclude.h"
+#include "../rendertest/OpenGLInclude.h"
 
 struct vec2
 {

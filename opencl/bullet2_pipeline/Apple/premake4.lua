@@ -35,6 +35,8 @@
 			"../../../rendering/rendertest/GLInstancingRenderer.h",
       "../../../rendering/rendertest/MacOpenGLWindow.mm",
       "../../../rendering/rendertest/MacOpenGLWindow.h",
+      "../../../rendering/rendertest/LoadShader.cpp",
+			"../../../rendering/rendertest/LoadShader.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",
 			"../../../bullet2/LinearMath/btConvexHullComputer.h",
 			"../../../bullet2/LinearMath/btSerializer.cpp",

@@ -34,6 +34,8 @@
 			"../../../rendering/rendertest/GLInstancingRenderer.h",
 			"../../../rendering/rendertest/Win32OpenGLRenderManager.cpp",
 			"../../../rendering/rendertest/Win32OpenGLRenderManager.h",	
+			"../../../rendering/rendertest/LoadShader.cpp",
+			"../../../rendering/rendertest/LoadShader.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",
 			"../../../bullet2/LinearMath/btConvexHullComputer.h",
 			"../../../bullet2/LinearMath/btSerializer.cpp",

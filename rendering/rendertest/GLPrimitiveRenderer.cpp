@@ -42,6 +42,7 @@ static const char* fragmentShader= \
 "    fragColour = colourV*texcolor;\n"
 "}\n";
 
+
 static unsigned int s_indexData[6] = {0,1,2,0,2,3};
 struct vec2
 {
@@ -75,6 +76,17 @@ typedef struct
 } Vertex;
 
 
+   GLuint m_shaderProg;
+    GLint m_positionUniform;
+    GLint m_colourAttribute;
+    GLint m_positionAttribute;
+    GLint m_textureAttribute;
+    GLuint m_vertexBuffer;
+    GLuint m_vertexArrayObject;
+    GLuint  m_indexBuffer;
+    GLuint m_texturehandle;
+
+
 GLPrimitiveRenderer::GLPrimitiveRenderer(int screenWidth, int screenHeight)
 :m_screenWidth(screenWidth),
 m_screenHeight(screenHeight)
@@ -102,8 +114,6 @@ m_screenHeight(screenHeight)
     loadBufferData();
     
 }
-
-
 
 void GLPrimitiveRenderer::loadBufferData()
 {
@@ -159,12 +169,13 @@ void GLPrimitiveRenderer::loadBufferData()
         GLubyte*	pi=image+y*256*3;
         for(int x=0;x<256;++x)
         {
-            if (x<2||y<2||x>253||y>253)
+          /*  if (x<2||y<2||x>253||y>253)
             {
                 pi[0]=0;
                 pi[1]=0;
                 pi[2]=0;
             } else
+			*/
             {
                 pi[0]=255;
                 pi[1]=255;
@@ -196,12 +207,29 @@ GLPrimitiveRenderer::~GLPrimitiveRenderer()
     glDeleteProgram(m_shaderProg);
 }
 
-void GLPrimitiveRenderer::drawLine()//float from[4], float to[4], float color[4])
+void GLPrimitiveRenderer::drawLine()
+{
+
+}
+
+void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float color[4])//Line()//float from[4], float to[4], float color[4])
 {
     glUseProgram(m_shaderProg);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBindVertexArray(m_vertexArrayObject);
     
+
+	   Vertex vertexData[4] = {
+        { vec4(-1+2.*x0/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.0078125,0.015625)},
+        { vec4(-1+2.*x0/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.101562,0.015625)},
+        { vec4( -1+2.*x1/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4(color[0], color[1], color[2], color[3]) ,vec2(0.101562,0.105469)},
+        { vec4( -1+2.*x1/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.0078125,0.105469)}
+    };
+    
+	   glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
+
+
+
      glActiveTexture(GL_TEXTURE0);
      glBindTexture(GL_TEXTURE_2D,m_texturehandle);
     

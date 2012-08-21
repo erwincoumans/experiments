@@ -38,6 +38,8 @@
 			"../../../rendering/rendertest/GLInstancingRenderer.h",
 			"../../../rendering/rendertest/Win32OpenGLRenderManager.cpp",
 			"../../../rendering/rendertest/Win32OpenGLRenderManager.h",	
+			"../../../rendering/rendertest/LoadShader.cpp",
+			"../../../rendering/rendertest/LoadShader.h",
 			"../../../bullet2/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp",
 			"../../../bullet2/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",

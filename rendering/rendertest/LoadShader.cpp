@@ -2,7 +2,7 @@
 #include "OpenGLInclude.h"
 #include <assert.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 
 // Load the shader from the source text
 void gltLoadShaderSrc(const char *szShaderSrc, GLuint shader)
@@ -46,7 +46,7 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
         glGetShaderInfoLog( hVertexShader, 256, NULL, temp);
         fprintf( stderr, "Compile failed:\n%s\n", temp);
         assert(0);
-        exit(0);
+        return 0;
 		glDeleteShader(hVertexShader);
 		glDeleteShader(hFragmentShader);
 		return (GLuint)NULL;

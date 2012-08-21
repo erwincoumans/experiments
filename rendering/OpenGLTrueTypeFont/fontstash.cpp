@@ -618,7 +618,7 @@ static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, 
 	v->uv.p[0] = s;
     v->uv.p[1] = t;
 
-    v->colour.p[0] = 1.f;
+    v->colour.p[0] = 0.f;
     v->colour.p[1] = 0.f;
     v->colour.p[2] = 0.f;
     v->colour.p[3] = 1.f;
@@ -627,13 +627,17 @@ static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, 
 }
 
 
+extern   GLuint m_shaderProg;
+extern    GLint m_positionUniform;
+extern    GLint m_colourAttribute;
+extern    GLint m_positionAttribute;
+extern    GLint m_textureAttribute;
+extern    GLuint m_vertexBuffer;
+extern    GLuint m_vertexArrayObject;
+extern    GLuint  m_indexBuffer;
+extern    GLuint m_texturehandle;
 
-extern GLuint m_texturehandle;
-extern GLuint shaderProgram;
-extern GLuint positionUniform;
-extern GLint colourAttribute, positionAttribute,textureAttribute;
-extern GLuint vertexArrayObject,vertexBuffer;
-extern GLuint  indexBuffer;
+
 
 
 void display2() {
@@ -644,7 +648,7 @@ void display2() {
     
 	const float timeScale = 0.008f;
 	
-    glUseProgram(shaderProgram);
+    glUseProgram(m_shaderProg);
     glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
     glBindVertexArray(s_vertexArrayObject);
     
@@ -659,30 +663,30 @@ void display2() {
     assert(err==GL_NO_ERROR);
     
     vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
-    glUniform2fv(positionUniform, 1, (const GLfloat *)&p);
+    glUniform2fv(m_positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(positionAttribute);
+    glEnableVertexAttribArray(m_positionAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(colourAttribute);
+    glEnableVertexAttribArray(m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(textureAttribute);
+	glEnableVertexAttribArray(m_textureAttribute);
     
-    glVertexAttribPointer(positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
     
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;
@@ -704,13 +708,14 @@ static void flush_draw(struct sth_stash* stash)
 	{
 		if (texture->nverts > 0)
 		{
-            display2();
+	         //   display2();
 
-            GLint err;
+				GLint err;
+			    glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture->id);
             err = glGetError();
             assert(err==GL_NO_ERROR);
-          //  glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
+          // glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
            // glBindVertexArray(s_vertexArrayObject);
             glBufferData(GL_ARRAY_BUFFER, texture->nverts * sizeof(Vertex), &texture->newverts[0].position.p[0], GL_DYNAMIC_DRAW);
             err = glGetError();

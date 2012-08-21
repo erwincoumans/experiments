@@ -49,11 +49,11 @@ bool useInterop = false;
 
 
 GLuint m_texturehandle;
-GLuint shaderProgram;
-GLuint positionUniform;
-GLint colourAttribute, positionAttribute,textureAttribute;
-GLuint vertexArrayObject,vertexBuffer;
-GLuint  indexBuffer;
+GLuint m_shaderProg;
+GLint m_positionUniform;
+GLint m_colourAttribute, m_positionAttribute,m_textureAttribute;
+GLuint m_vertexArrayObject,m_vertexBuffer;
+GLuint  m_indexBuffer;
 
 
 
@@ -84,31 +84,31 @@ void loadBufferData(){
     };
 
     
-    glGenVertexArrays(1, &vertexArrayObject);
-    glBindVertexArray(vertexArrayObject);
+    glGenVertexArrays(1, &m_vertexArrayObject);
+    glBindVertexArray(m_vertexArrayObject);
     
-    glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glGenBuffers(1, &m_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
     GLuint err = glGetError();
     assert(err==GL_NO_ERROR);
 
   
     
-    glGenBuffers(1, &indexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glGenBuffers(1, &m_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(int), indexData,GL_STATIC_DRAW);
     
-    glEnableVertexAttribArray(positionAttribute);
-    glEnableVertexAttribArray(colourAttribute);
+    glEnableVertexAttribArray(m_positionAttribute);
+    glEnableVertexAttribArray(m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(textureAttribute);
+	glEnableVertexAttribArray(m_textureAttribute);
     
-    glVertexAttribPointer(positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -199,22 +199,22 @@ static const char* fragmentShader= \
 
 
 void loadShader(){
-	shaderProgram = gltLoadShaderPair(vertexShader,fragmentShader);
+	m_shaderProg= gltLoadShaderPair(vertexShader,fragmentShader);
     
-   positionUniform = glGetUniformLocation(shaderProgram, "p");
-    if (positionUniform < 0) {
+   m_positionUniform = glGetUniformLocation(m_shaderProg, "p");
+    if (m_positionUniform < 0) {
 		assert(0);
 	}
-	colourAttribute = glGetAttribLocation(shaderProgram, "colour");
-	if (colourAttribute < 0) {
+	m_colourAttribute = glGetAttribLocation(m_shaderProg, "colour");
+	if (m_colourAttribute < 0) {
         assert(0);
    }
-	positionAttribute = glGetAttribLocation(shaderProgram, "position");
-	if (positionAttribute < 0) {
+	m_positionAttribute = glGetAttribLocation(m_shaderProg, "position");
+	if (m_positionAttribute < 0) {
 		assert(0);
   	}
-	textureAttribute = glGetAttribLocation(shaderProgram,"texuv");
-	if (textureAttribute < 0) {
+	m_textureAttribute = glGetAttribLocation(m_shaderProg,"texuv");
+	if (m_textureAttribute < 0) {
 		assert(0);
 	}
     
@@ -229,9 +229,9 @@ void display() {
     
 	const float timeScale = 0.008f;
 	
-    glUseProgram(shaderProgram);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBindVertexArray(vertexArrayObject);
+    glUseProgram(m_shaderProg);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glBindVertexArray(m_vertexArrayObject);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -244,30 +244,30 @@ void display() {
     assert(err==GL_NO_ERROR);
     
     vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
-    glUniform2fv(positionUniform, 1, (const GLfloat *)&p);
+    glUniform2fv(m_positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(positionAttribute);
+    glEnableVertexAttribArray(m_positionAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 
-    glEnableVertexAttribArray(colourAttribute);
+    glEnableVertexAttribArray(m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(textureAttribute);
+	glEnableVertexAttribArray(m_textureAttribute);
     
-    glVertexAttribPointer(positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
     
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;
@@ -534,13 +534,13 @@ int main(int argc, char* argv[])
                 assert(err==GL_NO_ERROR);
 				sth_flush_draw(stash);
 				dx=0;			
-				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "How does this OpenGL True Type font look? ", &dx,width,height);
+				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "How does this OpenGL True Type font look? ", &dx,width,height);
 				dx=0;
 				dy-=30;
-				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", &dx,width,height);
+				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", &dx,width,height);
 				dx=0;
 				dy-=30;
-				sth_draw_text(stash, droidRegular,30.f, dx, dy-60, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
+				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
 
 				dx=0;
 			//	sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);

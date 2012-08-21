@@ -90,7 +90,9 @@
 			"../../../rendering/rendertest/MacOpenGLWindow.mm",
 			"../../../rendering/rendertest/MacOpenGLWindow.h",
 			"../../../rendering/rendertest/GLInstancingRenderer.cpp",
-			"../../../rendering/rendertest/GLInstancingRenderer.h"
+			"../../../rendering/rendertest/GLInstancingRenderer.h",
+			"../../../rendering/rendertest/LoadShader.cpp",
+			"../../../rendering/rendertest/LoadShader.h"
 		}
 		
 	end

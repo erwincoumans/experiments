@@ -476,6 +476,8 @@ void GLInstancingRenderer::writeTransforms()
 	//if this glFinish is removed, the animation is not always working/blocks
 	//@todo: figure out why
 	glFlush();
+	glBindBuffer(GL_ARRAY_BUFFER, 0);//cube_vbo);
+
     GLint err = glGetError();
     assert(err==GL_NO_ERROR);
     

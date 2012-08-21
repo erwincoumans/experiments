@@ -243,6 +243,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseLButton=0;
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
+				
+				if (sData && sData->m_mouseCallback)
+					(*sData->m_mouseCallback)(0,0,xPos,yPos);
+
 			}
 		//	gDemoApplication->mouseFunc(0,1,xPos,yPos);
 		break;
@@ -256,6 +260,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseLButton=1;
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
+
+				if (sData && sData->m_mouseCallback)
+					(*sData->m_mouseCallback)(0,1,xPos,yPos);
 			}
 			break;
 		}
@@ -282,7 +289,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseYpos = yPos;
 
 				if (sData && sData->m_mouseCallback)
-					(*sData->m_mouseCallback)(sData->m_mouseLButton,0,xPos,yPos);
+					(*sData->m_mouseCallback)(-1,0,xPos,yPos);
 
 			break;
 		}
