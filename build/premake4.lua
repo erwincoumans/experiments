@@ -123,7 +123,7 @@ if _OPTIONS["with-pe"] then
 
 end
 	include "../opencl/bullet2_pipeline"
-	include "../opencl/bullet3_pipeline"
+--	include "../opencl/bullet3_pipeline"
 	
 	include "../dynamics/testbed"
 	include "../dynamics/position_based_dynamics"

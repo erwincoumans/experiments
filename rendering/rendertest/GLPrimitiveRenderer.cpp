@@ -214,7 +214,17 @@ void GLPrimitiveRenderer::drawLine()
 
 void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float color[4])//Line()//float from[4], float to[4], float color[4])
 {
+    GLint err;
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+   
+    
     glUseProgram(m_shaderProg);
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBindVertexArray(m_vertexArrayObject);
     
@@ -233,7 +243,6 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
      glActiveTexture(GL_TEXTURE0);
      glBindTexture(GL_TEXTURE_2D,m_texturehandle);
     
-    GLint err;
     
     err = glGetError();
     assert(err==GL_NO_ERROR);

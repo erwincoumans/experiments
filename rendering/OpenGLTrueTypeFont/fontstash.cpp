@@ -710,9 +710,16 @@ static void flush_draw(struct sth_stash* stash)
 		{
 	         //   display2();
 
-				GLint err;
-			    glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture->id);
+		
+            GLint err;
+		    err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glActiveTexture(GL_TEXTURE0);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+            glBindTexture(GL_TEXTURE_2D, texture->id);
             err = glGetError();
             assert(err==GL_NO_ERROR);
           // glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);

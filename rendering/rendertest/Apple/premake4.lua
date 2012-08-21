@@ -18,11 +18,12 @@
 
 		includedirs {
 		"../../primitives",
-		"../../../bullet2"
+		"../../../bullet2",
+		"../../Gwen"
 		}
 		
 			
-		links {"BulletFileLoader"}
+		links {"BulletFileLoader","gwen"}
 		links { "Cocoa.framework" }
 		
 		files {
@@ -37,6 +38,10 @@
 			"../GLPrimitiveRenderer.cpp",
 			"../LoadShader.cpp",
 			"../LoadShader.h",
+			"../gwenWindow.cpp",
+			"../gwenWindow.h",
+ 			"../../OpenGLTrueTypeFont/fontstash.cpp",
+                        "../../OpenGLTrueTypeFont/fontstash.h",
 			"../../../bullet2/LinearMath/btConvexHullComputer.cpp",
 			"../../../bullet2/LinearMath/btConvexHullComputer.h",
 			"../../../bullet2/LinearMath/btSerializer.cpp",

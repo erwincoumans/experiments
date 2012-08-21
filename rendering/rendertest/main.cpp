@@ -325,10 +325,10 @@ int main(int argc, char* argv[])
 		float col[4]={0,1,0,1};
 		prender.drawRect(10,50,120,60,col);
 //             glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_TEXTURE_2D);
+		//glEnable(GL_TEXTURE_2D);
     
 			glEnable(GL_BLEND);
-        err = glGetError();
+        GLint err = glGetError();
         assert(err==GL_NO_ERROR);
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -358,9 +358,8 @@ int main(int argc, char* argv[])
 		float y=100;
 		float  dx=0;
 		sth_begin_draw(stash);
-		glColor4f(1,1,1,1);
 		sth_flush_draw(stash);
-		sth_draw_text(stash, droidRegular,40.f, x, y, "How does this OpenGL True Type font look? ", &dx,width,height);
+		sth_draw_text(stash, droidRegular,40.f, x, y, "How does this OpenGL True Type font look like? ", &dx,width,height);
 		sth_flush_draw(stash);
 		
 		sth_end_draw(stash);
@@ -369,22 +368,31 @@ int main(int argc, char* argv[])
 		if (pCanvas)
 		{
 		//	saveOpenGLState(width,height);//m_glutScreenWidth,m_glutScreenHeight);
-			glMatrixMode(GL_TEXTURE);
-			glLoadIdentity();
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			glViewport(0,0,width-1,height-1);
-			glOrtho(0, width-1, height-1, 0, -1, 1);
-			glDisable(GL_TEXTURE_GEN_S);
-			glDisable(GL_TEXTURE_GEN_T);
-			glDisable(GL_TEXTURE_GEN_R);
-			glDisable(GL_CULL_FACE);
+			
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
+			
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
+            glDisable(GL_CULL_FACE);
+
 			glDisable(GL_DEPTH_TEST);
-			glDisable(GL_LIGHTING);
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
 			glEnable(GL_BLEND);
 
+            
+            err = glGetError();
+            assert(err==GL_NO_ERROR);
+            
+ 
+            
 			pCanvas->RenderCanvas();
 			//restoreOpenGLState();
 		}
