@@ -455,14 +455,7 @@ int main(int argc, char* argv[])
     err = glGetError();
     assert(err==GL_NO_ERROR);
 
-		sth_draw_text(stash, droidRegular,40.f, 100, 180, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
-
-		dx=0;
-	//	sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
-		//sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
-
-		sth_flush_draw(stash);
-
+	
 
 
 	while (!window->requestedExit())
