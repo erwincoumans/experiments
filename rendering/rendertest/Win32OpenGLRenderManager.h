@@ -25,7 +25,9 @@ RM_DECLARE_HANDLE(RenderObjectHandle);
 struct InternalData2;
 
 typedef void (*btWheelCallback)(float deltax, float deltay);
-typedef void (*btMouseCallback)(int button, int state, float x, float y);
+typedef void (*btResizeCallback)( float width, float height);
+typedef void (*btMouseMoveCallback)( float x, float y);
+typedef void (*btMouseButtonCallback)(int button, int state, float x, float y);
 typedef void (*btKeyboardCallback)(unsigned char key, int x, int y);
 
 
@@ -73,7 +75,9 @@ public:
 
 	virtual void getMouseCoordinates(int& x, int& y);
 
-	void setMouseCallback(btMouseCallback	mouseCallback);
+	void setMouseMoveCallback(btMouseMoveCallback	mouseCallback);
+	void setMouseButtonCallback(btMouseButtonCallback	mouseCallback);
+	void setResizeCallback(btResizeCallback	resizeCallback);
 	void setWheelCallback(btWheelCallback wheelCallback);
 	void setKeyboardCallback( btKeyboardCallback	keyboardCallback);
 

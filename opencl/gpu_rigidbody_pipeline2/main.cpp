@@ -158,7 +158,8 @@ int main(int argc, char* argv[])
     render.RenderScene();
     window->endRendering();
 
-	window->setMouseCallback(btDefaultMouseCallback);
+	window->setMouseMoveCallback(btDefaultMouseMoveCallback);
+	window->setMouseButtonCallback(btDefaultMouseButtonCallback);
 	window->setWheelCallback(btDefaultWheelCallback);
 	window->setKeyboardCallback(btDefaultKeyboardCallback);
     

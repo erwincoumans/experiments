@@ -124,6 +124,7 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 			memset(texture->m_texels,0,textureWidth*textureHeight);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, textureWidth, textureHeight, 0, GL_RED, GL_UNSIGNED_BYTE, texture->m_texels);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 			////////////////////////////
 			//create the other data
@@ -170,6 +171,7 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 void OpenGL2RenderCallback(sth_texture* texture)
 {
 
+		
 	GLuint* texId = (GLuint*) texture->m_userData;
 
     GLint err;
@@ -179,9 +181,19 @@ void OpenGL2RenderCallback(sth_texture* texture)
     glActiveTexture(GL_TEXTURE0);
     err = glGetError();
     assert(err==GL_NO_ERROR);
-            
-    glBindTexture(GL_TEXTURE_2D, *texId);
-    err = glGetError();
+
+	glBindTexture(GL_TEXTURE_2D, *texId);
+	bool useFiltering = false;
+	if (useFiltering)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	err = glGetError();
     assert(err==GL_NO_ERROR);
     // glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
     // glBindVertexArray(s_vertexArrayObject);

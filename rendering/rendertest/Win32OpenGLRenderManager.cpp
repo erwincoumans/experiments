@@ -54,7 +54,9 @@ struct InternalData2
 	int m_mouseYpos;
 
 	btWheelCallback m_wheelCallback;
-	btMouseCallback	m_mouseCallback;
+	btMouseMoveCallback	m_mouseMoveCallback;
+	btMouseButtonCallback	m_mouseButtonCallback;
+	btResizeCallback		m_resizeCallback;
 	btKeyboardCallback	m_keyboardCallback;
 
 	
@@ -80,8 +82,11 @@ struct InternalData2
 		m_quit = false;
 
 		m_keyboardCallback = 0;
-		m_mouseCallback = 0;
+		m_mouseMoveCallback = 0;
+		m_mouseButtonCallback = 0;
+		m_resizeCallback = 0;
 		m_wheelCallback = 0;
+
 	}
 };
 
@@ -138,6 +143,8 @@ void Win32OpenGLWindow::pumpMessage()
 {
 	MSG msg;
 		// check for messages
+	//'if' instead of 'while' can make mainloop smoother. 
+	//@todo: use separate threads for input and rendering
 		while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE )  )
 		{
 			
@@ -230,6 +237,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseMButton=1;
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
+				if (sData && sData->m_mouseButtonCallback)
+					(*sData->m_mouseButtonCallback)(1,1,xPos,yPos);
 			}
 		break;
 	}
@@ -244,8 +253,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
 				
-				if (sData && sData->m_mouseCallback)
-					(*sData->m_mouseCallback)(0,0,xPos,yPos);
+				if (sData && sData->m_mouseButtonCallback)
+					(*sData->m_mouseButtonCallback)(0,0,xPos,yPos);
 
 			}
 		//	gDemoApplication->mouseFunc(0,1,xPos,yPos);
@@ -261,8 +270,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
 
-				if (sData && sData->m_mouseCallback)
-					(*sData->m_mouseCallback)(0,1,xPos,yPos);
+				if (sData && sData->m_mouseButtonCallback)
+					(*sData->m_mouseButtonCallback)(0,1,xPos,yPos);
 			}
 			break;
 		}
@@ -288,8 +297,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
 
-				if (sData && sData->m_mouseCallback)
-					(*sData->m_mouseCallback)(-1,0,xPos,yPos);
+				if (sData && sData->m_mouseMoveCallback)
+					(*sData->m_mouseMoveCallback)(xPos,yPos);
 
 			break;
 		}
@@ -298,6 +307,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int xPos = LOWORD(lParam); 
 			int yPos = HIWORD(lParam); 
 			sData->m_mouseRButton = 1;
+
+			if (sData && sData->m_mouseButtonCallback)
+				(*sData->m_mouseButtonCallback)(2,0,sData->m_mouseXpos,sData->m_mouseYpos);
 
 			//gDemoApplication->mouseFunc(2,1,xPos,yPos);
 		break;
@@ -334,11 +346,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					sData->m_openglViewportHeight = clientRect.bottom;
 					m_glutScreenWidth = sData->m_openglViewportWidth;
 					m_glutScreenHeight = sData->m_openglViewportHeight;
+					glViewport(0, 0, sData->m_openglViewportWidth, sData->m_openglViewportHeight);
+
+					if (sData->m_resizeCallback)
+						(*sData->m_resizeCallback)(sData->m_openglViewportWidth,sData->m_openglViewportHeight);
 					//if (sOpenGLInitialized)
 					//{
 					//	//gDemoApplication->reshape(sWidth,sHeight);
 					//}
-					glViewport(0, 0, sData->m_openglViewportWidth, sData->m_openglViewportHeight);
 				return 0;												// Return
 			}
 		break;
@@ -560,7 +575,10 @@ Win32OpenGLWindow::Win32OpenGLWindow()
 Win32OpenGLWindow::~Win32OpenGLWindow()
 {
 	setKeyboardCallback(0);
-	setMouseCallback(0);
+	setMouseMoveCallback(0);
+	setMouseButtonCallback(0);
+	setWheelCallback(0);
+	setResizeCallback(0);
 	
 	sData = 0;
 	delete m_data;
@@ -576,7 +594,10 @@ void	Win32OpenGLWindow::init()
 void	Win32OpenGLWindow::exit()
 {
 	setKeyboardCallback(0);
-	setMouseCallback(0);
+	setMouseMoveCallback(0);
+	setMouseButtonCallback(0);
+	setWheelCallback(0);
+	setResizeCallback(0);
 
 	
 	
@@ -634,10 +655,19 @@ void Win32OpenGLWindow::setWheelCallback(btWheelCallback wheelCallback)
 	m_data->m_wheelCallback = wheelCallback;
 }
 
-void Win32OpenGLWindow::setMouseCallback(btMouseCallback	mouseCallback)
+void Win32OpenGLWindow::setMouseMoveCallback(btMouseMoveCallback	mouseCallback)
 {
-	m_data->m_mouseCallback = mouseCallback;
-	
+	m_data->m_mouseMoveCallback = mouseCallback;
+}
+
+void Win32OpenGLWindow::setMouseButtonCallback(btMouseButtonCallback	mouseCallback)
+{
+	m_data->m_mouseButtonCallback = mouseCallback;
+}
+
+void Win32OpenGLWindow::setResizeCallback(btResizeCallback	resizeCallback)
+{
+	m_data->m_resizeCallback = resizeCallback;
 }
 
 void Win32OpenGLWindow::setKeyboardCallback( btKeyboardCallback	keyboardCallback)

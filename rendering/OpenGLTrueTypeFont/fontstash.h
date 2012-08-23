@@ -126,7 +126,7 @@ void sth_flush_draw(struct sth_stash* stash);
 
 void sth_draw_text(struct sth_stash* stash,
 				   int idx, float size,
-				   float x, float y, const char* string, float* dx, int screenwidth, int screenheight);
+				   float x, float y, const char* string, float* dx, int screenwidth, int screenheight, int measureOnly=0);
 
 void sth_dim_text(struct sth_stash* stash, int idx, float size, const char* string,
 				  float* minx, float* miny, float* maxx, float* maxy);

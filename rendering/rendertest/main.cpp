@@ -66,9 +66,40 @@ void Usage()
 #include "gwenWindow.h"
 
 
-void MyMouseCallback(int button, int state, float x, float y)
+void MyMouseButtonCallback(int button, int state, float x, float y)
 {
-	btDefaultMouseCallback(button,state,x,y);
+	//btDefaultMouseCallback(button,state,x,y);
+
+	if (pCanvas)
+	{
+		bool handled = pCanvas->InputMouseMoved(x,y,x, y);
+
+		if (button>=0)
+		{
+			handled = pCanvas->InputMouseButton(button,state);
+			if (handled)
+			{
+				if (!state)
+					return;
+			}
+		}
+	}
+}
+
+int g_OpenGLWidth = 800;//1024;
+int g_OpenGLHeight =600;//768;
+
+void MyResizeCallback(float width, float height)
+{
+	g_OpenGLWidth = width;
+	g_OpenGLHeight = height;
+	pCanvas->SetSize(width,height);
+	resizeGUI(width,height);
+}
+
+void MyMouseMoveCallback( float x, float y)
+{
+	//btDefaultMouseCallback(button,state,x,y);
 
 	static int m_lastmousepos[2] = {0,0};
 	static bool isInitialized = false;
@@ -81,20 +112,6 @@ void MyMouseCallback(int button, int state, float x, float y)
 			m_lastmousepos[1] = y+1;
 		}
 		bool handled = pCanvas->InputMouseMoved(x,y,m_lastmousepos[0],m_lastmousepos[1]);
-
-		if (button>=0)
-		{
-			handled = pCanvas->InputMouseButton(button,state);
-			if (handled)
-			{
-				m_lastmousepos[0]	=	x;
-				m_lastmousepos[1]	=	y;
-			
-				if (!state)
-					return;
-			}
-		}
-		
 	}
 }
 
@@ -105,7 +122,6 @@ sth_stash* initFont()
 	GLint err;
 
 		struct sth_stash* stash = 0;
-	FILE* fp = 0;
 	int datasize;
 	unsigned char* data;
 	float sx,sy,dx,dy,lh;
@@ -121,17 +137,30 @@ sth_stash* initFont()
 		return 0;
 	}
 
+	const char* fontPaths[]={
+	"./",
+	"../../bin/",
+	"../bin/",
+	"bin/"
+	};
+
+	int numPaths=sizeof(fontPaths)/sizeof(char*);
+	
 	// Load the first truetype font from memory (just because we can).
-#ifdef _WIN32
-    const char* fontPath = "../../bin/";
-#else
-    const char* fontPath = "./";
-#endif
     
-    char fullFontFileName[1024];
-    sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//cour.ttf");//times.ttf");//DroidSerif-Regular.ttf");
-    
-	fp = fopen(fullFontFileName, "rb");
+	FILE* fp = 0;
+	const char* fontPath ="./";
+	char fullFontFileName[1024];
+
+	for (int i=0;i<numPaths;i++)
+	{
+		
+		fontPath = fontPaths[i];
+		sprintf(fullFontFileName,"%s%s",fontPath,"OpenSans.ttf");//"DroidSerif-Regular.ttf");
+		fp = fopen(fullFontFileName, "rb");
+		if (fp)
+			break;
+	}
 
     err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -238,10 +267,8 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
-	int width = 1024;
-	int height=768;
 
-	window->init(width,height);
+	window->init(g_OpenGLWidth,g_OpenGLHeight);
 #ifndef __APPLE__
 	GLenum err = glewInit();
 #endif
@@ -265,28 +292,30 @@ int main(int argc, char* argv[])
 
     window->runMainLoop();
 
-	window->setMouseCallback(MyMouseCallback);
+	window->setMouseButtonCallback(MyMouseButtonCallback);
+	window->setMouseMoveCallback(MyMouseMoveCallback);
+	window->setResizeCallback(MyResizeCallback);
 	window->setKeyboardCallback(btDefaultKeyboardCallback);
+    window->setWheelCallback(btDefaultWheelCallback);
 
 
-    GLPrimitiveRenderer prender(width,height);
+    GLPrimitiveRenderer prender(g_OpenGLWidth,g_OpenGLHeight);
    
    glUseProgram(0); 
 
 ////////////////////////////////
-	setupGUI(width,height);
+	setupGUI(g_OpenGLWidth,g_OpenGLHeight,stash);
 
 	/////////////////////////////////////
 
 
 	if (pCanvas)
 	{
-		pCanvas->SetSize(width,height);
+		pCanvas->SetSize(g_OpenGLWidth,g_OpenGLHeight);
 	}
 
 	class CProfileIterator* m_profileIterator;
 	m_profileIterator = CProfileManager::Get_Iterator();
-	processProfileData(m_profileIterator,false);
 
 	glClearColor(1,1,1,1);
 	while (!window->requestedExit())
@@ -329,6 +358,7 @@ int main(int argc, char* argv[])
 			window->startRendering();
 		}
 		render.RenderScene();
+		glFinish();
 		float col[4]={0,1,0,1};
 		prender.drawRect(10,50,120,60,col);
 //             glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -336,22 +366,6 @@ int main(int argc, char* argv[])
     
 		
     
-
-		float x = 10;
-		float y=100;
-		float  dx=0;
-	
-		{
-			BT_PROFILE("font sth_draw_text");
-	
-			sth_begin_draw(stash);
-			sth_flush_draw(stash);
-			sth_draw_text(stash, droidRegular,40.f, x, y, "How does this OpenGL True Type font look like? ", &dx,width,height);
-			sth_flush_draw(stash);
-		
-			sth_end_draw(stash);
-		}
-
 		{
 			BT_PROFILE("gwen RenderCanvas");
 	
@@ -415,12 +429,32 @@ int main(int argc, char* argv[])
 
 		}
 
+            
+        float x = 10;
+        float y=200;
+        float  dx=0;
+        
+        {
+            BT_PROFILE("font sth_draw_text");
+            
+            sth_begin_draw(stash);
+            sth_flush_draw(stash);
+            sth_draw_text(stash, droidRegular,40.f, x, y, "Profiler How does this OpenGL True Type font look like? ", &dx,g_OpenGLWidth,g_OpenGLHeight);
+            sth_flush_draw(stash);
+            
+            sth_end_draw(stash);
+        }
+        
+
+            
 		window->endRendering();
 
 		}
 
 
+		
 		CProfileManager::Increment_Frame_Counter();
+
 
 
 		static bool printStats  = true;
@@ -433,7 +467,11 @@ int main(int argc, char* argv[])
 			if (count<0)
 			{
 				count = 100;
-				CProfileManager::dumpAll();
+				{
+					//BT_PROFILE("processProfileData");
+					processProfileData(m_profileIterator,false);
+				}
+				//CProfileManager::dumpAll();
 				//printStats  = false;
 			} else
 			{

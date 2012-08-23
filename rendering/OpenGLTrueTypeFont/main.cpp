@@ -356,9 +356,9 @@ int main(int argc, char* argv[])
 
     window->runMainLoop();
 
-	//window->setMouseCallback(btDefaultMouseCallback);
-	//window->setKeyboardCallback(btDefaultKeyboardCallback);
-
+//	window->setMouseCallback(btDefaultMouseCallback);
+//	window->setKeyboardCallback(btDefaultKeyboardCallback);
+  //  window->setWheelCallback(btDefaultWheelCallback);
 
     err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -374,8 +374,8 @@ int main(int argc, char* argv[])
 	GLuint texture;
 
 
-	int fontTextureWidth = 48;//512;
-	int fontTextureHeight = 48;//512;
+	int fontTextureWidth = 512;
+	int fontTextureHeight = 512;
 	stash = sth_create(fontTextureWidth,fontTextureHeight,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);
 	
     err = glGetError();
@@ -533,7 +533,7 @@ int main(int argc, char* argv[])
 			    err = glGetError();
                 assert(err==GL_NO_ERROR);
 
-				sth_draw_text(stash, droidJapanese,32.f, dx, dy-36, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
+				sth_draw_text(stash, droidJapanese,16.f, dx, dy-36, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
                               width,height);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 //				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "私はガラスを食べられます。それは私を傷つけません。",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 				
@@ -543,13 +543,19 @@ int main(int argc, char* argv[])
                 assert(err==GL_NO_ERROR);
 				sth_flush_draw(stash);
 				dx=0;			
-				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "How does this OpenGL True Type font look? ", &dx,width,height);
+				sth_draw_text(stash, droidRegular,14.f, dx, dy-80, "File Profile How does this OpenGL True Type font look? ", &dx,width,height);
 				dx=0;
 				dy-=30;
-				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", &dx,width,height);
+
+                sth_draw_text(stash, droidRegular,16.f, dx, dy-80, "Profile How does this OpenGL True Type font look? ", &dx,width,height);
 				dx=0;
 				dy-=30;
-				sth_draw_text(stash, droidRegular,40.f, dx, dy-80, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
+
+                
+				sth_draw_text(stash, droidRegular,16.f, dx, dy-80, "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", &dx,width,height);
+				dx=0;
+				dy-=30;
+				sth_draw_text(stash, droidRegular,16.f, dx, dy-80, "!@#$%^abcdefghijklmnopqrstuvwxyz", &dx,width,height);
 
 				dx=0;
 			//	sth_draw_text(stash, droidRegular,16.f, dx, dy-42, "aph OpenGL Profile aCABCabdabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^", &dx,width,height);
@@ -569,7 +575,7 @@ int main(int argc, char* argv[])
                 assert(err==GL_NO_ERROR);
 
                 
-				sth_draw_texture(stash, droidRegular, 32.f, 0, 0,width,height, "a", &dx);
+				sth_draw_texture(stash, droidRegular, 16.f, 0, 0,width,height, "a", &dx);
                 err = glGetError();
                 assert(err==GL_NO_ERROR);
 

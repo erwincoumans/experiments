@@ -292,7 +292,8 @@ int main(int argc, char* argv[])
 
 	create_graphics_from_physics_objects(render);
 	
-	window->setMouseCallback(btDefaultMouseCallback);
+	window->setMouseMoveCallback(btDefaultMouseMoveCallback);
+	window->setMouseButtonCallback(btDefaultMouseButtonCallback);
 	window->setKeyboardCallback(btDefaultKeyboardCallback);
 
 	while (!window->requestedExit())

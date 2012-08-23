@@ -8,6 +8,7 @@
 #include "Gwen/Skins/Simple.h"
 #include "Gwen/Renderers/OpenGL_DebugFont.h"
 
+struct sth_stash;
 
 extern class GwenOpenGL3CoreRenderer* pRenderer;
 //extern Gwen::Renderer::OpenGL_DebugFont * pRenderer;
@@ -16,8 +17,8 @@ extern Gwen::Controls::Canvas* pCanvas;
 
 
 
-void	setupGUI(int width, int height);
+void	setupGUI(int width, int height, sth_stash* font);
 void	processProfileData(class CProfileIterator*  iterator, bool idle);
-
+void	resizeGUI(int width, int height);
 
 #endif //MY_GWEN_WINDOW_H

@@ -120,7 +120,7 @@ public:
 	{
 		SetTitle( L"FEM Settings" );
 
-		SetSize( 150, 150 );
+		SetSize( 450, 150 );
 		this->SetPos(10,40);
 
 //		this->Dock( Gwen::Pos::Bottom);
@@ -320,10 +320,10 @@ struct MyTestMenuBar : public Gwen::Controls::MenuStrip
 
 };
 
-void	setupGUI(int width, int height)
+void	setupGUI(int width, int height, sth_stash* font)
 {
 	primRenderer = new GLPrimitiveRenderer(width,height);
-	pRenderer = new GwenOpenGL3CoreRenderer(primRenderer);
+	pRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,width,height);
 //	pRenderer = new Gwen::Renderer::OpenGL_DebugFont();
 	skin.SetRender( pRenderer );
 
@@ -341,6 +341,12 @@ void	setupGUI(int width, int height)
 	
 }
 
+void resizeGUI(int width, int height)
+{
+	pCanvas->SetSize(width,height);
+	pRenderer->resize(width,height);
+	primRenderer->setScreenSize(width,height);
+}
 
 void	processProfileData(CProfileIterator*  iterator, bool idle)
 {

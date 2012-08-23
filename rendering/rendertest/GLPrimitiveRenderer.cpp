@@ -292,5 +292,7 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
 
 void GLPrimitiveRenderer::setScreenSize(int width, int height)
 {
+	m_screenWidth = width;
+	m_screenHeight = height;
     
 }

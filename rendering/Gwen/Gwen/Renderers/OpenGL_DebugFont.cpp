@@ -282,7 +282,6 @@ namespace Gwen
 
 		void OpenGL_DebugFont::StartClip()
 		{
-			return;
 			Flush();
 			Gwen::Rect rect = ClipRegion();
 
@@ -300,8 +299,7 @@ namespace Gwen
 
 		void OpenGL_DebugFont::EndClip()
 		{
-						return;
-
+				
 			Flush();
 			glDisable( GL_SCISSOR_TEST );
 			

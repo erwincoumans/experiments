@@ -18,7 +18,8 @@ subject to the following restrictions:
 
 #include "LinearMath/btAlignedObjectArray.h"
 
-void btDefaultMouseCallback( int button, int state, float x, float y);
+void btDefaultMouseButtonCallback( int button, int state, float x, float y);
+void btDefaultMouseMoveCallback(  float x, float y);
 void btDefaultKeyboardCallback(unsigned char key, int x, int y);
 void btDefaultWheelCallback( float deltax, float deltay);
 class GLInstancingRenderer

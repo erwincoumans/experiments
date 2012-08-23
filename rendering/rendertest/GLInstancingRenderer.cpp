@@ -125,7 +125,16 @@ struct InternalDataRenderer
         }
         
 	}
-	void mouseCallback(int button, int state, float x, float y)
+
+	void mouseMoveCallback(float x, float y)
+	{
+		
+		m_mouseXpos = x;
+		m_mouseYpos = y;
+		m_mouseInitialized = true;
+	}
+
+	void mouseButtonCallback(int button, int state, float x, float y)
 	{
 		if (m_mouseInitialized)
 		{
@@ -155,11 +164,17 @@ void btDefaultWheelCallback(float deltax, float deltay)
 	if (sData2)
 		sData2->wheelCallback(deltax,deltay);
 }
-void btDefaultMouseCallback(int button, int state, float x, float y)
+void btDefaultMouseButtonCallback(int button, int state, float x, float y)
 {
 	if (sData2)
-		sData2->mouseCallback(button, state, x, y);
+		sData2->mouseButtonCallback(button, state, x, y);
 }
+void btDefaultMouseMoveCallback( float x, float y)
+{
+	if (sData2)
+		sData2->mouseMoveCallback( x, y);
+}
+
 void btDefaultKeyboardCallback(unsigned char key, int x, int y)
 {
 	//printf("world\n");

@@ -314,12 +314,7 @@ void MacOpenGLWindow::init(int width, int height)
     glGenBuffers(n, vbo);
     checkError("glGenBuffers");
     
-    //see http://stackoverflow.com/questions/8238473/cant-get-nsmousemoved-events-from-nexteventmatchingmask-with-an-nsopenglview
-    ProcessSerialNumber psn;
-    GetCurrentProcess(&psn);
-    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-    SetFrontProcess(&psn);
-    
+   
 //[m_internalData->m_window setLevel:NSMainMenuWindowLevel];
     
 //    [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask];
@@ -327,18 +322,26 @@ void MacOpenGLWindow::init(int width, int height)
     [NSEvent addGlobalMonitorForEventsMatchingMask:NSMouseMovedMask handler:^(NSEvent *event)
     {
         //[window setFrameOrigin:[NSEvent mouseLocation]];
+        NSPoint eventLocation = [m_internalData->m_window mouseLocationOutsideOfEventStream];
         
-        NSPoint eventLocation = [event locationInWindow];
+      //  NSPoint eventLocation = [event locationInWindow];
         NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
         m_mouseX = center.x;
-        m_mouseY = center.y;
+        m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
         
         
         // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
         if (m_mouseCallback)
-            (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
+            (*m_mouseCallback)(-1,0,m_mouseX,m_mouseY);
         
     }];
+
+    //see http://stackoverflow.com/questions/8238473/cant-get-nsmousemoved-events-from-nexteventmatchingmask-with-an-nsopenglview
+       ProcessSerialNumber psn;
+     GetCurrentProcess(&psn);
+     TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+     SetFrontProcess(&psn);
+     
     
      [m_internalData->m_myApp finishLaunching];
     [pool release];
@@ -406,7 +409,42 @@ void MacOpenGLWindow::startRendering()
         //        m_azi += 0.1;
         //    input::doSomeWork(keycode);
         }
-         
+
+        if ([event type]== NSLeftMouseUp)
+        {
+            // printf("right mouse!");
+            float mouseX,mouseY;
+            
+            NSPoint eventLocation = [event locationInWindow];
+            NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+            m_mouseX = center.x;
+            m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
+            shootObject = 1;
+            
+            // printf("mouse coord = %f, %f\n",mouseX,mouseY);
+            if (m_mouseCallback)
+                (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
+            
+        }
+
+        
+        if ([event type]== NSLeftMouseDown)
+        {
+            // printf("right mouse!");
+            float mouseX,mouseY;
+            
+            NSPoint eventLocation = [event locationInWindow];
+            NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
+            m_mouseX = center.x;
+            m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
+            shootObject = 1;
+            
+            // printf("mouse coord = %f, %f\n",mouseX,mouseY);
+            if (m_mouseCallback)
+                (*m_mouseCallback)(0,1,m_mouseX,m_mouseY);
+            
+        }
+
         
         if ([event type]== NSRightMouseDown)
         {
@@ -416,11 +454,12 @@ void MacOpenGLWindow::startRendering()
             NSPoint eventLocation = [event locationInWindow];
             NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
             m_mouseX = center.x;
-            m_mouseY = center.y;
+            m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
             shootObject = 1;
             
            // printf("mouse coord = %f, %f\n",mouseX,mouseY);
-            
+            if (m_mouseCallback)
+                (*m_mouseCallback)(2,1,m_mouseX,m_mouseY);
             
         }
         
@@ -430,12 +469,12 @@ void MacOpenGLWindow::startRendering()
             NSPoint eventLocation = [event locationInWindow];
             NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
             m_mouseX = center.x;
-            m_mouseY = center.y;
+            m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
        
             
            // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
             if (m_mouseCallback)
-                (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
+                (*m_mouseCallback)(-1,0,m_mouseX,m_mouseY);
         }
         
         if ([event type] == NSLeftMouseDragged)
@@ -455,10 +494,10 @@ void MacOpenGLWindow::startRendering()
             NSPoint eventLocation = [event locationInWindow];
             NSPoint center = [m_internalData->m_myview convertPoint:eventLocation fromView:nil];
             m_mouseX = center.x;
-            m_mouseY = center.y;
+            m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
             
             if (m_mouseCallback)
-                (*m_mouseCallback)(1,0,m_mouseX,m_mouseY);
+                (*m_mouseCallback)(1,1,m_mouseX,m_mouseY);
 
           //  printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
         }

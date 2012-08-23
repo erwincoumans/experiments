@@ -488,16 +488,16 @@ static int get_quad(struct sth_stash* stash, struct sth_font* fnt, struct sth_gl
 {
 	int rx,ry;
 	float scale = 1.0f;
-
-	if (fnt->type == BMFONT) scale = isize/(glyph->size*10.0f);
+	if (fnt->type == BMFONT)
+        scale = isize/(glyph->size*10.0f);
 
 	rx = floorf(*x + scale * glyph->xoff);
-	ry = floorf(*y - scale * glyph->yoff);
+	ry = floorf(*y + scale * glyph->yoff);
 	
 	q->x0 = rx;
-	q->y0 = ry;
+	q->y0 = ry + 1.2*scale*0.5f*float(isize)/10.f;
 	q->x1 = rx + scale * (glyph->x1 - glyph->x0_);
-	q->y1 = ry - scale * (glyph->y1 - glyph->y0);
+	q->y1 = ry + scale * (glyph->y1 - glyph->y0)+ 1.2*scale*0.5f*float(isize)/10.f;
 	
 	q->s0 = float(glyph->x0_) * stash->itw;
 	q->t0 = float(glyph->y0) * stash->ith;
@@ -514,12 +514,12 @@ static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, 
 	bool scale=true;
 	if (scale)
 	{
-		v->position.p[0] = (x-width)/(width);
-		v->position.p[1] = (y)/(height);
+		v->position.p[0] = (x*2-width)/(width);
+		v->position.p[1] = 1-(y)/(height/2);
 	} else
 	{
-		v->position.p[0] = (x-width/2)/(width/2);
-		v->position.p[1] = (y-height/2)/(height/2);
+		v->position.p[0] = (x-width)/(width);
+		v->position.p[1] = (height-y)/(height);
 	}
     v->position.p[2] = 0.f;
     v->position.p[3] = 1.f;
@@ -662,7 +662,7 @@ void sth_flush_draw(struct sth_stash* stash)
 void sth_draw_text(struct sth_stash* stash,
 				   int idx, float size,
 				   float x, float y,
-				   const char* s, float* dx, int screenwidth, int screenheight)
+				   const char* s, float* dx, int screenwidth, int screenheight, int measureOnly)
 {
 	unsigned int codepoint;
 	struct sth_glyph* glyph = NULL;
@@ -688,22 +688,29 @@ void sth_draw_text(struct sth_stash* stash,
 		glyph = get_glyph(stash, fnt, codepoint, isize);
 		if (!glyph) continue;
 		texture = glyph->texture;
-		if (texture->nverts+6 >= VERT_COUNT)
-			flush_draw(stash);
-		
+        
+        if (!measureOnly)
+        {
+            if (texture->nverts+6 >= VERT_COUNT)
+                flush_draw(stash);
+		}
+        
 		if (!get_quad(stash, fnt, glyph, isize, &x, &y, &q)) continue;
 		
-		v = &texture->newverts[texture->nverts];
-		
-		v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
-		v = setv(v, q.x1, q.y0, q.s1, q.t0,screenwidth,screenheight);
-		v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
+        if (!measureOnly)
+        {
+            v = &texture->newverts[texture->nverts];
 
-		v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
-		v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
-		v = setv(v, q.x0, q.y1, q.s0, q.t1,screenwidth,screenheight);
-		
-		texture->nverts += 6;
+            v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
+            v = setv(v, q.x1, q.y0, q.s1, q.t0,screenwidth,screenheight);
+            v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
+
+            v = setv(v, q.x0, q.y0, q.s0, q.t0,screenwidth,screenheight);
+            v = setv(v, q.x1, q.y1, q.s1, q.t1,screenwidth,screenheight);
+            v = setv(v, q.x0, q.y1, q.s0, q.t1,screenwidth,screenheight);
+
+            texture->nverts += 6;
+        }
 	}
 	
 	if (dx) *dx = x;
