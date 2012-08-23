@@ -40,6 +40,7 @@
 			"../LoadShader.h",
 			"../gwenWindow.cpp",
 			"../gwenWindow.h",
+            "../GwenOpenGL3CoreRenderer.h",
 			"../../OpenGLTrueTypeFont/fontstash.cpp",
 			"../../OpenGLTrueTypeFont/fontstash.h",
 			"../../OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",

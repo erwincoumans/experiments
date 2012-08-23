@@ -8,6 +8,7 @@
 struct sth_stash;
 #include "../OpenGLTrueTypeFont/fontstash.h"
 
+
 class GwenOpenGL3CoreRenderer : public Gwen::Renderer::Base
 {
 	GLPrimitiveRenderer* m_primitiveRenderer;
@@ -17,20 +18,21 @@ class GwenOpenGL3CoreRenderer : public Gwen::Renderer::Base
     float m_screenWidth;
     float m_screenHeight;
     float m_fontScaling;
-    
+    float m_retinaScale;
 public:
-	GwenOpenGL3CoreRenderer (GLPrimitiveRenderer* primRender, sth_stash* font,float screenWidth, float screenHeight)
+	GwenOpenGL3CoreRenderer (GLPrimitiveRenderer* primRender, sth_stash* font,float screenWidth, float screenHeight, float retinaScale)
 		:m_primitiveRenderer(primRender),
     m_font(font),
     m_screenWidth(screenWidth),
-    m_screenHeight(screenHeight)
+    m_screenHeight(screenHeight),
+    m_retinaScale(retinaScale)
 	{
 		m_currentColor[0] = 1;
 		m_currentColor[1] = 1;
 		m_currentColor[2] = 1;
 		m_currentColor[3] = 1;
         
-        m_fontScaling = 16;//16.f;
+        m_fontScaling = 16.f*m_retinaScale;
 	}
 
 	void resize(int width, int height)
@@ -49,6 +51,7 @@ public:
 
 	virtual void StartClip()
 	{
+
 		sth_flush_draw(m_font);
 		Gwen::Rect rect = ClipRegion();
 
@@ -57,10 +60,10 @@ public:
 		{
 			GLint view[4];
 			glGetIntegerv( GL_VIEWPORT, &view[0] );
-			rect.y = view[3] - (rect.y + rect.h);
+			rect.y = view[3]/m_retinaScale - (rect.y + rect.h);
 		}
 
-		glScissor( rect.x * Scale(), rect.y * Scale(), rect.w * Scale(), rect.h * Scale() );
+		glScissor( m_retinaScale * rect.x * Scale(), m_retinaScale * rect.y * Scale(), m_retinaScale * rect.w * Scale(), m_retinaScale * rect.h * Scale() );
 		glEnable( GL_SCISSOR_TEST );
 	};
 
@@ -111,7 +114,7 @@ public:
         sth_draw_text(m_font,
                       1,m_fontScaling,
                       r.x,r.y,
-                      unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly);
+                      unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly,m_retinaScale);
         
         
        // Gwen::Renderer::Base::RenderText(pFont,pos,text);

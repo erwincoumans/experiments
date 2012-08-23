@@ -32,6 +32,7 @@
 			"../renderscene.h",
 			"../MacOpenGLWindow.h",
 			"../MacOpenGLWindow.mm",
+            "../GwenOpenGL3CoreRenderer.h",
 			"../GLInstancingRenderer.cpp",
 			"../GLInstancingRenderer.h",
 			"../GLPrimitiveRenderer.h",

@@ -42,18 +42,20 @@ void dumpInfo(void)
 
 // -------------------- View ------------------------
 
-@interface TestView : NSView 
+@interface TestView : NSView
 { 
     NSOpenGLContext* m_context;
     int m_lastWidth;
     int m_lastHeight;
+    btResizeCallback    m_resizeCallback;
+
 }
 -(void)drawRect:(NSRect)rect;
 -(void) MakeContext:(NSView*) view;
 -(void) MakeCurrent;
 -(float) GetWindowWidth;
 -(float) GetWindowHeight;
-
+-(void) setResizeCallback:(btResizeCallback) callback;
 @end
 
 float loop;
@@ -71,6 +73,10 @@ float loop;
     return m_lastHeight;
 }
 
+-(void)setResizeCallback:(btResizeCallback)callback
+{
+    m_resizeCallback = callback;
+}
 -(void)drawRect:(NSRect)rect
 {
 	if (([self frame].size.width != m_lastWidth) || ([self frame].size.height != m_lastHeight))
@@ -95,7 +101,10 @@ float loop;
         // Set viewport
        // glViewport(0, 0, backingPixelWidth, backingPixelHeight);
      //   glViewport(0,0,10,10);
-        
+        if (m_resizeCallback)
+        {
+            (*m_resizeCallback)(width,height);
+        }
         
         //glViewport(0,0,(GLsizei)width,(GLsizei)height);
 
@@ -172,9 +181,11 @@ MacOpenGLWindow::MacOpenGLWindow()
 :m_internalData(0),
 m_mouseX(0),
 m_mouseY(0),
-m_mouseCallback(0),
+m_mouseMoveCallback(0),
+m_mouseButtonCallback(0),
 m_wheelCallback(0),
-m_keyboardCallback(0)
+m_keyboardCallback(0),
+m_retinaScaleFactor(1)
 {
 }
 
@@ -275,15 +286,23 @@ void MacOpenGLWindow::init(int width, int height)
 	[m_internalData->m_window setTitle:@"Minimal OpenGL app (Cocoa)"];
     
 	m_internalData->m_myview = [TestView alloc];
+
+    [m_internalData->m_myview setResizeCallback:0];
+    
 	[m_internalData->m_myview initWithFrame: frame];
     
 	// OpenGL init!
 	[m_internalData->m_myview MakeContext];
 
    // https://developer.apple.com/library/mac/#documentation/GraphicsAnimation/Conceptual/HighResolutionOSX/CapturingScreenContents/CapturingScreenContents.html#//apple_ref/doc/uid/TP40012302-CH10-SW1
-    //support HighResolutionOSX
-   [m_internalData->m_myview  setWantsBestResolutionOpenGLSurface:YES];
+    //support HighResolutionOSX for Retina Macbook
+    [m_internalData->m_myview  setWantsBestResolutionOpenGLSurface:YES];
 
+    NSSize sz;
+    sz.width = 1;
+    sz.height = 1;
+    
+   //  float newBackingScaleFactor = [m_internalData->m_window backingScaleFactor];
     
     dumpInfo();
     
@@ -331,8 +350,8 @@ void MacOpenGLWindow::init(int width, int height)
         
         
         // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
-        if (m_mouseCallback)
-            (*m_mouseCallback)(-1,0,m_mouseX,m_mouseY);
+        if (m_mouseMoveCallback)
+            (*m_mouseMoveCallback)(m_mouseX,m_mouseY);
         
     }];
 
@@ -342,7 +361,8 @@ void MacOpenGLWindow::init(int width, int height)
      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
      SetFrontProcess(&psn);
      
-    
+    m_retinaScaleFactor = [m_internalData->m_myview convertSizeToBacking:sz].width;
+
      [m_internalData->m_myApp finishLaunching];
     [pool release];
 
@@ -422,8 +442,8 @@ void MacOpenGLWindow::startRendering()
             shootObject = 1;
             
             // printf("mouse coord = %f, %f\n",mouseX,mouseY);
-            if (m_mouseCallback)
-                (*m_mouseCallback)(0,0,m_mouseX,m_mouseY);
+            if (m_mouseButtonCallback)
+                (*m_mouseButtonCallback)(0,0,m_mouseX,m_mouseY);
             
         }
 
@@ -440,8 +460,8 @@ void MacOpenGLWindow::startRendering()
             shootObject = 1;
             
             // printf("mouse coord = %f, %f\n",mouseX,mouseY);
-            if (m_mouseCallback)
-                (*m_mouseCallback)(0,1,m_mouseX,m_mouseY);
+            if (m_mouseButtonCallback)
+                (*m_mouseButtonCallback)(0,1,m_mouseX,m_mouseY);
             
         }
 
@@ -458,8 +478,8 @@ void MacOpenGLWindow::startRendering()
             shootObject = 1;
             
            // printf("mouse coord = %f, %f\n",mouseX,mouseY);
-            if (m_mouseCallback)
-                (*m_mouseCallback)(2,1,m_mouseX,m_mouseY);
+            if (m_mouseButtonCallback)
+                (*m_mouseButtonCallback)(2,1,m_mouseX,m_mouseY);
             
         }
         
@@ -473,8 +493,8 @@ void MacOpenGLWindow::startRendering()
        
             
            // printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
-            if (m_mouseCallback)
-                (*m_mouseCallback)(-1,0,m_mouseX,m_mouseY);
+            if (m_mouseMoveCallback)
+                (*m_mouseMoveCallback)(m_mouseX,m_mouseY);
         }
         
         if ([event type] == NSLeftMouseDragged)
@@ -496,8 +516,10 @@ void MacOpenGLWindow::startRendering()
             m_mouseX = center.x;
             m_mouseY = [m_internalData->m_myview GetWindowHeight] - center.y;
             
-            if (m_mouseCallback)
-                (*m_mouseCallback)(1,1,m_mouseX,m_mouseY);
+            if (m_mouseMoveCallback)
+            {
+                (*m_mouseMoveCallback)(m_mouseX,m_mouseY);
+            }
 
           //  printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
         }
@@ -579,5 +601,9 @@ void MacOpenGLWindow::getMouseCoordinates(int& x, int& y)
     
 }
 
+void MacOpenGLWindow::setResizeCallback(btResizeCallback resizeCallback)
+{
+    [m_internalData->m_myview setResizeCallback:resizeCallback];
+}
 
 

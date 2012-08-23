@@ -86,8 +86,8 @@ void MyMouseButtonCallback(int button, int state, float x, float y)
 	}
 }
 
-int g_OpenGLWidth = 800;//1024;
-int g_OpenGLHeight =600;//768;
+int g_OpenGLWidth = 1024;
+int g_OpenGLHeight =768;
 
 void MyResizeCallback(float width, float height)
 {
@@ -156,7 +156,7 @@ sth_stash* initFont()
 	{
 		
 		fontPath = fontPaths[i];
-		sprintf(fullFontFileName,"%s%s",fontPath,"OpenSans.ttf");//"DroidSerif-Regular.ttf");
+		sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//OpenSans.ttf");//"DroidSerif-Regular.ttf");
 		fp = fopen(fullFontFileName, "rb");
 		if (fp)
 			break;
@@ -269,9 +269,14 @@ int main(int argc, char* argv[])
 	
 
 	window->init(g_OpenGLWidth,g_OpenGLHeight);
+    float retinaScale = 1;
+    
 #ifndef __APPLE__
 	GLenum err = glewInit();
+#else
+    retinaScale = window->getRetinaScale();
 #endif
+    
     window->runMainLoop();
 	window->startRendering();
 	window->endRendering();
@@ -304,7 +309,7 @@ int main(int argc, char* argv[])
    glUseProgram(0); 
 
 ////////////////////////////////
-	setupGUI(g_OpenGLWidth,g_OpenGLHeight,stash);
+	setupGUI(g_OpenGLWidth,g_OpenGLHeight,stash,retinaScale);
 
 	/////////////////////////////////////
 
@@ -364,7 +369,22 @@ int main(int argc, char* argv[])
 //             glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 		//glEnable(GL_TEXTURE_2D);
     
-		
+            float x = 10;
+            float y=220;
+            float  dx=0;
+            
+            {
+                BT_PROFILE("font sth_draw_text");
+                
+                sth_begin_draw(stash);
+                sth_flush_draw(stash);
+                sth_draw_text(stash, droidRegular,20.f, x, y, "Non-retina font rendering !@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,1);//retinaScale);
+                if (retinaScale!=1.f)
+                    sth_draw_text(stash, droidRegular,20.f*retinaScale, x, y+20, "Retina font rendering!@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,retinaScale);
+                sth_flush_draw(stash);
+                
+                sth_end_draw(stash);
+            }
     
 		{
 			BT_PROFILE("gwen RenderCanvas");
@@ -430,20 +450,7 @@ int main(int argc, char* argv[])
 		}
 
             
-        float x = 10;
-        float y=200;
-        float  dx=0;
-        
-        {
-            BT_PROFILE("font sth_draw_text");
-            
-            sth_begin_draw(stash);
-            sth_flush_draw(stash);
-            sth_draw_text(stash, droidRegular,40.f, x, y, "Profiler How does this OpenGL True Type font look like? ", &dx,g_OpenGLWidth,g_OpenGLHeight);
-            sth_flush_draw(stash);
-            
-            sth_end_draw(stash);
-        }
+       
         
 
             

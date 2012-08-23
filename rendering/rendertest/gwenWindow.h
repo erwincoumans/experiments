@@ -17,7 +17,7 @@ extern Gwen::Controls::Canvas* pCanvas;
 
 
 
-void	setupGUI(int width, int height, sth_stash* font);
+void	setupGUI(int width, int height, sth_stash* font, float retinaScale);
 void	processProfileData(class CProfileIterator*  iterator, bool idle);
 void	resizeGUI(int width, int height);
 

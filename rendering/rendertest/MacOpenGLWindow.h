@@ -1,7 +1,9 @@
 #ifndef MAC_OPENGL_WINDOW_H
 #define MAC_OPENGL_WINDOW_H
 
-typedef void (*btMouseCallback)(int button, int state, float x, float y);
+typedef void (*btMouseButtonCallback)(int button, int state, float x, float y);
+typedef void (*btMouseMoveCallback)(float x, float y);
+typedef void (*btResizeCallback)(float x, float y);
 typedef void (*btKeyboardCallback)(unsigned char key, int x, int y);
 typedef void (*btWheelCallback)(float deltax, float deltay);
 
@@ -10,11 +12,13 @@ class MacOpenGLWindow
     struct MacOpenGLWindowInternalData* m_internalData;
     float m_mouseX;
     float m_mouseY;
-    
-    btMouseCallback m_mouseCallback;
+
+   
+    btMouseButtonCallback m_mouseButtonCallback;
+    btMouseMoveCallback m_mouseMoveCallback;
     btWheelCallback m_wheelCallback;
     btKeyboardCallback m_keyboardCallback;
-    
+    float m_retinaScaleFactor;
 public:
     
     MacOpenGLWindow();
@@ -34,10 +38,17 @@ public:
     
     void runMainLoop();
     
-    void setMouseCallback(btMouseCallback	mouseCallback)
+    void setMouseButtonCallback(btMouseButtonCallback	mouseCallback)
     {
-        m_mouseCallback = mouseCallback;
+        m_mouseButtonCallback = mouseCallback;
     }
+
+    void setMouseMoveCallback(btMouseMoveCallback	mouseCallback)
+    {
+        m_mouseMoveCallback = mouseCallback;
+    }
+    
+    void setResizeCallback(btResizeCallback resizeCallback);
     
 	void setKeyboardCallback( btKeyboardCallback	keyboardCallback)
     {
@@ -49,6 +60,10 @@ public:
         m_wheelCallback = wheelCallback;
     }
 
+    float getRetinaScale() const
+    {
+        return m_retinaScaleFactor;
+    }
 
 };
 

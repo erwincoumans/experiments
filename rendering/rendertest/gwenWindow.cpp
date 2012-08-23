@@ -320,10 +320,10 @@ struct MyTestMenuBar : public Gwen::Controls::MenuStrip
 
 };
 
-void	setupGUI(int width, int height, sth_stash* font)
+void	setupGUI(int width, int height, sth_stash* font, float retinaScale)
 {
 	primRenderer = new GLPrimitiveRenderer(width,height);
-	pRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,width,height);
+	pRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,width,height, retinaScale);
 //	pRenderer = new Gwen::Renderer::OpenGL_DebugFont();
 	skin.SetRender( pRenderer );
 

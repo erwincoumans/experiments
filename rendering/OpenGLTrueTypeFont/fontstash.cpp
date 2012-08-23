@@ -49,6 +49,7 @@
 #define BMFONT      3
 
 static int idx = 1;
+static float s_retinaScale = 1;
 
 static unsigned int hashint(unsigned int a)
 {
@@ -486,18 +487,20 @@ error:
 
 static int get_quad(struct sth_stash* stash, struct sth_font* fnt, struct sth_glyph* glyph, short isize, float* x, float* y, struct sth_quad* q)
 {
-	int rx,ry;
-	float scale = 1.0f;
+	float rx,ry;
+	float scale = 1.f/s_retinaScale;//1.0f;
+    
 	if (fnt->type == BMFONT)
         scale = isize/(glyph->size*10.0f);
 
-	rx = floorf(*x + scale * glyph->xoff);
-	ry = floorf(*y + scale * glyph->yoff);
+	rx = (*x + scale * float(glyph->xoff));
+	ry = (*y + scale * float(glyph->yoff));
 	
 	q->x0 = rx;
-	q->y0 = ry + 1.2*scale*0.5f*float(isize)/10.f;
-	q->x1 = rx + scale * (glyph->x1 - glyph->x0_);
-	q->y1 = ry + scale * (glyph->y1 - glyph->y0)+ 1.2*scale*0.5f*float(isize)/10.f;
+    q->y0 = ry + 1.2*0.5f*float(isize)/10.f;
+
+	q->x1 = rx + scale * float(glyph->x1 - glyph->x0_);
+    q->y1 = ry + scale * float(glyph->y1 - glyph->y0)+ 1.2*0.5f*float(isize)/10.f;
 	
 	q->s0 = float(glyph->x0_) * stash->itw;
 	q->t0 = float(glyph->y0) * stash->ith;
@@ -662,8 +665,9 @@ void sth_flush_draw(struct sth_stash* stash)
 void sth_draw_text(struct sth_stash* stash,
 				   int idx, float size,
 				   float x, float y,
-				   const char* s, float* dx, int screenwidth, int screenheight, int measureOnly)
+				   const char* s, float* dx, int screenwidth, int screenheight, int measureOnly, float retinaScale)
 {
+    
 	unsigned int codepoint;
 	struct sth_glyph* glyph = NULL;
 	struct sth_texture* texture = NULL;
@@ -673,6 +677,7 @@ void sth_draw_text(struct sth_stash* stash,
 	Vertex* v;
 	struct sth_font* fnt = NULL;
 	
+    s_retinaScale = retinaScale;
 	if (stash == NULL) return;
 
 	if (!stash->textures) return;
