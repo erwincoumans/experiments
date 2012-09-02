@@ -17,7 +17,6 @@ subject to the following restrictions:
 #define BT_JACOBIAN_ENTRY_H
 
 #include "LinearMath/btMatrix3x3.h"
-//#include "BulletDynamics/Dynamics/btRigidBody.h"
 
 
 //notes:

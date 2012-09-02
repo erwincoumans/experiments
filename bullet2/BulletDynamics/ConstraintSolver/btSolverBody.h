@@ -19,7 +19,7 @@ subject to the following restrictions:
 class	btRigidBody;
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btMatrix3x3.h"
-//#include "BulletDynamics/Dynamics/btRigidBody.h"
+
 #include "LinearMath/btAlignedAllocator.h"
 #include "LinearMath/btTransformUtil.h"
 
@@ -112,6 +112,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	btVector3		m_deltaLinearVelocity;
 	btVector3		m_deltaAngularVelocity;
 	btVector3		m_angularFactor;
+	btVector3		m_linearFactor;
 	btVector3		m_invMass;
 	btVector3		m_pushVelocity;
 	btVector3		m_turnVelocity;
@@ -151,7 +152,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	{
 		if (m_originalBody)
 		{
-			m_deltaLinearVelocity += linearComponent*impulseMagnitude;
+			m_deltaLinearVelocity += linearComponent*impulseMagnitude*m_linearFactor;
 			m_deltaAngularVelocity += angularComponent*(impulseMagnitude*m_angularFactor);
 		}
 	}
@@ -160,7 +161,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	{
 		if (m_originalBody)
 		{
-			m_pushVelocity += linearComponent*impulseMagnitude;
+			m_pushVelocity += linearComponent*impulseMagnitude*m_linearFactor;
 			m_turnVelocity += angularComponent*(impulseMagnitude*m_angularFactor);
 		}
 	}
@@ -242,7 +243,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	{
 		if (m_originalBody)
 		{
-			m_deltaLinearVelocity += linearComponent*impulseMagnitude;
+			m_deltaLinearVelocity += linearComponent*impulseMagnitude*m_linearFactor;
 			m_deltaAngularVelocity += angularComponent*(impulseMagnitude*m_angularFactor);
 		}
 	}
@@ -262,7 +263,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	}
 
 
-	void	writebackVelocityAndTransform(btScalar timeStep)
+	void	writebackVelocityAndTransform(btScalar timeStep, btScalar splitImpulseTurnErp)
 	{
         (void) timeStep;
 		if (m_originalBody)
@@ -275,7 +276,7 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 			if (m_pushVelocity[0]!=0.f || m_pushVelocity[1]!=0 || m_pushVelocity[2]!=0 || m_turnVelocity[0]!=0.f || m_turnVelocity[1]!=0 || m_turnVelocity[2]!=0)
 			{
 				btQuaternion orn = m_worldTransform.getRotation();
-				btTransformUtil::integrateTransform(m_worldTransform,m_pushVelocity,m_turnVelocity*0.1,timeStep,newTransform);
+				btTransformUtil::integrateTransform(m_worldTransform,m_pushVelocity,m_turnVelocity*splitImpulseTurnErp,timeStep,newTransform);
 				m_worldTransform = newTransform;
 			}
 			//m_worldTransform.setRotation(orn);

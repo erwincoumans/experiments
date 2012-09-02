@@ -18,6 +18,7 @@ subject to the following restrictions:
 #ifndef __APPLE__
 #include <GL/glew.h>
 #endif
+#include <assert.h>
 
 #include "GLInstancingRenderer.h"
 

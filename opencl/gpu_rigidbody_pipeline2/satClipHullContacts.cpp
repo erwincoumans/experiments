@@ -686,7 +686,7 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
                     c->m_worldPos[0] = pointsIn[contactIdx.x];
                 default:
                 {
-                    assert(0);
+                    btAssert(0);
                 }
             };
 
@@ -1002,7 +1002,7 @@ void   clipFacesAndContactReductionKernel( btAlignedObjectArray<int2>& pairs,
                             c->m_worldPos[0] = pointsIn[contactIdx.x];
                         default:
                         {
-                            assert(0);
+                            btAssert(0);
                         }
                     };
                     
@@ -1088,7 +1088,7 @@ void   newContactReductionKernel( btAlignedObjectArray<int2>& pairs,
                             break;
                         default:
                         {
-                            assert(0);
+                            btAssert(0);
                         }
                     };
 
@@ -1193,7 +1193,7 @@ void   clipHullHullKernel( btAlignedObjectArray<int2>& pairs,
                             c->m_worldPos[0] = pointsIn[contactIdx.x];
                         default:
                         {
-                            assert(0);
+                            btAssert(0);
                         }
                     };
 
@@ -1424,7 +1424,7 @@ __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
                         c->m_worldPos[0] = pointsIn[contactIdx.x];
                     default:
                     {
-                        assert(0);
+                        btAssert(0);
                     }
                 };
 

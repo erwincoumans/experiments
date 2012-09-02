@@ -21,7 +21,7 @@ Physics Effects under the filename: physics_effects_license.txt
 #include "btFakeRigidBody.h"
 btAlignedObjectArray<btRigidBody> rbs;
 btAlignedObjectArray<btPersistentManifold> manifolds;
-bool peSolverEnabled=true;//true;//true;//;//true;//false;
+bool peSolverEnabled=true;//true;//;//true;//false;
 
 
 //#include "sample_api_physics_effects/common/perf_func.h"
@@ -370,9 +370,8 @@ PfxInt32 BulletSetupContactConstraints(PfxSetupContactConstraintsParam &param)
 		btPersistentManifold& manifold = manifolds.expand();
 		memset(&manifold,0xff,sizeof(btPersistentManifold));
 
-		manifold.m_body0 = &rbs[iA];
-		manifold.m_body1 = &rbs[iB];
-		manifold.m_cachedPoints = contact.getNumContacts();
+		manifold.setBodies(&rbs[iA],&rbs[iB]);
+		manifold.setNumContacts(contact.getNumContacts());
 
 		if (!contact.getNumContacts())
 			continue;
@@ -396,51 +395,51 @@ PfxInt32 BulletSetupContactConstraints(PfxSetupContactConstraintsParam &param)
 		
 		PfxFloat friction = sqrtf(bodyA.getFriction() * bodyB.getFriction());
 		
-		manifold.m_cachedPoints = contact.getNumContacts();
+		manifold.setNumContacts(contact.getNumContacts());
 	
 
-		manifold.m_contactProcessingThreshold = 0.01f;//SCE_PFX_CONTACT_THRESHOLD_NORMAL;
-		manifold.m_contactBreakingThreshold = 0.01f;
+		manifold.setContactProcessingThreshold(0.01f);//SCE_PFX_CONTACT_THRESHOLD_NORMAL;
+		manifold.setContactBreakingThreshold(0.01f);
 
 		for(int j=0;j<contact.getNumContacts();j++) {
 			PfxContactPoint &cp = contact.getContactPoint(j);
 
 			PfxVector3 ptA = pfxReadVector3(cp.m_localPointA);
-			manifold.m_pointCache[j].m_localPointA.setValue(ptA.getX(),ptA.getY(),ptA.getZ());
+			manifold.getContactPoint(j).m_localPointA.setValue(ptA.getX(),ptA.getY(),ptA.getZ());
 			PfxVector3 ptB = pfxReadVector3(cp.m_localPointB);
-			manifold.m_pointCache[j].m_localPointB.setValue(ptB.getX(),ptB.getY(),ptB.getZ());
+			manifold.getContactPoint(j).m_localPointB.setValue(ptB.getX(),ptB.getY(),ptB.getZ());
 			
-			manifold.m_pointCache[j].m_normalWorldOnB.setValue(
+			manifold.getContactPoint(j).m_normalWorldOnB.setValue(
 						cp.m_constraintRow[0].m_normal[0],
 						cp.m_constraintRow[0].m_normal[1],
 						cp.m_constraintRow[0].m_normal[2]);
-			manifold.m_pointCache[j].m_distance1 = cp.m_distance1;
-			manifold.m_pointCache[j].m_combinedFriction = friction;
-			manifold.m_pointCache[j].m_combinedRestitution = restitution;
-			manifold.m_pointCache[j].m_appliedImpulse = cp.m_constraintRow[0].m_accumImpulse;
-			manifold.m_pointCache[j].m_lateralFrictionDir1.setValue(
+			manifold.getContactPoint(j).m_distance1 = cp.m_distance1;
+			manifold.getContactPoint(j).m_combinedFriction = friction;
+			manifold.getContactPoint(j).m_combinedRestitution = restitution;
+			manifold.getContactPoint(j).m_appliedImpulse = cp.m_constraintRow[0].m_accumImpulse;
+			manifold.getContactPoint(j).m_lateralFrictionDir1.setValue(
 						cp.m_constraintRow[1].m_normal[0],
 						cp.m_constraintRow[1].m_normal[1],
 						cp.m_constraintRow[1].m_normal[2]);
-			manifold.m_pointCache[j].m_appliedImpulseLateral1 = cp.m_constraintRow[1].m_accumImpulse;
+			manifold.getContactPoint(j).m_appliedImpulseLateral1 = cp.m_constraintRow[1].m_accumImpulse;
 
-			manifold.m_pointCache[j].m_lateralFrictionDir2.setValue(
+			manifold.getContactPoint(j).m_lateralFrictionDir2.setValue(
 						cp.m_constraintRow[2].m_normal[0],
 						cp.m_constraintRow[2].m_normal[1],
 						cp.m_constraintRow[2].m_normal[2]);
-			manifold.m_pointCache[j].m_appliedImpulseLateral2 = cp.m_constraintRow[2].m_accumImpulse;
-			manifold.m_pointCache[j].m_lateralFrictionInitialized = true;
-			manifold.m_pointCache[j].m_lifeTime = cp.m_duration;
+			manifold.getContactPoint(j).m_appliedImpulseLateral2 = cp.m_constraintRow[2].m_accumImpulse;
+			manifold.getContactPoint(j).m_lateralFrictionInitialized = true;
+			manifold.getContactPoint(j).m_lifeTime = cp.m_duration;
 
-			btTransform trA = manifold.m_body0->getWorldTransform();
-			btTransform trB = manifold.m_body1->getWorldTransform();
+			btTransform trA = manifold.getBody0()->getWorldTransform();
+			btTransform trB = manifold.getBody1()->getWorldTransform();
 
-			manifold.m_pointCache[j].m_positionWorldOnA = trA( manifold.m_pointCache[j].m_localPointA );
-			manifold.m_pointCache[j].m_positionWorldOnB = trB( manifold.m_pointCache[j].m_localPointB );
-			manifold.m_pointCache[j].m_contactMotion1 = 0.f;
-			manifold.m_pointCache[j].m_contactMotion2 = 0.f;
-			manifold.m_pointCache[j].m_contactCFM1 = 0.f;
-			manifold.m_pointCache[j].m_contactCFM2 = 0.f;
+			manifold.getContactPoint(j).m_positionWorldOnA = trA( manifold.getContactPoint(j).m_localPointA );
+			manifold.getContactPoint(j).m_positionWorldOnB = trB( manifold.getContactPoint(j).m_localPointB );
+			manifold.getContactPoint(j).m_contactMotion1 = 0.f;
+			manifold.getContactPoint(j).m_contactMotion2 = 0.f;
+			manifold.getContactPoint(j).m_contactCFM1 = 0.f;
+			manifold.getContactPoint(j).m_contactCFM2 = 0.f;
 
 
 
@@ -511,11 +510,11 @@ PfxInt32 BulletWriteWarmstartContactConstraints(PfxSetupContactConstraintsParam 
 
 		PfxContactManifold &contact = offsetContactManifolds[iConstraint];
 		btPersistentManifold& manifold = manifolds[i];
-		for (int c=0;c<manifold.m_cachedPoints;c++)
+		for (int c=0;c<manifold.getNumContacts();c++)
 		{
-			contact.getContactPoint(c).m_constraintRow[0].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulse;
-			contact.getContactPoint(c).m_constraintRow[1].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulseLateral1;
-			contact.getContactPoint(c).m_constraintRow[2].m_accumImpulse = manifold.m_pointCache[c].m_appliedImpulseLateral2;
+			contact.getContactPoint(c).m_constraintRow[0].m_accumImpulse = manifold.getContactPoint(c).m_appliedImpulse;
+			contact.getContactPoint(c).m_constraintRow[1].m_accumImpulse = manifold.getContactPoint(c).m_appliedImpulseLateral1;
+			contact.getContactPoint(c).m_constraintRow[2].m_accumImpulse = manifold.getContactPoint(c).m_appliedImpulseLateral2;
 		}
 
 

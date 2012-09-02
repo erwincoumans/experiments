@@ -81,7 +81,7 @@ btGpu3DGridBroadphase::btGpu3DGridBroadphase(	btOverlappingPairCache* overlappin
 btGpu3DGridBroadphase::~btGpu3DGridBroadphase()
 {
 	//btSimpleBroadphase will free memory of btSortedOverlappingPairCache, because m_ownsPairCache
-	assert(m_bInitialized);
+	btAssert(m_bInitialized);
 	_finalize();
 
 	
@@ -130,7 +130,7 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 
 	m_LastLargeHandleIndex = -1;
 
-    assert(!m_bInitialized);
+    btAssert(!m_bInitialized);
 	
     // allocate host storage
     m_hBodiesHash = new unsigned int[m_maxHandles * 2];
@@ -192,7 +192,7 @@ void btGpu3DGridBroadphase::_initialize(	const btVector3& cellSize,
 
 void btGpu3DGridBroadphase::_finalize()
 {
-    assert(m_bInitialized);
+    btAssert(m_bInitialized);
     delete [] m_hBodiesHash;
     delete [] m_hCellStart;
     delete [] m_hPairBuffStartCurr;
