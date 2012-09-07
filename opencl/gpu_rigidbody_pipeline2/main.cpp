@@ -22,7 +22,7 @@ subject to the following restrictions:
 #include "GLInstancingRenderer.h"
 
 #ifdef _WIN32
-#include "Win32OpenGLRenderManager.h"
+#include "Win32OpenGLWindow.h"
 #else
 #include "../rendertest/MacOpenGLWindow.h"
 #endif
@@ -118,7 +118,9 @@ int main(int argc, char* argv[])
     MacOpenGLWindow* window = new MacOpenGLWindow();
 #endif
     
-	window->init(1024,768);
+	btgWindowConstructionInfo wci;
+	window->createWindow(wci);
+
 #ifdef _WIN32
 	GLenum err = glewInit();
 #endif
@@ -197,6 +199,7 @@ int main(int argc, char* argv[])
 
 
 		window->startRendering();
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		render.RenderScene();
 		window->endRendering();
 
@@ -235,7 +238,7 @@ int main(int argc, char* argv[])
 	demo.cleanup();
 
 	render.CleanupShaders();
-	window->exit();
+	window->closeWindow();
 	delete window;
 	
 	

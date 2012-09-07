@@ -100,9 +100,9 @@ struct sth_texture
 
 
 typedef void (*btUpdateTextureCallback)(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight);
-typedef void (*btRenderCallback)(sth_texture* texture);
+typedef void (*btFontRenderCallback)(sth_texture* texture);
 
-struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btRenderCallback renderCallback);
+struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btFontRenderCallback renderCallback);
 
 int sth_add_font(struct sth_stash* stash, const char* path);
 int sth_add_font_from_memory(struct sth_stash* stash, unsigned char* buffer);

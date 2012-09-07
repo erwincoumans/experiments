@@ -55,7 +55,7 @@ btScalar	btRigidBody::getInvMass() const
 
 btVector3 btRigidBody::getVelocityInLocalPoint(const btVector3& pt) const
 {
-	assert(0);
+	btAssert(0);
 	return btVector3(0,0,0);
 }
 

@@ -25,7 +25,7 @@ subject to the following restrictions:
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
 #else
-#include "Win32OpenGLRenderManager.h"
+#include "Win32OpenGLWindow.h"
 #endif
 
 #include "GLPrimitiveRenderer.h"
@@ -269,7 +269,11 @@ int main(int argc, char* argv[])
 #endif
 	
 
-	window->init(g_OpenGLWidth,g_OpenGLHeight);
+	btgWindowConstructionInfo wci;
+	wci.m_width = g_OpenGLWidth;
+	wci.m_height = g_OpenGLHeight;
+
+	window->createWindow(wci);
     float retinaScale = 1;
     
 #ifndef __APPLE__
@@ -491,7 +495,7 @@ int main(int argc, char* argv[])
 	}
 
 //	render.CleanupShaders();
-	window->exit();
+	window->closeWindow();
 	delete window;
 	
 	

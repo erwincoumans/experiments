@@ -23,7 +23,7 @@ subject to the following restrictions:
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
 #else
-#include "Win32OpenGLRenderManager.h"
+#include "Win32OpenGLWindow.h"
 #endif
 
 #include "fontstash.h"
@@ -330,7 +330,7 @@ int main(int argc, char* argv[])
 	int width = 512;
 	int height= 512;
 
-	window->init(width,height);
+	window->createWindow(btgWindowConstructionInfo(width,height));
 #ifndef __APPLE__
 	err = glewInit();
 #endif
@@ -640,7 +640,7 @@ int main(int argc, char* argv[])
 #endif
 
 //	render.CleanupShaders();
-	window->exit();
+	window->closeWindow();
 	delete window;
 	
 	return 0;

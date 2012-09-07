@@ -92,7 +92,7 @@ struct sth_stash
 	int drawing;
 
 	btUpdateTextureCallback		m_updateTextureCallback;
-	btRenderCallback			m_renderCallback;
+	btFontRenderCallback		m_renderCallback;
 };
 
 
@@ -132,7 +132,7 @@ static unsigned int decutf8(unsigned int* state, unsigned int* codep, unsigned i
 
 
 
-struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btRenderCallback renderCallback)
+struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btFontRenderCallback renderCallback)
 {
 	struct sth_stash* stash = NULL;
 	struct sth_texture* texture = NULL;
@@ -497,10 +497,10 @@ static int get_quad(struct sth_stash* stash, struct sth_font* fnt, struct sth_gl
 	ry = (*y + scale * float(glyph->yoff));
 	
 	q->x0 = rx;
-    q->y0 = ry + 1.2*0.5f*float(isize)/10.f;
+    q->y0 = ry + 1.5*0.5f*float(isize)/10.f;
 
 	q->x1 = rx + scale * float(glyph->x1 - glyph->x0_);
-    q->y1 = ry + scale * float(glyph->y1 - glyph->y0)+ 1.2*0.5f*float(isize)/10.f;
+    q->y1 = ry + scale * float(glyph->y1 - glyph->y0)+ 1.5*0.5f*float(isize)/10.f;
 	
 	q->s0 = float(glyph->x0_) * stash->itw;
 	q->t0 = float(glyph->y0) * stash->ith;

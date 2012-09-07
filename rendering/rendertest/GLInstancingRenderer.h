@@ -22,13 +22,15 @@ void btDefaultMouseButtonCallback( int button, int state, float x, float y);
 void btDefaultMouseMoveCallback(  float x, float y);
 void btDefaultKeyboardCallback(unsigned char key, int x, int y);
 void btDefaultWheelCallback( float deltax, float deltay);
+
+
 class GLInstancingRenderer
 {
 	
 	btAlignedObjectArray<struct btGraphicsInstance*> m_graphicsInstances;
 
-	int		m_maxObjectCapacity;
-	int		m_maxShapeCapacity;
+	int		m_maxNumObjectCapacity;
+	int		m_maxShapeCapacityInBytes;
 	struct InternalDataRenderer* m_data;
 
 	
@@ -64,7 +66,7 @@ public:
 
 	int getMaxShapeCapacity() const
 	{
-		return m_maxShapeCapacity;
+		return m_maxShapeCapacityInBytes;
 	}
 };
 

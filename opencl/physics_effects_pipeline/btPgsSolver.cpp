@@ -651,7 +651,7 @@ void btPgsSolver::setFrictionConstraintImpulse( btSolverConstraint& solverConstr
 
 	
 
-					if (infoGlobal.m_solverMode & SOLVER_USE_FRICTION_WARMSTARTING)
+					if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 					{
 						{
 							btSolverConstraint& frictionConstraint1 = m_tmpSolverContactFrictionConstraintPool[solverConstraint.m_frictionIndex];
@@ -1346,7 +1346,7 @@ btScalar btPgsSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,i
 		btManifoldPoint* pt = (btManifoldPoint*) solveManifold.m_originalContactPoint;
 		btAssert(pt);
 		pt->m_appliedImpulse = solveManifold.m_appliedImpulse;
-		if (infoGlobal.m_solverMode & SOLVER_USE_FRICTION_WARMSTARTING)
+		if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 		{
 			pt->m_appliedImpulseLateral1 = m_tmpSolverContactFrictionConstraintPool[solveManifold.m_frictionIndex].m_appliedImpulse;
 			if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS))
@@ -1381,7 +1381,7 @@ btScalar btPgsSolver::solveGroupCacheFriendlyFinish(btCollisionObject** bodies,i
 			btRigidBody* body = m_tmpSolverBodyPool[i].m_originalBody;
 			if (body)
 			{
-				m_tmpSolverBodyPool[i].writebackVelocityAndTransform(infoGlobal.m_timeStep);
+				m_tmpSolverBodyPool[i].writebackVelocityAndTransform(infoGlobal.m_timeStep,infoGlobal.m_splitImpulseTurnErp);
 				m_tmpSolverBodyPool[i].m_originalBody->setLinearVelocity(m_tmpSolverBodyPool[i].m_linearVelocity);
 				m_tmpSolverBodyPool[i].m_originalBody->setAngularVelocity(m_tmpSolverBodyPool[i].m_angularVelocity);
 				m_tmpSolverBodyPool[i].m_originalBody->setWorldTransform(m_tmpSolverBodyPool[i].m_worldTransform);

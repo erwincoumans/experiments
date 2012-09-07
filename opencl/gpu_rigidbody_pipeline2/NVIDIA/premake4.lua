@@ -85,8 +85,10 @@
 			"../../../rendering/WavefrontObjLoader/list.h",
 			"../../../rendering/rendertest/GLInstancingRenderer.cpp",
 			"../../../rendering/rendertest/GLInstancingRenderer.h",
-			"../../../rendering/rendertest/Win32OpenGLRenderManager.cpp",
-			"../../../rendering/rendertest/Win32OpenGLRenderManager.h",	
+			"../../../rendering/rendertest/Win32OpenGLWindow.cpp",
+			"../../../rendering/rendertest/Win32OpenGLWindow.h",	
+			"../../../rendering/rendertest/Win32Window.cpp",
+			"../../../rendering/rendertest/Win32Window.h",
 			"../../../rendering/rendertest/LoadShader.cpp",
 			"../../../rendering/rendertest/LoadShader.h",
 		}

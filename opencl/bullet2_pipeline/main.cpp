@@ -31,7 +31,7 @@ subject to the following restrictions:
 #ifdef __APPLE__
 #include "../../rendering/rendertest/MacOpenGLWindow.h"
 #else
-#include "../../rendering/rendertest/Win32OpenGLRenderManager.h"
+#include "../../rendering/rendertest/Win32OpenGLWindow.h"
 #endif
 
 
@@ -205,7 +205,8 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
-	window->init(1024,768);
+	btgWindowConstructionInfo wci(1024,768);
+	window->createWindow(wci);
 #ifndef __APPLE__
 	GLenum err = glewInit();
 #endif
@@ -329,7 +330,7 @@ int main(int argc, char* argv[])
 	
 
 	render.CleanupShaders();
-	window->exit();
+	window->closeWindow();
 	delete window;
 	
 	

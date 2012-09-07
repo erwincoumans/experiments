@@ -2,7 +2,7 @@
 	function initOpenGL()
 		configuration {}
 		configuration {"Windows"}
-			links {"opengl32"}
+			links {"opengl32","glu32"}
 		configuration {"MacOSX"}
  			links { "OpenGL.framework"} 
 		configuration {"not Windows", "not MacOSX"}

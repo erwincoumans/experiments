@@ -27,8 +27,10 @@
 		
 		files {
 			"../main.cpp",
-			"../../rendertest/Win32OpenGLRenderManager.cpp",
-			"../../rendertest/Win32OpenGLRenderManager.h",
+			"../../rendertest/Win32OpenGLWindow.cpp",
+			"../../rendertest/Win32OpenGLWindow.h",
+			"../../rendertest/Win32Window.cpp",
+			"../../rendertest/Win32Window.h",
 			"../../rendertest/LoadShader.cpp",
 			"../../rendertest/LoadShader.h",
 			"../../../bullet2/LinearMath/btAlignedAllocator.cpp",

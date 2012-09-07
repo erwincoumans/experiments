@@ -74,7 +74,7 @@ end
 	include "../jpeglib"
 
 	
-
+	include "../bullet2/Demos/BasicDemo"
 	
 if not _OPTIONS["with-nacl"] then
 
