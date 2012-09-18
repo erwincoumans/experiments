@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<localisp>
+	<country id="AU" alias=Australia>
+		<pop>
+			<city>Wollongong</city>
+			<areacode>02</areacode>
+			<phone>555-4893</phone>
+		</pop>
+		<pop>
+			<city>Newcastle</city>
+			<areacode>02</areacode>
+			<phone>555-2348</phone>
+		</pop>
+	</country>	
+</localisp>

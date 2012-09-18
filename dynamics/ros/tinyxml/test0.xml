@@ -1,0 +1,19 @@
+<?XML Version="1.0"?>
+<ch id="Random!" href="http://www.Random.com/">
+<gr yu="252" yd="308" yh="280" xt="17"></gr></ch>
+
+<sep ys="4" useg="1" y="336"></sep>
+
+<ch id="Today's News" href="http://dailynews.Random.com/">
+	<gr yd="56" yh="28" xt="17" xb="100"></gr>
+	<ch id="Top Stories" href="http://dailynews.Random.com/headlines/ts/"></ch>
+	<ch id="Business" href="http://dailynews.Random.com/headlines/bs/"></ch>
+	<ch id="Technology" href="http://dailynews.Random.com/headlines/tc/"></ch>
+	<ch id="Politics" href="http://dailynews.Random.com/headlines/pl/"></ch>
+	<ch id="World" href="http://dailynews.Random.com/headlines/wl/"></ch>
+	<ch id="Local" href="http://dailynews.Random.com/headlines/local/"></ch>
+	<ch id="Entertainment" href="http://dailynews.Random.com/headlines/en/"></ch>
+	<ch id="Sports" href="http://dailynews.Random.com/headlines/sports/"></ch>
+	<ch id="Science" href="http://dailynews.Random.com/headlines/sc/"></ch>
+	<ch id="Health" href="http://dailynews.Random.com/headlines/hl/"></ch>
+</ch>

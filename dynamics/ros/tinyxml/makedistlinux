@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# NOTE: This is set by setversion.py
+VERSION=2_6_2
+echo "Making tinyxml $VERSION"
+
+rm -rf ./docs/*
+
+# do this so all files/dirs created here are world readable
+# (reasonable for a distribution system I think)
+umask 2
+
+doxygen dox
+rm -rf ./tinyxml/*
+
+rm -f tinyxml_$VERSION.zip
+rm -f tinyxml_$VERSION.tar.gz
+
+if [ -d tinyxml ]; then
+	rmdir tinyxml
+fi
+mkdir tinyxml
+
+cp readme.txt ./tinyxml
+cp changes.txt ./tinyxml
+cp Makefile ./tinyxml
+
+cp utf8test.xml tinyxml
+cp utf8testverify.xml tinyxml
+cp utf8test.gif tinyxml
+
+cp tinyxml.cpp tinyxml
+cp tinyxmlerror.cpp tinyxml
+cp tinyxmlparser.cpp tinyxml
+cp xmltest.cpp tinyxml
+cp tinystr.cpp tinyxml
+
+cp tinystr.h tinyxml
+cp tinyxml.h tinyxml
+
+cp tinyXmlTest.vcxproj tinyxml
+cp tinyXmlTestSTL.vcxproj tinyxml
+cp tinyxml_lib.vcxproj tinyxml
+cp tinyxmlSTL.vcxproj tinyxml
+cp tinyxml.sln tinyxml
+
+unix2dos ./tinyxml/tinyXmlTest.vcxproj
+unix2dos ./tinyxml/tinyXmlTestSTL.vcxproj
+unix2dos ./tinyxml/tinyxml_lib.vcxproj
+unix2dos ./tinyxml/tinyxmlSTL.vcxproj
+unix2dos ./tinyxml/tinyxml.sln
+
+mkdir ./tinyxml/docs
+cp ./docs/* ./tinyxml/docs
+
+tar zcf tinyxml_$VERSION.tar.gz tinyxml
+zip -r -q -9 tinyxml_$VERSION.zip tinyxml
+
+echo "Finished:"
+ls -l tinyxml_$VERSION.tar.gz tinyxml_$VERSION.zip
+

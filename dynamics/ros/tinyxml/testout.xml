@@ -1,0 +1,11 @@
+<?XML Version="1.0"?><encompass_channels lastmod="1999/04/16 09:00.00"><img href="http://enc.yahoo.com/enc/no/channel.bmp" dest="channel.bmp" date="1999/04/16 09:00.00"></img>
+<ch id="Yahoo!" href="http://www.yahoo.com/">
+<gr yu="252" yd="308" yh="280" xt="17"></gr></ch>
+<sep ys="4" useg="1" y="336"></sep>
+<ch id="Today's News" href="http://dailynews.yahoo.com/">
+<gr yd="56" yh="28" xt="17" xb="100"></gr>
+<ch id="Top Stories" href="http://dailynews.yahoo.com/headlines/ts/"></ch>
+<ch id="Business" href="http://dailynews.yahoo.com/headlines/bs/"></ch>
+<ch id="Technology" href="http://dailynews.yahoo.com/headlines/tc/"></ch>
+<ch id="Politics" href="http://dailynews.yahoo.com/headlines/pl/"></ch><ch id="World" href="http://dailynews.yahoo.com/headlines/wl/"></ch><ch id="Local" href="http://dailynews.yahoo.com/headlines/local/"></ch><ch id="Entertainment" href="http://dailynews.yahoo.com/headlines/en/"></ch><ch id="Sports" href="http://dailynews.yahoo.com/headlines/sports/"></ch><ch id="Science" href="http://dailynews.yahoo.com/headlines/sc/"></ch><ch id="Health" href="http://dailynews.yahoo.com/headlines/hl/"></ch>
+</ch>

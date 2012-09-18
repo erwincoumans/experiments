@@ -1,0 +1,18 @@
+<!-- [lee] This file basically contains test cases for bug reports.-->
+<!-- The first 2 bugs (from Andrius)
+	 1) The parser doesn't skip leading spaces in text fields.
+	 2) empty comments are not handled correctly. -->
+
+<text>"  This has leading spaces in quotes -- that should be preserved!"</text>
+<text>  This has leading spaces that should go away</text>
+<!-- -->
+
+<!-- This was causing an infinite loop. Comment back in to test (you
+	 will get an error from the parser.) -->
+<!--
+	<Thing name="test" /> 
+	a foolish comment 
+	<Thing name="test2" /> 
+-->
+
+
