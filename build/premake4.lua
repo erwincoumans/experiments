@@ -70,6 +70,7 @@ end
 	language "C++"
 	
 
+	include "../dynamics/ros"
 	include "../bullet2"	
 	include "../jpeglib"
 
