@@ -7,6 +7,30 @@
 #include "GLPrimitiveRenderer.h"
 struct sth_stash;
 #include "../OpenGLTrueTypeFont/fontstash.h"
+#include "../OpenGLTrueTypeFont/TwFonts.h"
+static float extraSpacing = 0.;//6f;
+
+static GLuint BindFont(const CTexFont *_Font)
+{
+    GLuint TexID = 0;
+    glGenTextures(1, &TexID);
+    glBindTexture(GL_TEXTURE_2D, TexID);
+    glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+    glPixelStorei(GL_UNPACK_LSB_FIRST, GL_FALSE);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, _Font->m_TexWidth, _Font->m_TexHeight, 0, GL_RED, GL_UNSIGNED_BYTE, _Font->m_TexBytes);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return TexID;
+}
+
 
 
 class GwenOpenGL3CoreRenderer : public Gwen::Renderer::Base
@@ -19,22 +43,40 @@ class GwenOpenGL3CoreRenderer : public Gwen::Renderer::Base
     float m_screenHeight;
     float m_fontScaling;
     float m_retinaScale;
+	bool	m_useTrueTypeFont;
+	const CTexFont* m_currentFont;
+	
+	GLuint	m_fontTextureId;
 public:
 	GwenOpenGL3CoreRenderer (GLPrimitiveRenderer* primRender, sth_stash* font,float screenWidth, float screenHeight, float retinaScale)
 		:m_primitiveRenderer(primRender),
     m_font(font),
     m_screenWidth(screenWidth),
     m_screenHeight(screenHeight),
-    m_retinaScale(retinaScale)
+    m_retinaScale(retinaScale),
+	m_useTrueTypeFont(false)
 	{
 		m_currentColor[0] = 1;
 		m_currentColor[1] = 1;
 		m_currentColor[2] = 1;
 		m_currentColor[3] = 1;
         
-        m_fontScaling = 15.f*m_retinaScale;
+        m_fontScaling = 16.f*m_retinaScale;
+		
+		TwGenerateDefaultFonts();
+
+		//m_currentFont = g_DefaultNormalFont;
+		m_currentFont = g_DefaultNormalFontAA;
+		
+		//m_currentFont = g_DefaultLargeFont;
+		m_fontTextureId = BindFont(m_currentFont);
+		
 	}
 
+	virtual ~GwenOpenGL3CoreRenderer()
+	{
+		TwDeleteDefaultFonts();
+	}
 	void resize(int width, int height)
 	{
 		m_screenWidth = width;
@@ -51,8 +93,8 @@ public:
 
 	virtual void StartClip()
 	{
-
-		sth_flush_draw(m_font);
+		if (m_useTrueTypeFont)
+			sth_flush_draw(m_font);
 		Gwen::Rect rect = ClipRegion();
 
 		// OpenGL's coords are from the bottom left
@@ -65,11 +107,14 @@ public:
 
 		glScissor( m_retinaScale * rect.x * Scale(), m_retinaScale * rect.y * Scale(), m_retinaScale * rect.w * Scale(), m_retinaScale * rect.h * Scale() );
 		glEnable( GL_SCISSOR_TEST );
+		//glDisable( GL_SCISSOR_TEST );
+		
 	};
 
 	virtual void EndClip()
 	{
-		sth_flush_draw(m_font);
+		if (m_useTrueTypeFont)
+			sth_flush_draw(m_font);
 		glDisable( GL_SCISSOR_TEST );
 	};
 
@@ -90,18 +135,18 @@ public:
 
 	}
     
-    void RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString& text )
+    void RenderText( Gwen::Font* pFont, Gwen::Point rasterPos, const Gwen::UnicodeString& text )
     {
+		
         Gwen::String str = Gwen::Utility::UnicodeToString(text);
         const char* unicodeText = (const char*)str.c_str();
         
         Gwen::Rect r;
-        r.x = pos.x;
-        r.y = pos.y;
+        r.x = rasterPos.x;
+        r.y = rasterPos.y;
         r.w = 0;
         r.h = 0;
     
-        Translate(r);
         
       //
         //printf("str = %s\n",unicodeText);
@@ -111,13 +156,42 @@ public:
         
         int measureOnly=0;
         
-        sth_draw_text(m_font,
+		if (m_useTrueTypeFont)
+		{
+			Translate(r);
+			sth_draw_text(m_font,
                       1,m_fontScaling,
                       r.x,r.y,
                       unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly,m_retinaScale);
-        
-        
-       // Gwen::Renderer::Base::RenderText(pFont,pos,text);
+		} else
+		{
+			//float width = 0.f;
+			int pos=0;
+			float color[]={0.2f,0.2,0.2f,1.f};
+		
+			glBindTexture(GL_TEXTURE_2D,m_fontTextureId);
+			float width = r.x;
+			while (unicodeText[pos])
+			{
+				int c = unicodeText[pos];
+				r.h = m_currentFont->m_CharHeight;
+				r.w = m_currentFont->m_CharWidth[c]+extraSpacing;
+				Gwen::Rect rect = r;
+				Translate( rect );
+
+				m_primitiveRenderer->drawTexturedRect(rect.x, rect.y+m_yOffset, rect.x+rect.w, rect.y+rect.h+m_yOffset, m_currentColor,m_currentFont->m_CharU0[c],m_currentFont->m_CharV0[c],m_currentFont->m_CharU1[c],m_currentFont->m_CharV1[c]);
+
+				//DrawTexturedRect(0,r,m_currentFont->m_CharU0[c],m_currentFont->m_CharV0[c],m_currentFont->m_CharU1[c],m_currentFont->m_CharV1[c]);
+			//	DrawFilledRect(r);
+
+			
+			
+				width += r.w;
+				r.x = width;
+				pos++;
+			}
+			glBindTexture(GL_TEXTURE_2D,0);
+		}
 
     }
     Gwen::Point MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString& text )
@@ -128,19 +202,42 @@ public:
        // printf("str = %s\n",unicodeText);
         int xpos=0;
         int ypos=0;
-        float dx;
+        
         
         int measureOnly=1;
-        
-        sth_draw_text(m_font,
+		float dx=0;
+		if (m_useTrueTypeFont)
+		{
+			sth_draw_text(m_font,
                       1,m_fontScaling,
                       xpos,ypos,
                       unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly);
-        Gwen::Point pt;
-        pt.x = dx*Scale();
-        pt.y = m_fontScaling*Scale();//*0.8f;
-        return pt;
-//        return Gwen::Renderer::Base::MeasureText(pFont,text);
+		
+			Gwen::Point pt;
+			pt.x = dx*Scale();
+			pt.y = m_fontScaling*Scale();//*0.8f;
+			return pt;
+		}
+		else
+		{
+			float width = 0.f;
+			int pos=0;
+			while (unicodeText[pos])
+			{
+				width += m_currentFont->m_CharWidth[unicodeText[pos]]+extraSpacing;
+				pos++;
+			}
+			Gwen::Point pt;
+			int fontHeight = m_currentFont->m_CharHeight;
+
+
+			pt.x = width*Scale();
+			pt.y = (fontHeight+2) * Scale();
+
+			return pt;
+		}
+
+		return Gwen::Renderer::Base::MeasureText(pFont,text);
     }
 
 

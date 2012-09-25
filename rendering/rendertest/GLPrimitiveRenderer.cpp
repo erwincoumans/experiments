@@ -215,7 +215,13 @@ void GLPrimitiveRenderer::drawLine()
 
 }
 
-void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float color[4])//Line()//float from[4], float to[4], float color[4])
+void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float color[4])
+{
+	 glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+	 drawTexturedRect(x0,y0,x1,y1,color,0,0,1,1);
+}
+
+void GLPrimitiveRenderer::drawTexturedRect(float x0, float y0, float x1, float y1, float color[4], float u0,float v0, float u1, float v1)//Line()//float from[4], float to[4], float color[4])
 {
     GLint err;
     
@@ -231,12 +237,22 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBindVertexArray(m_vertexArrayObject);
     
+	bool useFiltering = false;
+	if (useFiltering)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
 
 	   Vertex vertexData[4] = {
-        { vec4(-1+2.*x0/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 0.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0,0)},
-        { vec4(-1+2.*x0/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0,1)},
-        { vec4( -1+2.*x1/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 1.0, 1.0 ), vec4(color[0], color[1], color[2], color[3]) ,vec2(1,1)},
-        { vec4( -1+2.*x1/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 1.0, 0.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(1,0)}
+        { vec4(-1.+2.*x0/float(m_screenWidth), 1.-2.*y0/float(m_screenHeight), 0, 0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(u0,v0)},
+        { vec4(-1.+2.*x0/float(m_screenWidth),  1.-2.*y1/float(m_screenHeight), 0, 1 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(u0,v1)},
+        { vec4( -1.+2.*x1/float(m_screenWidth),  1.-2.*y1/float(m_screenHeight), 1, 1 ), vec4(color[0], color[1], color[2], color[3]) ,vec2(u1,v1)},
+        { vec4( -1.+2.*x1/float(m_screenWidth), 1.-2.*y0/float(m_screenHeight), 1, 0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(u1,v0)}
     };
     
 	   glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
@@ -244,14 +260,7 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
 
 
      glActiveTexture(GL_TEXTURE0);
-     glBindTexture(GL_TEXTURE_2D,m_texturehandle);
     
-    
-    err = glGetError();
-    assert(err==GL_NO_ERROR);
-    
-    
-    //   glBindTexture(GL_TEXTURE_2D,m_texturehandle);
     
     
     err = glGetError();

@@ -529,7 +529,7 @@ int main(int argc, char* argv[])
 
 		//sth_draw_text(stash, droidRegular,12.f, dx, dy-50, "How does this OpenGL True Type font look? ", &dx,width,height);
 		int spacing = 512;
-		for (int i=12;i<=110;i+=12)
+		for (int i=20;i<=110;i+=12)
 		{
 			char txt[512];
 			sprintf(txt,"%d. The quick brown fox jumper over the lazy dog. 1234567890",i);

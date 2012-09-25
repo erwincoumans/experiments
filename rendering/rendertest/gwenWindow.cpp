@@ -72,7 +72,7 @@ class MyProfileWindow : public Gwen::Controls::WindowControl
 {
 	
 	//		Gwen::Controls::TabControl*	m_TabControl;
-	Gwen::Controls::ListBox*	m_TextOutput;
+	//Gwen::Controls::ListBox*	m_TextOutput;
 	unsigned int				m_iFrames;
 	float						m_fLastSecond;
 
@@ -122,7 +122,7 @@ public:
 
 		SetSize( 450, 150 );
 		this->SetPos(10,40);
-
+		
 //		this->Dock( Gwen::Pos::Bottom);
 
 		
@@ -130,7 +130,7 @@ public:
 		{
 			m_ctrl = new Gwen::Controls::TreeControl( this );
 			m_node = m_ctrl->AddNode( L"Total Parent Time" );
-
+			
 		
 			//Gwen::Controls::TreeNode* pNode = ctrl->AddNode( L"Node Two" );
 			//pNode->AddNode( L"Node Two Inside" );
@@ -352,6 +352,7 @@ void	processProfileData(CProfileIterator*  iterator, bool idle)
 {
 	if (profWindow)
 	{
+		
 		profWindow->UpdateText(iterator, idle);
 	}
 
