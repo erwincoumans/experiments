@@ -41,6 +41,8 @@
 			"../LoadShader.h",
 			"../gwenWindow.cpp",
 			"../gwenWindow.h",
+			"../TwFonts.cpp",
+			"../TwFonts.h",
  			"../../OpenGLTrueTypeFont/fontstash.cpp",
  			"../../OpenGLTrueTypeFont/fontstash.h",
  			"../../OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",

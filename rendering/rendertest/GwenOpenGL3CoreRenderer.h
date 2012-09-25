@@ -7,7 +7,7 @@
 #include "GLPrimitiveRenderer.h"
 struct sth_stash;
 #include "../OpenGLTrueTypeFont/fontstash.h"
-#include "../OpenGLTrueTypeFont/TwFonts.h"
+#include "TwFonts.h"
 static float extraSpacing = 0.;//6f;
 
 static GLuint BindFont(const CTexFont *_Font)
@@ -54,7 +54,7 @@ public:
     m_screenWidth(screenWidth),
     m_screenHeight(screenHeight),
     m_retinaScale(retinaScale),
-	m_useTrueTypeFont(false)
+	m_useTrueTypeFont(true)
 	{
 		m_currentColor[0] = 1;
 		m_currentColor[1] = 1;
@@ -65,10 +65,10 @@ public:
 		
 		TwGenerateDefaultFonts();
 
-		//m_currentFont = g_DefaultNormalFont;
+		m_currentFont = g_DefaultNormalFont;
 		m_currentFont = g_DefaultNormalFontAA;
 		
-		//m_currentFont = g_DefaultLargeFont;
+		m_currentFont = g_DefaultLargeFont;
 		m_fontTextureId = BindFont(m_currentFont);
 		
 	}
