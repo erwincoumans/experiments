@@ -158,9 +158,9 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 				
 				GLuint* id = (GLuint*)texture->m_userData;
 
-				//glDeleteTextures(1, id);
+				glDeleteTextures(1, id);
 				//delete id;
-				//texture->m_userData = 0;
+				texture->m_userData = 0;
 			}
 
 		}
@@ -170,7 +170,7 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 
 void OpenGL2RenderCallback(sth_texture* texture)
 {
-
+	display2();
 		
 	GLuint* texId = (GLuint*) texture->m_userData;
 
@@ -195,8 +195,8 @@ void OpenGL2RenderCallback(sth_texture* texture)
 	}
 	err = glGetError();
     assert(err==GL_NO_ERROR);
-    // glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
-    // glBindVertexArray(s_vertexArrayObject);
+     glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
+     glBindVertexArray(s_vertexArrayObject);
     glBufferData(GL_ARRAY_BUFFER, texture->nverts * sizeof(Vertex), &texture->newverts[0].position.p[0], GL_DYNAMIC_DRAW);
     err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -212,7 +212,12 @@ void OpenGL2RenderCallback(sth_texture* texture)
     err = glGetError();
     assert(err==GL_NO_ERROR);
 		
+	 glBindVertexArray(0);
 
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	 glDisableVertexAttribArray(m_textureAttribute);
+	 glUseProgram(0);
 
 }
 

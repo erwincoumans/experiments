@@ -32,7 +32,7 @@ Dec 2011 - Added deferencing operator
 
 #include <assert.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 
 namespace boost

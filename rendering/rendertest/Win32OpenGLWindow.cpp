@@ -21,6 +21,13 @@ subject to the following restrictions:
 #include "LinearMath/btVector3.h"
 
 #include "Win32InternalWindowData.h"
+#include <stdio.h>
+
+static void printGLString(const char *name, GLenum s) {
+    const char *v = (const char *) glGetString(s);
+    printf("GL %s = %s\n", name, v);
+}
+
 
 
 void Win32OpenGLWindow::enableOpenGL()
@@ -49,6 +56,10 @@ void Win32OpenGLWindow::enableOpenGL()
 	m_data->m_hRC = wglCreateContext( m_data->m_hDC );
 	wglMakeCurrent( m_data->m_hDC, m_data->m_hRC );
 
+	 printGLString("Version", GL_VERSION);
+    printGLString("Vendor", GL_VENDOR);
+    printGLString("Renderer", GL_RENDERER);
+    printGLString("Extensions", GL_EXTENSIONS);
 
 }
 
@@ -102,11 +113,11 @@ void	Win32OpenGLWindow::startRendering()
 {
 		pumpMessage();
 
-//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);	//clear buffers
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);	//clear buffers
 		
 		//glCullFace(GL_BACK);
 		//glFrontFace(GL_CCW);
-	//	glEnable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST);
 
 
 
@@ -118,7 +129,7 @@ void	Win32OpenGLWindow::renderAllObjects()
 }
 
 void	Win32OpenGLWindow::endRendering()
-{
+ {
 	SwapBuffers( m_data->m_hDC );
 
 }

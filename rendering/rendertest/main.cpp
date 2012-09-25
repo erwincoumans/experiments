@@ -157,6 +157,7 @@ sth_stash* initFont()
 	{
 		
 		fontPath = fontPaths[i];
+		//sprintf(fullFontFileName,"%s%s",fontPath,"OpenSans.ttf");//"DroidSerif-Regular.ttf");
 		sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//OpenSans.ttf");//"DroidSerif-Regular.ttf");
 		fp = fopen(fullFontFileName, "rb");
 		if (fp)
@@ -268,12 +269,14 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
+	
 
 	btgWindowConstructionInfo wci;
 	wci.m_width = g_OpenGLWidth;
 	wci.m_height = g_OpenGLHeight;
 
 	window->createWindow(wci);
+	window->setWindowTitle("render test");
     float retinaScale = 1;
     
 #ifndef __APPLE__
@@ -309,7 +312,7 @@ int main(int argc, char* argv[])
     window->setWheelCallback(btDefaultWheelCallback);
 
 
-    GLPrimitiveRenderer prender(g_OpenGLWidth,g_OpenGLHeight);
+    GLPrimitiveRenderer* pprender = new GLPrimitiveRenderer(g_OpenGLWidth,g_OpenGLHeight);
    
    glUseProgram(0); 
 
@@ -370,14 +373,14 @@ int main(int argc, char* argv[])
 		render.RenderScene();
 		glFinish();
 		float col[4]={0,1,0,1};
-		prender.drawRect(10,50,120,60,col);
+	//	pprender->drawRect(10,50,120,60,col);
 //             glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 		//glEnable(GL_TEXTURE_2D);
     
             float x = 10;
             float y=220;
             float  dx=0;
-            
+            if (0)
             {
                 BT_PROFILE("font sth_draw_text");
                 
@@ -391,6 +394,7 @@ int main(int argc, char* argv[])
                 sth_end_draw(stash);
             }
     
+			if (1)
 		{
 			BT_PROFILE("gwen RenderCanvas");
 	
@@ -494,6 +498,7 @@ int main(int argc, char* argv[])
 
 	}
 
+	delete pprender;
 //	render.CleanupShaders();
 	window->closeWindow();
 	delete window;

@@ -327,10 +327,11 @@ int main(int argc, char* argv[])
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
 #endif
 	
-	int width = 512;
+	int width = 700;
 	int height= 512;
 
 	window->createWindow(btgWindowConstructionInfo(width,height));
+	window->setWindowTitle("font test");
 #ifndef __APPLE__
 	err = glewInit();
 #endif
@@ -396,6 +397,7 @@ int main(int argc, char* argv[])
     
     char fullFontFileName[1024];
     sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//cour.ttf");//times.ttf");//DroidSerif-Regular.ttf");
+	//sprintf(fullFontFileName,"%s%s",fontPath,"arial.ttf");//cour.ttf");//times.ttf");//DroidSerif-Regular.ttf");
     
 	fp = fopen(fullFontFileName, "rb");
 
@@ -524,6 +526,21 @@ int main(int argc, char* argv[])
 		dx = sx; dy = sy;
 		static int once=0;
 
+
+		//sth_draw_text(stash, droidRegular,12.f, dx, dy-50, "How does this OpenGL True Type font look? ", &dx,width,height);
+		int spacing = 512;
+		for (int i=12;i<=110;i+=12)
+		{
+			char txt[512];
+			sprintf(txt,"%d. The quick brown fox jumper over the lazy dog. 1234567890",i);
+				sth_draw_text(stash, droidRegular,i, 10, dy-spacing, txt, &dx,width,height);
+				spacing-=i;
+		}
+		
+		  err = glGetError();
+                btAssert(err==GL_NO_ERROR);
+
+		if (0)
 		for (int i=0;i<1;i++)
 		{
 			dx = sx;
@@ -533,8 +550,8 @@ int main(int argc, char* argv[])
 			    err = glGetError();
                 btAssert(err==GL_NO_ERROR);
 
-				sth_draw_text(stash, droidJapanese,16.f, dx, dy-36, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
-                              width,height);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
+				//sth_draw_text(stash, droidJapanese,16.f, dx, dy-36, (const char*) "\xE7\xA7\x81\xE3\x81\xAF\xE3\x82\xAC\xE3\x83\xA9\xE3\x82\xB9\xE3\x82\x92\xE9\xA3\x9F\xE3\x81\xB9\xE3\x82\x89\xE3\x82\x8C\xE3\x81\xBE\xE3\x81\x99\xE3\x80\x82",&dx,
+                //              width,height);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 //				sth_draw_text(stash, droidJapanese,32.f, dx, dy, (const char*) "私はガラスを食べられます。それは私を傷つけません。",&dx);//はabcdefghijlkmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=?/\][{}.,<>`~@#$%^", &dx);
 				
 				dx = sx;
@@ -543,11 +560,11 @@ int main(int argc, char* argv[])
                 btAssert(err==GL_NO_ERROR);
 				sth_flush_draw(stash);
 				dx=0;			
-				sth_draw_text(stash, droidRegular,14.f, dx, dy-80, "File Profile How does this OpenGL True Type font look? ", &dx,width,height);
+				sth_draw_text(stash, droidRegular,14.f, dx, dy-80, "How does this OpenGL True Type font look? ", &dx,width,height);
 				dx=0;
 				dy-=30;
 
-                sth_draw_text(stash, droidRegular,16.f, dx, dy-80, "Profile How does this OpenGL True Type font look? ", &dx,width,height);
+                //sth_draw_text(stash, droidRegular,16.f, dx, dy-80, "Profile How does this OpenGL True Type font look? ", &dx,width,height);
 				dx=0;
 				dy-=30;
 
@@ -630,7 +647,10 @@ int main(int argc, char* argv[])
 //				printf(".");
 			}
 		 }
-		
+
+		 err = glGetError();
+	    btAssert(err==GL_NO_ERROR);
+
 
 	}
 

@@ -19,7 +19,7 @@ subject to the following restrictions:
 #include <windows.h>
 #include <GL/gl.h>
 #include "LinearMath/btVector3.h"
-
+#include <wchar.h>
 static InternalData2* sData = 0;
 
 #include "Win32InternalWindowData.h"

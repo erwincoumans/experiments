@@ -32,7 +32,7 @@ public:
 		m_currentColor[2] = 1;
 		m_currentColor[3] = 1;
         
-        m_fontScaling = 16.f*m_retinaScale;
+        m_fontScaling = 15.f*m_retinaScale;
 	}
 
 	void resize(int width, int height)

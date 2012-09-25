@@ -36,7 +36,7 @@ static const char* fragmentShader= \
 "void main(void)\n"
 "{\n"
 "	vec4 texcolorred = texture(Diffuse,texuvV);\n"
-"//	vec4 texcolor = vec4(texcolorred.x,texcolorred.x,texcolorred.x,texcolorred.x);\n"
+"//	vec4 texcolor = vec4(texcolorred.x,texcolorred.x,texcolorred.x,1);\n"
 "	vec4 texcolor = vec4(1,1,1,texcolorred.x);\n"
 "\n"
 "    fragColour = colourV*texcolor;\n"
@@ -119,10 +119,10 @@ void GLPrimitiveRenderer::loadBufferData()
 {
     
     Vertex vertexData[4] = {
-        { vec4(-1, -1, 0.0, 1.0 ), vec4( 1.0, 0.0, 0.0, 1.0 ) ,vec2(0.0078125,0.015625)},
-        { vec4(-1,  1, 0.0, 1.0 ), vec4( 0.0, 1.0, 0.0, 1.0 ) ,vec2(0.101562,0.015625)},
-        { vec4( 1,  1, 0.0, 1.0 ), vec4( 0.0, 0.0, 1.0, 1.0 ) ,vec2(0.101562,0.105469)},
-        { vec4( 1, -1, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(0.0078125,0.105469)}
+        { vec4(-1, -1, 0.0, 1.0 ), vec4( 1.0, 0.0, 0.0, 1.0 ) ,vec2(0,0)},
+        { vec4(-1,  1, 0.0, 1.0 ), vec4( 0.0, 1.0, 0.0, 1.0 ) ,vec2(0,1)},
+        { vec4( 1,  1, 0.0, 1.0 ), vec4( 0.0, 0.0, 1.0, 1.0 ) ,vec2(1,1)},
+        { vec4( 1, -1, 0.0, 1.0 ), vec4( 1.0, 1.0, 1.0, 1.0 ) ,vec2(1,0)}
     };
     
         
@@ -169,13 +169,13 @@ void GLPrimitiveRenderer::loadBufferData()
         GLubyte*	pi=image+y*256*3;
         for(int x=0;x<256;++x)
         {
-          /*  if (x<2||y<2||x>253||y>253)
+            if (x<y)//x<2||y<2||x>253||y>253)
             {
-                pi[0]=0;
+                pi[0]=255;
                 pi[1]=0;
                 pi[2]=0;
             } else
-			*/
+			
             {
                 pi[0]=255;
                 pi[1]=255;
@@ -204,6 +204,9 @@ void GLPrimitiveRenderer::loadBufferData()
 
 GLPrimitiveRenderer::~GLPrimitiveRenderer()
 {
+	glBindTexture(GL_TEXTURE_2D,0);
+	glUseProgram(0);
+	 glBindTexture(GL_TEXTURE_2D,0);
     glDeleteProgram(m_shaderProg);
 }
 
@@ -230,10 +233,10 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
     
 
 	   Vertex vertexData[4] = {
-        { vec4(-1+2.*x0/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.0078125,0.015625)},
-        { vec4(-1+2.*x0/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.101562,0.015625)},
-        { vec4( -1+2.*x1/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4(color[0], color[1], color[2], color[3]) ,vec2(0.101562,0.105469)},
-        { vec4( -1+2.*x1/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0.0078125,0.105469)}
+        { vec4(-1+2.*x0/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 0.0, 0.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0,0)},
+        { vec4(-1+2.*x0/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 0.0, 1.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(0,1)},
+        { vec4( -1+2.*x1/float(m_screenWidth),  1-2.*y1/float(m_screenHeight), 1.0, 1.0 ), vec4(color[0], color[1], color[2], color[3]) ,vec2(1,1)},
+        { vec4( -1+2.*x1/float(m_screenWidth), 1-2.*y0/float(m_screenHeight), 1.0, 0.0 ), vec4( color[0], color[1], color[2], color[3] ) ,vec2(1,0)}
     };
     
 	   glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
@@ -288,6 +291,14 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     err = glGetError();
     assert(err==GL_NO_ERROR);
+	
+	
+    glBindVertexArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	 glDisableVertexAttribArray(m_textureAttribute);
+	 glUseProgram(0);
 }
 
 void GLPrimitiveRenderer::setScreenSize(int width, int height)
