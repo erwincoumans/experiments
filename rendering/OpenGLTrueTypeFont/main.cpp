@@ -319,19 +319,21 @@ int main(int argc, char* argv[])
 
 	printf("load_bulletfile=%s\n",fileName);
 
-	
+	int width = 700;
+	int height= 512;
 	printf("\n");
 #ifdef __APPLE__
 	MacOpenGLWindow* window = new MacOpenGLWindow();
+	window->init(width,height);
 #else
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-#endif
-	
-	int width = 700;
-	int height= 512;
-
 	window->createWindow(btgWindowConstructionInfo(width,height));
 	window->setWindowTitle("font test");
+
+#endif
+	
+	
+
 #ifndef __APPLE__
 	err = glewInit();
 #endif
@@ -660,7 +662,7 @@ int main(int argc, char* argv[])
 #endif
 
 //	render.CleanupShaders();
-	window->closeWindow();
+	window->exit();
 	delete window;
 	
 	return 0;

@@ -54,8 +54,13 @@ public:
     m_screenWidth(screenWidth),
     m_screenHeight(screenHeight),
     m_retinaScale(retinaScale),
-	m_useTrueTypeFont(true)
+	m_useTrueTypeFont(false)
 	{
+		///only enable true type fonts on Macbook Retina, it looks gorgeous
+		if (retinaScale==2.0f)
+		{
+			m_useTrueTypeFont = true;
+		}
 		m_currentColor[0] = 1;
 		m_currentColor[1] = 1;
 		m_currentColor[2] = 1;
@@ -65,9 +70,9 @@ public:
 		
 		TwGenerateDefaultFonts();
 
-		m_currentFont = g_DefaultNormalFont;
-		m_currentFont = g_DefaultNormalFontAA;
-		
+//		m_currentFont = g_DefaultNormalFont;
+//		m_currentFont = g_DefaultNormalFontAA;
+
 		m_currentFont = g_DefaultLargeFont;
 		m_fontTextureId = BindFont(m_currentFont);
 		
@@ -158,11 +163,13 @@ public:
         
 		if (m_useTrueTypeFont)
 		{
+			
 			Translate(r);
 			sth_draw_text(m_font,
                       1,m_fontScaling,
                       r.x,r.y,
                       unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly,m_retinaScale);
+			 
 		} else
 		{
 			//float width = 0.f;
@@ -189,6 +196,7 @@ public:
 				width += r.w;
 				r.x = width;
 				pos++;
+				
 			}
 			glBindTexture(GL_TEXTURE_2D,0);
 		}
@@ -215,7 +223,7 @@ public:
 		
 			Gwen::Point pt;
 			pt.x = dx*Scale();
-			pt.y = m_fontScaling*Scale();//*0.8f;
+			pt.y = m_fontScaling*Scale()+8;//*0.8f;
 			return pt;
 		}
 		else

@@ -35,6 +35,7 @@ void Canvas::RenderCanvas()
 	Gwen::Renderer::Base* render = m_Skin->GetRender();
 	render->Begin();
 
+	
 		RecurseLayout( m_Skin );
 
 		render->SetClipRegion( GetBounds() );

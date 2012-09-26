@@ -406,8 +406,7 @@ void MacOpenGLWindow::startRendering()
     {
         [pool release];
         pool = [[NSAutoreleasePool alloc] init];
-        event =
-        [m_internalData->m_myApp
+        event =        [m_internalData->m_myApp
          nextEventMatchingMask:NSAnyEventMask
          untilDate:[NSDate distantPast]
          inMode:NSDefaultRunLoopMode

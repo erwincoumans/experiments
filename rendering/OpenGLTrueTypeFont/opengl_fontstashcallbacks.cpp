@@ -90,6 +90,11 @@ void display2() {
 
 void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight)
 {
+	GLint err;
+    
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+
 
 	if (glyph)
 	{
@@ -98,6 +103,8 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 		
 		glBindTexture(GL_TEXTURE_2D, *gltexture);
 		glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, textureWidth, textureHeight, 0, GL_RED, GL_UNSIGNED_BYTE, texture->m_texels);
 	
@@ -125,6 +132,8 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, textureWidth, textureHeight, 0, GL_RED, GL_UNSIGNED_BYTE, texture->m_texels);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
 
 			////////////////////////////
 			//create the other data
@@ -172,6 +181,7 @@ void OpenGL2RenderCallback(sth_texture* texture)
 {
 	display2();
 		
+
 	GLuint* texId = (GLuint*) texture->m_userData;
 
     GLint err;
@@ -216,7 +226,7 @@ void OpenGL2RenderCallback(sth_texture* texture)
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	 glDisableVertexAttribArray(m_textureAttribute);
+//	 glDisableVertexAttribArray(m_textureAttribute);
 	 glUseProgram(0);
 
 }
