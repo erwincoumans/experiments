@@ -662,7 +662,11 @@ int main(int argc, char* argv[])
 #endif
 
 //	render.CleanupShaders();
+#ifdef _WIN32
+	window->closeWindow();
+#else
 	window->exit();
+#endif
 	delete window;
 	
 	return 0;

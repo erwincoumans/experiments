@@ -70,10 +70,10 @@ public:
 		
 		TwGenerateDefaultFonts();
 
-//		m_currentFont = g_DefaultNormalFont;
-//		m_currentFont = g_DefaultNormalFontAA;
+		m_currentFont = g_DefaultNormalFont;
+		//m_currentFont = g_DefaultNormalFontAA;
 
-		m_currentFont = g_DefaultLargeFont;
+		//m_currentFont = g_DefaultLargeFont;
 		m_fontTextureId = BindFont(m_currentFont);
 		
 	}
