@@ -178,10 +178,16 @@ public:
 			double fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
 			
 			Gwen::String name(profileIterator->Get_Current_Name());
+#ifdef _WIN32
 			Gwen::UnicodeString uname = Gwen::Utility::StringToUnicode(name);
 
 			txt = Gwen::Utility::Format(L"%s (%.2f %%) :: %.3f ms / frame (%d calls)",uname.c_str(), fraction,(current_total_time / (double)frames_since_reset),profileIterator->Get_Current_Total_Calls());
 			
+#else
+			txt = Gwen::Utility::Format(L"%s (%.2f %%) :: %.3f ms / frame (%d calls)",name.c_str(), fraction,(current_total_time / (double)frames_since_reset),profileIterator->Get_Current_Total_Calls());
+			
+#endif
+
 			Gwen::Controls::TreeNode* childNode = (Gwen::Controls::TreeNode*)profileIterator->Get_Current_UserPointer();
 			if (!childNode)
 			{
@@ -248,8 +254,15 @@ public:
 
 		double accumulated_time = dumpRecursive(profileIterator,m_node);
 
-		Gwen::UnicodeString txt = Gwen::Utility::Format( L"Profiling: %s total time: %.3f ms, unaccounted %.3f %% :: %.3f ms", profileIterator->Get_Current_Parent_Name(), parent_time ,
+		const char* name = profileIterator->Get_Current_Parent_Name();
+#ifdef _WIN32
+		Gwen::UnicodeString uname = Gwen::Utility::StringToUnicode(name);
+		Gwen::UnicodeString txt = Gwen::Utility::Format( L"Profiling: %s total time: %.3f ms, unaccounted %.3f %% :: %.3f ms", uname.c_str(), parent_time ,
 			parent_time > SIMD_EPSILON ? ((parent_time - accumulated_time) / parent_time) * 100 : 0.f, parent_time - accumulated_time);
+#else
+		Gwen::UnicodeString txt = Gwen::Utility::Format( L"Profiling: %s total time: %.3f ms, unaccounted %.3f %% :: %.3f ms", name, parent_time ,
+			parent_time > SIMD_EPSILON ? ((parent_time - accumulated_time) / parent_time) * 100 : 0.f, parent_time - accumulated_time);
+#endif
 		//sprintf(blockTime,"--- Profiling: %s (total running time: %.3f ms) ---",	profileIterator->Get_Current_Parent_Name(), parent_time );
 		//displayProfileString(xOffset,yStart,blockTime);
 		m_node->SetText(txt);
