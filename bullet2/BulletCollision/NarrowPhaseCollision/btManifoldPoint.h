@@ -44,9 +44,9 @@ class btManifoldPoint
 		public:
 			btManifoldPoint()
 				:m_userPersistentData(0),
-				m_appliedImpulse(0.f),
 				m_lateralFrictionInitialized(false),
-				m_appliedImpulseLateral1(0.f),
+                m_appliedImpulse(0.f),
+                m_appliedImpulseLateral1(0.f),
 				m_appliedImpulseLateral2(0.f),
 				m_contactMotion1(0.f),
 				m_contactMotion2(0.f),
@@ -64,11 +64,12 @@ class btManifoldPoint
 					m_normalWorldOnB( normal ), 
 					m_distance1( distance ),
 					m_combinedFriction(btScalar(0.)),
+					m_combinedRollingFriction(btScalar(0.)),
 					m_combinedRestitution(btScalar(0.)),
 					m_userPersistentData(0),
-					m_appliedImpulse(0.f),
 					m_lateralFrictionInitialized(false),
-					m_appliedImpulseLateral1(0.f),
+                    m_appliedImpulse(0.f),
+                    m_appliedImpulseLateral1(0.f),
 					m_appliedImpulseLateral2(0.f),
 					m_contactMotion1(0.f),
 					m_contactMotion2(0.f),
@@ -90,6 +91,7 @@ class btManifoldPoint
 		
 			btScalar	m_distance1;
 			btScalar	m_combinedFriction;
+			btScalar	m_combinedRollingFriction;
 			btScalar	m_combinedRestitution;
 
 			//BP mod, store contact triangles.

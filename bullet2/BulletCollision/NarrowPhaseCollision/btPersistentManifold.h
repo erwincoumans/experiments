@@ -107,6 +107,7 @@ public:
 #endif //
 	
 	SIMD_FORCE_INLINE int	getNumContacts() const { return m_cachedPoints;}
+	/// the setNumContacts API is usually not used, except when you gather/fill all contacts manually
 	void setNumContacts(int cachedPoints)
 	{
 		m_cachedPoints = cachedPoints;
@@ -148,7 +149,7 @@ public:
 
 	int getCacheEntry(const btManifoldPoint& newPoint) const;
 
-	int addManifoldPoint( const btManifoldPoint& newPoint);
+	int addManifoldPoint( const btManifoldPoint& newPoint, bool isPredictive=false);
 
 	void removeContactPoint (int index)
 	{

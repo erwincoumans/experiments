@@ -40,7 +40,11 @@ extern bool gDisableDeactivation;
 
 enum	btRigidBodyFlags
 {
-	BT_DISABLE_WORLD_GRAVITY = 1
+	BT_DISABLE_WORLD_GRAVITY = 1,
+	///The BT_ENABLE_GYROPSCOPIC_FORCE can easily introduce instability
+	///So generally it is best to not enable it. 
+	///If really needed, run at a high frequency like 1000 Hertz:	///See Demos/GyroscopicDemo for an example use
+	BT_ENABLE_GYROPSCOPIC_FORCE = 2
 };
 
 
@@ -125,6 +129,9 @@ public:
 
 		///best simulation results when friction is non-zero
 		btScalar			m_friction;
+		///the m_rollingFriction prevents rounded shapes, such as spheres, cylinders and capsules from rolling forever.
+		///See Bullet/Demos/RollingFrictionDemo for usage
+		btScalar			m_rollingFriction;
 		///best simulation results using zero restitution.
 		btScalar			m_restitution;
 
@@ -147,6 +154,7 @@ public:
 			m_linearDamping(btScalar(0.)),
 			m_angularDamping(btScalar(0.)),
 			m_friction(btScalar(0.5)),
+			m_rollingFriction(btScalar(0)),
 			m_restitution(btScalar(0.)),
 			m_linearSleepingThreshold(btScalar(0.8)),
 			m_angularSleepingThreshold(btScalar(1.f)),
@@ -519,8 +527,7 @@ public:
 		return m_rigidbodyFlags;
 	}
 
-	
-	
+	btVector3 computeGyroscopicForce(btScalar maxGyroscopicForce) const;
 
 	///////////////////////////////////////////////
 
