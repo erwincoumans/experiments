@@ -223,7 +223,10 @@ public:
 		
 			Gwen::Point pt;
 			pt.x = dx*Scale();
-			pt.y = m_fontScaling*Scale()+8;//*0.8f;
+			if (m_retinaScale==2.0f)
+				pt.y = m_fontScaling*Scale()*+8;
+			else
+				pt.y = m_fontScaling*Scale()*+1;
 			return pt;
 		}
 		else
