@@ -23,7 +23,7 @@ subject to the following restrictions:
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 
 
-struct btFace
+struct btMyFace
 {
 	btAlignedObjectArray<int>	m_indices;
 	btScalar	m_plane[4];
@@ -41,7 +41,7 @@ ATTRIBUTE_ALIGNED16(class) btConvexUtility
 	btScalar		m_radius;
 	
 	btAlignedObjectArray<btVector3>	m_vertices;
-	btAlignedObjectArray<btFace>	m_faces;
+	btAlignedObjectArray<btMyFace>	m_faces;
 	btAlignedObjectArray<btVector3> m_uniqueEdges;
 
 		
@@ -50,7 +50,7 @@ ATTRIBUTE_ALIGNED16(class) btConvexUtility
 	}
 	virtual ~btConvexUtility();
 
-	bool	initializePolyhedralFeatures(const btVector3* orgVertices, int numVertices, bool mergeCoplanarTriangles);
+	bool	initializePolyhedralFeatures(const btVector3* orgVertices, int numVertices, bool mergeCoplanarTriangles=true);
 		
 	void	initialize();
 	bool testContainment() const;

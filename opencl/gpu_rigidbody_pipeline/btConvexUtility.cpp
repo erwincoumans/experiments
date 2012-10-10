@@ -42,7 +42,7 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 	btConvexHullComputer* convexUtil = &conv;
 
 	
-	btAlignedObjectArray<btFace>	tmpFaces;
+	btAlignedObjectArray<btMyFace>	tmpFaces;
 	tmpFaces.resize(numFaces);
 
 	int numVertices = convexUtil->vertices.size();
@@ -124,14 +124,14 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 		int refFace = todoFaces[todoFaces.size()-1];
 
 		coplanarFaceGroup.push_back(refFace);
-		btFace& faceA = tmpFaces[refFace];
+		btMyFace& faceA = tmpFaces[refFace];
 		todoFaces.pop_back();
 
 		btVector3 faceNormalA(faceA.m_plane[0],faceA.m_plane[1],faceA.m_plane[2]);
 		for (int j=todoFaces.size()-1;j>=0;j--)
 		{
 			int i = todoFaces[j];
-			btFace& faceB = tmpFaces[i];
+			btMyFace& faceB = tmpFaces[i];
 			btVector3 faceNormalB(faceB.m_plane[0],faceB.m_plane[1],faceB.m_plane[2]);
 			if (faceNormalA.dot(faceNormalB)>faceWeldThreshold)
 			{
@@ -153,7 +153,7 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 			{
 //				m_polyhedron->m_faces.push_back(tmpFaces[coplanarFaceGroup[i]]);
 
-				btFace& face = tmpFaces[coplanarFaceGroup[i]];
+				btMyFace& face = tmpFaces[coplanarFaceGroup[i]];
 				btVector3 faceNormal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
 				averageFaceNormal+=faceNormal;
 				for (int f=0;f<face.m_indices.size();f++)
@@ -179,7 +179,7 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 
 			
 
-			btFace combinedFace;
+			btMyFace combinedFace;
 			for (int i=0;i<4;i++)
 				combinedFace.m_plane[i] = tmpFaces[coplanarFaceGroup[0]].m_plane[i];
 
@@ -212,7 +212,7 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 				// this vertex is rejected -- is anybody else using this vertex?
 				for(int j = 0; j < tmpFaces.size(); j++) {
 					
-					btFace& face = tmpFaces[j];
+					btMyFace& face = tmpFaces[j];
 					// is this a face of the current coplanar group?
 					bool is_in_current_group = false;
 					for(int k = 0; k < coplanarFaceGroup.size(); k++) {
@@ -249,7 +249,7 @@ bool	btConvexUtility::initializePolyhedralFeatures(const btVector3* orgVertices,
 		{
 			for (int i=0;i<coplanarFaceGroup.size();i++)
 			{
-				btFace face = tmpFaces[coplanarFaceGroup[i]];
+				btMyFace face = tmpFaces[coplanarFaceGroup[i]];
 				m_faces.push_back(face);
 			}
 
