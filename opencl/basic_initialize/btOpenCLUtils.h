@@ -30,7 +30,7 @@ extern "C" {
 
 /// CL Context optionally takes a GL context. This is a generic type because we don't really want this code
 /// to have to understand GL types. It is a HGLRC in _WIN32 or a GLXContext otherwise.
-cl_context 	btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx , void* pGLDC , int preferredDeviceIndex , int preferredPlatformIndex);
+cl_context 	btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx , void* pGLDC , int preferredDeviceIndex , int preferredPlatformIndex, cl_platform_id* platformId);
 	
 int btOpenCLUtils_getNumDevices(cl_context cxMainContext);
 
@@ -114,9 +114,9 @@ struct btOpenCLUtils
 {
 	/// CL Context optionally takes a GL context. This is a generic type because we don't really want this code
 	/// to have to understand GL types. It is a HGLRC in _WIN32 or a GLXContext otherwise.
-	static inline cl_context 	createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx = 0, void* pGLDC = 0, int preferredDeviceIndex = -1, int preferredPlatformIndex= - 1)
+	static inline cl_context 	createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLCtx = 0, void* pGLDC = 0, int preferredDeviceIndex = -1, int preferredPlatformIndex= - 1, cl_platform_id* platformId=0)
 	{
-		return btOpenCLUtils_createContextFromType(deviceType, pErrNum, pGLCtx , pGLDC , preferredDeviceIndex, preferredPlatformIndex);
+		return btOpenCLUtils_createContextFromType(deviceType, pErrNum, pGLCtx , pGLDC , preferredDeviceIndex, preferredPlatformIndex, platformId);
 	}
 	
 	static inline int getNumDevices(cl_context cxMainContext)
