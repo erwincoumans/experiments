@@ -22,6 +22,7 @@ subject to the following restrictions:
 #include "LinearMath/btHashMap.h"
 
 btConvexPolyhedron::btConvexPolyhedron()
+	:m_gpuCollidableIndex(-1)
 {
 
 }

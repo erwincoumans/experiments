@@ -96,13 +96,17 @@ void	BasicDemo::initPhysics()
 
 
 	///collision configuration contains default setup for memory, collision setup
-	m_collisionConfiguration = new btDefaultCollisionConfiguration();
+	btDefaultCollisionConstructionInfo dcc;
+	dcc.m_defaultMaxPersistentManifoldPoolSize =  512*1024;
+	dcc.m_defaultMaxCollisionAlgorithmPoolSize = 512*1024;
+
+	m_collisionConfiguration = new btDefaultCollisionConfiguration(dcc);
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
 
-//	m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
+//m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 	m_dispatcher = new	btGpuDispatcher(m_collisionConfiguration,m_ctx,m_device,m_queue);
 	m_dispatcher->registerCollisionCreateFunc(BOX_SHAPE_PROXYTYPE,BOX_SHAPE_PROXYTYPE,m_collisionConfiguration->getCollisionAlgorithmCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE));
-	
+	m_dispatcher->setDispatcherFlags(m_dispatcher->getDispatcherFlags() | btCollisionDispatcher::CD_DISABLE_CONTACTPOOL_DYNAMIC_ALLOCATION);
 	
 	m_broadphase = new btDbvtBroadphase();
 

@@ -1304,6 +1304,8 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 			btAlignedObjectArray<Contact4> contactCpu;
 			contactOut->copyToHost(contactCpu);
 
+			int curNumContacts = nContacts;
+
 			computeConcaveConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
 				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
 				hostConvexData, hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,
@@ -1312,6 +1314,11 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				maxTriConvexPairCapacity,
 				hostTriangleConvexPairs,
 				numTriConvexPairsOut);
+			
+			if (nContacts!=curNumContacts)
+			{
+				contactCpu[curNumContacts].m_batchIdx = i;
+			}
 			
 			contactOut->copyFromHost(contactCpu);
 
@@ -1334,11 +1341,18 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				btAlignedObjectArray<Contact4> contactCpu;
 				contactOut->copyToHost(contactCpu);
 
+				int curNumContacts = nContacts;
+
 				computeConvexConvexContactsGPUSATSingle(bodyIndexB, bodyIndexA,
-				collidableIndexB,collidableIndexA,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
-				hostConvexData,hostConvexData,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					collidableIndexB,collidableIndexA,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostConvexData,hostConvexData,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+
+				if (curNumContacts != nContacts)
+				{
+					contactCpu[curNumContacts].m_batchIdx = i;
+				}
 
 				contactOut->copyFromHost(contactCpu);
 			} else
@@ -1346,11 +1360,18 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				btAlignedObjectArray<Contact4> contactCpu;
 				contactOut->copyToHost(contactCpu);
 
+				int curNumContacts = nContacts;
+
 				computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
-				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
-				hostConvexData,hostConvexData,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostConvexData,hostConvexData,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+
+				if (curNumContacts != nContacts)
+				{
+					contactCpu[curNumContacts].m_batchIdx = i;
+				}
 
 				contactOut->copyFromHost(contactCpu);
 
@@ -2159,6 +2180,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			clFinish(m_queue);
 		
 			nContacts = m_totalContactsOut.at(0);
+			contactOut->resize(nContacts);
 #endif
             
 #endif//DEBUG_CPU_CLIP

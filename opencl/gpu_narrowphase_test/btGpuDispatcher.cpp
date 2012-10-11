@@ -4,10 +4,11 @@
 #include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/BroadphaseCollision/btCollisionAlgorithm.h"
 #include "LinearMath/btQuickprof.h"
-#include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
+
 
 btGpuDispatcher::btGpuDispatcher(btCollisionConfiguration* collisionConfiguration, cl_context ctx,cl_device_id device, cl_command_queue  q)
-	:btCollisionDispatcher(collisionConfiguration)
+	:btCollisionDispatcher(collisionConfiguration),
+	m_ctx(ctx), m_device(device), m_queue(q)
 {
 	m_satCollision = new GpuSatCollision(ctx,device,q);
 }
@@ -146,159 +147,294 @@ struct PersistentManifoldCachingAlgorithm : public btCollisionAlgorithm
 
 void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCache,const btDispatcherInfo& dispatchInfo,btDispatcher* dispatcher)
 {
+	BT_PROFILE("btGpuDispatcher::dispatchAllCollisionPairs");
+
 	int numBulletPairs = pairCache->getNumOverlappingPairs();
+	if (!numBulletPairs)
+		return;
+
 	btBroadphasePair* bulletPairs = pairCache->getOverlappingPairArrayPtr();
+	btAlignedObjectArray<int> pairMapping;
+	//leave this empty, it is for unused heightfields
+	btAlignedObjectArray<ChNarrowphase::ShapeData> shapeBuf;
+	
+	btAlignedObjectArray<int2> hostPairs;
+	hostPairs.reserve(numBulletPairs);
 
-	for (int i=0;i<numBulletPairs;i++)
+	btAlignedObjectArray<RigidBodyBase::Body> bodyBuf;
+	bodyBuf.reserve(8192);
+
+	btAlignedObjectArray<Contact4> contactOut;
+	int numContacts=0;
+	ChNarrowphase::Config cfg;
+
 	{
-		btBroadphasePair& collisionPair = bulletPairs[i];
-		btCollisionObject* colObj0 = (btCollisionObject*)collisionPair.m_pProxy0->m_clientObject;
-		btCollisionObject* colObj1 = (btCollisionObject*)collisionPair.m_pProxy1->m_clientObject;
-
-		//can this 'needsCollision' be computed on GPU?
-		if (needsCollision(colObj0,colObj1))
+		BT_PROFILE("process numBulletPairs");
+		for (int i=0;i<numBulletPairs;i++)
 		{
-			btCollisionObjectWrapper obj0Wrap(0,colObj0->getCollisionShape(),colObj0,colObj0->getWorldTransform());
-			btCollisionObjectWrapper obj1Wrap(0,colObj1->getCollisionShape(),colObj1,colObj1->getWorldTransform());
+			btBroadphasePair& collisionPair = bulletPairs[i];
+			btCollisionObject* colObj0 = (btCollisionObject*)collisionPair.m_pProxy0->m_clientObject;
+			btCollisionObject* colObj1 = (btCollisionObject*)collisionPair.m_pProxy1->m_clientObject;
 
-
-			//dispatcher will keep algorithms persistent in the collision pair
-			if (!collisionPair.m_algorithm)
+			//can this 'needsCollision' be computed on GPU?
+			bool needs =false;
 			{
-				//create some special GPU collision algorithm with contact points?
-				int sz = sizeof(PersistentManifoldCachingAlgorithm);
-				void* ptr = dispatcher->allocateCollisionAlgorithm(sz);
-				PersistentManifoldCachingAlgorithm* m = new(ptr) PersistentManifoldCachingAlgorithm(dispatcher);
-				collisionPair.m_algorithm = m;
-				m->m_manifoldPtr = dispatcher->getNewManifold(colObj0,colObj1);
-
+//				BT_PROFILE("needsCollision");
+				needs = needsCollision(colObj0,colObj1);
 			}
-
-			if (collisionPair.m_algorithm)
+			if (needs)
 			{
-				PersistentManifoldCachingAlgorithm* mf = (PersistentManifoldCachingAlgorithm*) collisionPair.m_algorithm;
-
-				btManifoldResult contactPointResult(&obj0Wrap,&obj1Wrap);
-				contactPointResult.setPersistentManifold(mf->m_manifoldPtr);
-				mf->m_manifoldPtr->refreshContactPoints(colObj0->getWorldTransform(),colObj1->getWorldTransform());
-
-				//idea is to convert data to GPU friendly
-
-				int bodyIndexA=0;
-				int bodyIndexB=1;
-				int collidableIndexA=0;
-				int collidableIndexB=1;
-	
-				btAlignedObjectArray<RigidBodyBase::Body> bodyBuf;
-
+	//			BT_PROFILE("needs");
+		
+				//dispatcher will keep algorithms persistent in the collision pair
+				if (!collisionPair.m_algorithm)
 				{
-					RigidBodyBase::Body body0 = createBodyFromBulletCollisionObject(colObj0);
-					body0.m_collidableIdx = 0;
-					bodyBuf.push_back(body0);
-				}
-				{
-					RigidBodyBase::Body body1 = createBodyFromBulletCollisionObject(colObj1);
-					body1.m_collidableIdx = 1;
-					bodyBuf.push_back(body1);
+		//			BT_PROFILE("PersistentManifoldCachingAlgorithm");
+					//create some special GPU collision algorithm with contact points?
+					int sz = sizeof(PersistentManifoldCachingAlgorithm);
+					void* ptr = dispatcher->allocateCollisionAlgorithm(sz);
+					PersistentManifoldCachingAlgorithm* m = new(ptr) PersistentManifoldCachingAlgorithm(dispatcher);
+					collisionPair.m_algorithm = m;
+					m->m_manifoldPtr = dispatcher->getNewManifold(colObj0,colObj1);
+
 				}
 
-				btAlignedObjectArray<btCollidable> hostCollidables;
+				if (collisionPair.m_algorithm)
 				{
-					btCollidable& col = hostCollidables.expand();
-					col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
-					col.m_shapeIndex = 0;
-				}
+					PersistentManifoldCachingAlgorithm* mf = (PersistentManifoldCachingAlgorithm*) collisionPair.m_algorithm;
 
-				{
-					btCollidable& col = hostCollidables.expand();
-					col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
-					col.m_shapeIndex = 1;
-				}
-
-				//leave this empty, it is for unused heightfields
-				btAlignedObjectArray<ChNarrowphase::ShapeData> shapeBuf;
-				
-				btAlignedObjectArray<Contact4> contactOut;
-				int numContacts=0;
-				ChNarrowphase::Config cfg;
-
-				btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
-				
-
-				btAlignedObjectArray<btVector3> vertices;
-				btAlignedObjectArray<btVector3> uniqueEdges;
-				btAlignedObjectArray<btGpuFace> faces;
-				btAlignedObjectArray<int> indices;
-
-				if (colObj0->getCollisionShape()->isPolyhedral())
-				{
-					btPolyhedralConvexShape* convexHull0=0;
-					convexHull0 = (btPolyhedralConvexShape*)colObj0->getCollisionShape();
-					ConvexPolyhedronCL& convex0 = hostConvexData.expand();
-					BT_PROFILE("serializeConvexHull");
-					serializeConvexHull(convexHull0, convex0,vertices,uniqueEdges,faces,indices);
-				}
-
-
-				if (colObj1->getCollisionShape()->isPolyhedral())
-				{
-					btPolyhedralConvexShape* convexHull1=0;
-					convexHull1 = (btPolyhedralConvexShape*)colObj1->getCollisionShape();
-					ConvexPolyhedronCL& convex1 = hostConvexData.expand();
-					BT_PROFILE("serializeConvexHull");
-
-					serializeConvexHull(convexHull1, convex1,vertices,uniqueEdges,faces,indices);
-				}
-
-
-				
-
-//				btAlignedObjectArray<btYetAnotherAabb> clAabbs;
-//				int numObjects=2;
-	//			int maxTriConvexPairCapacity=0;
-		//		btAlignedObjectArray<int4> triangleConvexPairs;
-			//	int numTriConvexPairsOut=0;
-	
-				//perform GPU narrowphase
-
-				//copy contacts back to CPU and convert to btPersistentManifold
-				
-				{
-					BT_PROFILE("computeConvexConvexContactsGPUSATSingle");
-
-					m_satCollision->computeConvexConvexContactsGPUSATSingle(
-							bodyIndexA,bodyIndexB,
-							collidableIndexA,collidableIndexB,
-							&bodyBuf,&shapeBuf,
-							&contactOut,numContacts,cfg,
-							hostConvexData,hostConvexData,
-							vertices,uniqueEdges,faces,indices,
-							vertices,uniqueEdges,faces,indices,
-							hostCollidables,hostCollidables);
-					
-
-					for (int i=0;i<numContacts;i++)
 					{
-						btVector3 normalOnBInWorld(-contactOut[i].m_worldNormal.x,-contactOut[i].m_worldNormal.y,-contactOut[i].m_worldNormal.z);
-						for (int p=0;p<contactOut[i].getNPoints();p++)
-						{
-							btScalar depth = contactOut[i].getPenetration(p);
-							
-							float4 pt = contactOut[i].m_worldPos[p];
-							btVector3 pointInWorld(pt.x,pt.y,pt.z);
-							
-							contactPointResult.addContactPoint(normalOnBInWorld,pointInWorld,depth);
-						}
+						//BT_PROFILE("refreshContactPoints");
+						mf->m_manifoldPtr->refreshContactPoints(colObj0->getWorldTransform(),colObj1->getWorldTransform());
+					}
+
+					//idea is to convert data to GPU friendly
+
+					int bodyIndexA=-1;
+					int bodyIndexB=-1;
+	
+
+					{
+				//		BT_PROFILE("bodyBuf.push_bacj A");
+						RigidBodyBase::Body body0 = createBodyFromBulletCollisionObject(colObj0);
+						body0.m_collidableIdx = -1;
+						bodyIndexA = bodyBuf.size();
+						bodyBuf.push_back(body0);
 
 					}
-				}		
-//				printf("numContacts = %d\n", numContacts);
+					{
+					//	BT_PROFILE("bodyBuf.push_back B");
+
+						RigidBodyBase::Body body1 = createBodyFromBulletCollisionObject(colObj1);
+						body1.m_collidableIdx = -1;
+						bodyIndexB= bodyBuf.size();
+						bodyBuf.push_back(body1);
+					}
+
+				
+
+				
+				
+
+
+
+					if (colObj0->getCollisionShape()->isPolyhedral())
+					{
+
+						btPolyhedralConvexShape* convexHull0 = (btPolyhedralConvexShape*)colObj0->getCollisionShape();
+						const btConvexPolyhedron* c = convexHull0->getConvexPolyhedron();
+
+						if (c->m_gpuCollidableIndex<0)
+						{
+							BT_PROFILE("serializeConvexHull A");
+
+							c->m_gpuCollidableIndex = m_hostCollidables.size();
+							btCollidable& col = m_hostCollidables.expand();
+							col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
+							col.m_shapeIndex = m_hostConvexData.size();
+							ConvexPolyhedronCL& convex0 = m_hostConvexData.expand();
+						//	BT_PROFILE("serializeConvexHull");
+							serializeConvexHull(convexHull0, convex0,m_vertices,m_uniqueEdges,m_faces,m_indices);
+						}
+						bodyBuf[bodyIndexA].m_collidableIdx = c->m_gpuCollidableIndex;
+					}
+
+
+					if (colObj1->getCollisionShape()->isPolyhedral())
+					{
+
+						btPolyhedralConvexShape* convexHull1 = (btPolyhedralConvexShape*)colObj1->getCollisionShape();
+						const btConvexPolyhedron* c = convexHull1->getConvexPolyhedron();
+
+						if (c->m_gpuCollidableIndex<0)
+						{
+							BT_PROFILE("serializeConvexHull B");
+
+							c->m_gpuCollidableIndex = m_hostCollidables.size();
+							btCollidable& col = m_hostCollidables.expand();
+							col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
+							col.m_shapeIndex = m_hostConvexData.size();
+							ConvexPolyhedronCL& convex1 = m_hostConvexData.expand();
+							//BT_PROFILE("serializeConvexHull");
+							serializeConvexHull(convexHull1, convex1,m_vertices,m_uniqueEdges,m_faces,m_indices);
+						}
+						bodyBuf[bodyIndexB].m_collidableIdx = c->m_gpuCollidableIndex;
+					}
+
+					{
+					//	BT_PROFILE("hostPairs.push_back");
+						int2 pair;
+						pair.x = bodyIndexA;
+						pair.y = bodyIndexB;
+						hostPairs.push_back(pair);
+						pairMapping.push_back(i);
+
+	/*					BT_PROFILE("computeConvexConvexContactsGPUSATSingle");
+
+						m_satCollision->computeConvexConvexContactsGPUSATSingle(
+								bodyIndexA,bodyIndexB,
+								bodyBuf[bodyIndexA].m_collidableIdx,bodyBuf[bodyIndexB].m_collidableIdx,
+								&bodyBuf,&shapeBuf,
+								&contactOut,numContacts,cfg,
+								m_hostConvexData,m_hostConvexData,
+								m_vertices,m_uniqueEdges,m_faces,m_indices,
+								m_vertices,m_uniqueEdges,m_faces,m_indices,
+								m_hostCollidables,m_hostCollidables);
+								*/
+
+					}
+				
+	//				printf("numContacts = %d\n", numContacts);
+					}
 				}
-			}
-	//m_satCollision->computeConvexConvexContactsGPUSAT_sequential(pairs,numPairs,bodyBuf,shapeBuf,contactOut,nContacts,cfg,hostConvexData,vertices,uniqueEdges,faces,indices,gpuCollidables,clAabbs,numObjects,maxTriConvexPairCapacity,tripairs,numTriConvexPairsOut);
+		}
 	}
 
+	bool sequential=false;
+	if (sequential)
+	{
+	for (int i=0;i<hostPairs.size();i++)
+	{
+		int bodyIndexA = hostPairs[i].x;
+		int bodyIndexB = hostPairs[i].y;
 
+		int curContactOut = numContacts;
+
+		m_satCollision->computeConvexConvexContactsGPUSATSingle(
+							bodyIndexA,bodyIndexB,
+							bodyBuf[bodyIndexA].m_collidableIdx,bodyBuf[bodyIndexB].m_collidableIdx,
+							&bodyBuf,&shapeBuf,
+							&contactOut,numContacts,cfg,
+							m_hostConvexData,m_hostConvexData,
+							m_vertices,m_uniqueEdges,m_faces,m_indices,
+							m_vertices,m_uniqueEdges,m_faces,m_indices,
+							m_hostCollidables,m_hostCollidables);
+		if (curContactOut !=numContacts)
+		{
+			contactOut[curContactOut].m_batchIdx = i;//?
+		}
+	}
+	}
+	else
+	{
+	btOpenCLArray<int2> gpuPairs(m_ctx,m_queue);
+	gpuPairs.copyFromHost(hostPairs);
+
+	btOpenCLArray<RigidBodyBase::Body> gpuBodyBuf(m_ctx,m_queue);
+	gpuBodyBuf.copyFromHost(bodyBuf);
+
+	btOpenCLArray<ChNarrowphase::ShapeData> gpuShapeBuf(m_ctx,m_queue);
+	btOpenCLArray<Contact4> gpuContacts(m_ctx,m_queue,1024*1024);
+
+	btOpenCLArray<ConvexPolyhedronCL>	gpuConvexData(m_ctx,m_queue);
+	gpuConvexData.copyFromHost(m_hostConvexData);
+
+	btOpenCLArray<btVector3>				gpuVertices(m_ctx,m_queue);
+	gpuVertices.copyFromHost(m_vertices);
+	btOpenCLArray<btVector3>				gpuUniqueEdges(m_ctx,m_queue);
+	gpuUniqueEdges.copyFromHost(m_uniqueEdges);
+	btOpenCLArray<btGpuFace>				gpuFaces(m_ctx,m_queue);
+	gpuFaces.copyFromHost(m_faces);
+	btOpenCLArray<int>						gpuIndices(m_ctx,m_queue);
+	gpuIndices.copyFromHost(m_indices);
+
+	btOpenCLArray<btCollidable>			gpuCollidables(m_ctx,m_queue);
+	gpuCollidables.copyFromHost(m_hostCollidables);
+
+	btOpenCLArray<btYetAnotherAabb> clAabbs(m_ctx,m_queue,1);
+	btOpenCLArray<int4> triangleConvexPairs(m_ctx,m_queue,1);
+
+	int numObjects = 0;
+	int maxTriConvexPairCapacity = 0;
+	int numTriConvexPairsOut = 0;
+
+	static bool useGPU= true;
+	if (useGPU)
+	{
+		BT_PROFILE("computeConvexConvexContactsGPUSAT_AND_OpenCLArrays");
+
+		 btOpenCLArray<float4> worldVertsB1GPU(m_ctx,m_queue);
+		btOpenCLArray<int4> clippingFacesOutGPU(m_ctx,m_queue,1);
+		btOpenCLArray<float4> worldNormalsAGPU(m_ctx,m_queue);
+		btOpenCLArray<float4> worldVertsA1GPU(m_ctx,m_queue);
+		btOpenCLArray<float4> worldVertsB2GPU(m_ctx,m_queue);
+
+
+		m_satCollision->computeConvexConvexContactsGPUSAT(
+			&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
+			&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
+			gpuCollidables,clAabbs,
+			worldVertsB1GPU,clippingFacesOutGPU,worldNormalsAGPU,worldVertsA1GPU,worldVertsB2GPU,
+			numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+
+	} else
+	{
+		m_satCollision->computeConvexConvexContactsGPUSAT_sequential(
+			&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
+			&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
+			gpuCollidables,clAabbs,numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+	}
+
+	{
+		BT_PROFILE("gpuContacts.copyToHost");
+		gpuContacts.copyToHost(contactOut);
+	}
+	}
+
+	{
+		BT_PROFILE("addContactPoint");
+
+		for (int i=0;i<numContacts;i++)
+		{
+			int newPairIndex = contactOut[i].getBatchIdx();
+			int pairIndex = pairMapping[newPairIndex];
+			btBroadphasePair& collisionPair = bulletPairs[pairIndex];
+			btCollisionObject* colObj0 = (btCollisionObject*)collisionPair.m_pProxy0->m_clientObject;
+			btCollisionObject* colObj1 = (btCollisionObject*)collisionPair.m_pProxy1->m_clientObject;
+
+			btAssert(collisionPair.m_algorithm);
+			PersistentManifoldCachingAlgorithm* mf = (PersistentManifoldCachingAlgorithm*) collisionPair.m_algorithm;
+
+
+			btCollisionObjectWrapper obj0Wrap(0,colObj0->getCollisionShape(),colObj0,colObj0->getWorldTransform());
+			btCollisionObjectWrapper obj1Wrap(0,colObj1->getCollisionShape(),colObj1,colObj1->getWorldTransform());
+			btManifoldResult contactPointResult(&obj0Wrap,&obj1Wrap);
+			contactPointResult.setPersistentManifold(mf->m_manifoldPtr);
+
+
+			btVector3 normalOnBInWorld(-contactOut[i].m_worldNormal.x,-contactOut[i].m_worldNormal.y,-contactOut[i].m_worldNormal.z);
+			for (int p=0;p<contactOut[i].getNPoints();p++)
+			{
+				btScalar depth = contactOut[i].getPenetration(p);
+							
+				float4 pt = contactOut[i].m_worldPos[p];
+				btVector3 pointInWorld(pt.x,pt.y,pt.z);
+							
+				contactPointResult.addContactPoint(normalOnBInWorld,pointInWorld,depth);
+			}
+
+		}
+	}		
 
 
 

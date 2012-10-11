@@ -53,6 +53,7 @@ ATTRIBUTE_ALIGNED16(class) btConvexPolyhedron
 	btVector3		mC;
 	btVector3		mE;
 
+	mutable int				m_gpuCollidableIndex;
 	void	initialize();
 	bool testContainment() const;
 
