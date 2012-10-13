@@ -107,6 +107,7 @@ int main(int argc, char* argv[])
 	cl_context			g_cxMainContext=0;
     cl_command_queue	g_cqCommandQueue=0;
     cl_device_id		g_device=0;
+	cl_platform_id		g_platformId;
 
 	cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
 	const char* vendorSDK = btOpenCLUtils_getSdkVendorName();
@@ -164,7 +165,8 @@ int main(int argc, char* argv[])
 	
 
 	printf("Initialize OpenCL using btOpenCLUtils_createContextFromType for CL_DEVICE_TYPE_GPU\n");
-	g_cxMainContext = btOpenCLUtils_createContextFromType(deviceType, &ciErrNum, glCtx, glDC,1,1);
+	
+	g_cxMainContext = btOpenCLUtils_createContextFromType(deviceType, &ciErrNum, glCtx, glDC,1,1,&g_platformId);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
 	numDev = btOpenCLUtils_getNumDevices(g_cxMainContext);

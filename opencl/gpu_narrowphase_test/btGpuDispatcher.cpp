@@ -1,3 +1,5 @@
+//#pragma optimize( "gty",off )
+
 #include "btGpuDispatcher.h"
 #include "BulletCollision/BroadphaseCollision/btOverlappingPairCache.h"
 #include "../gpu_rigidbody_pipeline2/ConvexHullContact.h"
@@ -218,6 +220,8 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 				//		BT_PROFILE("bodyBuf.push_bacj A");
 						RigidBodyBase::Body body0 = createBodyFromBulletCollisionObject(colObj0);
 						body0.m_collidableIdx = -1;
+						///we need to set the invmass, because there is a filter in the kernel for static versus static (both objects have zero (inv)mass )
+						body0.m_invMass = 1;//colObj0->isStaticOrKinematicObject() ? 0 : 1;
 						bodyIndexA = bodyBuf.size();
 						bodyBuf.push_back(body0);
 
@@ -227,6 +231,7 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 
 						RigidBodyBase::Body body1 = createBodyFromBulletCollisionObject(colObj1);
 						body1.m_collidableIdx = -1;
+						body1.m_invMass = 1;//colObj1->isStaticOrKinematicObject() ? 0 : 1;
 						bodyIndexB= bodyBuf.size();
 						bodyBuf.push_back(body1);
 					}
@@ -403,7 +408,7 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 
 	{
 		BT_PROFILE("addContactPoint");
-
+		//printf("numContacts = %d\n",numContacts);
 		for (int i=0;i<numContacts;i++)
 		{
 			int newPairIndex = contactOut[i].getBatchIdx();

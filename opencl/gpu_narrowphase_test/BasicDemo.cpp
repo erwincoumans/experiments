@@ -13,11 +13,12 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "../physics_effects_pipeline/barrel.h"
 
-///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 5
-#define ARRAY_SIZE_Y 5
-#define ARRAY_SIZE_Z 5
+
+#define ARRAY_SIZE_X 15
+#define ARRAY_SIZE_Y 15
+#define ARRAY_SIZE_Z 15
 
 //maximum number of objects (and allow user to shoot additional boxes)
 #define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
@@ -92,7 +93,7 @@ BasicDemo::BasicDemo(cl_context ctx, cl_device_id device, cl_command_queue q)
 void	BasicDemo::initPhysics()
 {
 	setTexturing(true);
-	setShadows(true);
+	setShadows(false);
 
 
 	///collision configuration contains default setup for memory, collision setup
@@ -103,7 +104,7 @@ void	BasicDemo::initPhysics()
 	m_collisionConfiguration = new btDefaultCollisionConfiguration(dcc);
 	//m_collisionConfiguration->setConvexConvexMultipointIterations();
 
-//m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
+	//m_dispatcher = new	btCollisionDispatcher(m_collisionConfiguration);
 	m_dispatcher = new	btGpuDispatcher(m_collisionConfiguration,m_ctx,m_device,m_queue);
 	m_dispatcher->registerCollisionCreateFunc(BOX_SHAPE_PROXYTYPE,BOX_SHAPE_PROXYTYPE,m_collisionConfiguration->getCollisionAlgorithmCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE));
 	m_dispatcher->setDispatcherFlags(m_dispatcher->getDispatcherFlags() | btCollisionDispatcher::CD_DISABLE_CONTACTPOOL_DYNAMIC_ALLOCATION);
@@ -155,7 +156,9 @@ void	BasicDemo::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		btBoxShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
+		//btBoxShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
+		btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx,BarrelVtxCount,sizeof(float)*6);
+		
 		colShape->initializePolyhedralFeatures();
 
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
@@ -185,9 +188,9 @@ void	BasicDemo::initPhysics()
 				for(int j = 0;j<ARRAY_SIZE_Z;j++)
 				{
 					startTransform.setOrigin(SCALING*btVector3(
-										btScalar(2.0*i + start_x),
-										btScalar(1+2.0*k + start_y),
-										btScalar(2.0*j + start_z)));
+										btScalar(1.0*i + start_x),
+										btScalar(1+1.0*k + start_y),
+										btScalar(1.0*j + start_z)));
 
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects

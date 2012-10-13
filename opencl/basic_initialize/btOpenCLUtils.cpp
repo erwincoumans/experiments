@@ -189,6 +189,9 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 
 	cprops = (NULL == platform) ? NULL : cps;
 
+	if (!num_devices)
+		return 0;
+
 	if (pGLContext)
 	{
 		//search for the GPU that relates to the OpenCL context
@@ -503,9 +506,10 @@ static const char* strip2(const char* name, const char* pattern)
 	  return oriptr;
 }
 
-cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching)
+cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching1)
 {
 	const char* additionalMacros = additionalMacrosArg?additionalMacrosArg:"";
+	const char* clFileNameForCaching=0;
 
 	cl_program m_cpProgram=0;
 	cl_int status;

@@ -81,6 +81,8 @@ if not _OPTIONS["with-nacl"] then
 
 	include "../opencl/c_api"
 
+	include "../opencl/gpu_narrowphase_test"
+	
 	include "../opencl/basic_initialize"
 	include "../opencl/compiler"
 	include "../opencl/vector_add"
