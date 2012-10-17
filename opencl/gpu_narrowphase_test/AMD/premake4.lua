@@ -1,11 +1,11 @@
 	
-	hasCL = findOpenCL_NVIDIA()
+	hasCL = findOpenCL_AMD()
 	
 	if (hasCL) then
 
-		project "OpenCL_gpu_narrowphase_test_NVIDIA"
+		project "OpenCL_gpu_narrowphase_test_AMD"
 
-		initOpenCL_NVIDIA()
+		initOpenCL_AMD()
 	
 		language "C++"
 				
