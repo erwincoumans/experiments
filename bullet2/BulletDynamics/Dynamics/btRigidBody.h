@@ -257,7 +257,6 @@ public:
 	void setLinearFactor(const btVector3& linearFactor)
 	{
 		m_linearFactor = linearFactor;
-		m_invMass = m_linearFactor*m_inverseMass;
 	}
 	btScalar		getInvMass() const { return m_inverseMass; }
 	const btMatrix3x3& getInvInertiaTensorWorld() const { 
