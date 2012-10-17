@@ -90,12 +90,6 @@ void	btRigidBody::setupRigidBody(const btRigidBody::btRigidBodyConstructionInfo&
 	m_rigidbodyFlags = 0;
 
 
-	m_deltaLinearVelocity.setZero();
-	m_deltaAngularVelocity.setZero();
-	m_invMass = m_inverseMass*m_linearFactor;
-	m_pushVelocity.setZero();
-	m_turnVelocity.setZero();
-
 	
 
 }
@@ -247,7 +241,6 @@ void btRigidBody::setMassProps(btScalar mass, const btVector3& inertia)
 				   inertia.y() != btScalar(0.0) ? btScalar(1.0) / inertia.y(): btScalar(0.0),
 				   inertia.z() != btScalar(0.0) ? btScalar(1.0) / inertia.z(): btScalar(0.0));
 
-	m_invMass = m_linearFactor*m_inverseMass;
 }
 
 	

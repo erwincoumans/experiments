@@ -230,7 +230,7 @@ void gim_radix_sort_array_tokens(
     }
     gim_radix_sort_rtokens(_unsorted,sorted_tokens,element_count);
     gim_free(_unsorted);
-    gim_free(_unsorted);
+//    gim_free(_unsorted);
 }
 
 /// Sorts array in place. For generic use

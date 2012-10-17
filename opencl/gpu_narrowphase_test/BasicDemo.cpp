@@ -15,6 +15,7 @@ subject to the following restrictions:
 
 #include "../physics_effects_pipeline/barrel.h"
 
+#include "btParallelAxisSweep3.h"
 
 #define ARRAY_SIZE_X 15
 #define ARRAY_SIZE_Y 15
@@ -76,6 +77,17 @@ void BasicDemo::displayCallback(void) {
 	if (m_dynamicsWorld)
 		m_dynamicsWorld->debugDrawWorld();
 
+/*	for (int i=0;i<m_dynamicsWorld->getNumCollisionObjects();i++)
+	{
+		char uniqueId[1024];
+		int uid = m_dynamicsWorld->getCollisionObjectArray()[i]->getBroadphaseHandle()->getUid();
+		btVector3 pos = m_dynamicsWorld->getCollisionObjectArray()[i]->getWorldTransform().getOrigin();
+		sprintf(uniqueId,"UID:%d",uid);
+		glRasterPos3f(pos.getX(),pos.getY(),pos.getZ());
+		BMF_DrawString(BMF_GetFont(BMF_kHelvetica10),uniqueId);
+	}
+	*/
+
 	glFlush();
 	swapBuffers();
 }
@@ -86,6 +98,8 @@ BasicDemo::BasicDemo(cl_context ctx, cl_device_id device, cl_command_queue q)
 	m_device(device),
 	m_queue(q)
 {
+	m_idle = true;
+	m_debugMode |= btIDebugDraw::DBG_DrawWireframe|btIDebugDraw::DBG_NoDeactivation;
 	setCameraDistance(btScalar(SCALING*20.));
 }
 
@@ -108,8 +122,13 @@ void	BasicDemo::initPhysics()
 	m_dispatcher = new	btGpuDispatcher(m_collisionConfiguration,m_ctx,m_device,m_queue);
 	m_dispatcher->registerCollisionCreateFunc(BOX_SHAPE_PROXYTYPE,BOX_SHAPE_PROXYTYPE,m_collisionConfiguration->getCollisionAlgorithmCreateFunc(CONVEX_HULL_SHAPE_PROXYTYPE,CONVEX_HULL_SHAPE_PROXYTYPE));
 	m_dispatcher->setDispatcherFlags(m_dispatcher->getDispatcherFlags() | btCollisionDispatcher::CD_DISABLE_CONTACTPOOL_DYNAMIC_ALLOCATION);
-	
-	m_broadphase = new btDbvtBroadphase();
+
+	btVector3 aabbMin(-1000,-1000,-1000);
+	btVector3 aabbMax(1000,1000,1000);
+
+	m_broadphase = new btParallelAxisSweep3(aabbMin,aabbMax);
+
+	//m_broadphase = new btDbvtBroadphase();
 
 	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
 	btSequentialImpulseConstraintSolver* sol = new btSequentialImpulseConstraintSolver;
@@ -117,7 +136,8 @@ void	BasicDemo::initPhysics()
 
 	m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher,m_broadphase,m_solver,m_collisionConfiguration);
 	m_dynamicsWorld->setDebugDrawer(&gDebugDraw);
-	m_dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
+	gDebugDraw.setDebugMode(m_debugMode);
+	m_dynamicsWorld->getDispatchInfo().m_enableSatConvex = false;
 	m_dynamicsWorld->setGravity(btVector3(0,-10,0));
 
 	///create a few basic rigid bodies
@@ -156,8 +176,9 @@ void	BasicDemo::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		//btBoxShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
-		btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx,BarrelVtxCount,sizeof(float)*6);
+		btBoxShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
+		//btConvexHullShape* colShape = new btConvexHullShape(BarrelVtx,BarrelVtxCount,sizeof(float)*6);
+		//btCollisionShape* colShape = new btSphereShape(0.5);//btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
 		
 		colShape->initializePolyhedralFeatures();
 
@@ -188,9 +209,9 @@ void	BasicDemo::initPhysics()
 				for(int j = 0;j<ARRAY_SIZE_Z;j++)
 				{
 					startTransform.setOrigin(SCALING*btVector3(
-										btScalar(1.0*i + start_x),
-										btScalar(1+1.0*k + start_y),
-										btScalar(1.0*j + start_z)));
+										btScalar(2.0*i + start_x),
+										btScalar(1+2.0*k + start_y),
+										btScalar(2.0*j + start_z)));
 
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects

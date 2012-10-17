@@ -127,7 +127,7 @@ struct PersistentManifoldCachingAlgorithm : public btCollisionAlgorithm
 
 	virtual void processCollision (const btCollisionObjectWrapper* body0Wrap,const btCollisionObjectWrapper* body1Wrap,const btDispatcherInfo& dispatchInfo,btManifoldResult* resultOut)
 	{
-		btAssert(0);
+//		btAssert(0);
 	}
 
 	virtual btScalar calculateTimeOfImpact(btCollisionObject* body0,btCollisionObject* body1,const btDispatcherInfo& dispatchInfo,btManifoldResult* resultOut)
@@ -177,6 +177,9 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 			btBroadphasePair& collisionPair = bulletPairs[i];
 			btCollisionObject* colObj0 = (btCollisionObject*)collisionPair.m_pProxy0->m_clientObject;
 			btCollisionObject* colObj1 = (btCollisionObject*)collisionPair.m_pProxy1->m_clientObject;
+
+			if (!colObj0->getCollisionShape()->isPolyhedral() || !colObj1->getCollisionShape()->isPolyhedral())
+				continue;
 
 			//can this 'needsCollision' be computed on GPU?
 			bool needs =false;
@@ -441,6 +444,6 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 		}
 	}		
 
-
+	btCollisionDispatcher::dispatchAllCollisionPairs(pairCache,dispatchInfo,dispatcher);
 
 }

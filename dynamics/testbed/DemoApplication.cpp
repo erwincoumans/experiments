@@ -357,10 +357,10 @@ void DemoApplication::keyboardCallback(unsigned char key, int x, int y)
 		break;
 
 	case 'p':
-		if (m_debugMode & btIDebugDraw::DBG_ProfileTimings)
-			m_debugMode = m_debugMode & (~btIDebugDraw::DBG_ProfileTimings);
+		if (m_debugMode & btIDebugDraw::DBG_DrawBroadphasePairs)
+			m_debugMode = m_debugMode & (~btIDebugDraw::DBG_DrawBroadphasePairs);
 		else
-			m_debugMode |= btIDebugDraw::DBG_ProfileTimings;
+			m_debugMode |= btIDebugDraw::DBG_DrawBroadphasePairs;
 		break;
 
 	case '=':

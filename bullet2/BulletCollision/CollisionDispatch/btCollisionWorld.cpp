@@ -1238,7 +1238,7 @@ public:
 void btCollisionWorld::debugDrawObject(const btTransform& worldTransform, const btCollisionShape* shape, const btVector3& color)
 {
 	// Draw a small simplex at the center of the object
-	getDebugDrawer()->drawTransform(worldTransform,1);
+	getDebugDrawer()->drawTransform(worldTransform,0.1);
 
 	if (shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE)
 	{
@@ -1439,6 +1439,21 @@ void	btCollisionWorld::debugDrawWorld()
 	{
 		int i;
 
+		if (getDebugDrawer()->getDebugMode()&(btIDebugDraw::DBG_DrawBroadphasePairs))
+		{
+			for (  i=0;i<getBroadphase()->getOverlappingPairCache()->getNumOverlappingPairs();i++)
+			{
+				btBroadphasePair* pair = &getBroadphase()->getOverlappingPairCache()->getOverlappingPairArrayPtr()[i];
+
+				btVector3 normalColor(1,0,0);
+				btCollisionObject* colObj0 = (btCollisionObject*)pair->m_pProxy0->m_clientObject;
+				btCollisionObject* colObj1 = (btCollisionObject*)pair->m_pProxy1->m_clientObject;
+
+				m_debugDrawer->drawLine(colObj0->getWorldTransform().getOrigin(),
+					colObj1->getWorldTransform().getOrigin(),normalColor);
+    
+			}
+		}
 		for (  i=0;i<m_collisionObjects.size();i++)
 		{
 			btCollisionObject* colObj = m_collisionObjects[i];
