@@ -98,9 +98,9 @@ BasicDemo::BasicDemo(cl_context ctx, cl_device_id device, cl_command_queue q)
 	m_device(device),
 	m_queue(q)
 {
-	m_idle = true;
-	m_debugMode |= btIDebugDraw::DBG_DrawWireframe|btIDebugDraw::DBG_NoDeactivation;
-	setCameraDistance(btScalar(SCALING*20.));
+	m_idle = false;//true;
+	//m_debugMode |= btIDebugDraw::DBG_DrawWireframe|btIDebugDraw::DBG_NoDeactivation;
+	setCameraDistance(btScalar(SCALING*60.));
 }
 
 
