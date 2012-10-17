@@ -13,6 +13,8 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+//enable BT_SOLVER_DEBUG if you experience solver crashes
+//#define BT_SOLVER_DEBUG
 //#define COMPUTE_IMPULSE_DENOM 1
 //It is not necessary (redundant) to refresh contact manifolds, this refresh has been moved to the collision algorithms.
 
@@ -912,7 +914,7 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 
 	m_maxOverrideNumSolverIterations = 0;
 
-#ifdef BT_DEBUG
+#ifdef BT_SOLVER_DEBUG
 	 //make sure that dynamic bodies exist for all (enabled) constraints
 	for (int i=0;i<numConstraints;i++)
 	{
@@ -996,20 +998,23 @@ btScalar btSequentialImpulseConstraintSolver::solveGroupCacheFriendlySetup(btCol
 
 	//convert all bodies
 
-	for (int i=0;i<numBodies;i++)
 	{
-		int bodyId = getOrInitSolverBody(*bodies[i]);
-		btRigidBody* body = btRigidBody::upcast(bodies[i]);
-		if (body && body->getInvMass())
+		BT_PROFILE("convert bodies");
+		for (int i=0;i<numBodies;i++)
 		{
-			btSolverBody& solverBody = m_tmpSolverBodyPool[bodyId];
-			btVector3 gyroForce (0,0,0);
-			if (body->getFlags()&BT_ENABLE_GYROPSCOPIC_FORCE)
+			int bodyId = getOrInitSolverBody(*bodies[i]);
+			btRigidBody* body = btRigidBody::upcast(bodies[i]);
+			if (body && body->getInvMass())
 			{
-				gyroForce = body->computeGyroscopicForce(infoGlobal.m_maxGyroscopicForce);
+				btSolverBody& solverBody = m_tmpSolverBodyPool[bodyId];
+				btVector3 gyroForce (0,0,0);
+				if (body->getFlags()&BT_ENABLE_GYROPSCOPIC_FORCE)
+				{
+					gyroForce = body->computeGyroscopicForce(infoGlobal.m_maxGyroscopicForce);
+				}
+				solverBody.m_linearVelocity += body->getTotalForce()*body->getInvMass()*infoGlobal.m_timeStep;
+				solverBody.m_angularVelocity += (body->getTotalTorque()-gyroForce)*body->getInvInertiaTensorWorld()*infoGlobal.m_timeStep;
 			}
-			solverBody.m_linearVelocity += body->getTotalForce()*body->getInvMass()*infoGlobal.m_timeStep;
-			solverBody.m_angularVelocity += (body->getTotalTorque()-gyroForce)*body->getInvInertiaTensorWorld()*infoGlobal.m_timeStep;
 		}
 	}
 	
