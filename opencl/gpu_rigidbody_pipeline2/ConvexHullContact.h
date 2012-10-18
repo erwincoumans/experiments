@@ -95,7 +95,7 @@ struct GpuSatCollision
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
@@ -120,7 +120,7 @@ struct GpuSatCollision
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
@@ -147,7 +147,7 @@ struct GpuSatCollision
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 			const btAlignedObjectArray<btVector3>& verticesB,

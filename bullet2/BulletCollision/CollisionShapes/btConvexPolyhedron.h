@@ -53,10 +53,11 @@ ATTRIBUTE_ALIGNED16(class) btConvexPolyhedron
 	btVector3		mC;
 	btVector3		mE;
 
+	mutable int				m_gpuCollidableIndex;
 	void	initialize();
 	bool testContainment() const;
 
-	void project(const btTransform& trans, const btVector3& dir, btScalar& min, btScalar& max) const;
+	void project(const btTransform& trans, const btVector3& dir, btScalar& minProj, btScalar& maxProj, btVector3& witnesPtMin,btVector3& witnesPtMax) const;
 };
 
 	

@@ -114,7 +114,7 @@ void	GLDebugDrawer::drawContactPoint(const btVector3& pointOnB,const btVector3& 
 {
 	
 	{
-		btVector3 to=pointOnB+normalOnB*1;//distance;
+		btVector3 to=pointOnB+normalOnB*0.1;//distance;
 		const btVector3&from = pointOnB;
 		glColor4f(color.getX(), color.getY(), color.getZ(),1.f);
 		//glColor4f(0,0,0,1.f);

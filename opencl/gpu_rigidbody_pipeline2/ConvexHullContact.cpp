@@ -122,9 +122,9 @@ GpuSatCollision::~GpuSatCollision()
 		clReleaseKernel(m_extractManifoldAndAddContactKernel);
 }
 
-int gExpectedNbTests=0;
-int gActualNbTests = 0;
-bool gUseInternalObject = true;
+static int gExpectedNbTests=0;
+static int gActualNbTests = 0;
+static bool gUseInternalObject = true;
 
 __inline float4 lerp3(const float4& a,const float4& b, float  t)
 {
@@ -770,7 +770,7 @@ void GpuSatCollision::computeConcaveConvexContactsGPUSATSingle(
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 			const btAlignedObjectArray<btVector3>& verticesB,
@@ -1006,7 +1006,7 @@ void GpuSatCollision::clipHullHullSingle(
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
@@ -1111,7 +1111,9 @@ void GpuSatCollision::clipHullHullSingle(
 			if (contactOut->size())
 			{
 				BT_PROFILE("copyToHost(m_hostContactOut");
-				contactOut->copyToHost(m_hostContactOut);
+				m_hostContactOut.copyFromArray(*contactOut);
+
+
 			} else
 			{
 				m_hostContactOut.resize(0);
@@ -1135,7 +1137,7 @@ void GpuSatCollision::clipHullHullSingle(
 			
 			{
 				BT_PROFILE("contactOut->copyFromHost");
-				contactOut->copyFromHost(m_hostContactOut);
+				contactOut->copyFromArray(m_hostContactOut);
 			}
 			nContacts++;
 		}
@@ -1149,7 +1151,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
 			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, 
+			btAlignedObjectArray<Contact4>* contactOut, 
 			int& nContacts, const ChNarrowphase::Config& cfg , 
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
@@ -1299,15 +1301,27 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 
 		if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)
 		{
+			btAlignedObjectArray<Contact4> contactCpu;
+			contactOut->copyToHost(contactCpu);
+
+			int curNumContacts = nContacts;
+
 			computeConcaveConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
-				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,contactOut,nContacts,cfg,
+				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
 				hostConvexData, hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,
 				hostAabbs,
 				numObjects,
 				maxTriConvexPairCapacity,
 				hostTriangleConvexPairs,
 				numTriConvexPairsOut);
-				
+			
+			if (nContacts!=curNumContacts)
+			{
+				contactCpu[curNumContacts].m_batchIdx = i;
+			}
+			
+			contactOut->copyFromHost(contactCpu);
+
 			continue;
 		}
 
@@ -1324,18 +1338,43 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 
 		if (hostConvexData[collidableIndexA].m_numFaces<6)
 			{
+				btAlignedObjectArray<Contact4> contactCpu;
+				contactOut->copyToHost(contactCpu);
+
+				int curNumContacts = nContacts;
+
 				computeConvexConvexContactsGPUSATSingle(bodyIndexB, bodyIndexA,
-				collidableIndexB,collidableIndexA,&hostBodyBuf,&hostShapeBuf,contactOut,nContacts,cfg,
-				hostConvexData,hostConvexData,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					collidableIndexB,collidableIndexA,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostConvexData,hostConvexData,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+
+				if (curNumContacts != nContacts)
+				{
+					contactCpu[curNumContacts].m_batchIdx = i;
+				}
+
+				contactOut->copyFromHost(contactCpu);
 			} else
 			{
+				btAlignedObjectArray<Contact4> contactCpu;
+				contactOut->copyToHost(contactCpu);
+
+				int curNumContacts = nContacts;
+
 				computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
-				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,contactOut,nContacts,cfg,
-				hostConvexData,hostConvexData,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,
-				hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostConvexData,hostConvexData,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+
+				if (curNumContacts != nContacts)
+				{
+					contactCpu[curNumContacts].m_batchIdx = i;
+				}
+
+				contactOut->copyFromHost(contactCpu);
+
 			}
 
 				
@@ -2141,6 +2180,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			clFinish(m_queue);
 		
 			nContacts = m_totalContactsOut.at(0);
+			contactOut->resize(nContacts);
 #endif
             
 #endif//DEBUG_CPU_CLIP
@@ -2394,13 +2434,17 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
                                         
 					hostConvexDataA.push_back(convexPolyhedronA);
+
+					btAlignedObjectArray<Contact4> contactCpu;
+					contactOut->copyToHost(contactCpu);
+
 					int numContactsOut = 0;
 					clipHullHullSingle(
 						objectIndexA, objectIndexB,
 						collidableIndexA, collidableIndexB,
 						&hostBodyBuf, 
 						&hostShapeBuf,
-						contactOut, 
+						&contactCpu, 
 						nContacts, cfg , 
 			
 						hostConvexDataA,
@@ -2419,6 +2463,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 						hostCollidablesA,
 						cpuCollidables,
 						(btVector3&)sepNormalWorldSpace,numContactsOut);
+
+					contactOut->copyFromHost(contactCpu);
+
 				//	printf("numContactsOut=%d\n",numContactsOut);
 				}
 			}

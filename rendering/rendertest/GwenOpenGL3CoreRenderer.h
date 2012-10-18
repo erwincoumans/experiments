@@ -70,10 +70,10 @@ public:
 		
 		TwGenerateDefaultFonts();
 
-//		m_currentFont = g_DefaultNormalFont;
-//		m_currentFont = g_DefaultNormalFontAA;
+		m_currentFont = g_DefaultNormalFont;
+		//m_currentFont = g_DefaultNormalFontAA;
 
-		m_currentFont = g_DefaultLargeFont;
+		//m_currentFont = g_DefaultLargeFont;
 		m_fontTextureId = BindFont(m_currentFont);
 		
 	}
@@ -223,7 +223,10 @@ public:
 		
 			Gwen::Point pt;
 			pt.x = dx*Scale();
-			pt.y = m_fontScaling*Scale()+8;//*0.8f;
+			if (m_retinaScale==2.0f)
+				pt.y = m_fontScaling*Scale()*+8;
+			else
+				pt.y = m_fontScaling*Scale()*+1;
 			return pt;
 		}
 		else

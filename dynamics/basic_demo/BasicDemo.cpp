@@ -389,7 +389,7 @@ void	BasicDemo::initPhysics()
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-11,0));
+	groundTransform.setOrigin(btVector3(0,-1,0));
 
 	//We can also use DemoApplication::localCreateRigidBody, but for clarity it is provided here:
 	{

@@ -189,6 +189,9 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 
 	cprops = (NULL == platform) ? NULL : cps;
 
+	if (!num_devices)
+		return 0;
+
 	if (pGLContext)
 	{
 		//search for the GPU that relates to the OpenCL context
@@ -224,7 +227,7 @@ cl_context btOpenCLUtils_createContextFromPlatform(cl_platform_id platform, cl_d
 	return retContext;
 }
 
-cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC , int preferredDeviceIndex, int preferredPlatformIndex)
+cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int* pErrNum, void* pGLContext, void* pGLDC , int preferredDeviceIndex, int preferredPlatformIndex, cl_platform_id* retPlatformId)
 {
 	cl_uint numPlatforms;
 	cl_context retContext = 0;
@@ -296,6 +299,8 @@ cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int
 
 				btOpenCLUtils::getPlatformInfo(platform, &platformInfo);
 
+				if (retPlatformId)
+					*retPlatformId = platform;
 
 				break;
 			}
@@ -434,7 +439,7 @@ void btOpenCLUtils_printDeviceInfo(cl_device_id device)
 {
 	btOpenCLDeviceInfo info;
 	btOpenCLUtils::getDeviceInfo(device,&info);
-
+	printf("Device Info:\n");
 	printf("  CL_DEVICE_NAME: \t\t\t%s\n", info.m_deviceName);
 	printf("  CL_DEVICE_VENDOR: \t\t\t%s\n", info.m_deviceVendor);
 	printf("  CL_DRIVER_VERSION: \t\t\t%s\n", info.m_driverVersion);
@@ -501,9 +506,10 @@ static const char* strip2(const char* name, const char* pattern)
 	  return oriptr;
 }
 
-cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching)
+cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching1)
 {
 	const char* additionalMacros = additionalMacrosArg?additionalMacrosArg:"";
+	const char* clFileNameForCaching=0;
 
 	cl_program m_cpProgram=0;
 	cl_int status;

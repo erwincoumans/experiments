@@ -357,10 +357,10 @@ void DemoApplication::keyboardCallback(unsigned char key, int x, int y)
 		break;
 
 	case 'p':
-		if (m_debugMode & btIDebugDraw::DBG_ProfileTimings)
-			m_debugMode = m_debugMode & (~btIDebugDraw::DBG_ProfileTimings);
+		if (m_debugMode & btIDebugDraw::DBG_DrawBroadphasePairs)
+			m_debugMode = m_debugMode & (~btIDebugDraw::DBG_DrawBroadphasePairs);
 		else
-			m_debugMode |= btIDebugDraw::DBG_ProfileTimings;
+			m_debugMode |= btIDebugDraw::DBG_DrawBroadphasePairs;
 		break;
 
 	case '=':
@@ -558,7 +558,7 @@ void	DemoApplication::shootBox(const btVector3& destination)
 		body->setLinearVelocity(linVel);
 		body->setAngularVelocity(btVector3(0,0,0));
 		body->setCcdMotionThreshold(0.5);
-		body->setCcdSweptSphereRadius(0.9f);
+		body->setCcdSweptSphereRadius(0.4f);
 //		printf("shootBox uid=%d\n", body->getBroadphaseHandle()->getUid());
 //		printf("camPos=%f,%f,%f\n",camPos.getX(),camPos.getY(),camPos.getZ());
 //		printf("destination=%f,%f,%f\n",destination.getX(),destination.getY(),destination.getZ());

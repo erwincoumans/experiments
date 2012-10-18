@@ -28,7 +28,7 @@ subject to the following restrictions:
 #include <float.h>
 
 /* SVN $Revision$ on $Date$ from http://bullet.googlecode.com*/
-#define BT_BULLET_VERSION 280
+#define BT_BULLET_VERSION 281
 
 inline int	btGetVersion()
 {
@@ -175,7 +175,7 @@ inline int	btGetVersion()
                 #include <emmintrin.h>
             #endif
         #endif //BT_USE_SSE
-    #elif defined( __arm__ )
+    #elif defined( __armv7__ )
         #ifdef __clang__
             #define BT_USE_NEON 1
 

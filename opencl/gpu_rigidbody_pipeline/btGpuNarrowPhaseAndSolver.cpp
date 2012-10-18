@@ -826,30 +826,53 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                     
 					//convex versus concave convex
                     
-					//m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT_sequential(
-					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
+					bool useSequential = false;
+					if (useSequential)
+					{
+						m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT_sequential(
 							&broadphasePairsGPU, numBroadphasePairs,
 							m_internalData->m_bodyBufferGPU,
 							m_internalData->m_ShapeBuffer,
-							m_internalData->m_pBufContactOutGPU,
-							nContactOut, cfgNP, *m_internalData->m_convexPolyhedraGPU,
+														m_internalData->m_pBufContactOutGPU,
+							nContactOut, cfgNP,
+							*m_internalData->m_convexPolyhedraGPU,
 							*m_internalData->m_convexVerticesGPU,
 							*m_internalData->m_uniqueEdgesGPU,
 							*m_internalData->m_convexFacesGPU,
 							*m_internalData->m_convexIndicesGPU,
 							*m_internalData->m_collidablesGPU,
 							clAabbArray,
-                             *m_internalData->m_worldVertsB1GPU,
-                             *m_internalData->m_clippingFacesOutGPU,
-                             *m_internalData->m_worldNormalsAGPU,
-                             *m_internalData->m_worldVertsA1GPU,
-                             *m_internalData->m_worldVertsB2GPU,
-
 							numObjects,
 							maxTriConvexPairCapacity,
 							triangleConvexPairs,
-							numTriConvexPairsOut
-							);
+							numTriConvexPairsOut);
+					} else
+					{
+						m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
+								&broadphasePairsGPU, numBroadphasePairs,
+								m_internalData->m_bodyBufferGPU,
+								m_internalData->m_ShapeBuffer,
+								m_internalData->m_pBufContactOutGPU,
+								nContactOut, cfgNP, 
+								*m_internalData->m_convexPolyhedraGPU,
+								*m_internalData->m_convexVerticesGPU,
+								*m_internalData->m_uniqueEdgesGPU,
+								*m_internalData->m_convexFacesGPU,
+								*m_internalData->m_convexIndicesGPU,
+								*m_internalData->m_collidablesGPU,
+								clAabbArray,
+								 *m_internalData->m_worldVertsB1GPU,
+								 *m_internalData->m_clippingFacesOutGPU,
+								 *m_internalData->m_worldNormalsAGPU,
+								 *m_internalData->m_worldVertsA1GPU,
+								 *m_internalData->m_worldVertsB2GPU,
+
+								numObjects,
+								maxTriConvexPairCapacity,
+								triangleConvexPairs,
+								numTriConvexPairsOut
+								);
+					}
                 }
             }
             else

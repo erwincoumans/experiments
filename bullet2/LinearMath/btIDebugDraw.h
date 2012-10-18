@@ -47,6 +47,8 @@ class	btIDebugDraw
 		DBG_DrawConstraintLimits = (1 << 12),
 		DBG_FastWireframe = (1<<13),
         DBG_DrawNormals = (1<<14),
+		DBG_DrawBroadphasePairs= (1<<15),
+
 		DBG_MAX_DEBUG_DRAW_MODE
 	};
 
@@ -62,29 +64,19 @@ class	btIDebugDraw
 
 	virtual void	drawSphere(btScalar radius, const btTransform& transform, const btVector3& color)
 	{
+
 		btVector3 start = transform.getOrigin();
 
-		const btVector3 xoffs = transform.getBasis() * btVector3(radius,0,0);
-		const btVector3 yoffs = transform.getBasis() * btVector3(0,radius,0);
-		const btVector3 zoffs = transform.getBasis() * btVector3(0,0,radius);
+		 
+		const btVector3 xoffs = transform.getBasis() * btVector3(1,0,0);
+		const btVector3 yoffs = transform.getBasis() * btVector3(0,1,0);
+		const btVector3 zoffs = transform.getBasis() * btVector3(0,0,1);
 
-		// XY 
-		drawLine(start-xoffs, start+yoffs, color);
-		drawLine(start+yoffs, start+xoffs, color);
-		drawLine(start+xoffs, start-yoffs, color);
-		drawLine(start-yoffs, start-xoffs, color);
+		drawArc(start,xoffs,yoffs,radius,radius,0,SIMD_2_PI,color,true,btScalar(10.0));
+		drawArc(start,yoffs,zoffs,radius,radius,0,SIMD_2_PI,color,true,btScalar(10.0));
+		drawArc(start,zoffs,xoffs,radius,radius,0,SIMD_2_PI,color,true,btScalar(10.0));
+//		drawArc(start,zoffs,yoffs,radius,radius,0,SIMD_2_PI,color,false,btScalar(10.0));
 
-		// XZ
-		drawLine(start-xoffs, start+zoffs, color);
-		drawLine(start+zoffs, start+xoffs, color);
-		drawLine(start+xoffs, start-zoffs, color);
-		drawLine(start-zoffs, start-xoffs, color);
-
-		// YZ
-		drawLine(start-yoffs, start+zoffs, color);
-		drawLine(start+zoffs, start+yoffs, color);
-		drawLine(start+yoffs, start-zoffs, color);
-		drawLine(start-zoffs, start-yoffs, color);
 	}
 	
 	virtual void	drawSphere (const btVector3& p, btScalar radius, const btVector3& color)
@@ -280,6 +272,7 @@ class	btIDebugDraw
 		}
 	}
 	
+  
 	virtual void drawBox(const btVector3& bbMin, const btVector3& bbMax, const btVector3& color)
 	{
 		drawLine(btVector3(bbMin[0], bbMin[1], bbMin[2]), btVector3(bbMax[0], bbMin[1], bbMin[2]), color);

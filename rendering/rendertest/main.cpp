@@ -502,7 +502,12 @@ int main(int argc, char* argv[])
 
 	delete pprender;
 //	render.CleanupShaders();
+#ifdef _WIN32
+	window->closeWindow();
+#else
 	window->exit();
+#endif
+
 	delete window;
 	
 	

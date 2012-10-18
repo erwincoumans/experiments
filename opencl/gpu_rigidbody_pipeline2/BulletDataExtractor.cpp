@@ -191,6 +191,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 	}
 #endif
 
+
 	float cubeScaling[4] = {1.,1.,1.,1};
 	int cubeCollisionShapeIndex = physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
 
@@ -344,7 +345,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 				
 					{
 						btScalar c = -(normal.dot(convex.m_vertices[0]));
-						btFace f;
+						btMyFace f;
 						f.m_plane[0] = normal[0];
 						f.m_plane[1] = normal[1];
 						f.m_plane[2] = normal[2];
@@ -358,7 +359,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 #if 1
 					{
 						btScalar c = (normal.dot(convex.m_vertices[0]));
-						btFace f;
+						btMyFace f;
 						f.m_plane[0] = -normal[0];
 						f.m_plane[1] = -normal[1];
 						f.m_plane[2] = -normal[2];
@@ -381,7 +382,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 
 							btVector3 edgeNormal = (normal.cross(v1-v0)).normalize();
 							btScalar c = -edgeNormal.dot(v0);
-							btFace f;
+							btMyFace f;
 							f.m_indices.push_back(i);
 							f.m_indices.push_back(prevVertex);
 							f.m_plane[0] = edgeNormal[0];
@@ -1062,7 +1063,7 @@ GraphicsShape* btBulletDataExtractor::createGraphicsShapeFromConvexHull(const bt
 		btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
 		for (int f=0;f<utilPtr->m_faces.size();f++)
 		{
-			const btFace& face = utilPtr->m_faces[f];
+			const btMyFace& face = utilPtr->m_faces[f];
 			btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
 			if (face.m_indices.size()>2)
 			{

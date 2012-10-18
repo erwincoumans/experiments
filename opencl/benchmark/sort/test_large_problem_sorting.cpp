@@ -631,7 +631,8 @@ int main( int argc, char** argv)
 {
 	cl_int ciErrNum;
 	printf("Initialize OpenCL using btOpenCLUtils_createContextFromType for CL_DEVICE_TYPE_GPU\n");
-	g_cxMainContext = btOpenCLUtils_createContextFromType(CL_DEVICE_TYPE_GPU, &ciErrNum, 0, 0,1,1);
+	cl_platform_id platformId;
+	g_cxMainContext = btOpenCLUtils_createContextFromType(CL_DEVICE_TYPE_GPU, &ciErrNum, 0, 0,1,1,&platformId);
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
 	int numDev = btOpenCLUtils_getNumDevices(g_cxMainContext);

@@ -78,6 +78,7 @@ void	btRigidBody::setupRigidBody(const btRigidBody::btRigidBodyConstructionInfo&
 	
 	//moved to btCollisionObject
 	m_friction = constructionInfo.m_friction;
+	m_rollingFriction = constructionInfo.m_rollingFriction;
 	m_restitution = constructionInfo.m_restitution;
 
 	setCollisionShape( constructionInfo.m_collisionShape );
@@ -88,12 +89,6 @@ void	btRigidBody::setupRigidBody(const btRigidBody::btRigidBodyConstructionInfo&
 
 	m_rigidbodyFlags = 0;
 
-
-	m_deltaLinearVelocity.setZero();
-	m_deltaAngularVelocity.setZero();
-	m_invMass = m_inverseMass*m_linearFactor;
-	m_pushVelocity.setZero();
-	m_turnVelocity.setZero();
 
 	
 
@@ -246,7 +241,6 @@ void btRigidBody::setMassProps(btScalar mass, const btVector3& inertia)
 				   inertia.y() != btScalar(0.0) ? btScalar(1.0) / inertia.y(): btScalar(0.0),
 				   inertia.z() != btScalar(0.0) ? btScalar(1.0) / inertia.z(): btScalar(0.0));
 
-	m_invMass = m_linearFactor*m_inverseMass;
 }
 
 	
@@ -255,6 +249,23 @@ void btRigidBody::updateInertiaTensor()
 	m_invInertiaTensorWorld = m_worldTransform.getBasis().scaled(m_invInertiaLocal) * m_worldTransform.getBasis().transpose();
 }
 
+
+btVector3 btRigidBody::computeGyroscopicForce(btScalar maxGyroscopicForce) const
+{
+	btVector3 inertiaLocal;
+	inertiaLocal[0] = 1.f/getInvInertiaDiagLocal()[0];
+	inertiaLocal[1] = 1.f/getInvInertiaDiagLocal()[1];
+	inertiaLocal[2] = 1.f/getInvInertiaDiagLocal()[2];
+	btMatrix3x3 inertiaTensorWorld = getWorldTransform().getBasis().scaled(inertiaLocal) * getWorldTransform().getBasis().transpose();
+	btVector3 tmp = inertiaTensorWorld*getAngularVelocity();
+	btVector3 gf = getAngularVelocity().cross(tmp);
+	btScalar l2 = gf.length2();
+	if (l2>maxGyroscopicForce*maxGyroscopicForce)
+	{
+		gf *= btScalar(1.)/btSqrt(l2)*maxGyroscopicForce;
+	}
+	return gf;
+}
 
 void btRigidBody::integrateVelocities(btScalar step) 
 {

@@ -40,7 +40,11 @@ extern bool gDisableDeactivation;
 
 enum	btRigidBodyFlags
 {
-	BT_DISABLE_WORLD_GRAVITY = 1
+	BT_DISABLE_WORLD_GRAVITY = 1,
+	///The BT_ENABLE_GYROPSCOPIC_FORCE can easily introduce instability
+	///So generally it is best to not enable it. 
+	///If really needed, run at a high frequency like 1000 Hertz:	///See Demos/GyroscopicDemo for an example use
+	BT_ENABLE_GYROPSCOPIC_FORCE = 2
 };
 
 
@@ -93,13 +97,8 @@ class btRigidBody  : public btCollisionObject
 
 protected:
 
-	ATTRIBUTE_ALIGNED64(btVector3		m_deltaLinearVelocity);
-	btVector3		m_deltaAngularVelocity;
 	btVector3		m_angularFactor;
-	btVector3		m_invMass;
-	btVector3		m_pushVelocity;
-	btVector3		m_turnVelocity;
-
+	
 
 public:
 
@@ -125,6 +124,9 @@ public:
 
 		///best simulation results when friction is non-zero
 		btScalar			m_friction;
+		///the m_rollingFriction prevents rounded shapes, such as spheres, cylinders and capsules from rolling forever.
+		///See Bullet/Demos/RollingFrictionDemo for usage
+		btScalar			m_rollingFriction;
 		///best simulation results using zero restitution.
 		btScalar			m_restitution;
 
@@ -147,6 +149,7 @@ public:
 			m_linearDamping(btScalar(0.)),
 			m_angularDamping(btScalar(0.)),
 			m_friction(btScalar(0.5)),
+			m_rollingFriction(btScalar(0)),
 			m_restitution(btScalar(0.)),
 			m_linearSleepingThreshold(btScalar(0.8)),
 			m_angularSleepingThreshold(btScalar(1.f)),
@@ -254,7 +257,6 @@ public:
 	void setLinearFactor(const btVector3& linearFactor)
 	{
 		m_linearFactor = linearFactor;
-		m_invMass = m_linearFactor*m_inverseMass;
 	}
 	btScalar		getInvMass() const { return m_inverseMass; }
 	const btMatrix3x3& getInvInertiaTensorWorld() const { 
@@ -519,8 +521,7 @@ public:
 		return m_rigidbodyFlags;
 	}
 
-	
-	
+	btVector3 computeGyroscopicForce(btScalar maxGyroscopicForce) const;
 
 	///////////////////////////////////////////////
 
