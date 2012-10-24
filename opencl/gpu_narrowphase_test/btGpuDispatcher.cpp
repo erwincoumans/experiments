@@ -321,92 +321,97 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 	bool sequential=false;
 	if (sequential)
 	{
-	for (int i=0;i<hostPairs.size();i++)
-	{
-		int bodyIndexA = hostPairs[i].x;
-		int bodyIndexB = hostPairs[i].y;
-
-		int curContactOut = numContacts;
-
-		m_satCollision->computeConvexConvexContactsGPUSATSingle(
-							bodyIndexA,bodyIndexB,
-							bodyBuf[bodyIndexA].m_collidableIdx,bodyBuf[bodyIndexB].m_collidableIdx,
-							&bodyBuf,&shapeBuf,
-							&contactOut,numContacts,cfg,
-							m_hostConvexData,m_hostConvexData,
-							m_vertices,m_uniqueEdges,m_faces,m_indices,
-							m_vertices,m_uniqueEdges,m_faces,m_indices,
-							m_hostCollidables,m_hostCollidables);
-		if (curContactOut !=numContacts)
+		BT_PROFILE("computeConvexConvexContactsGPUSATSingle");
+		for (int i=0;i<hostPairs.size();i++)
 		{
-			contactOut[curContactOut].m_batchIdx = i;//?
+			int bodyIndexA = hostPairs[i].x;
+			int bodyIndexB = hostPairs[i].y;
+
+			int curContactOut = numContacts;
+
+			m_satCollision->computeConvexConvexContactsGPUSATSingle(
+								bodyIndexA,bodyIndexB,
+								bodyBuf[bodyIndexA].m_collidableIdx,bodyBuf[bodyIndexB].m_collidableIdx,
+								&bodyBuf,&shapeBuf,
+								&contactOut,numContacts,cfg,
+								m_hostConvexData,m_hostConvexData,
+								m_vertices,m_uniqueEdges,m_faces,m_indices,
+								m_vertices,m_uniqueEdges,m_faces,m_indices,
+								m_hostCollidables,m_hostCollidables);
+			if (curContactOut !=numContacts)
+			{
+				contactOut[curContactOut].m_batchIdx = i;//?
+			}
 		}
-	}
 	}
 	else
 	{
-	btOpenCLArray<int2> gpuPairs(m_ctx,m_queue);
-	gpuPairs.copyFromHost(hostPairs);
-
-	btOpenCLArray<RigidBodyBase::Body> gpuBodyBuf(m_ctx,m_queue);
-	gpuBodyBuf.copyFromHost(bodyBuf);
-
-	btOpenCLArray<ChNarrowphase::ShapeData> gpuShapeBuf(m_ctx,m_queue);
-	btOpenCLArray<Contact4> gpuContacts(m_ctx,m_queue,1024*1024);
-
-	btOpenCLArray<ConvexPolyhedronCL>	gpuConvexData(m_ctx,m_queue);
-	gpuConvexData.copyFromHost(m_hostConvexData);
-
-	btOpenCLArray<btVector3>				gpuVertices(m_ctx,m_queue);
-	gpuVertices.copyFromHost(m_vertices);
-	btOpenCLArray<btVector3>				gpuUniqueEdges(m_ctx,m_queue);
-	gpuUniqueEdges.copyFromHost(m_uniqueEdges);
-	btOpenCLArray<btGpuFace>				gpuFaces(m_ctx,m_queue);
-	gpuFaces.copyFromHost(m_faces);
-	btOpenCLArray<int>						gpuIndices(m_ctx,m_queue);
-	gpuIndices.copyFromHost(m_indices);
-
-	btOpenCLArray<btCollidable>			gpuCollidables(m_ctx,m_queue);
-	gpuCollidables.copyFromHost(m_hostCollidables);
-
-	btOpenCLArray<btYetAnotherAabb> clAabbs(m_ctx,m_queue,1);
-	btOpenCLArray<int4> triangleConvexPairs(m_ctx,m_queue,1);
-
-	int numObjects = 0;
-	int maxTriConvexPairCapacity = 0;
-	int numTriConvexPairsOut = 0;
-
-	static bool useGPU= true;
-	if (useGPU)
-	{
 		BT_PROFILE("computeConvexConvexContactsGPUSAT_AND_OpenCLArrays");
+		btOpenCLArray<int2> gpuPairs(m_ctx,m_queue);
+		gpuPairs.copyFromHost(hostPairs);
 
-		 btOpenCLArray<float4> worldVertsB1GPU(m_ctx,m_queue);
-		btOpenCLArray<int4> clippingFacesOutGPU(m_ctx,m_queue,1);
-		btOpenCLArray<float4> worldNormalsAGPU(m_ctx,m_queue);
-		btOpenCLArray<float4> worldVertsA1GPU(m_ctx,m_queue);
-		btOpenCLArray<float4> worldVertsB2GPU(m_ctx,m_queue);
+		btOpenCLArray<RigidBodyBase::Body> gpuBodyBuf(m_ctx,m_queue);
+		gpuBodyBuf.copyFromHost(bodyBuf);
 
+		btOpenCLArray<ChNarrowphase::ShapeData> gpuShapeBuf(m_ctx,m_queue);
+		btOpenCLArray<Contact4> gpuContacts(m_ctx,m_queue,1024*1024);
 
-		m_satCollision->computeConvexConvexContactsGPUSAT(
-			&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
-			&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
-			gpuCollidables,clAabbs,
-			worldVertsB1GPU,clippingFacesOutGPU,worldNormalsAGPU,worldVertsA1GPU,worldVertsB2GPU,
-			numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+		btOpenCLArray<ConvexPolyhedronCL>	gpuConvexData(m_ctx,m_queue);
+		gpuConvexData.copyFromHost(m_hostConvexData);
 
-	} else
-	{
-		m_satCollision->computeConvexConvexContactsGPUSAT_sequential(
-			&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
-			&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
-			gpuCollidables,clAabbs,numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
-	}
+		btOpenCLArray<btVector3>				gpuVertices(m_ctx,m_queue);
+		gpuVertices.copyFromHost(m_vertices);
+		btOpenCLArray<btVector3>				gpuUniqueEdges(m_ctx,m_queue);
+		gpuUniqueEdges.copyFromHost(m_uniqueEdges);
+		btOpenCLArray<btGpuFace>				gpuFaces(m_ctx,m_queue);
+		gpuFaces.copyFromHost(m_faces);
+		btOpenCLArray<int>						gpuIndices(m_ctx,m_queue);
+		gpuIndices.copyFromHost(m_indices);
 
-	{
-		BT_PROFILE("gpuContacts.copyToHost");
-		gpuContacts.copyToHost(contactOut);
-	}
+		btOpenCLArray<btCollidable>			gpuCollidables(m_ctx,m_queue);
+		gpuCollidables.copyFromHost(m_hostCollidables);
+
+		btOpenCLArray<btYetAnotherAabb> clAabbs(m_ctx,m_queue,1);
+		btOpenCLArray<int4> triangleConvexPairs(m_ctx,m_queue,1);
+
+		int numObjects = 0;
+		int maxTriConvexPairCapacity = 0;
+		int numTriConvexPairsOut = 0;
+
+		static bool useGPU= true;
+		if (useGPU)
+		{
+			
+
+			 btOpenCLArray<float4> worldVertsB1GPU(m_ctx,m_queue);
+			btOpenCLArray<int4> clippingFacesOutGPU(m_ctx,m_queue,1);
+			btOpenCLArray<float4> worldNormalsAGPU(m_ctx,m_queue);
+			btOpenCLArray<float4> worldVertsA1GPU(m_ctx,m_queue);
+			btOpenCLArray<float4> worldVertsB2GPU(m_ctx,m_queue);
+
+			{
+				BT_PROFILE("computeConvexConvexContactsGPUSAT");
+				m_satCollision->computeConvexConvexContactsGPUSAT(
+					&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
+					&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
+					gpuCollidables,clAabbs,
+					worldVertsB1GPU,clippingFacesOutGPU,worldNormalsAGPU,worldVertsA1GPU,worldVertsB2GPU,
+					numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+				}
+
+		} else
+		{
+			BT_PROFILE("computeConvexConvexContactsGPUSAT_sequential");
+			m_satCollision->computeConvexConvexContactsGPUSAT_sequential(
+				&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
+				&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
+				gpuCollidables,clAabbs,numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+		}
+
+		{
+			BT_PROFILE("gpuContacts.copyToHost");
+			gpuContacts.copyToHost(contactOut);
+		}
 	}
 
 	{
@@ -444,6 +449,9 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 		}
 	}		
 
-	btCollisionDispatcher::dispatchAllCollisionPairs(pairCache,dispatchInfo,dispatcher);
+	{
+			BT_PROFILE("btCollisionDispatcher::dispatchAllCollisionPairs");
+			btCollisionDispatcher::dispatchAllCollisionPairs(pairCache,dispatchInfo,dispatcher);
+	}
 
 }
