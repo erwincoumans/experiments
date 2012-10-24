@@ -530,9 +530,9 @@ static Vertex* setv(Vertex* v, float x, float y, float s, float t, float width, 
 	v->uv.p[0] = s;
     v->uv.p[1] = t;
 
-    v->colour.p[0] = 0.f;
-    v->colour.p[1] = 0.f;
-    v->colour.p[2] = 0.f;
+    v->colour.p[0] = 0.1f;//1.f;
+    v->colour.p[1] = 0.1f;
+    v->colour.p[2] = 0.1f;
     v->colour.p[3] = 1.f;
     
 	return v+1;

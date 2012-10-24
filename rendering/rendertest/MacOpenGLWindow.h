@@ -1,13 +1,11 @@
 #ifndef MAC_OPENGL_WINDOW_H
 #define MAC_OPENGL_WINDOW_H
 
-typedef void (*btMouseButtonCallback)(int button, int state, float x, float y);
-typedef void (*btMouseMoveCallback)(float x, float y);
-typedef void (*btResizeCallback)(float x, float y);
-typedef void (*btKeyboardCallback)(unsigned char key, int x, int y);
-typedef void (*btWheelCallback)(float deltax, float deltay);
+#include "../btgWindowInterface.h"
 
-class MacOpenGLWindow
+#define btgDefaultOpenGLWindow MacOpenGLWindow
+
+class MacOpenGLWindow : public btgWindowInterface
 {
     struct MacOpenGLWindowInternalData* m_internalData;
     float m_mouseX;
@@ -18,21 +16,25 @@ class MacOpenGLWindow
     btMouseMoveCallback m_mouseMoveCallback;
     btWheelCallback m_wheelCallback;
     btKeyboardCallback m_keyboardCallback;
+	btRenderCallback m_renderCallback;
+	
     float m_retinaScaleFactor;
 public:
     
     MacOpenGLWindow();
     virtual ~MacOpenGLWindow();
     
-    void init(int width, int height);
+    void init(int width, int height, const char* windowTitle);
 
-    void exit();
+    void closeWindow();
     
     void startRendering();
     
     void endRendering();//swap buffers
     
-    bool requestedExit();
+  	virtual bool	requestedExit() const;
+
+	virtual	void	setRequestExit();
     
     void getMouseCoordinates(int& x, int& y);
     
@@ -64,6 +66,18 @@ public:
     {
         return m_retinaScaleFactor;
     }
+	
+	virtual	void	createWindow(const btgWindowConstructionInfo& ci);
+	
+	virtual	float	getTimeInSeconds();
+	
+
+	
+	virtual void setRenderCallback( btRenderCallback renderCallback);
+	
+	virtual void setWindowTitle(const char* title);
+
+	
 
 };
 

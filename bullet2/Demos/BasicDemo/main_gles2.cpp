@@ -18,7 +18,7 @@ int g_OpenGLWidth = 1024;
 int g_OpenGLHeight = 768;
 
 GLES2Renderer render;
-void MyKeyboardCallback(unsigned char key, int x, int y)
+void MyKeyboardCallback(int key, int state)
 {
 	render.keyboardCallback(key);
 }

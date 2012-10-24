@@ -20,7 +20,7 @@ subject to the following restrictions:
 
 void btDefaultMouseButtonCallback( int button, int state, float x, float y);
 void btDefaultMouseMoveCallback(  float x, float y);
-void btDefaultKeyboardCallback(unsigned char key, int x, int y);
+void btDefaultKeyboardCallback(int key, int state);
 void btDefaultWheelCallback( float deltax, float deltay);
 
 

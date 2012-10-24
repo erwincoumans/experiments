@@ -165,7 +165,7 @@ void GLPrimitiveRenderer::loadBufferData()
     GLubyte*	image=new GLubyte[256*256*3];
     for(int y=0;y<256;++y)
     {
-        const int	t=y>>5;
+     //   const int	t=y>>5;
         GLubyte*	pi=image+y*256*3;
         for(int x=0;x<256;++x)
         {

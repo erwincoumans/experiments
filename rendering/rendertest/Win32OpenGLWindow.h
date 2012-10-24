@@ -21,6 +21,8 @@ subject to the following restrictions:
 
 #include "Win32Window.h"
 
+#define btgDefaultOpenGLWindow Win32OpenGLWindow
+
 class Win32OpenGLWindow : public Win32Window
 {
 	bool m_OpenGLInitialized;
@@ -32,9 +34,6 @@ class Win32OpenGLWindow : public Win32Window
 		
 	void disableOpenGL();
 
-	
-		
-	
 public:
 
 	Win32OpenGLWindow();
@@ -43,7 +42,6 @@ public:
 
 	virtual	void	createWindow(const btgWindowConstructionInfo& ci);
 	
-
 	virtual	void	closeWindow();
 
 
@@ -52,8 +50,9 @@ public:
 	virtual	void	renderAllObjects();
 
 	virtual	void	endRendering();
-	
 
 };
+
+
 
 #endif //_WIN32_OPENGL_RENDER_MANAGER_H

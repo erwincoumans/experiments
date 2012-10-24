@@ -506,11 +506,10 @@ static const char* strip2(const char* name, const char* pattern)
 	  return oriptr;
 }
 
-cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching1)
+cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_device_id device, const char* kernelSourceOrg, cl_int* pErrNum, const char* additionalMacrosArg , const char* clFileNameForCaching)
 {
 	const char* additionalMacros = additionalMacrosArg?additionalMacrosArg:"";
-	const char* clFileNameForCaching=0;
-
+	
 	cl_program m_cpProgram=0;
 	cl_int status;
 	

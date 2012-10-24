@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 
 	render.CleanupShaders();
 	
-	window->exit();
+	window->closeWindow();
 	delete window;
 	
 	

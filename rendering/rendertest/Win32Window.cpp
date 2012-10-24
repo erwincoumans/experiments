@@ -53,11 +53,51 @@ void Win32Window::pumpMessage()
 		};
 }
 
+int getAsciiCodeFromVirtualKeycode(int virtualKeyCode)
+{
+	int keycode = 0xffffffff;
+	switch (virtualKeyCode)
+	{
+		case VK_F1: {keycode = BTG_F1; break;}
+		case VK_F2: {keycode = BTG_F2; break;}
+		case VK_F3: {keycode = BTG_F3; break;}
+		case VK_F4: {keycode = BTG_F4; break;}
+		case VK_F5: {keycode = BTG_F5; break;}
+		case VK_F6: {keycode = BTG_F6; break;}
+		case VK_F7: {keycode = BTG_F7; break;}
+		case VK_F8: {keycode = BTG_F8; break;}
+		case VK_F9: {keycode = BTG_F9; break;}
+		case VK_F10: {keycode= BTG_F10; break;}
+
+		case VK_SPACE: {keycode= ' '; break;}
+		
+		case VK_NEXT:	{keycode= BTG_PAGE_DOWN; break;}
+		case VK_PRIOR:	{keycode= BTG_PAGE_UP; break;}
+		
+		case VK_INSERT: {keycode= BTG_INSERT; break;}
+		case VK_DELETE: {keycode= BTG_DELETE; break;}
+
+		case VK_END:{keycode= BTG_END; break;}
+		case VK_HOME:{keycode= BTG_HOME; break;}
+		case VK_LEFT:{keycode= BTG_LEFT_ARROW; break;}
+		case VK_UP:{keycode= BTG_UP_ARROW; break;}
+		case VK_RIGHT:{keycode= BTG_RIGHT_ARROW; break;}
+		case VK_DOWN:{keycode= BTG_DOWN_ARROW; break;}
+		default:
+			{
+				keycode = MapVirtualKey( virtualKeyCode, MAPVK_VK_TO_CHAR ) & 0x0000FFFF;
+			}
+	};
+
+	return keycode;
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	//printf("msg = %d\n", message);
 	switch (message)
 	{
+		
 	case WM_PAINT:
 		{
 			PAINTSTRUCT ps;
@@ -77,11 +117,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		return 0;
 
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
+		{
+
+			int keycode = getAsciiCodeFromVirtualKeycode(wParam);
+			
+
+			if (sData && sData->m_keyboardCallback )
+			{
+				int state=0;
+				(*sData->m_keyboardCallback)(keycode,state);
+			}
+			return 0;
+		}
+	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
 		{
-			if (sData && sData->m_keyboardCallback)
-					(*sData->m_keyboardCallback)(tolower(wParam),0,0);
-			break;
+			int keycode = getAsciiCodeFromVirtualKeycode(wParam);
+
+			if (sData && sData->m_keyboardCallback && ((HIWORD(lParam) & KF_REPEAT) == 0))
+			{
+				int state = 1;
+				(*sData->m_keyboardCallback)(keycode,state);
+			}
+			return 0;
 		}
 
 		case WM_MBUTTONUP:
@@ -93,6 +153,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				sData->m_mouseMButton=0;
 				sData->m_mouseXpos = xPos;
 				sData->m_mouseYpos = yPos;
+				if (sData && sData->m_mouseButtonCallback)
+					(*sData->m_mouseButtonCallback)(1,0,xPos,yPos);
 			}
 		break;
 	}
@@ -187,8 +249,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			int xPos = LOWORD(lParam); 
 			int yPos = HIWORD(lParam); 
 			sData->m_mouseRButton = 0;
+			if (sData && sData->m_mouseButtonCallback)
+				(*sData->m_mouseButtonCallback)(2,1,sData->m_mouseXpos,sData->m_mouseYpos);
 
-			//gDemoApplication->mouseFunc(2,0,xPos,yPos);
 		break;
 	}
 	case WM_QUIT:
@@ -554,7 +617,11 @@ void	Win32Window::setDebugMessage(int x,int y,const char* message)
 {
 }
 
-bool Win32Window::requestedExit()
+void	Win32Window::setRequestExit()
+{
+	m_data->m_quit = true;
+}
+bool Win32Window::requestedExit() const
 {
 	return m_data->m_quit;
 }

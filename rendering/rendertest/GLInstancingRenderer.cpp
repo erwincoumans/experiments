@@ -175,7 +175,7 @@ void btDefaultMouseMoveCallback( float x, float y)
 		sData2->mouseMoveCallback( x, y);
 }
 
-void btDefaultKeyboardCallback(unsigned char key, int x, int y)
+void btDefaultKeyboardCallback(int key, int state)
 {
 	//printf("world\n");
 }
@@ -219,8 +219,8 @@ GLInstancingRenderer::~GLInstancingRenderer()
 static GLint                uniform_texture_diffuse = 0;
 
 //used for dynamic loading from disk (default switched off)
-#define MAX_SHADER_LENGTH   8192
-static GLubyte shaderText[MAX_SHADER_LENGTH];
+//#define MAX_SHADER_LENGTH   8192
+//static GLubyte shaderText[MAX_SHADER_LENGTH];
 
 static const char* vertexShader= \
 "#version 330\n"
@@ -447,7 +447,7 @@ void GLInstancingRenderer::writeTransforms()
 		int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
 		int ORIENTATION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
 		int COLOR_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
-		int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
+	//	int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
 
 		char* base = orgBase;
 
@@ -456,7 +456,7 @@ void GLInstancingRenderer::writeTransforms()
 		float* colors= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
 		float* scaling= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
 
-		static int offset=0;
+		//static int offset=0;
 		//offset++;
 
 
@@ -600,7 +600,7 @@ void GLInstancingRenderer::InitShaders()
 	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
 	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
 
-	GLuint offset = 0;
+	//GLuint offset = 0;
 
 	glGenBuffers(1, &cube_vbo);
     checkError("glGenBuffers");
@@ -629,19 +629,6 @@ void myinit()
 	GLint err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	//	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
-	GLfloat light_ambient[] = { btScalar(1.0), btScalar(1.2), btScalar(0.2), btScalar(1.0) };
-
-	GLfloat light_diffuse[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0) };
-	GLfloat light_specular[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0 )};
-	/*	light_position is NOT default value	*/
-	GLfloat light_position0[] = { btScalar(10000.0), btScalar(10000.0), btScalar(10000.0), btScalar(0.0 )};
-	GLfloat light_position1[] = { btScalar(-1.0), btScalar(-10.0), btScalar(-1.0), btScalar(0.0) };
-
-	
-	//	glShadeModel(GL_FLAT);//GL_SMOOTH);
-	//glShadeModel(GL_SMOOTH);
-
     err = glGetError();
 	assert(err==GL_NO_ERROR);
     
@@ -652,9 +639,7 @@ void myinit()
 	assert(err==GL_NO_ERROR);
     
 	glClearColor(float(0.7),float(0.7),float(0.7),float(0));
-	//glEnable(GL_LIGHTING);
-	//glEnable(GL_LIGHT0);
-
+	
     err = glGetError();
 	assert(err==GL_NO_ERROR);
 
@@ -675,7 +660,7 @@ void myinit()
 				GLubyte*	image=new GLubyte[256*256*3];
 				for(int y=0;y<256;++y)
 				{
-					const int	t=y>>5;
+//					const int	t=y>>5;
 					GLubyte*	pi=image+y*256*3;
 					for(int x=0;x<256;++x)
 					{
@@ -734,12 +719,6 @@ void myinit()
 	#endif
 				 err = glGetError();
 				assert(err==GL_NO_ERROR);
-				int filter=1;
-				// Build2DMipmaps(3,256,256,GL_RGB,image,filter);
-				 //gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA,256,256,GL_RGB,GL_UNSIGNED_BYTE,image);
-
-			
-				//glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256,256,0,GL_RGB,GL_UNSIGNED_BYTE,image);
 				glGenerateMipmap(GL_TEXTURE_2D);
 			
@@ -749,10 +728,7 @@ void myinit()
 				delete[] image;
 				m_textureinitialized=true;
 			}
-			//		glMatrixMode(GL_TEXTURE);
-			//		glLoadIdentity();
-			//		glMatrixMode(GL_MODELVIEW);
-
+			
 			err = glGetError();
 			assert(err==GL_NO_ERROR);
         
@@ -844,10 +820,6 @@ void GLInstancingRenderer::updateCamera()
     assert(err==GL_NO_ERROR);
     
 
-	float top = 1.f;
-	float bottom = -1.f;
-	float nearPlane = 1.f;
-	float farPlane(10000.f);
 	int m_forwardAxis(2);
 
     float m_frustumZNear=1;
@@ -896,8 +868,8 @@ void GLInstancingRenderer::updateCamera()
 		
 		
 		extents *= m_data->m_cameraDistance;
-		btVector3 lower = m_data->m_cameraTargetPosition - extents;
-		btVector3 upper = m_data->m_cameraTargetPosition + extents;
+		//btVector3 lower = m_data->m_cameraTargetPosition - extents;
+		//btVector3 upper = m_data->m_cameraTargetPosition + extents;
 		//gluOrtho2D(lower.x, upper.x, lower.y, upper.y);
 				//glTranslatef(100,210,0);
 	} else
@@ -1063,12 +1035,12 @@ void GLInstancingRenderer::RenderScene(void)
 	{
 		
 		btGraphicsInstance* gfxObj = m_graphicsInstances[i];
-		int myOffset = gfxObj->m_instanceOffset*4*sizeof(float);
+	//	int myOffset = gfxObj->m_instanceOffset*4*sizeof(float);
 
 		int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
 		int ORIENTATION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
 		int COLOR_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
-		int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
+//		int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
 
 		glBindVertexArray(gfxObj->m_cube_vao);
 
@@ -1094,7 +1066,6 @@ void GLInstancingRenderer::RenderScene(void)
 		glEnableVertexAttribArray(4);
 		glEnableVertexAttribArray(5);
 		glEnableVertexAttribArray(6);
-
 		glVertexAttribDivisorARB(0, 0);
 		glVertexAttribDivisorARB(1, 1);
 		glVertexAttribDivisorARB(2, 1);

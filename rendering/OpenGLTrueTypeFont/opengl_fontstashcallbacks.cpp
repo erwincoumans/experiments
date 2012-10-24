@@ -32,7 +32,7 @@ void display2() {
     assert(err==GL_NO_ERROR);
    // glViewport(0,0,10,10);
     
-	const float timeScale = 0.008f;
+	//const float timeScale = 0.008f;
 	
     glUseProgram(m_shaderProg);
     glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
@@ -71,9 +71,9 @@ void display2() {
     glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
+/*    
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
-    
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;
     err = glGetError();
@@ -82,7 +82,8 @@ void display2() {
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     err = glGetError();
     assert(err==GL_NO_ERROR);
-    
+  */
+
     //	glutSwapBuffers();
 }
 

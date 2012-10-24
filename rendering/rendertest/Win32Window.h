@@ -58,7 +58,9 @@ public:
 
 	virtual void	setDebugMessage(int x,int y,const char* message);
 	
-	virtual bool requestedExit();
+	virtual bool	requestedExit() const;
+	
+	virtual	void	setRequestExit();
 
 	virtual void getMouseCoordinates(int& x, int& y);
 
