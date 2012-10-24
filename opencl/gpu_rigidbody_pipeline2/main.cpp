@@ -114,12 +114,14 @@ int main(int argc, char* argv[])
 	printf("\n");
 #ifdef _WIN32
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-#else
-    MacOpenGLWindow* window = new MacOpenGLWindow();
-#endif
-    
 	btgWindowConstructionInfo wci;
 	window->createWindow(wci);
+
+#else
+    MacOpenGLWindow* window = new MacOpenGLWindow();
+	window->init(512,512);
+#endif
+    
 
 #ifdef _WIN32
 	GLenum err = glewInit();
@@ -238,7 +240,8 @@ int main(int argc, char* argv[])
 	demo.cleanup();
 
 	render.CleanupShaders();
-	window->closeWindow();
+	
+	window->exit();
 	delete window;
 	
 	
