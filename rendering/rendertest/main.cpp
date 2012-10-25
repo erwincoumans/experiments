@@ -265,17 +265,15 @@ int main(int argc, char* argv[])
 	printf("\n");
 #ifdef __APPLE__
 	MacOpenGLWindow* window = new MacOpenGLWindow();
-	window->init(g_OpenGLWidth,g_OpenGLHeight);
 #else
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
+#endif
 	btgWindowConstructionInfo wci;
 	wci.m_width = g_OpenGLWidth;
 	wci.m_height = g_OpenGLHeight;
 	
 	window->createWindow(wci);
 	window->setWindowTitle("render test");
-
-#endif
 	
 	
 
@@ -502,11 +500,7 @@ int main(int argc, char* argv[])
 
 	delete pprender;
 //	render.CleanupShaders();
-#ifdef _WIN32
 	window->closeWindow();
-#else
-	window->exit();
-#endif
 
 	delete window;
 	

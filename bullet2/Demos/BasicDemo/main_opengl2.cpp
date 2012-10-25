@@ -2,7 +2,7 @@
 #include "BasicDemo.h"
 
 #ifdef __APPLE__
-#include "MacOpenGLWindow.h"
+#include "../rendering/rendertest/MacOpenGLWindow.h"
 #else
 #include "../rendering/rendertest/Win32OpenGLWindow.h"
 #include "../rendering/rendertest/GLPrimitiveRenderer.h"
@@ -20,9 +20,7 @@ void MyKeyboardCallback(int key, int state)
 	render.keyboardCallback(key);
 }
 
-#include <Windows.h>
-
-#include "GL/gl.h"
+#include "../rendering/rendertest/OpenGLInclude.h"
 
 int main(int argc, char* argv[])
 {
@@ -37,8 +35,10 @@ int main(int argc, char* argv[])
 	
 	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
+#ifdef _WIN32
 	glewInit();
-
+#endif
+	
 	window->startRendering();
 	glFinish();
 	glClearColor(1,0,0,1);

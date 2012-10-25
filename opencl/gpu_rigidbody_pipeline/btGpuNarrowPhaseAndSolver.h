@@ -19,8 +19,8 @@ subject to the following restrictions:
 #include "btCollidable.h"
 
 //#define MAX_CONVEX_BODIES_CL 8*1024
-#define MAX_CONVEX_BODIES_CL 128*1024
-//#define MAX_CONVEX_BODIES_CL 16*1024
+//#define MAX_CONVEX_BODIES_CL 128*1024
+#define MAX_CONVEX_BODIES_CL 16*1024
 //#define MAX_PAIRS_PER_BODY_CL 64
 #define MAX_PAIRS_PER_BODY_CL 16
 #define MAX_CONVEX_SHAPES_CL 8192

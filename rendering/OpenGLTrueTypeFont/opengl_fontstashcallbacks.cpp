@@ -72,7 +72,7 @@ void display2() {
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 /*    
-    
+ 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;

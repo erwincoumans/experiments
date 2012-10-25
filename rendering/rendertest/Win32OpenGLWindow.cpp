@@ -16,8 +16,8 @@ subject to the following restrictions:
 
 #include "Win32OpenGLWindow.h"
 
-#include <windows.h>
-#include <GL/gl.h>
+#include "OpenGLInclude.h"
+
 #include "LinearMath/btVector3.h"
 
 #include "Win32InternalWindowData.h"

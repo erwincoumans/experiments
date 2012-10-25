@@ -16,8 +16,7 @@ subject to the following restrictions:
 
 #include "Win32Window.h"
 
-#include <windows.h>
-#include <GL/gl.h>
+#include "OpenGLInclude.h"
 #include "LinearMath/btVector3.h"
 #include <wchar.h>
 static InternalData2* sData = 0;
