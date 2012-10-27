@@ -324,13 +324,11 @@ int main(int argc, char* argv[])
 	printf("\n");
 #ifdef __APPLE__
 	MacOpenGLWindow* window = new MacOpenGLWindow();
-	window->init(width,height);
 #else
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
+#endif
 	window->createWindow(btgWindowConstructionInfo(width,height));
 	window->setWindowTitle("font test");
-
-#endif
 	
 	
 
@@ -662,11 +660,7 @@ int main(int argc, char* argv[])
 #endif
 
 //	render.CleanupShaders();
-#ifdef _WIN32
 	window->closeWindow();
-#else
-	window->exit();
-#endif
 	delete window;
 	
 	return 0;

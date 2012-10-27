@@ -138,14 +138,11 @@ int main(int argc, char* argv[])
 	printf("\n");
 #ifdef _WIN32
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-	btgWindowConstructionInfo wci;
-	window->createWindow(wci);
-
 #else
     MacOpenGLWindow* window = new MacOpenGLWindow();
-	window->init(512,512);
 #endif
-    
+	btgWindowConstructionInfo wci;
+	window->createWindow(wci);    
 
 #ifdef _WIN32
 	GLenum err = glewInit();
