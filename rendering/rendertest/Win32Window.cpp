@@ -110,11 +110,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 	
 	case WM_CLOSE:
-		PostQuitMessage(0);
+		if (sData)
+			sData->m_quit = true;
+		//PostQuitMessage(0);
 		return 0;
 
 	case WM_DESTROY:
-		PostQuitMessage(0);
+		if (sData)
+			sData->m_quit = true;
+		//PostQuitMessage(0);
 		return 0;
 
 	case WM_SYSKEYUP:
@@ -256,6 +260,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_QUIT:
 		{
+			return 0;
 			break;
 		}
 	case WM_SIZE:													// Size Action Has Taken Place

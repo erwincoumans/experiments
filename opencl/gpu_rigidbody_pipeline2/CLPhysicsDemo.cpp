@@ -16,7 +16,7 @@ subject to the following restrictions:
 bool useSapGpuBroadphase = true;
 extern bool useConvexHeightfield;
 
-#include "OpenGLInclude.h"
+#include "../../rendering/rendertest/OpenGLInclude.h"
 #ifdef _WIN32
 #include "windows.h"
 #endif
@@ -53,6 +53,7 @@ static char* interopKernelString =
 #define INTEROPKERNEL_SRC_PATH "../../opencl/broadphase_benchmark/integrateKernel.cl"
 	
 cl_kernel g_integrateTransformsKernel;
+cl_kernel g_integrateTransformsKernel2;
 
 
 
@@ -66,7 +67,7 @@ btOpenCLGLInteropBuffer* g_interopBuffer = 0;
 #endif
 
 extern GLuint               cube_vbo;
-extern int VBOsize;
+
 
 cl_mem clBuffer=0;
 char* hostPtr=0;
@@ -163,13 +164,10 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 
 
 
-#ifdef _WIN32
-CLPhysicsDemo::CLPhysicsDemo(Win32OpenGLWindow*	renderer, int maxShapeBufferCapacity)
-#else
-CLPhysicsDemo::CLPhysicsDemo(MacOpenGLWindow*	renderer, int maxShapeBufferCapacity)
-#endif
+CLPhysicsDemo::CLPhysicsDemo(int maxShapeBufferCapacity, int maxNumObjects)
 {
 	m_maxShapeBufferCapacity = maxShapeBufferCapacity;
+	m_maxNumPhysicsInstances = maxNumObjects;
 	m_numPhysicsInstances=0;
 	m_numDynamicPhysicsInstances = 0;
 
@@ -180,6 +178,20 @@ CLPhysicsDemo::~CLPhysicsDemo()
 {
 
 }
+
+void	CLPhysicsDemo::readbackBodiesToCpu()
+{
+	if (narrowphaseAndSolver)
+		narrowphaseAndSolver->readbackAllBodiesToCpu();
+
+}
+	
+void	CLPhysicsDemo::getObjectTransformFromCpu(float* position, float* orientation, int objectIndex)
+{
+	if (narrowphaseAndSolver)
+		narrowphaseAndSolver->getObjectTransformFromCpu(position,orientation,objectIndex);
+}
+
 
 
 void CLPhysicsDemo::writeBodiesToGpu()
@@ -460,7 +472,7 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
 	g_integrateTransformsKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel" ,0,prog);
-	
+	g_integrateTransformsKernel2 = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel2" ,0,prog);
 
 	initFindPairs(gFpIO, g_cxMainContext, g_device, g_cqCommandQue, MAX_CONVEX_BODIES_CL);
 
@@ -572,7 +584,7 @@ void	CLPhysicsDemo::stepSimulation()
 	btAssert(b1==b2);
 
 	BT_PROFILE("simulationLoop");
-	
+	int VBOsize = m_maxShapeBufferCapacity+m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
 	
 	cl_int ciErrNum = CL_SUCCESS;
 
@@ -602,9 +614,12 @@ void	CLPhysicsDemo::stepSimulation()
 
 		blocking=  CL_TRUE;
 		hostPtr=  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
+		
+
 		if (!clBuffer)
 		{
-			clBuffer = clCreateBuffer(g_cxMainContext, CL_MEM_READ_WRITE, VBOsize, 0, &ciErrNum);
+			int maxVBOsize = m_maxShapeBufferCapacity+MAX_CONVEX_BODIES_CL*(4+4+4+3)*sizeof(float);
+			clBuffer = clCreateBuffer(g_cxMainContext, CL_MEM_READ_WRITE,maxVBOsize, 0, &ciErrNum);
 		} 
 		clFinish(g_cqCommandQue);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
@@ -690,7 +705,8 @@ void	CLPhysicsDemo::stepSimulation()
 				{
 					BT_PROFILE("copyBodyVelocities");
 					if (narrowphaseAndSolver)
-						copyBodyVelocities(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getBodyInertiasGpu());
+						copyBodyVelocities(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu());
+
 				}
 			}
 
@@ -712,17 +728,18 @@ void	CLPhysicsDemo::stepSimulation()
 					int numObjects = m_numPhysicsInstances;
 					int offset = m_maxShapeBufferCapacity/4;
 
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 0, sizeof(int), &offset);
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 1, sizeof(int), &numObjects);
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 2, sizeof(cl_mem), (void*)&clBuffer );
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 0, sizeof(int), &offset);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 1, sizeof(int), &numObjects);
+					cl_mem bodyGpuBuffer = narrowphaseAndSolver->getBodiesGpu();
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 2, sizeof(cl_mem), (void*)&bodyGpuBuffer );
 	
 					cl_mem lv = m_data->m_linVelBuf->getBufferCL();
 					cl_mem av = m_data->m_angVelBuf->getBufferCL();
 					cl_mem btimes = m_data->m_bodyTimes->getBufferCL();
 
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 3, sizeof(cl_mem), (void*)&lv);
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 4, sizeof(cl_mem), (void*)&av);
-					ciErrNum = clSetKernelArg(g_integrateTransformsKernel, 5, sizeof(cl_mem), (void*)&btimes);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 3, sizeof(cl_mem), (void*)&lv);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 4, sizeof(cl_mem), (void*)&av);
+					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 5, sizeof(cl_mem), (void*)&btimes);
 					
 					
 					
@@ -733,7 +750,7 @@ void	CLPhysicsDemo::stepSimulation()
 					if (workGroupSize>numWorkItems)
 						workGroupSize=numWorkItems;
 
-					ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_integrateTransformsKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+					ciErrNum = clEnqueueNDRangeKernel(g_cqCommandQue, g_integrateTransformsKernel2, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 					oclCHECKERROR(ciErrNum, CL_SUCCESS);
 				} else
 				{
@@ -750,6 +767,12 @@ void	CLPhysicsDemo::stepSimulation()
 
 				}
 			} 
+		}
+
+		{
+			BT_PROFILE("copyTransformsToBVO");
+			if (narrowphaseAndSolver)
+					copyTransformsToBVO(gFpIO, narrowphaseAndSolver->getBodiesGpu());
 		}
 			
 

@@ -84,8 +84,9 @@ public:
 	void setObjectTransform(const float* position, const float* orientation , int bodyIndex);
 
 	void	writeAllBodiesToGpu();
-	
-	//btBroadphasePair* GetPair(btBroadphasePairArray& pairArray, int idxBodyA, int idxBodyB);
+
+	void	readbackAllBodiesToCpu();
+	void	getObjectTransformFromCpu(float* position, float* orientation , int bodyIndex) const;
 
 	virtual void computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem aabbs, int numObjects);
 

@@ -44,6 +44,7 @@ struct btFindPairsIO
 
 	cl_kernel	m_setupBodiesKernel;
 	cl_kernel	m_copyVelocitiesKernel;
+	cl_kernel	m_copyTransformsToVBOKernel;
 
 	cl_context		m_mainContext;
 	cl_device_id	m_device;
@@ -83,7 +84,8 @@ void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies, cl_mem collidables);
 void	colorPairsOpenCL(btFindPairsIO&	fpio);
 
 void	setupBodies(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias);
-void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias);
+void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies);
+void	copyTransformsToBVO(btFindPairsIO& fpio, cl_mem bodies);
 
 void releaseFindPairs(btFindPairsIO& fpio);
 

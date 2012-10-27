@@ -28,28 +28,22 @@ class MacOpenGLWindow;
 
 struct CLPhysicsDemo
 {
-#ifdef _WIN32
-	Win32OpenGLWindow* m_renderer;
-#else
-    MacOpenGLWindow* m_renderer;
-#endif
+
     
 	
 
 	int m_numPhysicsInstances;
 	int m_numDynamicPhysicsInstances;
 	int m_maxShapeBufferCapacity;
+	int m_maxNumPhysicsInstances;
 	
 	
 
 
 
 	struct InternalData* m_data;
-#ifdef _WIN32
-	CLPhysicsDemo(Win32OpenGLWindow*	renderer, int maxShapeBufferCapacity);
-#else
-    CLPhysicsDemo(MacOpenGLWindow*	renderer, int maxShapeBufferCapacity);
-#endif
+
+	CLPhysicsDemo(int maxShapeBufferCapacity, int maxNumObjects);
     
 	virtual ~CLPhysicsDemo();
 
@@ -71,6 +65,9 @@ struct CLPhysicsDemo
 
 	void	writeVelocitiesToGpu();
 	void	writeBodiesToGpu();
+
+	void	readbackBodiesToCpu();
+	void	getObjectTransformFromCpu(float* position,float* orientation, int objectIndex);
 
 	void	cleanup();
 

@@ -69,7 +69,7 @@ void Win32OpenGLWindow::disableOpenGL()
 {
 	wglMakeCurrent( NULL, NULL );
 	wglDeleteContext( m_data->m_hRC );
-	ReleaseDC( m_data->m_hWnd, m_data->m_hDC );
+//	ReleaseDC( m_data->m_hWnd, m_data->m_hDC );
 
 }
 

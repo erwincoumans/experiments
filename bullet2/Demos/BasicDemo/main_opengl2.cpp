@@ -8,6 +8,7 @@
 #include "../rendering/rendertest/GLPrimitiveRenderer.h"
 #endif
 #include "../../DemosCommon/OpenGL2Renderer.h"
+#include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
@@ -73,7 +74,8 @@ int main(int argc, char* argv[])
 
 			render.init();
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
-			render.renderPhysicsWorld(demo->getDynamicsWorld());
+			btCollisionObject** colObjectArray = &demo->getDynamicsWorld()->getCollisionObjectArray()[0];
+			render.renderPhysicsWorld(demo->getDynamicsWorld()->getNumCollisionObjects(), colObjectArray);
 			window->endRendering();
 			glFinish();
 		} while (!window->requestedExit());

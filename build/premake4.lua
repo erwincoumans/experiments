@@ -75,9 +75,15 @@ end
 	include "../jpeglib"
 
 	
-	include "../bullet2/Demos/BasicDemo"
+	--include "../bullet2/Demos/BasicDemo"
+	include "../bullet2/Demos/GpuDemo"
+	include "../opencl/gpu_rigidbody_pipeline2"
 	
-if not _OPTIONS["with-nacl"] then
+	--include "../pole"
+	
+		if false then
+--	if true then
+--if not _OPTIONS["with-nacl"] then
 
 	include "../opencl/c_api"
 
@@ -98,7 +104,7 @@ if not _OPTIONS["with-nacl"] then
 	include "../opencl/3dGridBroadphase"
 	include "../opencl/broadphase_benchmark"
 --	include "../opencl/gpu_rigidbody_pipeline"
-	include "../opencl/gpu_rigidbody_pipeline2"
+	
 	include "../rendering/rendertest"
 	include "../rendering/OpenGLTrueTypeFont"
 	include "../opencl/tests"
@@ -144,7 +150,5 @@ end
 	include "../rendering/Gwen/Gwen"
 	include "../rendering/Gwen/GwenOpenGLTest"
 	include "../rendering/OpenGLES2Angle"
-else
-	include "../rendering/NativeClient"	
 	
 end

@@ -34,7 +34,7 @@ void OpenGL3CoreRenderer::keyboardCallback(unsigned char key)
 
 
 //very incomplete conversion from physics to graphics
-void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly, const btDiscreteDynamicsWorld* world)
+void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly, int numObjects, btCollisionObject** colObjArray)
 {
 
     int cubeShapeIndex  = -1;
@@ -49,12 +49,12 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
     
 
     
-	int numColObj = world->getNumCollisionObjects();
+	int numColObj = numObjects;
     int curGraphicsIndex = 0;
     
     for (int i=0;i<numColObj;i++)
     {
-		btCollisionObject* colObj = world->getCollisionObjectArray()[i];
+		btCollisionObject* colObj = colObjArray[i];
 		
         btVector3 pos = colObj->getWorldTransform().getOrigin();
         btQuaternion orn = colObj->getWorldTransform().getRotation();
@@ -107,7 +107,7 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 
 
 
-void OpenGL3CoreRenderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* world)
+void OpenGL3CoreRenderer::renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray)
 {
 	//sync changes from physics world to render world	
 	//for now, we don't deal with adding/removing objects to the world during the simulation, to keep the rendererer simpler
@@ -115,7 +115,7 @@ void OpenGL3CoreRenderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* worl
 
 	m_instanceRenderer->writeTransforms();
 	static bool syncOnly=false;
-	graphics_from_physics(*m_instanceRenderer,syncOnly,world);
+	graphics_from_physics(*m_instanceRenderer,syncOnly,numObjects, colObjArray);
 	syncOnly= true;
 
 	//render

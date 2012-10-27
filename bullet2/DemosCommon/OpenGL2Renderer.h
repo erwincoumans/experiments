@@ -1,7 +1,7 @@
 #ifndef _BT_OPENGL2_RENDERER_H
 #define _BT_OPENGL2_RENDERER_H
 
-class btDiscreteDynamicsWorld;
+class btCollisionObject;
 class GL_ShapeDrawer;
 
 #include"LinearMath/btVector3.h"
@@ -41,7 +41,8 @@ protected:
 	GL_ShapeDrawer*	m_shapeDrawer;
 
 	int	m_ortho;
-	void	renderscene(int pass,const btDiscreteDynamicsWorld* world);
+	
+	void	renderscene(int pass,int numobjects, btCollisionObject** objectArray);
 
 	void stepLeft();
 	void stepRight();
@@ -60,7 +61,7 @@ public:
 	void resetPerspectiveProjection() ;
 	void reshape(int w, int h); 
 	void keyboardCallback(unsigned char key);
-	void renderPhysicsWorld(const btDiscreteDynamicsWorld* world);
+	void renderPhysicsWorld(int numObjects, btCollisionObject** objectArray);
 
 
 };

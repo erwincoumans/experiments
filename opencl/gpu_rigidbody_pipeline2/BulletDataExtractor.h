@@ -7,7 +7,7 @@
 #include "LinearMath/btVector3.h"
 
 class GLInstancingRenderer;
-class CLPhysicsDemo;
+struct CLPhysicsDemo;
 
 void createScene(GLInstancingRenderer& renderer,CLPhysicsDemo& physicsSim, bool useConvexHeightfield, const char* fileName);
 

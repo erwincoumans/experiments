@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
 		
 
 
-	CLPhysicsDemo demo(window, render.getMaxShapeCapacity());
+	CLPhysicsDemo demo(render.getMaxShapeCapacity(), MAX_CONVEX_BODIES_CL);
 	
 	
 	demo.init(-1,-1,useInterop);

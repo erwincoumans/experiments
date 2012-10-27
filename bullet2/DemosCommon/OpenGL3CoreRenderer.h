@@ -1,7 +1,7 @@
 #ifndef OPENGL3_CORE_RENDERER_H
 #define OPENGL3_CORE_RENDERER_H
 
-class btDiscreteDynamicsWorld;
+class btCollisionObject;
 class GLInstancingRenderer;
 
 class OpenGL3CoreRenderer
@@ -14,7 +14,7 @@ public:
 	void init();
 	void reshape(int w, int h); 
 	void keyboardCallback(unsigned char key);
-	void renderPhysicsWorld(const btDiscreteDynamicsWorld* world);
+	void renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray);
 
 };
 

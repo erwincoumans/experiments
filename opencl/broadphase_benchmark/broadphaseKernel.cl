@@ -210,10 +210,10 @@ __kernel void
 
 
 __kernel void 
-  copyVelocitiesKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer,
+  copyVelocitiesKernel( const int startOffset, const int numNodes, 
 		   __global float4 *linVel,
 		   __global float4 *pAngVel,
-		   __global Body* gBodies, __global Shape* bodyInertias
+		   __global Body* gBodies
 		   )
 {
 	int nodeID = get_global_id(0);
@@ -232,6 +232,20 @@ __kernel void
 		}
 	}
 }
+
+__kernel void 
+	copyTransformsToVBOKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global Body* gBodies	   )
+{
+	int nodeID = get_global_id(0);
+	
+	if( nodeID < numNodes )
+	{
+		g_vertexBuffer[nodeID + startOffset/4] = (float4) (gBodies[nodeID].m_pos.xyz,1.0);
+		
+		g_vertexBuffer[nodeID + startOffset/4+numNodes] = gBodies[nodeID].m_quat;
+	}
+}
+
 
 
 

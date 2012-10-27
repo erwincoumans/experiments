@@ -12,8 +12,8 @@ subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-#ifndef BASIC_DEMO_H
-#define BASIC_DEMO_H
+#ifndef GPU_DEMO_H
+#define GPU_DEMO_H
 
 
 #include "LinearMath/btAlignedObjectArray.h"
@@ -26,36 +26,25 @@ class btCollisionDispatcher;
 class btConstraintSolver;
 struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
-class btDiscreteDynamicsWorld;
+class btGpuDynamicsWorld;
 
-///BasicDemo is good starting point for learning the code base and porting.
+///GpuDemo is good starting point for learning the code base and porting.
 
-class BasicDemo : public DemoApplication
+class GpuDemo : public DemoApplication
 {
-	btDiscreteDynamicsWorld*	m_dynamicsWorld;
+	btGpuDynamicsWorld*	m_dynamicsWorld;
 
 	//keep the collision shapes, for deletion/cleanup
 	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
 
-	btBroadphaseInterface*	m_broadphase;
-
-	btCollisionDispatcher*	m_dispatcher;
-
-	btConstraintSolver*	m_solver;
-
-	btDefaultCollisionConfiguration* m_collisionConfiguration;
-
 	public:
 
-	BasicDemo()
+	GpuDemo()
 	{
 		m_dynamicsWorld=0;
-		m_broadphase=0;
-		m_dispatcher=0;
-		m_solver=0;
-		m_collisionConfiguration=0;
+	
 	}
-	virtual ~BasicDemo()
+	virtual ~GpuDemo()
 	{
 		exitPhysics();
 	}
@@ -63,12 +52,7 @@ class BasicDemo : public DemoApplication
 
 	void	exitPhysics();
 
-	btDiscreteDynamicsWorld* getDynamicsWorld()
-	{
-		return m_dynamicsWorld;
-	}
-
-	const btDiscreteDynamicsWorld* getDynamicsWorld() const
+	const btGpuDynamicsWorld* getDynamicsWorld() const
 	{
 		return m_dynamicsWorld;
 	}
@@ -79,7 +63,7 @@ class BasicDemo : public DemoApplication
 	
 	static DemoApplication* Create()
 	{
-		BasicDemo* demo = new BasicDemo;
+		GpuDemo* demo = new GpuDemo;
 		demo->myinit();
 		demo->initPhysics();
 		return demo;
@@ -88,5 +72,5 @@ class BasicDemo : public DemoApplication
 	
 };
 
-#endif //BASIC_DEMO_H
+#endif //GPU_DEMO_H
 

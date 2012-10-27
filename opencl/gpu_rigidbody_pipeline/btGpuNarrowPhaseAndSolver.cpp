@@ -526,6 +526,31 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass
 	return m_internalData->m_numAcceleratedRigidBodies++;
 }
 
+void	btGpuNarrowphaseAndSolver::readbackAllBodiesToCpu()
+{
+	btAssert(m_internalData->m_bodyBufferCPU->size() == m_internalData->m_numAcceleratedRigidBodies);
+
+	m_internalData->m_bodyBufferGPU->copyToHostPointer(&m_internalData->m_bodyBufferCPU->at(0),m_internalData->m_numAcceleratedRigidBodies);
+}
+
+void	btGpuNarrowphaseAndSolver::getObjectTransformFromCpu(float* position, float* orientation , int bodyIndex) const
+{
+
+	float4 pos = m_internalData->m_bodyBufferCPU->at(bodyIndex).m_pos;
+	position[0] = pos.x;
+	position[1] = pos.y;
+	position[2] = pos.z;
+	position[3] = pos.w;
+	float4 orn = m_internalData->m_bodyBufferCPU->at(bodyIndex).m_quat;
+	orientation[0] = orn.x;
+	orientation[1] = orn.y;
+	orientation[2] = orn.z;
+	orientation[3] = orn.w;
+
+
+
+}
+
 void	btGpuNarrowphaseAndSolver::writeAllBodiesToGpu()
 {
 	m_internalData->m_bodyBufferGPU->resize(m_internalData->m_numAcceleratedRigidBodies);

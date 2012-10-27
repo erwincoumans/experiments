@@ -280,16 +280,16 @@ void OpenGL2Renderer::resetPerspectiveProjection()
 
 
 //
-void	OpenGL2Renderer::renderscene(int pass, const btDiscreteDynamicsWorld* world)
+void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject** objArray)
 {
 	btScalar	m[16];
 	btMatrix3x3	rot;rot.setIdentity();
-	const int	numObjects=world->getNumCollisionObjects();
+
 	btVector3 wireColor(1,0,0);
 	for(int i=0;i<numObjects;i++)
 	{
-		btCollisionObject*	colObj=world->getCollisionObjectArray()[i];
-		btRigidBody*		body=btRigidBody::upcast(colObj);
+		const btCollisionObject*	colObj=objArray[i];
+		const btRigidBody*		body=btRigidBody::upcast(colObj);
 		if(body&&body->getMotionState())
 		{
 			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
@@ -327,11 +327,13 @@ void	OpenGL2Renderer::renderscene(int pass, const btDiscreteDynamicsWorld* world
 			}
 		}
 
-		btVector3 aabbMin,aabbMax;
-		world->getBroadphase()->getBroadphaseAabb(aabbMin,aabbMax);
+
+		btVector3 aabbMin(-BT_LARGE_FLOAT,-BT_LARGE_FLOAT,-BT_LARGE_FLOAT);
+		btVector3 aabbMax(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
+		//world->getBroadphase()->getBroadphaseAabb(aabbMin,aabbMax);
 		
-		aabbMin-=btVector3(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
-		aabbMax+=btVector3(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
+		//aabbMin-=btVector3(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
+		//aabbMax+=btVector3(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
 //		printf("aabbMin=(%f,%f,%f)\n",aabbMin.getX(),aabbMin.getY(),aabbMin.getZ());
 //		printf("aabbMax=(%f,%f,%f)\n",aabbMax.getX(),aabbMax.getY(),aabbMax.getZ());
 //		m_dynamicsWorld->getDebugDrawer()->drawAabb(aabbMin,aabbMax,btVector3(1,1,1));
@@ -349,19 +351,19 @@ void	OpenGL2Renderer::renderscene(int pass, const btDiscreteDynamicsWorld* world
 }
 
 //
-void OpenGL2Renderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* world)
+void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** objectArray)
 {
 	init();
 
 	updateCamera();
 
-	if (world)
+	if (1)
 	{			
 		if(m_enableshadows)
 		{
 			glClear(GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_CULL_FACE);
-			renderscene(0,world);
+			renderscene(0,numObjects,objectArray);
 
 			glDisable(GL_LIGHTING);
 			glDepthMask(GL_FALSE);
@@ -371,10 +373,10 @@ void OpenGL2Renderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* world)
 			glStencilFunc(GL_ALWAYS,1,0xFFFFFFFFL);
 			glFrontFace(GL_CCW);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
-			renderscene(1,world);
+			renderscene(1,numObjects,objectArray);
 			glFrontFace(GL_CW);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-			renderscene(1,world);
+			renderscene(1,numObjects,objectArray);
 			glFrontFace(GL_CCW);
 
 			glPolygonMode(GL_FRONT,GL_FILL);
@@ -393,7 +395,7 @@ void OpenGL2Renderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* world)
 			glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
 			glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
 			glDisable(GL_LIGHTING);
-			renderscene(2,world);
+			renderscene(2,numObjects,objectArray);
 			glEnable(GL_LIGHTING);
 			glDepthFunc(GL_LESS);
 			glDisable(GL_STENCIL_TEST);
@@ -402,7 +404,7 @@ void OpenGL2Renderer::renderPhysicsWorld(const btDiscreteDynamicsWorld* world)
 		else
 		{
 			glDisable(GL_CULL_FACE);
-			renderscene(0,world);
+			renderscene(0,numObjects,objectArray);
 		}
 
 		int	xOffset = 10;

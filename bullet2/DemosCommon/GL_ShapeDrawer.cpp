@@ -48,6 +48,32 @@ subject to the following restrictions:
 
 #include <stdio.h> //printf debugging
 
+//
+GL_ShapeDrawer::GL_ShapeDrawer()
+{
+	m_texturehandle			=	0;
+	m_textureenabled		=	false;
+	m_textureinitialized	=	false;
+}
+
+GL_ShapeDrawer::~GL_ShapeDrawer()
+{
+	int i;
+	for (i=0;i<m_shapecaches.size();i++)
+	{
+		m_shapecaches[i]->~ShapeCache();
+		btAlignedFree(m_shapecaches[i]);
+	}
+	m_shapecaches.clear();
+	if(m_textureinitialized)
+	{
+		glDeleteTextures(1,(const GLuint*) &m_texturehandle);
+	}
+}
+
+
+
+
 //#define USE_DISPLAY_LISTS 1
 #ifdef USE_DISPLAY_LISTS
 
@@ -968,29 +994,6 @@ void		GL_ShapeDrawer::drawShadow(btScalar* m,const btVector3& extrusion,const bt
 	}
 	glPopMatrix();
 
-}
-
-//
-GL_ShapeDrawer::GL_ShapeDrawer()
-{
-	m_texturehandle			=	0;
-	m_textureenabled		=	false;
-	m_textureinitialized	=	false;
-}
-
-GL_ShapeDrawer::~GL_ShapeDrawer()
-{
-	int i;
-	for (i=0;i<m_shapecaches.size();i++)
-	{
-		m_shapecaches[i]->~ShapeCache();
-		btAlignedFree(m_shapecaches[i]);
-	}
-	m_shapecaches.clear();
-	if(m_textureinitialized)
-	{
-		glDeleteTextures(1,(const GLuint*) &m_texturehandle);
-	}
 }
 
 

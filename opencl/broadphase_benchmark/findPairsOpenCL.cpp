@@ -45,7 +45,8 @@ void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id de
 
 	fpio.m_setupBodiesKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "setupBodiesKernel" ,&pErrNum,prog);
 	fpio.m_copyVelocitiesKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "copyVelocitiesKernel" ,&pErrNum,prog);
-
+	fpio.m_copyTransformsToVBOKernel = btOpenCLUtils::compileCLKernelFromString(cxMainContext,device, broadphaseKernelString, "copyTransformsToVBOKernel" ,&pErrNum,prog);
+	
 
 
 }
@@ -138,7 +139,31 @@ void	setupBodies(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem
 }
 
 
-void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias)
+
+void	copyTransformsToBVO(btFindPairsIO& fpio, cl_mem bodies)
+{
+	int ciErrNum = 0;
+	int numObjects = fpio.m_numObjects;
+	int offset = fpio.m_positionOffset;
+
+	ciErrNum = clSetKernelArg(fpio.m_copyTransformsToVBOKernel, 0, sizeof(int), &offset);
+	ciErrNum = clSetKernelArg(fpio.m_copyTransformsToVBOKernel, 1, sizeof(int), &fpio.m_numObjects);
+	ciErrNum = clSetKernelArg(fpio.m_copyTransformsToVBOKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);	
+	ciErrNum = clSetKernelArg(fpio.m_copyTransformsToVBOKernel, 3, sizeof(cl_mem), (void*)&bodies);
+	
+	if (numObjects)
+	{
+		size_t workGroupSize = 64;
+		size_t numWorkItems = workGroupSize*((numObjects+ (workGroupSize)) / workGroupSize);
+				
+		ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_copyTransformsToVBOKernel, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
+		oclCHECKERROR(ciErrNum, CL_SUCCESS);
+	}
+
+}
+
+
+void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies)
 {
 	int ciErrNum = 0;
 
@@ -147,12 +172,11 @@ void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem,
 
 	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 0, sizeof(int), &offset);
 	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 1, sizeof(int), &fpio.m_numObjects);
-	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 2, sizeof(cl_mem), (void*)&fpio.m_clObjectsBuffer);
-
-	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 3, sizeof(cl_mem), (void*)&linVelMem);
-	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 4, sizeof(cl_mem), (void*)&angVelMem);
-	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 5, sizeof(cl_mem), (void*)&bodies);
-	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 6, sizeof(cl_mem), (void*)&bodyInertias);
+	
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 2, sizeof(cl_mem), (void*)&linVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 3, sizeof(cl_mem), (void*)&angVelMem);
+	ciErrNum = clSetKernelArg(fpio.m_copyVelocitiesKernel, 4, sizeof(cl_mem), (void*)&bodies);
+	
 	
 	if (numObjects)
 	{

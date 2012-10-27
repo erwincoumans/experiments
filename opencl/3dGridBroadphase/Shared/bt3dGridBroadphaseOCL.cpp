@@ -17,7 +17,7 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedAllocator.h"
 #include "LinearMath/btQuickprof.h"
 #include "BulletCollision/BroadphaseCollision/btOverlappingPairCache.h"
-#include "../basic_initialize/btOpenCLUtils.h"
+#include "../../basic_initialize/btOpenCLUtils.h"
 
 #include "bt3dGridBroadphaseOCL.h"
 

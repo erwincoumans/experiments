@@ -1,5 +1,5 @@
 
-#include "BasicDemo.h"
+#include "GpuDemo.h"
 
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
@@ -10,14 +10,14 @@
 #include "../rendering/rendertest/GLInstancingRenderer.h"
 #include "../../DemosCommon/OpenGL3CoreRenderer.h"
 #include "LinearMath/btQuickProf.h"
-#include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+#include "btGpuDynamicsWorld.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
 
 
 
-OpenGL3CoreRenderer render;
+
 
 
 #include <Windows.h>
@@ -37,18 +37,22 @@ int main(int argc, char* argv[])
 	
 	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
-	glewInit();
-
-	window->startRendering();
-	glFinish();
+	
 	glClearColor(1,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
+	window->startRendering();
+	glFinish();
+	
 //	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
 	float color[4] = {1,1,1,1};
 //	prim.drawRect(0,0,200,200,color);
 	window->endRendering();
 	glFinish();
 
+
+	glewInit();
+	OpenGL3CoreRenderer render;
+	
 	glClearColor(0,1,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	
@@ -65,20 +69,25 @@ int main(int argc, char* argv[])
 
 
 	{
-		BasicDemo* demo = new BasicDemo;
+		GpuDemo* demo = new GpuDemo;
 		demo->myinit();
 		demo->initPhysics();
 		render.init();
 		do
 		{
 			window->startRendering();
-			glClearColor(0,1,0,1);
+			glClearColor(0.6,0.6,0.6,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			demo->clientMoveAndDisplay();
 
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
-			render.renderPhysicsWorld(demo->getDynamicsWorld()->getNumCollisionObjects(), &demo->getDynamicsWorld()->getCollisionObjectArray()[0]);
+			if (demo->getDynamicsWorld()->getNumCollisionObjects())
+			{
+				btAlignedObjectArray<btCollisionObject*> arr = demo->getDynamicsWorld()->getCollisionObjectArray();
+				btCollisionObject** colObjArray = &arr[0];
+				render.renderPhysicsWorld(demo->getDynamicsWorld()->getNumCollisionObjects(),colObjArray);
+			}
 			window->endRendering();
 			glFinish();
 //			CProfileManager::dumpAll();
