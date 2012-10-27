@@ -36,6 +36,11 @@ subject to the following restrictions:
 #include "BulletDataExtractor.h"
 #include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
 #include "OpenGLInclude.h"
+#include "../broadphase_benchmark/findPairsOpenCL.h"
+
+extern cl_context			g_cxMainContext;
+extern cl_command_queue	g_cqCommandQue;
+extern cl_device_id		g_device;
 
 bool printStats  = true;
 bool pauseSimulation = false;
@@ -51,6 +56,25 @@ bool useInterop = false;//true;
 #else
 bool useInterop = false;
 #endif
+
+#ifdef _WIN32
+#include "../opengl_interop/btOpenCLGLInteropBuffer.h"
+#endif
+
+#ifdef _WIN32
+btOpenCLGLInteropBuffer* g_interopBuffer = 0;
+#endif
+
+cl_mem clBuffer=0;
+char* hostPtr=0;
+cl_bool blocking=  CL_TRUE;
+
+
+extern GLuint               cube_vbo;
+
+void GL2CL(CLPhysicsDemo& demo);
+void CL2GL(CLPhysicsDemo& demo);
+extern btFindPairsIO gFpIO;
 
 extern bool useSapGpuBroadphase;
 extern int NUM_OBJECTS_X;
@@ -144,7 +168,12 @@ int main(int argc, char* argv[])
 	render.InitShaders();
 
 	if (useInterop)
-		demo.setupInterop();
+	{
+#ifdef _WIN32
+	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
+	clFinish(g_cqCommandQue);
+#endif
+	}
 
 	createScene(render, demo, useConvexHeightfield,fileName);
 		
@@ -197,7 +226,18 @@ int main(int argc, char* argv[])
 //			render.writeTransforms();
 		}
 		if (!pauseSimulation )
+		{
+			GL2CL(demo);
 			demo.stepSimulation();
+
+			{
+				BT_PROFILE("copyTransformsToBVO");
+			
+				copyTransformsToBVO(gFpIO, demo.getBodiesGpu());
+			}
+
+			CL2GL(demo);
+		}
 
 
 		window->startRendering();
@@ -239,6 +279,10 @@ int main(int argc, char* argv[])
 	
 	demo.cleanup();
 
+#ifdef _WIN32
+	delete g_interopBuffer;
+#endif
+
 	render.CleanupShaders();
 	
 	window->closeWindow();
@@ -247,4 +291,98 @@ int main(int argc, char* argv[])
 	
 	
 	return 0;
+}
+
+
+
+
+
+void GL2CL(CLPhysicsDemo& demo)
+{
+	BT_PROFILE("simulationLoop");
+	int VBOsize = demo.m_maxShapeBufferCapacity+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
+	
+	cl_int ciErrNum = CL_SUCCESS;
+
+
+	if(useInterop)
+	{
+#ifndef __APPLE__
+		clBuffer = g_interopBuffer->getCLBUffer();
+		BT_PROFILE("clEnqueueAcquireGLObjects");
+		{
+			BT_PROFILE("clEnqueueAcquireGLObjects");
+			ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
+			clFinish(g_cqCommandQue);
+		}
+
+#else
+        assert(0);
+
+#endif
+	} else
+	{
+
+		glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+		glFlush();
+
+		BT_PROFILE("glMapBuffer and clEnqueueWriteBuffer");
+
+		blocking=  CL_TRUE;
+		hostPtr=  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
+		
+
+		if (!clBuffer)
+		{
+			int maxVBOsize = demo.m_maxShapeBufferCapacity+MAX_CONVEX_BODIES_CL*(4+4+4+3)*sizeof(float);
+			clBuffer = clCreateBuffer(g_cxMainContext, CL_MEM_READ_WRITE,maxVBOsize, 0, &ciErrNum);
+		} 
+		clFinish(g_cqCommandQue);
+			oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
+		ciErrNum = clEnqueueWriteBuffer (	g_cqCommandQue,
+ 			clBuffer,
+ 			blocking,
+ 			0,
+ 			VBOsize,
+ 			hostPtr,0,0,0
+		);
+		clFinish(g_cqCommandQue);
+	}
+
+	gFpIO.m_clObjectsBuffer = clBuffer;
+	gFpIO.m_positionOffset = demo.m_maxShapeBufferCapacity/4;
+}
+
+void CL2GL(CLPhysicsDemo& demo)
+{
+	int VBOsize = demo.m_maxShapeBufferCapacity+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
+
+	int ciErrNum;
+	if(useInterop)
+	{
+#ifndef __APPLE__
+		BT_PROFILE("clEnqueueReleaseGLObjects");
+		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
+		clFinish(g_cqCommandQue);
+#endif
+	}
+	else
+	{
+		BT_PROFILE("clEnqueueReadBuffer clReleaseMemObject and glUnmapBuffer");
+		ciErrNum = clEnqueueReadBuffer (	g_cqCommandQue,
+ 		clBuffer,
+ 		blocking,
+ 		0,
+ 		VBOsize,
+ 		hostPtr,0,0,0);
+
+		//clReleaseMemObject(clBuffer);
+		clFinish(g_cqCommandQue);
+		glUnmapBuffer( GL_ARRAY_BUFFER);
+		glFlush();
+	}
+
+	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
 }

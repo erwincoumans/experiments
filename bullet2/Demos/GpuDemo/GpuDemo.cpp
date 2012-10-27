@@ -49,6 +49,7 @@ subject to the following restrictions:
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btDefaultMotionState.h"
+#include "LinearMath/btQuickprof.h"
 
 
 #include <stdio.h> //printf debugging
@@ -65,6 +66,13 @@ void GpuDemo::clientMoveAndDisplay()
 	if (m_dynamicsWorld)
 	{
 		m_dynamicsWorld->stepSimulation(dt);
+		static int count=0;
+		count++;
+		if (count>100)
+		{
+			count=0;
+			CProfileManager::dumpAll();
+		}
 	}
 		
 	renderme(); 
@@ -95,7 +103,7 @@ void GpuDemo::displayCallback(void) {
 void	GpuDemo::initPhysics()
 {
 	setTexturing(true);
-	setShadows(true);
+	setShadows(false);
 
 	setCameraDistance(btScalar(SCALING*50.));
 
@@ -115,6 +123,7 @@ void	GpuDemo::initPhysics()
 	groundTransform.setOrigin(btVector3(0,-50,0));
 
 	//We can also use DemoApplication::localCreateRigidBody, but for clarity it is provided here:
+	if (0)
 	{
 		btScalar mass(0.);
 
@@ -147,14 +156,7 @@ void	GpuDemo::initPhysics()
 		btTransform startTransform;
 		startTransform.setIdentity();
 
-		btScalar	mass(1.f);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			colShape->calculateLocalInertia(mass,localInertia);
+	
 
 		float start_x = START_POS_X - ARRAY_SIZE_X/2;
 		float start_y = START_POS_Y;
@@ -166,10 +168,20 @@ void	GpuDemo::initPhysics()
 			{
 				for(int j = 0;j<ARRAY_SIZE_Z;j++)
 				{
+
+						btScalar	mass = k==0? 0.f : 1.f;
+
+					//rigidbody is dynamic if and only if mass is non zero, otherwise static
+					bool isDynamic = (mass != 0.f);
+
+					btVector3 localInertia(0,0,0);
+					if (isDynamic)
+						colShape->calculateLocalInertia(mass,localInertia);
+
 					startTransform.setOrigin(SCALING*btVector3(
-										btScalar(2.0*i + start_x),
+										btScalar(2.3*i + start_x),
 										btScalar(20+2.0*k + start_y),
-										btScalar(2.0*j + start_z)));
+										btScalar(2.3*j + start_z)));
 
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
@@ -229,7 +241,6 @@ void	GpuDemo::exitPhysics()
 
 	
 }
-
 
 
 

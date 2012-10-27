@@ -10,7 +10,7 @@
 
 OpenGL3CoreRenderer::OpenGL3CoreRenderer()
 {
-	int maxNumObjects = 16384;
+	int maxNumObjects = 128*1024;
 	m_instanceRenderer = new GLInstancingRenderer(maxNumObjects);
 }
 OpenGL3CoreRenderer::~OpenGL3CoreRenderer()

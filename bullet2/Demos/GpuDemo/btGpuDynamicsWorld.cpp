@@ -4,6 +4,7 @@
 #include "../../../opencl/gpu_rigidbody_pipeline2/CLPhysicsDemo.h"
 #include "../../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "BulletCollision/CollisionShapes/btPolyhedralConvexShape.h"
+#include "LinearMath/btQuickprof.h"
 
 
 #ifdef _WIN32
@@ -38,6 +39,10 @@ void btGpuDynamicsWorld::exitOpenCL()
 
 int	btGpuDynamicsWorld::stepSimulation( btScalar timeStep)
 {
+#ifndef BT_NO_PROFILE
+	CProfileManager::Reset();
+#endif //BT_NO_PROFILE
+
 	//convert all shapes now, and if any change, reset all (todo)
 	static bool once = true;
 	if (once)
@@ -61,6 +66,11 @@ int	btGpuDynamicsWorld::stepSimulation( btScalar timeStep)
 		this->m_bodies[i]->setWorldTransform(newTrans);
 	}
 
+#ifndef BT_NO_PROFILE
+	CProfileManager::Increment_Frame_Counter();
+#endif //BT_NO_PROFILE
+
+
 	return 1;
 }
 
@@ -71,6 +81,8 @@ void	btGpuDynamicsWorld::setGravity(const btVector3& gravity)
 
 void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 {
+
+	body->setMotionState(0);
 
 	int index = m_uniqueShapes.findLinearSearch(body->getCollisionShape());
 	if (index==m_uniqueShapes.size())

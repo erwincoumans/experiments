@@ -25,7 +25,7 @@ class MacOpenGLWindow;
 #endif
 
 #include "../gpu_rigidbody_pipeline/btCollidable.h"
-
+#include "../basic_initialize/btOpenCLInclude.h" //cl_mem
 struct CLPhysicsDemo
 {
 
@@ -51,7 +51,7 @@ struct CLPhysicsDemo
 	
 	void	init(int preferredDevice, int preferredPlatform, bool useInterop);
 	
-	void	setupInterop();
+	cl_mem	getBodiesGpu();
 
 	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 	int		registerConvexShape(class btConvexUtility* utilPtr , bool noHeightField);

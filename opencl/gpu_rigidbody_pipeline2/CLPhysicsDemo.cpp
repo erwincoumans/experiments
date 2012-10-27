@@ -24,9 +24,6 @@ extern bool useConvexHeightfield;
 #include "CLPhysicsDemo.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../basic_initialize/btOpenCLUtils.h"
-#ifdef _WIN32
-#include "../opengl_interop/btOpenCLGLInteropBuffer.h"
-#endif
 #include "../rendering/WavefrontObjLoader/objLoader.h"
 #include "../broadphase_benchmark/findPairsOpenCL.h"
 #include "LinearMath/btVector3.h"
@@ -62,16 +59,8 @@ bool runOpenCLKernels = true;
 
 btGpuNarrowphaseAndSolver* narrowphaseAndSolver = 0;
 ConvexHeightField* s_convexHeightField = 0 ;
-#ifdef _WIN32
-btOpenCLGLInteropBuffer* g_interopBuffer = 0;
-#endif
-
-extern GLuint               cube_vbo;
 
 
-cl_mem clBuffer=0;
-char* hostPtr=0;
-cl_bool blocking=  CL_TRUE;
 
 
 
@@ -90,7 +79,7 @@ struct InternalData
 	btOpenCLArray<btVector3>* m_linVelBuf;
 	btOpenCLArray<btVector3>* m_angVelBuf;
 	btOpenCLArray<float>* m_bodyTimes;
-	bool	m_useInterop;
+	
 	btGridBroadphaseCl* m_BroadphaseGrid;
 	btGpuSapBroadphase* m_BroadphaseSap;
 
@@ -101,7 +90,7 @@ struct InternalData
 	btAlignedObjectArray<btVector3>	m_angVelHost;
 	btAlignedObjectArray<float> m_bodyTimesHost;
 
-	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_useInterop(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
+	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
 	{
 		
 	}
@@ -492,15 +481,7 @@ void CLPhysicsDemo::writeVelocitiesToGpu()
 }
 
 
-void CLPhysicsDemo::setupInterop()
-{
-	m_data->m_useInterop = true;
-#ifdef _WIN32
-	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
-	clFinish(g_cqCommandQue);
-#endif
 
-}
 
 void	CLPhysicsDemo::cleanup()
 {
@@ -517,9 +498,7 @@ void	CLPhysicsDemo::cleanup()
 
 
 	m_data=0;
-#ifdef _WIN32
-	delete g_interopBuffer;
-#endif
+
 	delete s_convexHeightField;
 }
 
@@ -583,66 +562,16 @@ void	CLPhysicsDemo::stepSimulation()
 	int b2 = sizeof(RigidBodyBase::Body);
 	btAssert(b1==b2);
 
-	BT_PROFILE("simulationLoop");
-	int VBOsize = m_maxShapeBufferCapacity+m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
+	int ciErrNum=CL_SUCCESS;
+
+
 	
-	cl_int ciErrNum = CL_SUCCESS;
-
-
-	if(m_data->m_useInterop)
-	{
-#ifndef __APPLE__
-		clBuffer = g_interopBuffer->getCLBUffer();
-		BT_PROFILE("clEnqueueAcquireGLObjects");
-		{
-			BT_PROFILE("clEnqueueAcquireGLObjects");
-			ciErrNum = clEnqueueAcquireGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, NULL);
-			clFinish(g_cqCommandQue);
-		}
-
-#else
-        assert(0);
-
-#endif
-	} else
-	{
-
-		glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
-		glFlush();
-
-		BT_PROFILE("glMapBuffer and clEnqueueWriteBuffer");
-
-		blocking=  CL_TRUE;
-		hostPtr=  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);//GL_WRITE_ONLY
-		
-
-		if (!clBuffer)
-		{
-			int maxVBOsize = m_maxShapeBufferCapacity+MAX_CONVEX_BODIES_CL*(4+4+4+3)*sizeof(float);
-			clBuffer = clCreateBuffer(g_cxMainContext, CL_MEM_READ_WRITE,maxVBOsize, 0, &ciErrNum);
-		} 
-		clFinish(g_cqCommandQue);
-			oclCHECKERROR(ciErrNum, CL_SUCCESS);
-
-		ciErrNum = clEnqueueWriteBuffer (	g_cqCommandQue,
- 			clBuffer,
- 			blocking,
- 			0,
- 			VBOsize,
- 			hostPtr,0,0,0
-		);
-		clFinish(g_cqCommandQue);
-	}
-
-
-
-	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 	if (1 && m_numPhysicsInstances)
 	{
 
 		gFpIO.m_numObjects = m_numPhysicsInstances;
-		gFpIO.m_positionOffset = m_maxShapeBufferCapacity/4;
-		gFpIO.m_clObjectsBuffer = clBuffer;
+		
+		
 		if (useSapGpuBroadphase)
 		{
 			gFpIO.m_dAABB = m_data->m_BroadphaseSap->getAabbBuffer();
@@ -685,7 +614,7 @@ void	CLPhysicsDemo::stepSimulation()
 		//printf("gFpIO.m_numOverlap = %d\n",gFpIO.m_numOverlap );
 		if (gFpIO.m_numOverlap>=0 && gFpIO.m_numOverlap<MAX_BROADPHASE_COLLISION_CL)
 		{
-			colorPairsOpenCL(gFpIO);
+			//colorPairsOpenCL(gFpIO);
 
 			if (runOpenCLKernels)
 			{
@@ -769,41 +698,14 @@ void	CLPhysicsDemo::stepSimulation()
 			} 
 		}
 
-		{
-			BT_PROFILE("copyTransformsToBVO");
-			if (narrowphaseAndSolver)
-					copyTransformsToBVO(gFpIO, narrowphaseAndSolver->getBodiesGpu());
-		}
+		
 			
 
 	}
 
-	if(m_data->m_useInterop)
-	{
-#ifndef __APPLE__
-		BT_PROFILE("clEnqueueReleaseGLObjects");
-		ciErrNum = clEnqueueReleaseGLObjects(g_cqCommandQue, 1, &clBuffer, 0, 0, 0);
-		clFinish(g_cqCommandQue);
-#endif
-	}
-	else
-	{
-		BT_PROFILE("clEnqueueReadBuffer clReleaseMemObject and glUnmapBuffer");
-		ciErrNum = clEnqueueReadBuffer (	g_cqCommandQue,
- 		clBuffer,
- 		blocking,
- 		0,
- 		VBOsize,
- 		hostPtr,0,0,0);
-
-		//clReleaseMemObject(clBuffer);
-		clFinish(g_cqCommandQue);
-		glUnmapBuffer( GL_ARRAY_BUFFER);
-		glFlush();
-	}
-
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
+	
 
 	if (runOpenCLKernels)
 	{
@@ -812,4 +714,9 @@ void	CLPhysicsDemo::stepSimulation()
 	}
 
 	
+}
+
+cl_mem	CLPhysicsDemo::getBodiesGpu()
+{
+	return narrowphaseAndSolver->getBodiesGpu();
 }

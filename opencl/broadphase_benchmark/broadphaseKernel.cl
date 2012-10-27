@@ -159,7 +159,7 @@ Matrix3x3 mtMul(Matrix3x3 a, Matrix3x3 b)
 //copy transforms from buffer to bodies
 
 __kernel void 
-  setupBodiesKernel( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer,
+  setupBodiesKernel( const int numNodes,
 		   __global float4 *linVel,
 		   __global float4 *pAngVel,
 		   __global Body* gBodies, __global Shape* bodyInertias
@@ -175,14 +175,16 @@ __kernel void
 		float inverseMass = gBodies[nodeID].m_invMass;
 		if (inverseMass != 0.f)
 		{
-			float4 position = g_vertexBuffer[nodeID + startOffset/4];
-			float4 orientation = g_vertexBuffer[nodeID + startOffset/4+numNodes];
+			//float4 position = g_vertexBuffer[nodeID + startOffset/4];
+			//float4 orientation = g_vertexBuffer[nodeID + startOffset/4+numNodes];
 
 			float4 gravityAcceleration = (float4)(0.f,-9.8f,0.f,0.f);
 			linVel[nodeID] += gravityAcceleration * timeStep;
 		
-			gBodies[nodeID].m_pos = position;
-			gBodies[nodeID].m_quat = orientation;
+			//gBodies[nodeID].m_pos = position;
+			//gBodies[nodeID].m_quat = orientation;
+
+			float4 orientation = gBodies[nodeID].m_quat;
 
 			gBodies[nodeID].m_linVel = (float4)(linVel[nodeID].xyz,0.f);
 			gBodies[nodeID].m_angVel = (float4)(pAngVel[nodeID].xyz,0.f);
@@ -210,11 +212,7 @@ __kernel void
 
 
 __kernel void 
-  copyVelocitiesKernel( const int startOffset, const int numNodes, 
-		   __global float4 *linVel,
-		   __global float4 *pAngVel,
-		   __global Body* gBodies
-		   )
+  copyVelocitiesKernel( const int numNodes,   __global float4 *linVel,  __global float4 *pAngVel,  __global Body* gBodies   )
 {
 	int nodeID = get_global_id(0);
 	
@@ -290,56 +288,44 @@ __kernel void
 
 
 
-__kernel void 
-  initializeGpuAabbsFull( const int startOffset, const int numNodes, __global float4 *g_vertexBuffer, __global Body* gBodies,__global Collidable* collidables, __global btAABBCL* plocalShapeAABB, __global btAABBCL* pAABB)
+__kernel void initializeGpuAabbsFull(  const int numNodes, __global Body* gBodies,__global Collidable* collidables, __global btAABBCL* plocalShapeAABB, __global btAABBCL* pAABB)
 {
 	int nodeID = get_global_id(0);
 		
 	if( nodeID < numNodes )
 	{
-		float4 position = g_vertexBuffer[nodeID + startOffset/4];
-		float4 orientation = g_vertexBuffer[nodeID + startOffset/4+numNodes];
-		float4 color = g_vertexBuffer[nodeID + startOffset/4+numNodes+numNodes];
+		float4 position = gBodies[nodeID].m_pos;
+		float4 orientation = gBodies[nodeID].m_quat;
 		
-		float4 green = (float4)(.4f,1.f,.4f,1.f);
-		g_vertexBuffer[nodeID + startOffset/4+numNodes+numNodes] = green;
-		
-	
-		
-	//	int shapeType = gBodies[nodeID].m_shapeType;
-		//if (shapeType==SHAPE_CONVEX_HULL)
+			
+		int collidableIndex = gBodies[nodeID].m_collidableIdx;
+		int shapeIndex = collidables[collidableIndex].m_shapeIndex;
+			
+		if (shapeIndex>=0)
 		{
-		
-			
-			int collidableIndex = gBodies[nodeID].m_collidableIdx;
-			int shapeIndex = collidables[collidableIndex].m_shapeIndex;
-			
-			if (shapeIndex>=0)
-			{
-				btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
-				btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
+			btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
+			btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
 				
-				float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
-				float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;
+			float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
+			float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;
 				
-				float4 worldCenter = transform(&localCenter,&position,&orientation);
+			float4 worldCenter = transform(&localCenter,&position,&orientation);
 				
-				Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
-				float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
+			Matrix3x3 abs_b = qtGetRotationMatrix(orientation);
+			float4 extent = (float4) (	dot(abs_b.m_row[0],halfExtents),dot(abs_b.m_row[1],halfExtents),dot(abs_b.m_row[2],halfExtents),0.f);
 			
 	
-				pAABB[nodeID*2].fx = worldCenter.x-extent.x;
-				pAABB[nodeID*2].fy = worldCenter.y-extent.y;
-				pAABB[nodeID*2].fz = worldCenter.z-extent.z;
-				pAABB[nodeID*2].uw = nodeID;
+			pAABB[nodeID*2].fx = worldCenter.x-extent.x;
+			pAABB[nodeID*2].fy = worldCenter.y-extent.y;
+			pAABB[nodeID*2].fz = worldCenter.z-extent.z;
+			pAABB[nodeID*2].uw = nodeID;
 	
-				pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
-				pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
-				pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
-				pAABB[nodeID*2+1].uw = gBodies[nodeID].m_invMass==0.f? 0 : 1;
-			}
-		} 
-	}
+			pAABB[nodeID*2+1].fx = worldCenter.x+extent.x;
+			pAABB[nodeID*2+1].fy = worldCenter.y+extent.y;
+			pAABB[nodeID*2+1].fz = worldCenter.z+extent.z;
+			pAABB[nodeID*2+1].uw = gBodies[nodeID].m_invMass==0.f? 0 : 1;
+		}
+	} 
 }
 
 

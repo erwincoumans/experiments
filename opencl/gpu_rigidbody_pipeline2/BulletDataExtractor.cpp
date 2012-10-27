@@ -1,6 +1,6 @@
-int NUM_OBJECTS_X = 20;
-int NUM_OBJECTS_Y = 30;
-int NUM_OBJECTS_Z = 20;
+int NUM_OBJECTS_X = 45;
+int NUM_OBJECTS_Y = 45;
+int NUM_OBJECTS_Z = 45;
 
 
 
@@ -248,9 +248,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 		position[3] = 0.f;
 
 		physicsSim.registerPhysicsInstance(0.f,position, orn, -1,index);
-		color[0] = 1.f;
+		color[0] = 0.f;
 		color[1] = 0.f;
-		color[2] = 0.f;
+		color[2] = 1.f;
 		cubeScaling[0] = 5000.f;
 		cubeScaling[1] = 0.01f;
 		cubeScaling[2] = 5000.f;
@@ -423,9 +423,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 					posnew[3] = 0.f;
 
 					physicsSim.registerPhysicsInstance(0.f,  posnew, orn, cubeCollisionShapeIndex2,index);
-					color[0] = 1.f;
+					color[0] = 0.f;
 					color[1] = 0.f;
-					color[2] = 0.f;
+					color[2] = 1.f;
 					renderer.registerGraphicsInstance(tetraShapeIndex,posnew,orn,color,groundScaling);
 				}
 			}
@@ -639,7 +639,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 				} else
 				{
 					mass = 1.f/colObjData->m_inverseMass;
-					color[0] = 1;
+					color[2] = 1;
 				}
 				if (keepStaticObjects || colObjData->m_inverseMass!=0.f)
 				{
