@@ -209,7 +209,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
+	case 0x020e://WM_MOUSEWHEEL_LEFT_RIGHT
+	{
 
+		int  zDelta = (short)HIWORD(wParam);
+		int xPos = LOWORD(lParam); 
+		int yPos = HIWORD(lParam); 
+		//m_cameraDistance -= zDelta*0.01;
+		if (sData && sData->m_wheelCallback)
+			(*sData->m_wheelCallback)(-float(zDelta)*0.05f,0);
+
+		break;
+	}
 	case 0x020A://WM_MOUSEWHEEL:
 	{
 
