@@ -16,7 +16,7 @@ subject to the following restrictions:
 ///original author: Erwin Coumans
 
 #include "btOpenCLGLInteropBuffer.h"
-	
+#ifdef _WIN32
 btOpenCLGLInteropBuffer::btOpenCLGLInteropBuffer(cl_context	clContext, cl_command_queue	commandQueue,GLuint openGLVBO)
 :m_clContext(clContext),
 m_commandQueue(commandQueue),
@@ -57,4 +57,5 @@ void	btOpenCLGLInteropBuffer::copyCL2GL()
 void	btOpenCLGLInteropBuffer::copyGL2CL()
 {
 }
+#endif //_WIN32
 

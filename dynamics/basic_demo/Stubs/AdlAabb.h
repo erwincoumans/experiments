@@ -16,8 +16,8 @@ subject to the following restrictions:
 #ifndef AABB_H
 #define AABB_H
 
-#include "Stubs/AdlMath.h"
-#include "Stubs/AdlQuaternion.h"
+#include "AdlMath.h"
+#include "AdlQuaternion.h"
 #include "LinearMath/btScalar.h"
 
 enum AdlCollisionShapeTypes

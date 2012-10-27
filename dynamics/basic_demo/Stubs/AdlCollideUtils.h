@@ -17,7 +17,7 @@ subject to the following restrictions:
 #ifndef COLLIDE_UTILS_H
 #define COLLIDE_UTILS_H
 
-#include "Stubs/AdlMath.h"
+#include "AdlMath.h"
 
 
 class CollideUtils

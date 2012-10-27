@@ -9,6 +9,7 @@
 #endif
 #include "../../DemosCommon/OpenGL2Renderer.h"
 #include "btGpuDynamicsWorld.h"
+#include "../rendering/rendertest/OpenGLInclude.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
@@ -29,9 +30,6 @@ void MyKeyboardCallback(int key, int state)
 		render->keyboardCallback(key);
 }
 
-#include <Windows.h>
-
-#include "GL/gl.h"
 
 int main(int argc, char* argv[])
 {
@@ -46,8 +44,10 @@ int main(int argc, char* argv[])
 	
 	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
+	
+#ifdef _WIN32
 	glewInit();
-
+#endif
 		
 	render = new OpenGL2Renderer;
 

@@ -282,7 +282,7 @@ void OpenGL2Renderer::resetPerspectiveProjection()
 //
 void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject** objArray)
 {
-	btScalar	m[16];
+	ATTRIBUTE_ALIGNED16(btScalar)	m[16];
 	btMatrix3x3	rot;rot.setIdentity();
 
 	btVector3 wireColor(1,0,0);

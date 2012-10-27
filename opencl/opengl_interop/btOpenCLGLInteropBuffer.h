@@ -18,6 +18,7 @@ subject to the following restrictions:
 #ifndef BT_OPENCL_GL_INTEROP_BUFFER_H
 #define BT_OPENCL_GL_INTEROP_BUFFER_H
 
+#ifdef _WIN32
 #include "../../rendering/rendertest/OpenGLInclude.h"
 
 #include "../basic_initialize/btOpenCLInclude.h"
@@ -44,6 +45,6 @@ public:
 		return m_buffer;
 	}
 };
-
+#endif //_WIN32
 #endif //BT_OPENCL_GL_INTEROP_BUFFER_H
 

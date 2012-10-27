@@ -23,7 +23,7 @@ subject to the following restrictions:
 #include "SolverKernels.h"
 #include "batchingKernels.h"
 #include "LinearMath/btQuickprof.h"
-#include "../../opencl/broadphase_benchmark/btLauncherCL.h"
+#include "../../../opencl/broadphase_benchmark/btLauncherCL.h"
 
 
 struct SolverDebugInfo

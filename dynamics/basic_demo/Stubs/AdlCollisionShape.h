@@ -17,8 +17,8 @@ subject to the following restrictions:
 #ifndef COLLISION_SHAPE_H
 #define COLLISION_SHAPE_H
 
-#include "Stubs/AdlMath.h"
-#include "Stubs/AdlAabb.h"
+#include "AdlMath.h"
+#include "AdlAabb.h"
 
 
 ATTRIBUTE_ALIGNED16(class) CollisionShape
