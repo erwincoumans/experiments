@@ -202,6 +202,8 @@ void OpenGL2Renderer::keyboardCallback(unsigned char key)
 
 void OpenGL2Renderer::init()
 	{
+		GLint err;
+		
 	GLfloat light_ambient[] = { btScalar(0.2), btScalar(0.2), btScalar(0.2), btScalar(1.0) };
 	GLfloat light_diffuse[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0) };
 	GLfloat light_specular[] = { btScalar(1.0), btScalar(1.0), btScalar(1.0), btScalar(1.0 )};
@@ -209,6 +211,9 @@ void OpenGL2Renderer::init()
 	GLfloat light_position0[] = { btScalar(1.0), btScalar(10.0), btScalar(1.0), btScalar(0.0 )};
 	GLfloat light_position1[] = { btScalar(-1.0), btScalar(-10.0), btScalar(-1.0), btScalar(0.0) };
 
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		
 	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
@@ -219,15 +224,24 @@ void OpenGL2Renderer::init()
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
 	glLightfv(GL_LIGHT1, GL_POSITION, light_position1);
 
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
 
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		
 
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		
 	glClearColor(btScalar(0.7),btScalar(0.7),btScalar(0.7),btScalar(0));
 }
 
@@ -282,6 +296,9 @@ void OpenGL2Renderer::resetPerspectiveProjection()
 //
 void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject** objArray)
 {
+	GLint err = glGetError();
+	assert(err==GL_NO_ERROR);
+	
 	ATTRIBUTE_ALIGNED16(btScalar)	m[16];
 	btMatrix3x3	rot;rot.setIdentity();
 
@@ -327,6 +344,9 @@ void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject**
 			}
 		}
 
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		
 
 		btVector3 aabbMin(-BT_LARGE_FLOAT,-BT_LARGE_FLOAT,-BT_LARGE_FLOAT);
 		btVector3 aabbMax(BT_LARGE_FLOAT,BT_LARGE_FLOAT,BT_LARGE_FLOAT);
@@ -363,8 +383,14 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 		{
 			glClear(GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_CULL_FACE);
+			GLint err = glGetError();
+			assert(err==GL_NO_ERROR);
+			
 			renderscene(0,numObjects,objectArray);
 
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
+			
 			glDisable(GL_LIGHTING);
 			glDepthMask(GL_FALSE);
 			glDepthFunc(GL_LEQUAL);
@@ -379,6 +405,9 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 			renderscene(1,numObjects,objectArray);
 			glFrontFace(GL_CCW);
 
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
+			
 			glPolygonMode(GL_FRONT,GL_FILL);
 			glPolygonMode(GL_BACK,GL_FILL);
 			glShadeModel(GL_SMOOTH);
@@ -400,6 +429,10 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 			glDepthFunc(GL_LESS);
 			glDisable(GL_STENCIL_TEST);
 			glDisable(GL_CULL_FACE);
+			
+			err = glGetError();
+			assert(err==GL_NO_ERROR);
+			
 		}
 		else
 		{
@@ -459,6 +492,9 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 
 void OpenGL2Renderer::updateCamera()
 {
+	GLint err = glGetError();
+	assert(err==GL_NO_ERROR);
+	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	btScalar rele = m_ele * btScalar(0.01745329251994329547);// rads per deg
@@ -479,6 +515,9 @@ void OpenGL2Renderer::updateCamera()
 	btVector3 right = m_cameraUp.cross(forward);
 	btQuaternion roll(right,-rele);
 
+	err = glGetError();
+	assert(err==GL_NO_ERROR);
+	
 	eyePos = btMatrix3x3(rot) * btMatrix3x3(roll) * eyePos;
 
 	m_cameraPosition[0] = eyePos.getX();
@@ -516,4 +555,7 @@ void OpenGL2Renderer::updateCamera()
 			m_cameraTargetPosition[0], m_cameraTargetPosition[1], m_cameraTargetPosition[2], 
 			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
 	}
+	err = glGetError();
+	assert(err==GL_NO_ERROR);
+	
 }
