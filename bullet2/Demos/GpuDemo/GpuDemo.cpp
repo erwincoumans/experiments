@@ -13,19 +13,14 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-//#define FORCE_CPU
 
-#ifdef FORCE_CPU
-#define btGpuDynamicsWorld btCpuDynamicsWorld
-#endif //FORCE_CPU
+#include "btCpuDynamicsWorld.h"
+#include "btGpuDynamicsWorld.h"
 
-///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 10
-#define ARRAY_SIZE_Y 10
-#define ARRAY_SIZE_Z 10
+
 
 //maximum number of objects (and allow user to shoot additional boxes)
-#define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
+//#define MAX_PROXIES (arraySizeX*arraySizeY*arraySizeZ + 1024)
 
 ///scaling of the objects (0.1 = 20 centimeter boxes )
 #define SCALING 1.
@@ -39,11 +34,6 @@ subject to the following restrictions:
 //#include "GlutStuff.h"
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 //#include "btBulletDynamicsCommon.h"
-#ifdef FORCE_CPU
-	#include "btCpuDynamicsWorld.h"
-#else
-	#include "btGpuDynamicsWorld.h"
-#endif 
 
 
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
@@ -68,10 +58,9 @@ void GpuDemo::clientMoveAndDisplay()
 		m_dynamicsWorld->stepSimulation(dt);
 		static int count=0;
 		count++;
-		if (count>100)
+		//if (count<5)
 		{
-			count=0;
-			CProfileManager::dumpAll();
+			//CProfileManager::dumpAll();
 		}
 	}
 		
@@ -100,15 +89,23 @@ void GpuDemo::displayCallback(void) {
 
 
 
-void	GpuDemo::initPhysics()
+void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 {
+
 	setTexturing(true);
 	setShadows(false);
 
 	setCameraDistance(btScalar(SCALING*50.));
 
 	///collision configuration contains default setup for memory, collision setup
-	m_dynamicsWorld = new btGpuDynamicsWorld();
+	if (ci.useOpenCL)
+	{
+		m_dynamicsWorld = new btGpuDynamicsWorld(ci.preferredOpenCLPlatformIndex,ci.preferredOpenCLDeviceIndex);
+	} else
+	{
+		m_dynamicsWorld = new btCpuDynamicsWorld();
+	}
+
 	
 	m_dynamicsWorld->setGravity(btVector3(0,-10,0));
 
@@ -158,15 +155,15 @@ void	GpuDemo::initPhysics()
 
 	
 
-		float start_x = START_POS_X - ARRAY_SIZE_X/2;
+		float start_x = START_POS_X - ci.arraySizeX/2;
 		float start_y = START_POS_Y;
-		float start_z = START_POS_Z - ARRAY_SIZE_Z/2;
+		float start_z = START_POS_Z - ci.arraySizeZ/2;
 
-		for (int k=0;k<ARRAY_SIZE_Y;k++)
+		for (int k=0;k<ci.arraySizeY;k++)
 		{
-			for (int i=0;i<ARRAY_SIZE_X;i++)
+			for (int i=0;i<ci.arraySizeX;i++)
 			{
-				for(int j = 0;j<ARRAY_SIZE_Z;j++)
+				for(int j = 0;j<ci.arraySizeZ;j++)
 				{
 
 						btScalar	mass = k==0? 0.f : 1.f;
@@ -179,9 +176,9 @@ void	GpuDemo::initPhysics()
 						colShape->calculateLocalInertia(mass,localInertia);
 
 					startTransform.setOrigin(SCALING*btVector3(
-										btScalar(2.3*i + start_x),
-										btScalar(20+2.0*k + start_y),
-										btScalar(2.3*j + start_z)));
+										btScalar(ci.gapX*i + start_x),
+										btScalar(20+ci.gapY*k + start_y),
+										btScalar(ci.gapZ*j + start_z)));
 
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
@@ -198,12 +195,14 @@ void	GpuDemo::initPhysics()
 
 
 }
-void	GpuDemo::clientResetScene()
+
+/*void	GpuDemo::clientResetScene()
 {
 	exitPhysics();
 	initPhysics();
 }
-	
+	*/
+
 
 void	GpuDemo::exitPhysics()
 {

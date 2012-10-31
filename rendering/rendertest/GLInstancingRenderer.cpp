@@ -196,7 +196,9 @@ static GLint ProjectionMatrix;
 
 GLInstancingRenderer::GLInstancingRenderer(int maxNumObjectCapacity, int maxShapeCapacityInBytes)
 	:m_maxNumObjectCapacity(maxNumObjectCapacity),
-	m_maxShapeCapacityInBytes(maxShapeCapacityInBytes)
+	m_maxShapeCapacityInBytes(maxShapeCapacityInBytes),
+	m_textureenabled(true),
+	m_textureinitialized(false)
 {
 
 	m_data = new InternalDataRenderer;
@@ -624,7 +626,7 @@ void GLInstancingRenderer::InitShaders()
 
 
 
-void myinit()
+void GLInstancingRenderer::init()
 {
 	GLint err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -643,9 +645,7 @@ void myinit()
     err = glGetError();
 	assert(err==GL_NO_ERROR);
 
-	static bool m_textureenabled = true;
-	static bool m_textureinitialized = false;
-
+	
     err = glGetError();
 	assert(err==GL_NO_ERROR);
     
@@ -967,8 +967,8 @@ void GLInstancingRenderer::RenderScene(void)
 	 BT_PROFILE("GLInstancingRenderer::RenderScene");
 
 	 {
-		BT_PROFILE("myinit");
-		myinit();
+		BT_PROFILE("init");
+		init();
 	 }
 
     GLint err = glGetError();

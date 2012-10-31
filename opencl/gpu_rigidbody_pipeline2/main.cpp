@@ -255,15 +255,15 @@ int main(int argc, char* argv[])
 		
 		 if (printStats && !pauseSimulation)
 		 {
-			static int count = 3;
+			static int count = 10;
 			count--;
-			if (count<0)
+			if (count>0)
 			{
 
 				CProfileManager::dumpAll();
 				printf("total broadphase pairs= %d\n", numPairsTotal);
 				printf("numPairsOut (culled)  = %d\n", numPairsOut);
-				printStats  = false;
+				
 			} else
 			{
 //				printf(".");

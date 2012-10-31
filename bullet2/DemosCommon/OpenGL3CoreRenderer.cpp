@@ -107,16 +107,16 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 
 
 
-void OpenGL3CoreRenderer::renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray)
+void OpenGL3CoreRenderer::renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray, bool syncOnly)
 {
 	//sync changes from physics world to render world	
 	//for now, we don't deal with adding/removing objects to the world during the simulation, to keep the rendererer simpler
 
 
 	m_instanceRenderer->writeTransforms();
-	static bool syncOnly=false;
+	
 	graphics_from_physics(*m_instanceRenderer,syncOnly,numObjects, colObjArray);
-	syncOnly= true;
+	
 
 	//render
 	 m_instanceRenderer->RenderScene();

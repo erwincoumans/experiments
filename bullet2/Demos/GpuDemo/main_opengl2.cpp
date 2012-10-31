@@ -34,6 +34,8 @@ void MyKeyboardCallback(int key, int state)
 int main(int argc, char* argv[])
 {
 	
+	
+
 
 #ifdef __APPLE__
 	window = new MacOpenGLWindow();
@@ -70,7 +72,7 @@ int main(int argc, char* argv[])
 	glFinish();
 
 	GLint err = glGetError();
-    assert(err==GL_NO_ERROR);
+    btAssert(err==GL_NO_ERROR);
 
 	window->setKeyboardCallback(MyKeyboardCallback);
 
@@ -80,31 +82,33 @@ int main(int argc, char* argv[])
 		
 		demo->myinit();
 		GLint err = glGetError();
-		assert(err==GL_NO_ERROR);
-		demo->initPhysics();
+		btAssert(err==GL_NO_ERROR);
+		
+		GpuDemo::ConstructionInfo ci;
+		demo->initPhysics(ci);
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		do
 		{
 			GLint err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			window->startRendering();
 			glClearColor(0,1,0,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			demo->clientMoveAndDisplay();
 
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			render->init();
 			
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			if (demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
@@ -113,15 +117,15 @@ int main(int argc, char* argv[])
 				render->renderPhysicsWorld(demo->getDynamicsWorld()->getNumCollisionObjects(), colObjArray);
 			}
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			window->endRendering();
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			glFinish();
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 		} while (!window->requestedExit());
 

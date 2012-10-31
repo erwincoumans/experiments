@@ -26,18 +26,45 @@ class btCollisionDispatcher;
 class btConstraintSolver;
 struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
-class btGpuDynamicsWorld;
+class btDynamicsWorld;
 
 ///GpuDemo is good starting point for learning the code base and porting.
 
+
 class GpuDemo : public DemoApplication
 {
-	btGpuDynamicsWorld*	m_dynamicsWorld;
+
+	btDynamicsWorld*	m_dynamicsWorld;
 
 	//keep the collision shapes, for deletion/cleanup
 	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
 
 	public:
+
+	struct ConstructionInfo
+	{
+		bool useOpenCL;
+		int preferredOpenCLPlatformIndex;
+		int preferredOpenCLDeviceIndex;
+		int arraySizeX;
+		int arraySizeY;
+		int arraySizeZ;
+		float gapX;
+		float gapY;
+		float gapZ;
+		ConstructionInfo()
+			:useOpenCL(true),
+			preferredOpenCLPlatformIndex(-1),
+			preferredOpenCLDeviceIndex(-1),
+			arraySizeX(10),
+			arraySizeY(10),
+			arraySizeZ(10),
+			gapX(2.3),
+			gapY(2.0),
+			gapZ(2.3)
+		{
+		}
+	};
 
 	GpuDemo()
 	{
@@ -48,26 +75,27 @@ class GpuDemo : public DemoApplication
 	{
 		exitPhysics();
 	}
-	void	initPhysics();
+	void	initPhysics(const ConstructionInfo& ci);
 
 	void	exitPhysics();
 
-	const btGpuDynamicsWorld* getDynamicsWorld() const
+	const btDynamicsWorld* getDynamicsWorld() const
 	{
 		return m_dynamicsWorld;
 	}
 	virtual void clientMoveAndDisplay();
 
 	virtual void displayCallback();
-	virtual void	clientResetScene();
+	//virtual void	clientResetScene();
 	
-	static DemoApplication* Create()
+/*	static DemoApplication* Create()
 	{
 		GpuDemo* demo = new GpuDemo;
 		demo->myinit();
 		demo->initPhysics();
 		return demo;
 	}
+	*/
 
 	
 };

@@ -1,6 +1,6 @@
-int NUM_OBJECTS_X = 10;
-int NUM_OBJECTS_Y = 10;
-int NUM_OBJECTS_Z = 10;
+int NUM_OBJECTS_X = 50;
+int NUM_OBJECTS_Y = 45;
+int NUM_OBJECTS_Z = 50;
 
 
 

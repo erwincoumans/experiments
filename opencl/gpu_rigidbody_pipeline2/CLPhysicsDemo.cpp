@@ -52,6 +52,8 @@ static char* interopKernelString =
 cl_kernel g_integrateTransformsKernel;
 cl_kernel g_integrateTransformsKernel2;
 
+btOpenCLDeviceInfo info;
+const char* g_deviceName = 0;
 
 
 bool runOpenCLKernels = true;
@@ -146,6 +148,9 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
         
         btOpenCLUtils::printDeviceInfo(g_device);
+		
+		btOpenCLUtils::getDeviceInfo(g_device,&info);
+		g_deviceName = info.m_deviceName;
 
 	}
 
@@ -426,7 +431,7 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInterop)
 {
 	
-	InitCL(-1,-1,useInterop);
+	InitCL(preferredDevice,preferredPlatform,useInterop);
 
 
 	//adl::Solver<adl::TYPE_CL>::allocate(g_deviceCL->allocate(
