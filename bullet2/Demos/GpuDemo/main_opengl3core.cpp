@@ -2,7 +2,7 @@
 #include "GpuDemo.h"
 
 #ifdef __APPLE__
-#include "MacOpenGLWindow.h"
+#include "../rendering/rendertest/MacOpenGLWindow.h"
 #else
 #include "../rendering/rendertest/Win32OpenGLWindow.h"
 #include "../rendering/rendertest/GLPrimitiveRenderer.h"
@@ -17,12 +17,8 @@ int g_OpenGLHeight = 768;
 
 
 
+#include "../rendering/rendertest/OpenGLInclude.h"
 
-
-
-#include <Windows.h>
-
-#include "GL/gl.h"
 
 int main(int argc, char* argv[])
 {
@@ -49,8 +45,10 @@ int main(int argc, char* argv[])
 	window->endRendering();
 	glFinish();
 
-
+#ifdef _WIN32
 	glewInit();
+#endif
+	
 	OpenGL3CoreRenderer render;
 	
 	glClearColor(0,1,0,1);

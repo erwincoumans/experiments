@@ -110,7 +110,6 @@ if (hasCL) then
 	links {"Cocoa.framework"}
 	end	
 
-	if false then	
 	project "bullet2_gpu_demo_opengl3core_Apple"
 
 	initOpenCL_Apple()
@@ -196,13 +195,28 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLInstancingRenderer.h",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.cpp",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.h",
-			"../../../../rendering/rendertest/Win32Window.cpp",
-			"../../../../rendering/rendertest/Win32Window.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
 											
 	}
+	
+	if os.is("windows") then
+		files
+		{
+		    "../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
+                        "../../../../rendering/rendertest/Win32OpenGLWindow.h",
+                        "../../../../rendering/rendertest/Win32Window.cpp",
+                        "../../../../rendering/rendertest/Win32Window.h",
+		}	
 	end
+
+	if os.is("macosx") then
+	files
+	{
+		"../../../../rendering/rendertest/MacOpenGLWindow.mm",
+		"../../../../rendering/rendertest/MacOpenGLWindow.h"
+	}
+	links {"Cocoa.framework"}
+	end	
+	
 end
