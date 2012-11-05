@@ -4,6 +4,8 @@
 #include "../../rendering/rendertest/ShapeData.h"
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
+
+#include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
 #include "BulletCollision/CollisionShapes/btCollisionShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 
@@ -32,21 +34,97 @@ void OpenGL3CoreRenderer::keyboardCallback(unsigned char key)
 {
 }
 
+struct GraphicsVertex
+{
+	float xyzw[4];
+	float normal[3];
+	float uv[2];
+};
+struct GraphicsShape
+{
+	const float*	m_vertices;
+	int				m_numvertices;
+	const int*		m_indices;
+	int				m_numIndices;
+	float			m_scaling[4];
+};
+
+
+
+GraphicsShape* createGraphicsShapeFromConvexHull(const btConvexPolyhedron* utilPtr)
+{
+	
+	btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
+	{
+		int numVertices = utilPtr->m_vertices.size();
+		int numIndices = 0;
+		btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
+		for (int f=0;f<utilPtr->m_faces.size();f++)
+		{
+			const btFace& face = utilPtr->m_faces[f];
+			btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
+			if (face.m_indices.size()>2)
+			{
+				
+				GraphicsVertex vtx;
+				const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[0]];
+				vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+				vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+				vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+				int newvtxindex0 = vertices->size();
+				vertices->push_back(vtx);
+			
+				for (int j=1;j<face.m_indices.size()-1;j++)
+				{
+					indicesPtr->push_back(newvtxindex0);
+					{
+						GraphicsVertex vtx;
+						const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j]];
+						vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+						vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+						vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+						int newvtxindexj = vertices->size();
+						vertices->push_back(vtx);
+						indicesPtr->push_back(newvtxindexj);
+					}
+
+					{
+						GraphicsVertex vtx;
+						const btVector3& orgVertex = utilPtr->m_vertices[face.m_indices[j+1]];
+						vtx.xyzw[0] = orgVertex[0];vtx.xyzw[1] = orgVertex[1];vtx.xyzw[2] = orgVertex[2];vtx.xyzw[3] = 0.f;
+						vtx.normal[0] = normal[0];vtx.normal[1] = normal[1];vtx.normal[2] = normal[2];
+						vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;
+						int newvtxindexj1 = vertices->size();
+						vertices->push_back(vtx);
+						indicesPtr->push_back(newvtxindexj1);
+					}
+				}
+			}
+		}
+		
+		
+		GraphicsShape* gfxShape = new GraphicsShape;
+		gfxShape->m_vertices = &vertices->at(0).xyzw[0];
+		gfxShape->m_numvertices = vertices->size();
+		gfxShape->m_indices = &indicesPtr->at(0);
+		gfxShape->m_numIndices = indicesPtr->size();
+		for (int i=0;i<4;i++)
+			gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
+		return gfxShape;
+	}
+}
+
 
 //very incomplete conversion from physics to graphics
 void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly, int numObjects, btCollisionObject** colObjArray)
 {
+	///@todo: we need to sort the objects based on collision shape type, so we can share instances
 
-    int cubeShapeIndex  = -1;
+    
 	int strideInBytes = sizeof(float)*9;
     
-	if (!syncTransformsOnly)
-	{
-		int numVertices = sizeof(cube_vertices)/strideInBytes;
-		int numIndices = sizeof(cube_indices)/sizeof(int);
-		cubeShapeIndex = renderer.registerShape(&cube_vertices[0],numVertices,cube_indices,numIndices);
-	}
-    
+	int prevGraphicsShapeIndex  = -1;
+	btCollisionShape* prevShape = 0;
 
     
 	int numColObj = numObjects;
@@ -73,19 +151,30 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
             color[1]=1.f;
         }
         
-        switch (colObj->getCollisionShape()->getShapeType())
-        {
-            case BOX_SHAPE_PROXYTYPE:
-            {
-                btBoxShape* box = (btBoxShape*)colObj->getCollisionShape();
+		if (!syncTransformsOnly)
+		{
+			if (prevShape != colObj->getCollisionShape())
+			if (colObj->getCollisionShape()->isPolyhedral())
+			{
+				btPolyhedralConvexShape* polyShape = (btPolyhedralConvexShape*)colObj->getCollisionShape();
+				const btConvexPolyhedron* pol = polyShape->getConvexPolyhedron();
+				GraphicsShape* gfxShape = createGraphicsShapeFromConvexHull(pol);
 
-                btVector3 halfExtents = box->getHalfExtentsWithMargin();
-                
-                float cubeScaling[4] = {halfExtents.getX(),halfExtents.getY(), halfExtents.getZ(),1};
+				prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+				prevShape = colObj->getCollisionShape();
+			}
+		}
+    
+		if (colObj->getCollisionShape()->isPolyhedral())
+		{
+				btPolyhedralConvexShape* polyShape = (btPolyhedralConvexShape*)colObj->getCollisionShape();
+				const btVector3& localScaling = polyShape ->getLocalScaling();
+
+				float cubeScaling[4] = {localScaling.getX(),localScaling.getY(), localScaling.getZ(),1};
                 
                 if (!syncTransformsOnly)
                 {
-                    renderer.registerGraphicsInstance(cubeShapeIndex,position,orientation,color,cubeScaling);
+                    renderer.registerGraphicsInstance(prevGraphicsShapeIndex,position,orientation,color,cubeScaling);
                 }
                 else
                 {
@@ -94,13 +183,10 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
                 }
                 
                 curGraphicsIndex++;
-            }
-            break;
-                
-            default:
-                break;
-        }
-        //convert it now!
+
+		}
+
+       
     }
 	
 }
