@@ -20,9 +20,9 @@ subject to the following restrictions:
 #endif //FORCE_CPU
 
 ///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 10
-#define ARRAY_SIZE_Y 10
-#define ARRAY_SIZE_Z 10
+#define ARRAY_SIZE_X 5
+#define ARRAY_SIZE_Y 5
+#define ARRAY_SIZE_Z 5
 
 //maximum number of objects (and allow user to shoot additional boxes)
 #define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
@@ -45,7 +45,8 @@ subject to the following restrictions:
 	#include "btGpuDynamicsWorld.h"
 #endif 
 
-
+#include "BulletCollision/CollisionShapes/btConvexHullShape.h"
+#include "BulletCollision/CollisionShapes/btSphereShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btDefaultMotionState.h"
@@ -97,7 +98,7 @@ void GpuDemo::displayCallback(void) {
 }
 
 
-
+btAlignedObjectArray<btVector3> vertices;
 
 
 void	GpuDemo::initPhysics()
@@ -115,6 +116,7 @@ void	GpuDemo::initPhysics()
 	///create a few basic rigid bodies
 	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
 //	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
+	
 	
 	m_collisionShapes.push_back(groundShape);
 
@@ -148,8 +150,27 @@ void	GpuDemo::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
+#if 1
 		btCollisionShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
-		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+#else
+		vertices.push_back(btVector3(0,1,0));
+		
+//		vertices.push_back(btVector3(1,1,1));
+//		vertices.push_back(btVector3(1,1,-1));
+//		vertices.push_back(btVector3(-1,1,1));
+//		vertices.push_back(btVector3(-1,1,-1));
+		
+		vertices.push_back(btVector3(1,-1,1));
+		vertices.push_back(btVector3(1,-1,-1));
+		vertices.push_back(btVector3(-1,-1,1));
+		vertices.push_back(btVector3(-1,-1,-1));
+		
+		btConvexHullShape* colShape = new btConvexHullShape(&vertices[0].getX(), vertices.size());
+		colShape->initializePolyhedralFeatures();
+		
+#endif
+		
+	//	btCollisionShape* colShape = new btSphereShape(btScalar(1.));
 		m_collisionShapes.push_back(colShape);
 
 		/// Create Dynamic Objects

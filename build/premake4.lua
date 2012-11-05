@@ -81,6 +81,10 @@ end
 	
 	--include "../pole"
 	
+	include "../rendering/OpenGLTrueTypeFont"
+	include "../opencl/gui_initialize"
+
+
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
@@ -92,7 +96,6 @@ end
 	include "../opencl/basic_initialize"
 	include "../opencl/compiler"
 	include "../opencl/vector_add"
-	include "../opencl/gui_initialize"
 	include "../opencl/opengl_interop"
 	include "../opencl/global_atomics"
 --	include "../opencl/integration"
@@ -106,7 +109,6 @@ end
 --	include "../opencl/gpu_rigidbody_pipeline"
 	
 	include "../rendering/rendertest"
-	include "../rendering/OpenGLTrueTypeFont"
 	include "../opencl/tests"
 	
 	
