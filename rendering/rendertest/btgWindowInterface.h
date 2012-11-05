@@ -86,6 +86,10 @@ class btgWindowInterface
 		virtual bool	requestedExit() const = 0;
 		virtual	void	setRequestExit() = 0;
 
+		virtual	void	startRendering()=0;
+
+		virtual	void	endRendering()=0;
+
 		
 		virtual void setMouseMoveCallback(btMouseMoveCallback	mouseCallback)=0;
 		virtual void setMouseButtonCallback(btMouseButtonCallback	mouseCallback)=0;

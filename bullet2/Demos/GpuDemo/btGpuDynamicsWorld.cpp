@@ -16,11 +16,15 @@ struct btGpuInternalData
 
 };
 
-btGpuDynamicsWorld::btGpuDynamicsWorld()
+btGpuDynamicsWorld::btGpuDynamicsWorld(int preferredOpenCLPlatformIndex,int preferredOpenCLDeviceIndex)
+:btDynamicsWorld(0,0,0),
+m_gravity(0,-10,0),
+m_once(true)
 {
 	m_gpuPhysics = new CLPhysicsDemo(512*1024, MAX_CONVEX_BODIES_CL);
 	bool useInterop = false;
-	m_gpuPhysics->init(-1,-1,useInterop);
+	///platform and device are swapped, todo: fix this and make it consistent
+	m_gpuPhysics->init(preferredOpenCLDeviceIndex,preferredOpenCLPlatformIndex,useInterop);
 }
 
 btGpuDynamicsWorld::~btGpuDynamicsWorld()
@@ -37,34 +41,47 @@ void btGpuDynamicsWorld::exitOpenCL()
 
 
 
-int	btGpuDynamicsWorld::stepSimulation( btScalar timeStep)
+int		btGpuDynamicsWorld::stepSimulation( btScalar timeStep,int maxSubSteps, btScalar fixedTimeStep)
 {
 #ifndef BT_NO_PROFILE
 	CProfileManager::Reset();
 #endif //BT_NO_PROFILE
 
+	BT_PROFILE("stepSimulation");
+
 	//convert all shapes now, and if any change, reset all (todo)
-	static bool once = true;
-	if (once)
+	
+	if (m_once)
 	{
-		once = false;
+		m_once = false;
 		m_gpuPhysics->writeBodiesToGpu();
 	}
 
 	m_gpuPhysics->stepSimulation();
 
-	//now copy info back to rigid bodies....
-	m_gpuPhysics->readbackBodiesToCpu();
-	for (int i=0;i<this->m_bodies.size();i++)
 	{
-		btVector3 pos;
-		btQuaternion orn;
-		m_gpuPhysics->getObjectTransformFromCpu(&pos[0],&orn[0],i);
-		btTransform newTrans;
-		newTrans.setOrigin(pos);
-		newTrans.setRotation(orn);
-		this->m_bodies[i]->setWorldTransform(newTrans);
+		{
+			BT_PROFILE("readbackBodiesToCpu");
+			//now copy info back to rigid bodies....
+			m_gpuPhysics->readbackBodiesToCpu();
+		}
+
+		
+		{
+			BT_PROFILE("scatter transforms into rigidbody");
+			for (int i=0;i<this->m_collisionObjects.size();i++)
+			{
+				btVector3 pos;
+				btQuaternion orn;
+				m_gpuPhysics->getObjectTransformFromCpu(&pos[0],&orn[0],i);
+				btTransform newTrans;
+				newTrans.setOrigin(pos);
+				newTrans.setRotation(orn);
+				this->m_collisionObjects[i]->setWorldTransform(newTrans);
+			}
+		}
 	}
+
 
 #ifndef BT_NO_PROFILE
 	CProfileManager::Increment_Frame_Counter();
@@ -110,26 +127,14 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 	btVector3 pos = body->getWorldTransform().getOrigin();
 	btQuaternion orn = body->getWorldTransform().getRotation();
 	
-	m_gpuPhysics->registerPhysicsInstance(mass,&pos.getX(),&orn.getX(),gpuShapeIndex,m_bodies.size());
+	m_gpuPhysics->registerPhysicsInstance(mass,&pos.getX(),&orn.getX(),gpuShapeIndex,m_collisionObjects.size());
 
-	m_bodies.push_back(body);
+	m_collisionObjects.push_back(body);
 }
 
 void	btGpuDynamicsWorld::removeCollisionObject(btCollisionObject* colObj)
 {
+	btDynamicsWorld::removeCollisionObject(colObj);
 }
 
-int		btGpuDynamicsWorld::getNumCollisionObjects() const
-{
-	return m_bodies.size();
-}
 
-btAlignedObjectArray<class btCollisionObject*>& btGpuDynamicsWorld::getCollisionObjectArray()
-{
-	return m_bodies;
-}
-
-const btAlignedObjectArray<class btCollisionObject*>& btGpuDynamicsWorld::getCollisionObjectArray() const
-{
-	return m_bodies;
-}

@@ -13,11 +13,10 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
-//#define FORCE_CPU
 
-#ifdef FORCE_CPU
-#define btGpuDynamicsWorld btCpuDynamicsWorld
-#endif //FORCE_CPU
+#include "btCpuDynamicsWorld.h"
+#include "btGpuDynamicsWorld.h"
+
 
 ///create 125 (5x5x5) dynamic object
 #define ARRAY_SIZE_X 5
@@ -25,7 +24,7 @@ subject to the following restrictions:
 #define ARRAY_SIZE_Z 5
 
 //maximum number of objects (and allow user to shoot additional boxes)
-#define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)
+//#define MAX_PROXIES (arraySizeX*arraySizeY*arraySizeZ + 1024)
 
 ///scaling of the objects (0.1 = 20 centimeter boxes )
 #define SCALING 1.
@@ -39,14 +38,9 @@ subject to the following restrictions:
 //#include "GlutStuff.h"
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 //#include "btBulletDynamicsCommon.h"
-#ifdef FORCE_CPU
-	#include "btCpuDynamicsWorld.h"
-#else
-	#include "btGpuDynamicsWorld.h"
-#endif 
 
-#include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btSphereShape.h"
+#include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btDefaultMotionState.h"
@@ -69,10 +63,9 @@ void GpuDemo::clientMoveAndDisplay()
 		m_dynamicsWorld->stepSimulation(dt);
 		static int count=0;
 		count++;
-		if (count>100)
+		//if (count<5)
 		{
-			count=0;
-			CProfileManager::dumpAll();
+			//CProfileManager::dumpAll();
 		}
 	}
 		
@@ -100,20 +93,28 @@ void GpuDemo::displayCallback(void) {
 
 btAlignedObjectArray<btVector3> vertices;
 
-
-void	GpuDemo::initPhysics()
+void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 {
+
 	setTexturing(true);
 	setShadows(false);
 
 	setCameraDistance(btScalar(SCALING*50.));
 
 	///collision configuration contains default setup for memory, collision setup
-	m_dynamicsWorld = new btGpuDynamicsWorld();
+	if (ci.useOpenCL)
+	{
+		m_dynamicsWorld = new btGpuDynamicsWorld(ci.preferredOpenCLPlatformIndex,ci.preferredOpenCLDeviceIndex);
+	} else
+	{
+		m_dynamicsWorld = new btCpuDynamicsWorld();
+	}
+
 	
 	m_dynamicsWorld->setGravity(btVector3(0,-10,0));
 
 	///create a few basic rigid bodies
+
 	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
 //	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
 	
@@ -150,28 +151,26 @@ void	GpuDemo::initPhysics()
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-#if 1
-		btCollisionShape* colShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
-#else
 		vertices.push_back(btVector3(0,1,0));
-		
-//		vertices.push_back(btVector3(1,1,1));
-//		vertices.push_back(btVector3(1,1,-1));
-//		vertices.push_back(btVector3(-1,1,1));
-//		vertices.push_back(btVector3(-1,1,-1));
-		
+		//vertices.push_back(btVector3(1,1,1));
+		//vertices.push_back(btVector3(1,1,-1));
+		//vertices.push_back(btVector3(-1,1,-1));
+		//vertices.push_back(btVector3(-1,1,1));
 		vertices.push_back(btVector3(1,-1,1));
 		vertices.push_back(btVector3(1,-1,-1));
-		vertices.push_back(btVector3(-1,-1,1));
 		vertices.push_back(btVector3(-1,-1,-1));
-		
-		btConvexHullShape* colShape = new btConvexHullShape(&vertices[0].getX(), vertices.size());
+		vertices.push_back(btVector3(-1,-1,1));
+			
+		btPolyhedralConvexShape* colShape = new btConvexHullShape(&vertices[0].getX(),vertices.size());
 		colShape->initializePolyhedralFeatures();
-		
-#endif
-		
-	//	btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+
+
+		btPolyhedralConvexShape* boxShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
+		boxShape->initializePolyhedralFeatures();
+
+		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
 		m_collisionShapes.push_back(colShape);
+		m_collisionShapes.push_back(boxShape);
 
 		/// Create Dynamic Objects
 		btTransform startTransform;
@@ -179,17 +178,23 @@ void	GpuDemo::initPhysics()
 
 	
 
-		float start_x = START_POS_X - ARRAY_SIZE_X/2;
+		float start_x = START_POS_X - ci.arraySizeX/2;
 		float start_y = START_POS_Y;
-		float start_z = START_POS_Z - ARRAY_SIZE_Z/2;
+		float start_z = START_POS_Z - ci.arraySizeZ/2;
 
-		for (int k=0;k<ARRAY_SIZE_Y;k++)
+		for (int k=0;k<ci.arraySizeY;k++)
 		{
-			for (int i=0;i<ARRAY_SIZE_X;i++)
+			int sizeX = k==0? 100 : ci.arraySizeX;
+			int startX = k==0? -50 : 0;
+			float gapX = k==0? 2.05 : ci.gapX;
+			for (int i=0;i<sizeX;i++)
 			{
-				for(int j = 0;j<ARRAY_SIZE_Z;j++)
+				int sizeZ = k==0? 100 : ci.arraySizeZ;
+				int startZ = k==0? -50 : 0;
+				float gapZ = k==0? 2.05 : ci.gapZ;
+				for(int j = 0;j<sizeZ;j++)
 				{
-
+					btCollisionShape* shape = k==0? boxShape : colShape;
 						btScalar	mass = k==0? 0.f : 1.f;
 
 					//rigidbody is dynamic if and only if mass is non zero, otherwise static
@@ -197,17 +202,17 @@ void	GpuDemo::initPhysics()
 
 					btVector3 localInertia(0,0,0);
 					if (isDynamic)
-						colShape->calculateLocalInertia(mass,localInertia);
+						shape->calculateLocalInertia(mass,localInertia);
 
 					startTransform.setOrigin(SCALING*btVector3(
-										btScalar(2.3*i + start_x),
-										btScalar(20+2.0*k + start_y),
-										btScalar(2.3*j + start_z)));
+										btScalar(startX+gapX*i + start_x),
+										btScalar(20+ci.gapY*k + start_y),
+										btScalar(startZ+gapZ*j + start_z)));
 
 			
 					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 					btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-					btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
+					btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
 					btRigidBody* body = new btRigidBody(rbInfo);
 					
 
@@ -219,12 +224,14 @@ void	GpuDemo::initPhysics()
 
 
 }
-void	GpuDemo::clientResetScene()
+
+/*void	GpuDemo::clientResetScene()
 {
 	exitPhysics();
 	initPhysics();
 }
-	
+	*/
+
 
 void	GpuDemo::exitPhysics()
 {

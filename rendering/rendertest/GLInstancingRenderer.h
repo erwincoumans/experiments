@@ -33,10 +33,16 @@ class GLInstancingRenderer
 	int		m_maxShapeCapacityInBytes;
 	struct InternalDataRenderer* m_data;
 
+	bool m_textureenabled;
+	bool m_textureinitialized;
+
+
 	
 public:
 	GLInstancingRenderer(int m_maxObjectCapacity, int maxShapeCapacity = 512*1024);
 	virtual ~GLInstancingRenderer();
+
+	void init();
 
 	void InitShaders();
 	void RenderScene(void);

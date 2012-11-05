@@ -73,7 +73,7 @@ m_broadphasePairCache(pairCache),
 m_debugDrawer(0),
 m_forceUpdateAllAabbs(true)
 {
-	m_stackAlloc = collisionConfiguration->getStackAllocator();
+	m_stackAlloc = 0;//collisionConfiguration->getStackAllocator();
 	m_dispatchInfo.m_stackAllocator = m_stackAlloc;
 }
 

@@ -212,7 +212,7 @@ void OpenGL2Renderer::init()
 	GLfloat light_position1[] = { btScalar(-1.0), btScalar(-10.0), btScalar(-1.0), btScalar(0.0) };
 
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		
 	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -225,14 +225,14 @@ void OpenGL2Renderer::init()
 	glLightfv(GL_LIGHT1, GL_POSITION, light_position1);
 
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
 
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		
 
 	glShadeModel(GL_SMOOTH);
@@ -240,7 +240,7 @@ void OpenGL2Renderer::init()
 	glDepthFunc(GL_LESS);
 
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		
 	glClearColor(btScalar(0.7),btScalar(0.7),btScalar(0.7),btScalar(0));
 }
@@ -297,7 +297,7 @@ void OpenGL2Renderer::resetPerspectiveProjection()
 void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject** objArray)
 {
 	GLint err = glGetError();
-	assert(err==GL_NO_ERROR);
+	btAssert(err==GL_NO_ERROR);
 	
 	ATTRIBUTE_ALIGNED16(btScalar)	m[16];
 	btMatrix3x3	rot;rot.setIdentity();
@@ -345,7 +345,7 @@ void	OpenGL2Renderer::renderscene(int pass, int numObjects,  btCollisionObject**
 		}
 
 		err = glGetError();
-		assert(err==GL_NO_ERROR);
+		btAssert(err==GL_NO_ERROR);
 		
 
 		btVector3 aabbMin(-BT_LARGE_FLOAT,-BT_LARGE_FLOAT,-BT_LARGE_FLOAT);
@@ -384,12 +384,12 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 			glClear(GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_CULL_FACE);
 			GLint err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			renderscene(0,numObjects,objectArray);
 
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			glDisable(GL_LIGHTING);
 			glDepthMask(GL_FALSE);
@@ -406,7 +406,7 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 			glFrontFace(GL_CCW);
 
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 			glPolygonMode(GL_FRONT,GL_FILL);
 			glPolygonMode(GL_BACK,GL_FILL);
@@ -431,7 +431,7 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 			glDisable(GL_CULL_FACE);
 			
 			err = glGetError();
-			assert(err==GL_NO_ERROR);
+			btAssert(err==GL_NO_ERROR);
 			
 		}
 		else
@@ -493,7 +493,7 @@ void OpenGL2Renderer::renderPhysicsWorld(int numObjects, btCollisionObject** obj
 void OpenGL2Renderer::updateCamera()
 {
 	GLint err = glGetError();
-	assert(err==GL_NO_ERROR);
+	btAssert(err==GL_NO_ERROR);
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -516,7 +516,7 @@ void OpenGL2Renderer::updateCamera()
 	btQuaternion roll(right,-rele);
 
 	err = glGetError();
-	assert(err==GL_NO_ERROR);
+	btAssert(err==GL_NO_ERROR);
 	
 	eyePos = btMatrix3x3(rot) * btMatrix3x3(roll) * eyePos;
 
@@ -556,6 +556,6 @@ void OpenGL2Renderer::updateCamera()
 			m_cameraUp.getX(),m_cameraUp.getY(),m_cameraUp.getZ());
 	}
 	err = glGetError();
-	assert(err==GL_NO_ERROR);
+	btAssert(err==GL_NO_ERROR);
 	
 }

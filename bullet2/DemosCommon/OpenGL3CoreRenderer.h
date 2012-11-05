@@ -14,7 +14,7 @@ public:
 	void init();
 	void reshape(int w, int h); 
 	void keyboardCallback(unsigned char key);
-	void renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray);
+	void renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray, bool syncOnly);
 
 };
 

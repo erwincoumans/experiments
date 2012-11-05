@@ -79,6 +79,13 @@ end
 	include "../bullet2/Demos/GpuDemo"
 	include "../opencl/gpu_rigidbody_pipeline2"
 	
+	include "../opencl/basic_initialize"
+	include "../opencl/gui_initialize"
+	
+	include "../rendering/Gwen/Gwen"
+	include "../rendering/Gwen/GwenOpenGLTest"
+	
+	
 	--include "../pole"
 	
 	include "../rendering/OpenGLTrueTypeFont"
@@ -93,7 +100,7 @@ end
 
 	include "../opencl/gpu_narrowphase_test"
 	
-	include "../opencl/basic_initialize"
+	
 	include "../opencl/compiler"
 	include "../opencl/vector_add"
 	include "../opencl/opengl_interop"
@@ -149,8 +156,7 @@ end
 	
 	include "../rendering/WavefrontObjLoader"
 
-	include "../rendering/Gwen/Gwen"
-	include "../rendering/Gwen/GwenOpenGLTest"
+	
 	include "../rendering/OpenGLES2Angle"
 	
 end
