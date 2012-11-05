@@ -35,7 +35,7 @@ void MyKeyboardCallback(int key, int state)
 
 void Usage()
 {
-	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
+	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--disable_opencl] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
 };
 
 
@@ -93,6 +93,8 @@ int main(int argc, char* argv[])
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
+	ci.useOpenCL =!args.CheckCmdLineFlag("disable_opencl");
+	
 	args.GetCmdLineArgument("cl_device", ci.preferredOpenCLDeviceIndex);
 	args.GetCmdLineArgument("cl_platform", ci.preferredOpenCLPlatformIndex);
 	args.GetCmdLineArgument("x_dim", ci.arraySizeX);
@@ -166,7 +168,7 @@ int main(int argc, char* argv[])
 		demo->myinit();
 		bool useGpu = false;
 		
-		ci.useOpenCL = true;
+		
 
 		demo->initPhysics(ci);
 		render.init();
