@@ -12,11 +12,11 @@
 OpenGL2Renderer::OpenGL2Renderer()
 //see btIDebugDraw.h for modes
 :
-m_cameraDistance(35.0),
+m_cameraDistance(55.0),
 m_debugMode(0),//btIDebugDraw::DBG_DrawWireframe),
-m_ele(20.f),
-m_azi(0.f),
-m_cameraPosition(0.f,0.f,0.f),
+m_ele(40.f),
+m_azi(-20.f),
+m_cameraPosition(0.f,60.f,0.f),
 m_cameraTargetPosition(0.f,0.f,0.f),
 m_mouseOldX(0),
 m_mouseOldY(0),

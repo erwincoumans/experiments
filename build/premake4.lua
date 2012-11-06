@@ -90,6 +90,7 @@ end
 	
 	include "../rendering/OpenGLTrueTypeFont"
 	include "../opencl/gui_initialize"
+	include "../rendering/rendertest"
 
 
 		if false then
@@ -115,7 +116,6 @@ end
 	include "../opencl/broadphase_benchmark"
 --	include "../opencl/gpu_rigidbody_pipeline"
 	
-	include "../rendering/rendertest"
 	include "../opencl/tests"
 	
 	
