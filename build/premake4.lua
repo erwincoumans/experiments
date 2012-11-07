@@ -92,6 +92,8 @@ end
 	include "../opencl/gui_initialize"
 
 
+include "../dynamics/position_based_dynamics"
+
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
@@ -144,7 +146,7 @@ end
 --	include "../opencl/bullet3_pipeline"
 	
 	include "../dynamics/testbed"
-	include "../dynamics/position_based_dynamics"
+	
 	include "../dynamics/basic_demo"
 --	include "../dynamics/bullet_serialize"
 
