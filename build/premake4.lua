@@ -93,13 +93,16 @@ end
 	include "../rendering/rendertest"
 
 
-include "../dynamics/position_based_dynamics"
+	include "../dynamics/position_based_dynamics"
+	include "../dynamics/testbed"
+
+	include "../opencl/c_api"
+	include "../dynamics/meshmesh"
 
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
 
-	include "../opencl/c_api"
 
 	include "../opencl/gpu_narrowphase_test"
 	
@@ -140,12 +143,14 @@ if _OPTIONS["with-pe"] then
 	include "../physics_effects/sample_api_physics_effects/6_joint"
 
 	include "../opencl/physics_effects_pipeline"
+	
+
 
 end
 	include "../opencl/bullet2_pipeline"
 --	include "../opencl/bullet3_pipeline"
 	
-	include "../dynamics/testbed"
+	
 	
 	include "../dynamics/basic_demo"
 --	include "../dynamics/bullet_serialize"
