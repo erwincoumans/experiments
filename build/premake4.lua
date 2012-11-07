@@ -90,6 +90,7 @@ end
 	
 	include "../rendering/OpenGLTrueTypeFont"
 	include "../opencl/gui_initialize"
+	include "../rendering/rendertest"
 
 
 include "../dynamics/position_based_dynamics"
@@ -117,7 +118,6 @@ include "../dynamics/position_based_dynamics"
 	include "../opencl/broadphase_benchmark"
 --	include "../opencl/gpu_rigidbody_pipeline"
 	
-	include "../rendering/rendertest"
 	include "../opencl/tests"
 	
 	

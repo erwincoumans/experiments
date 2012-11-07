@@ -57,7 +57,7 @@ class GpuDemo : public DemoApplication
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
 			arraySizeX(10),
-			arraySizeY(10),
+			arraySizeY(30),
 			arraySizeZ(10),
 			gapX(2.3),
 			gapY(2.0),

@@ -18,15 +18,6 @@ subject to the following restrictions:
 #include "btGpuDynamicsWorld.h"
 
 
-///create 125 (5x5x5) dynamic object
-#define ARRAY_SIZE_X 5
-#define ARRAY_SIZE_Y 5
-#define ARRAY_SIZE_Z 5
-
-//maximum number of objects (and allow user to shoot additional boxes)
-//#define MAX_PROXIES (arraySizeX*arraySizeY*arraySizeZ + 1024)
-
-///scaling of the objects (0.1 = 20 centimeter boxes )
 #define SCALING 1.
 #define START_POS_X -5
 #define START_POS_Y -5
@@ -63,9 +54,9 @@ void GpuDemo::clientMoveAndDisplay()
 		m_dynamicsWorld->stepSimulation(dt);
 		static int count=0;
 		count++;
-		//if (count<5)
+		if (count==5)
 		{
-			//CProfileManager::dumpAll();
+			CProfileManager::dumpAll();
 		}
 	}
 		
@@ -151,11 +142,11 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		vertices.push_back(btVector3(0,1,0));
-		//vertices.push_back(btVector3(1,1,1));
-		//vertices.push_back(btVector3(1,1,-1));
-		//vertices.push_back(btVector3(-1,1,-1));
-		//vertices.push_back(btVector3(-1,1,1));
+		//vertices.push_back(btVector3(0,1,0));
+		vertices.push_back(btVector3(1,1,1));
+		vertices.push_back(btVector3(1,1,-1));
+		vertices.push_back(btVector3(-1,1,-1));
+		vertices.push_back(btVector3(-1,1,1));
 		vertices.push_back(btVector3(1,-1,1));
 		vertices.push_back(btVector3(1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,-1));
