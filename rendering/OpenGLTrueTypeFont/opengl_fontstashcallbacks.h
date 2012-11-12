@@ -1,6 +1,7 @@
 #ifndef _OPENGL_FONTSTASH_CALLBACKS_H
 #define _OPENGL_FONTSTASH_CALLBACKS_H
 
+#include "fontstash.h"
 
 void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight);
 

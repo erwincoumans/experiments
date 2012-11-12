@@ -39,11 +39,9 @@
 					projectRootDir .. "rendering/GlutGlewWindows"
 			}
 			libdirs {	projectRootDir .. "rendering/GlutGlewWindows"}
-		configuration {"Windows", "x32"}
-			links {"glew32s"}
-		configuration {"Windows", "x64"}
-			links {"glew64s"}
-
+			if os.is("Windows") then
+				files { projectRootDir .. "rendering/GlutGlewWindows/glew.c"}
+			end
 		configuration{}
 	end
 
