@@ -54,7 +54,7 @@ public:
     m_screenWidth(screenWidth),
     m_screenHeight(screenHeight),
     m_retinaScale(retinaScale),
-	m_useTrueTypeFont(false)
+	m_useTrueTypeFont(true)
 	{
 		///only enable true type fonts on Macbook Retina, it looks gorgeous
 		if (retinaScale==2.0f)
@@ -164,10 +164,15 @@ public:
 		if (m_useTrueTypeFont)
 		{
 			
+			float yoffset = 0.f;
+			if (m_retinaScale==2.0f)
+			{
+				yoffset = -12;
+			}
 			Translate(r);
 			sth_draw_text(m_font,
                       1,m_fontScaling,
-                      r.x,r.y,
+                      r.x,r.y+yoffset,
                       unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly,m_retinaScale);
 			 
 		} else
@@ -222,11 +227,17 @@ public:
                       unicodeText,&dx, m_screenWidth,m_screenHeight,measureOnly);
 		
 			Gwen::Point pt;
-			pt.x = dx*Scale();
+			
 			if (m_retinaScale==2.0f)
-				pt.y = m_fontScaling*Scale()+8;
+			{
+				pt.x = dx*Scale()/2.f;
+				pt.y = m_fontScaling/2*Scale()+1;
+			}
 			else
+			{
+				pt.x = dx*Scale();
 				pt.y = m_fontScaling*Scale()+1;
+			}
 			return pt;
 		}
 		else

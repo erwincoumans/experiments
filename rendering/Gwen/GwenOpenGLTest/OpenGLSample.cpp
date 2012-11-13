@@ -6,11 +6,12 @@
 #include "UnitTest.h"
 
 
-#include "gl/glew.h"
 
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
 #else
+#include "GL/glew.h"
+
 #include "Win32OpenGLWindow.h"
 #endif
 
@@ -280,12 +281,13 @@ sth_stash* initFont()
 int main()
 {
 
-
+	float retinaScale = 1.f;
 
 #ifdef __APPLE__
 	MacOpenGLWindow* window = new MacOpenGLWindow();
 #else
 	Win32OpenGLWindow* window = new Win32OpenGLWindow();
+	
 #endif
 	btgWindowConstructionInfo wci;
 	wci.m_width = sWidth;
@@ -293,12 +295,16 @@ int main()
 	
 	window->createWindow(wci);
 	window->setWindowTitle("render test");
+#ifdef _WIN32
 	glewInit();
+#endif
+
+	retinaScale = window->getRetinaScale();
 
 	sth_stash* font = initFont();
 
 	GLPrimitiveRenderer* primRenderer = new GLPrimitiveRenderer(sWidth,sHeight);
-	GwenOpenGL3CoreRenderer* gwenRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,sWidth,sHeight,1);
+	GwenOpenGL3CoreRenderer* gwenRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,sWidth,sHeight,retinaScale);
 
 
 	//
