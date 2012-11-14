@@ -105,7 +105,8 @@ class Solver : public SolverBase
 		
 		int m_nIterations;
 		cl_kernel m_batchingKernel;
-		cl_kernel m_batchSolveKernel;
+		cl_kernel m_solveContactKernel;
+		cl_kernel m_solveFrictionKernel;
 		cl_kernel m_contactToConstraintKernel;
 		cl_kernel m_setSortDataKernel;
 		cl_kernel m_reorderContactKernel;

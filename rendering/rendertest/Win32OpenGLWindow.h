@@ -44,13 +44,13 @@ public:
 	
 	virtual	void	closeWindow();
 
-
 	virtual	void	startRendering();
 
 	virtual	void	renderAllObjects();
 
 	virtual	void	endRendering();
 
+	virtual float getRetinaScale() const {return 1.f;}
 };
 
 

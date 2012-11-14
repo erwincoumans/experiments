@@ -16,11 +16,17 @@ subject to the following restrictions:
 
 #include "Solver.h"
 
-#define SOLVER_KERNEL_PATH "../../dynamics/basic_demo/Stubs/SolverKernels.cl"
+#define SOLVER_SETUP_KERNEL_PATH "../../dynamics/basic_demo/Stubs/solverSetup.cl"
+#define SOLVER_CONTACT_KERNEL_PATH "../../dynamics/basic_demo/Stubs/solveContact.cl"
+#define SOLVER_FRICTION_KERNEL_PATH "../../dynamics/basic_demo/Stubs/solveFriction.cl"
+
 #define BATCHING_PATH "../../dynamics/basic_demo/Stubs/batchingKernels.cl"
 
 
-#include "SolverKernels.h"
+#include "solverSetup.h"
+#include "solveContact.h"
+#include "solveFriction.h"
+
 #include "batchingKernels.h"
 #include "LinearMath/btQuickprof.h"
 #include "../../../opencl/broadphase_benchmark/btLauncherCL.h"
@@ -97,7 +103,9 @@ Solver::Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int 
 
 	cl_int pErrNum;
 	const char* batchKernelSource = batchingKernelsCL;
-	const char* solverKernelSource = solverKernelsCL;
+	const char* solverSetupSource = solverSetupCL;
+	const char* solveContactSource = solveContactCL;
+	const char* solveFrictionSource = solveFrictionCL;
 	
 	{
 		cl_program batchingProg = btOpenCLUtils::compileCLProgramFromString( ctx, device, batchKernelSource, &pErrNum,additionalMacros, BATCHING_PATH);
@@ -108,24 +116,33 @@ Solver::Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int 
 	}
 	
 	{
-		cl_program solverProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solverKernelSource, &pErrNum,additionalMacros, SOLVER_KERNEL_PATH);
-		btAssert(solverProg);
+		cl_program solverSetupProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solverSetupSource, &pErrNum,additionalMacros, SOLVER_SETUP_KERNEL_PATH);
+		btAssert(solverSetupProg);
 		
-		m_batchSolveKernel= btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "BatchSolveKernel", &pErrNum, solverProg,additionalMacros );
-		btAssert(m_batchSolveKernel);
-	
+		cl_program solveContactProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solveContactSource, &pErrNum,additionalMacros, SOLVER_CONTACT_KERNEL_PATH);
+		btAssert(solverSetupProg);
 		
-		m_contactToConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "ContactToConstraintKernel", &pErrNum, solverProg,additionalMacros );
+		cl_program solveFrictionProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solveFrictionSource, &pErrNum,additionalMacros, SOLVER_FRICTION_KERNEL_PATH);
+		btAssert(solverSetupProg);
+		
+		
+		m_solveFrictionKernel= btOpenCLUtils::compileCLKernelFromString( ctx, device, solveFrictionSource, "BatchSolveKernelFriction", &pErrNum, solveFrictionProg,additionalMacros );
+		btAssert(m_solveFrictionKernel);
+
+		m_solveContactKernel= btOpenCLUtils::compileCLKernelFromString( ctx, device, solveContactSource, "BatchSolveKernelContact", &pErrNum, solveContactProg,additionalMacros );
+		btAssert(m_solveContactKernel);
+		
+		m_contactToConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverSetupSource, "ContactToConstraintKernel", &pErrNum, solverSetupProg,additionalMacros );
 		btAssert(m_contactToConstraintKernel);
 			
-		m_setSortDataKernel =  btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "SetSortDataKernel", &pErrNum, solverProg,additionalMacros );
+		m_setSortDataKernel =  btOpenCLUtils::compileCLKernelFromString( ctx, device, solverSetupSource, "SetSortDataKernel", &pErrNum, solverSetupProg,additionalMacros );
 		btAssert(m_setSortDataKernel);
 				
-		m_reorderContactKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "ReorderContactKernel", &pErrNum, solverProg,additionalMacros );
+		m_reorderContactKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverSetupSource, "ReorderContactKernel", &pErrNum, solverSetupProg,additionalMacros );
 		btAssert(m_reorderContactKernel);
 		
 
-		m_copyConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverKernelSource, "CopyConstraintKernel", &pErrNum, solverProg,additionalMacros );
+		m_copyConstraintKernel = btOpenCLUtils::compileCLKernelFromString( ctx, device, solverSetupSource, "CopyConstraintKernel", &pErrNum, solverSetupProg,additionalMacros );
 		btAssert(m_copyConstraintKernel);
 		
 	}
@@ -144,7 +161,10 @@ Solver::~Solver()
 
 
 	clReleaseKernel(m_batchingKernel);
-	clReleaseKernel( m_batchSolveKernel);
+	
+	clReleaseKernel( m_solveContactKernel);
+	clReleaseKernel( m_solveFrictionKernel);
+
 	clReleaseKernel( m_contactToConstraintKernel);
 	clReleaseKernel( m_setSortDataKernel);
 	clReleaseKernel( m_reorderContactKernel);
@@ -564,7 +584,7 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 					cdata.z = ib;
 					cdata.w = N_SPLIT;
 
-				btLauncherCL launcher( m_queue, m_batchSolveKernel );
+				btLauncherCL launcher( m_queue, m_solveContactKernel );
 #if 1
                     
 					btBufferInfoCL bInfo[] = { 
@@ -582,7 +602,7 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 					
 
                     launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-					launcher.setConst(  cdata.x );
+					//launcher.setConst(  cdata.x );
                     launcher.setConst(  cdata.y );
                     launcher.setConst(  cdata.z );
                     launcher.setConst(  cdata.w );
@@ -664,9 +684,9 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 						,btBufferInfoCL(&gpuDebugInfo)
 #endif //DEBUG_ME
 					};
-					btLauncherCL launcher( m_queue, m_batchSolveKernel );
+					btLauncherCL launcher( m_queue, m_solveFrictionKernel );
 					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-					launcher.setConst(  cdata.x );
+					//launcher.setConst(  cdata.x );
                     launcher.setConst(  cdata.y );
                     launcher.setConst(  cdata.z );
                     launcher.setConst(  cdata.w );

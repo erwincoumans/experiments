@@ -142,11 +142,11 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		//create a few dynamic rigidbodies
 		// Re-using the same collision is better for memory usage and performance
 
-		vertices.push_back(btVector3(0,1,0));
-		//vertices.push_back(btVector3(1,1,1));
-		//vertices.push_back(btVector3(1,1,-1));
-		//vertices.push_back(btVector3(-1,1,-1));
-		//vertices.push_back(btVector3(-1,1,1));
+		//vertices.push_back(btVector3(0,1,0));
+		vertices.push_back(btVector3(1,1,1));
+		vertices.push_back(btVector3(1,1,-1));
+		vertices.push_back(btVector3(-1,1,-1));
+		vertices.push_back(btVector3(-1,1,1));
 		vertices.push_back(btVector3(1,-1,1));
 		vertices.push_back(btVector3(1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,-1));

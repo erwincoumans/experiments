@@ -3,7 +3,10 @@
 
 premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/batchingKernels.cl" --headerfile="../dynamics/basic_demo/Stubs/batchingKernels.h" --stringname="batchingKernelsCL" stringify
 premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.cl" --headerfile="../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.h" --stringname="narrowphaseKernelsCL" stringify
-premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/SolverKernels.cl" --headerfile="../dynamics/basic_demo/Stubs/SolverKernels.h" --stringname="solverKernelsCL" stringify
+premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solverSetup.cl" --headerfile="../dynamics/basic_demo/Stubs/solverSetup.h" --stringname="solverSetupCL" stringify
+premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solveContact.cl" --headerfile="../dynamics/basic_demo/Stubs/solveContact.h" --stringname="solveContactCL" stringify
+premake4 --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solveFriction.cl" --headerfile="../dynamics/basic_demo/Stubs/solveFriction.h" --stringname="solveFrictionCL" stringify
+
 premake4 --file=stringifyKernel.lua --kernelfile="../opencl/vector_add/VectorAddKernels.cl" --headerfile="../opencl/vector_add/VectorAddKernels.h" --stringname="vectorAddCL" stringify
 premake4 --file=stringifyKernel.lua --kernelfile="../opencl/broadphase_benchmark/broadphaseKernel.cl" --headerfile="../opencl/broadphase_benchmark/broadphaseKernel.h" --stringname="broadphaseKernelCL" stringify
 premake4 --file=stringifyKernel.lua --kernelfile="../opencl/broadphase_benchmark/sap.cl" --headerfile="../opencl/broadphase_benchmark/sapKernels.h" --stringname="sapCL" stringify

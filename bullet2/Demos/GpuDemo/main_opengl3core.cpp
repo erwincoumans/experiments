@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
 	ci.useOpenCL =!args.CheckCmdLineFlag("disable_opencl");
-	
+	ci.preferredOpenCLPlatformIndex=1;
 	args.GetCmdLineArgument("cl_device", ci.preferredOpenCLDeviceIndex);
 	args.GetCmdLineArgument("cl_platform", ci.preferredOpenCLPlatformIndex);
 	args.GetCmdLineArgument("x_dim", ci.arraySizeX);

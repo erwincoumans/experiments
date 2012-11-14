@@ -54,7 +54,7 @@ public:
     m_screenWidth(screenWidth),
     m_screenHeight(screenHeight),
     m_retinaScale(retinaScale),
-	m_useTrueTypeFont(true)
+	m_useTrueTypeFont(false)
 	{
 		///only enable true type fonts on Macbook Retina, it looks gorgeous
 		if (retinaScale==2.0f)
