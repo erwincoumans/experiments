@@ -434,6 +434,9 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	InitCL(preferredDevice,preferredPlatform,useInterop);
 
 
+	narrowphaseAndSolver = new btGpuNarrowphaseAndSolver(g_cxMainContext,g_device,g_cqCommandQue);
+
+	
 	//adl::Solver<adl::TYPE_CL>::allocate(g_deviceCL->allocate(
 	m_data->m_linVelBuf = new btOpenCLArray<btVector3>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_BODIES_CL,false);
 	m_data->m_angVelBuf = new btOpenCLArray<btVector3>(g_cxMainContext,g_cqCommandQue,MAX_CONVEX_BODIES_CL,false);
@@ -445,8 +448,7 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 
 	
 
-	narrowphaseAndSolver = new btGpuNarrowphaseAndSolver(g_cxMainContext,g_device,g_cqCommandQue);
-
+	
 	
 	
 	int maxObjects = btMax(256,MAX_CONVEX_BODIES_CL);

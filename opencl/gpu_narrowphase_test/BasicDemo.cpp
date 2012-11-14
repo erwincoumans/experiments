@@ -17,9 +17,9 @@ subject to the following restrictions:
 
 #include "btParallelAxisSweep3.h"
 
-#define ARRAY_SIZE_X 15
-#define ARRAY_SIZE_Y 15
-#define ARRAY_SIZE_Z 15
+#define ARRAY_SIZE_X 5
+#define ARRAY_SIZE_Y 5
+#define ARRAY_SIZE_Z 5
 
 //maximum number of objects (and allow user to shoot additional boxes)
 #define MAX_PROXIES (ARRAY_SIZE_X*ARRAY_SIZE_Y*ARRAY_SIZE_Z + 1024)

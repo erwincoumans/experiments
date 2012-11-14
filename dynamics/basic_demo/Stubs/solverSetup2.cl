@@ -1,4 +1,3 @@
-
 /*
 Copyright (c) 2012 Advanced Micro Devices, Inc.  
 
@@ -291,8 +290,7 @@ float4 qtRotate(Quaternion q, float4 vec);
 __inline
 Quaternion qtInvert(Quaternion q);
 
-__inline
-Matrix3x3 qtGetRotationMatrix(Quaternion q);
+
 
 
 
@@ -334,30 +332,6 @@ __inline
 float4 qtInvRotate(const Quaternion q, float4 vec)
 {
 	return qtRotate( qtInvert( q ), vec );
-}
-
-__inline
-Matrix3x3 qtGetRotationMatrix(Quaternion quat)
-{
-	float4 quat2 = (float4)(quat.x*quat.x, quat.y*quat.y, quat.z*quat.z, 0.f);
-	Matrix3x3 out;
-
-	out.m_row[0].x=1-2*quat2.y-2*quat2.z;
-	out.m_row[0].y=2*quat.x*quat.y-2*quat.w*quat.z;
-	out.m_row[0].z=2*quat.x*quat.z+2*quat.w*quat.y;
-	out.m_row[0].w = 0.f;
-
-	out.m_row[1].x=2*quat.x*quat.y+2*quat.w*quat.z;
-	out.m_row[1].y=1-2*quat2.x-2*quat2.z;
-	out.m_row[1].z=2*quat.y*quat.z-2*quat.w*quat.x;
-	out.m_row[1].w = 0.f;
-
-	out.m_row[2].x=2*quat.x*quat.z-2*quat.w*quat.y;
-	out.m_row[2].y=2*quat.y*quat.z+2*quat.w*quat.x;
-	out.m_row[2].z=1-2*quat2.x-2*quat2.y;
-	out.m_row[2].w = 0.f;
-
-	return out;
 }
 
 
@@ -433,33 +407,6 @@ typedef struct
 } ConstBufferBatchSolve;
 
 
-void setLinearAndAngular( float4 n, float4 r0, float4 r1, float4* linear, float4* angular0, float4* angular1)
-{
-	*linear = -n;
-	*angular0 = -cross3(r0, n);
-	*angular1 = cross3(r1, n);
-}
-
-
-float calcRelVel( float4 l0, float4 l1, float4 a0, float4 a1, float4 linVel0, float4 angVel0, float4 linVel1, float4 angVel1 )
-{
-	return dot3F4(l0, linVel0) + dot3F4(a0, angVel0) + dot3F4(l1, linVel1) + dot3F4(a1, angVel1);
-}
-
-
-float calcJacCoeff(const float4 linear0, const float4 linear1, const float4 angular0, const float4 angular1,
-					float invMass0, const Matrix3x3* invInertia0, float invMass1, const Matrix3x3* invInertia1)
-{
-	//	linear0,1 are normlized
-	float jmj0 = invMass0;//dot3F4(linear0, linear0)*invMass0;
-	float jmj1 = dot3F4(mtMul3(angular0,*invInertia0), angular0);
-	float jmj2 = invMass1;//dot3F4(linear1, linear1)*invMass1;
-	float jmj3 = dot3F4(mtMul3(angular1,*invInertia1), angular1);
-	return -1.f/(jmj0+jmj1+jmj2+jmj3);
-}
-
-
-
  
 
 
@@ -478,6 +425,22 @@ typedef struct
 
 
 
+
+//	others
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void ReorderContactKernel(__global Contact4* in, __global Contact4* out, __global int2* sortData, int4 cb )
+{
+	int nContacts = cb.x;
+	int gIdx = GET_GLOBAL_IDX;
+
+	if( gIdx < nContacts )
+	{
+		int srcIdx = sortData[gIdx].y;
+		out[gIdx] = in[srcIdx];
+	}
+}
+
 typedef struct
 {
 	int m_nContacts;
@@ -486,119 +449,14 @@ typedef struct
 	int m_nSplit;
 } ConstBufferSSD;
 
-
-
-
-void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVelA, float invMassA, const Matrix3x3 invInertiaA,
-	const float4 posB, const float4 linVelB, const float4 angVelB, float invMassB, const Matrix3x3 invInertiaB, 
-	__global Contact4* src, float dt, float positionDrift, float positionConstraintCoeff,
-	Constraint4* dstC )
-{
-	dstC->m_bodyA = abs(src->m_bodyAPtrAndSignBit);
-	dstC->m_bodyB = abs(src->m_bodyBPtrAndSignBit);
-
-	float dtInv = 1.f/dt;
-	for(int ic=0; ic<4; ic++)
-	{
-		dstC->m_appliedRambdaDt[ic] = 0.f;
-	}
-	dstC->m_fJacCoeffInv[0] = dstC->m_fJacCoeffInv[1] = 0.f;
-
-
-	dstC->m_linear = -src->m_worldNormal;
-	dstC->m_linear.w = 0.7f ;//src->getFrictionCoeff() );
-	for(int ic=0; ic<4; ic++)
-	{
-		float4 r0 = src->m_worldPos[ic] - posA;
-		float4 r1 = src->m_worldPos[ic] - posB;
-
-		if( ic >= src->m_worldNormal.w )//npoints
-		{
-			dstC->m_jacCoeffInv[ic] = 0.f;
-			continue;
-		}
-
-		float relVelN;
-		{
-			float4 linear, angular0, angular1;
-			setLinearAndAngular(src->m_worldNormal, r0, r1, &linear, &angular0, &angular1);
-
-			dstC->m_jacCoeffInv[ic] = calcJacCoeff(linear, -linear, angular0, angular1,
-				invMassA, &invInertiaA, invMassB, &invInertiaB );
-
-			relVelN = calcRelVel(linear, -linear, angular0, angular1,
-				linVelA, angVelA, linVelB, angVelB);
-
-			float e = 0.f;//src->getRestituitionCoeff();
-			if( relVelN*relVelN < 0.004f ) e = 0.f;
-
-			dstC->m_b[ic] = e*relVelN;
-			//float penetration = src->m_worldPos[ic].w;
-			dstC->m_b[ic] += (src->m_worldPos[ic].w + positionDrift)*positionConstraintCoeff*dtInv;
-			dstC->m_appliedRambdaDt[ic] = 0.f;
-		}
-	}
-
-	if( src->m_worldNormal.w > 1 )//npoints
-	{	//	prepare friction
-		float4 center = make_float4(0.f);
-		for(int i=0; i<src->m_worldNormal.w; i++) center += src->m_worldPos[i];
-		center /= (float)src->m_worldNormal.w;
-
-		float4 tangent[2];
-		tangent[0] = cross3( src->m_worldNormal, src->m_worldPos[0]-center );
-		tangent[1] = cross3( tangent[0], src->m_worldNormal );
-		tangent[0] = normalize3( tangent[0] );
-		tangent[1] = normalize3( tangent[1] );
-		float4 r[2];
-		r[0] = center - posA;
-		r[1] = center - posB;
-
-		for(int i=0; i<2; i++)
-		{
-			float4 linear, angular0, angular1;
-			setLinearAndAngular(tangent[i], r[0], r[1], &linear, &angular0, &angular1);
-
-			dstC->m_fJacCoeffInv[i] = calcJacCoeff(linear, -linear, angular0, angular1,
-				invMassA, &invInertiaA, invMassB, &invInertiaB );
-			dstC->m_fAppliedRambdaDt[i] = 0.f;
-		}
-		dstC->m_center = center;
-	}
-	else
-	{
-		//	single point constraint
-	}
-
-	for(int i=0; i<4; i++)
-	{
-		if( i<src->m_worldNormal.w )
-		{
-			dstC->m_worldPos[i] = src->m_worldPos[i];
-		}
-		else
-		{
-			dstC->m_worldPos[i] = make_float4(0.f);
-		}
-	}
-}
-
-typedef struct
-{
-	int m_nContacts;
-	float m_dt;
-	float m_positionDrift;
-	float m_positionConstraintCoeff;
-} ConstBufferCTC;
-
 __kernel
 __attribute__((reqd_work_group_size(WG_SIZE,1,1)))
-void ContactToConstraintKernel(__global Contact4* gContact, __global Body* gBodies, __global Shape* gShapes, __global Constraint4* gConstraintOut, 
+void SetSortDataKernel(__global Contact4* gContact, __global Body* gBodies, __global int2* gSortDataOut, 
 int nContacts,
-float dt,
-float positionDrift,
-float positionConstraintCoeff
+float scale,
+int N_SPLIT
 )
+
 {
 	int gIdx = GET_GLOBAL_IDX;
 	
@@ -607,31 +465,30 @@ float positionConstraintCoeff
 		int aIdx = abs(gContact[gIdx].m_bodyAPtrAndSignBit);
 		int bIdx = abs(gContact[gIdx].m_bodyBPtrAndSignBit);
 
-		float4 posA = gBodies[aIdx].m_pos;
-		float4 linVelA = gBodies[aIdx].m_linVel;
-		float4 angVelA = gBodies[aIdx].m_angVel;
-		float invMassA = gBodies[aIdx].m_invMass;
-		Matrix3x3 invInertiaA = gShapes[aIdx].m_invInertia;
+		int idx = (gContact[gIdx].m_bodyAPtrAndSignBit<0)? bIdx: aIdx;
+		float4 p = gBodies[idx].m_pos;
+		int xIdx = (int)((p.x-((p.x<0.f)?1.f:0.f))*scale) & (N_SPLIT-1);
+		int zIdx = (int)((p.z-((p.z<0.f)?1.f:0.f))*scale) & (N_SPLIT-1);
 
-		float4 posB = gBodies[bIdx].m_pos;
-		float4 linVelB = gBodies[bIdx].m_linVel;
-		float4 angVelB = gBodies[bIdx].m_angVel;
-		float invMassB = gBodies[bIdx].m_invMass;
-		Matrix3x3 invInertiaB = gShapes[bIdx].m_invInertia;
-
-		Constraint4 cs;
-
-    	setConstraint4( posA, linVelA, angVelA, invMassA, invInertiaA, posB, linVelB, angVelB, invMassB, invInertiaB,
-			&gContact[gIdx], dt, positionDrift, positionConstraintCoeff,
-			&cs );
-		
-		cs.m_batchIdx = gContact[gIdx].m_batchIdx;
-
-		gConstraintOut[gIdx] = cs;
+		gSortDataOut[gIdx].x = (xIdx+zIdx*N_SPLIT);
+		gSortDataOut[gIdx].y = gIdx;
+	}
+	else
+	{
+		gSortDataOut[gIdx].x = 0xffffffff;
 	}
 }
 
-
+__kernel
+__attribute__((reqd_work_group_size(WG_SIZE,1,1)))
+void CopyConstraintKernel(__global Contact4* gIn, __global Contact4* gOut, int4 cb )
+{
+	int gIdx = GET_GLOBAL_IDX;
+	if( gIdx < cb.x )
+	{
+		gOut[gIdx] = gIn[gIdx];
+	}
+}
 
 
 

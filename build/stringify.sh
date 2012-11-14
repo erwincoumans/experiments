@@ -3,6 +3,7 @@
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/batchingKernels.cl" --headerfile="../dynamics/basic_demo/Stubs/batchingKernels.h" --stringname="batchingKernelsCL" stringify
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.cl" --headerfile="../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.h" --stringname="narrowphaseKernelsCL" stringify
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solverSetup.cl" --headerfile="../dynamics/basic_demo/Stubs/solverSetup.h" --stringname="solverSetupCL" stringify
+./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solverSetup2.cl" --headerfile="../dynamics/basic_demo/Stubs/solverSetup2.h" --stringname="solverSetup2CL" stringify
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solveContact.cl" --headerfile="../dynamics/basic_demo/Stubs/solveContact.h" --stringname="solveContactCL" stringify
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../dynamics/basic_demo/Stubs/solveFriction.cl" --headerfile="../dynamics/basic_demo/Stubs/solveFriction.h" --stringname="solveFrictionCL" stringify
 ./premake4_osx --file=stringifyKernel.lua --kernelfile="../opencl/vector_add/VectorAddKernels.cl" --headerfile="../opencl/vector_add/VectorAddKernels.h" --stringname="vectorAddCL" stringify

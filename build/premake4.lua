@@ -99,6 +99,10 @@ end
 	include "../opencl/c_api"
 	include "../dynamics/meshmesh"
 
+	 include "../opencl/compiler"
+
+ include "../opencl/gpu_narrowphase_test"
+
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
