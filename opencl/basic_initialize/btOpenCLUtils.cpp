@@ -588,6 +588,20 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 			if (binaryFileValid)
 			{
 				HANDLE srcFileHandle = CreateFile(clFileNameForCaching,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+
+				if (srcFileHandle==INVALID_HANDLE_VALUE)
+				{
+					const char* prefix[]={"../","../../","../../../","../../../../"};
+					for (int i=0;(srcFileHandle==INVALID_HANDLE_VALUE) && i<3;i++)
+					{
+						char relativeFileName[1024];
+						sprintf(relativeFileName,"%s%s",prefix[i],clFileNameForCaching);
+						srcFileHandle = CreateFile(relativeFileName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
+					}
+
+				}
+
+
 				if (srcFileHandle!=INVALID_HANDLE_VALUE)
 				{
 					FILETIME modtimeSrc; 
@@ -705,7 +719,20 @@ cl_program btOpenCLUtils_compileCLProgramFromString(cl_context clContext, cl_dev
 		{
 			if (clFileNameForCaching)
 			{
+				
 				FILE* file = fopen(clFileNameForCaching, "rb");
+				//in many cases the relative path is a few levels up the directory hierarchy, so try it
+				if (!file)
+				{
+					const char* prefix[]={"../","../../","../../../","../../../../"};
+					for (int i=0;!file && i<3;i++)
+					{
+						char relativeFileName[1024];
+						sprintf(relativeFileName,"%s%s",prefix[i],clFileNameForCaching);
+						file = fopen(relativeFileName, "rb");
+					}
+				}
+
 				if (file)
 				{
 					char* kernelSrc=0;

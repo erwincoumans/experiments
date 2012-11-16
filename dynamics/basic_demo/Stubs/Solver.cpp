@@ -16,11 +16,11 @@ subject to the following restrictions:
 
 #include "Solver.h"
 
-#define SOLVER_SETUP_KERNEL_PATH "../dynamics/basic_demo/Stubs/solverSetup.cl"
-#define SOLVER_SETUP2_KERNEL_PATH "../dynamics/basic_demo/Stubs/solverSetup2.cl"
+#define SOLVER_SETUP_KERNEL_PATH "dynamics/basic_demo/Stubs/solverSetup.cl"
+#define SOLVER_SETUP2_KERNEL_PATH "dynamics/basic_demo/Stubs/solverSetup2.cl"
 
-#define SOLVER_CONTACT_KERNEL_PATH "../dynamics/basic_demo/Stubs/solveContact.cl"
-#define SOLVER_FRICTION_KERNEL_PATH "../dynamics/basic_demo/Stubs/solveFriction.cl"
+#define SOLVER_CONTACT_KERNEL_PATH "dynamics/basic_demo/Stubs/solveContact.cl"
+#define SOLVER_FRICTION_KERNEL_PATH "dynamics/basic_demo/Stubs/solveFriction.cl"
 
 #define BATCHING_PATH "../../dynamics/basic_demo/Stubs/batchingKernels.cl"
 
