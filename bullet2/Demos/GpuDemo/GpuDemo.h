@@ -49,6 +49,7 @@ class GpuDemo : public DemoApplication
 		int arraySizeX;
 		int arraySizeY;
 		int arraySizeZ;
+		bool m_useConcaveMesh;
 		float gapX;
 		float gapY;
 		float gapZ;
@@ -56,9 +57,10 @@ class GpuDemo : public DemoApplication
 			:useOpenCL(true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(10),
-			arraySizeY(30),
-			arraySizeZ(10),
+			arraySizeX(5),
+			arraySizeY(5),
+			arraySizeZ(5),
+			m_useConcaveMesh(false),
 			gapX(2.3),
 			gapY(2.0),
 			gapZ(2.3)

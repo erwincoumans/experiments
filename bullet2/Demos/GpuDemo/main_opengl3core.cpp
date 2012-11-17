@@ -17,6 +17,9 @@ int g_OpenGLHeight = 768;
 
 btgWindowInterface* window=0;
 
+extern bool enableExperimentalCpuConcaveCollision;
+
+
 void MyKeyboardCallback(int key, int state)
 {
 	if (key==BTG_ESCAPE && window)
@@ -33,7 +36,7 @@ void MyKeyboardCallback(int key, int state)
 
 void Usage()
 {
-	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--disable_opencl] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
+	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--disable_opencl] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>] [--use_concave_mesh]\n"); 
 };
 
 
@@ -92,6 +95,11 @@ int main(int argc, char* argv[])
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
 	ci.useOpenCL =!args.CheckCmdLineFlag("disable_opencl");
+	ci.m_useConcaveMesh = args.CheckCmdLineFlag("use_concave_mesh");
+	if (ci.m_useConcaveMesh)
+	{
+		enableExperimentalCpuConcaveCollision = true;
+	}
 	ci.preferredOpenCLPlatformIndex=1;
 	args.GetCmdLineArgument("cl_device", ci.preferredOpenCLDeviceIndex);
 	args.GetCmdLineArgument("cl_platform", ci.preferredOpenCLPlatformIndex);
@@ -101,6 +109,8 @@ int main(int argc, char* argv[])
 	args.GetCmdLineArgument("x_gap", ci.gapX);
 	args.GetCmdLineArgument("y_gap", ci.gapY);
 	args.GetCmdLineArgument("z_gap", ci.gapZ);
+	
+		
 	printf("Demo settings:\n");
 	printf("x_dim=%d, y_dim=%d, z_dim=%d\n",ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ);
 	printf("x_gap=%f, y_gap=%f, z_gap=%f\n",ci.gapX,ci.gapY,ci.gapZ);
