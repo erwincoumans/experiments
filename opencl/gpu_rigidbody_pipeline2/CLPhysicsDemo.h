@@ -17,6 +17,7 @@ subject to the following restrictions:
 #define CL_PHYSICS_DEMO_H
 
 #include "LinearMath/btAlignedObjectArray.h"
+#include "LinearMath/btVector3.h"
 
 #ifdef _WIN32
 class Win32OpenGLWindow;
@@ -55,7 +56,7 @@ struct CLPhysicsDemo
 
 	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 	int		registerConvexShape(class btConvexUtility* utilPtr , bool noHeightField);
-	int		registerConcaveMesh(class objLoader* obj, const float* scaling);
+	int		registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, const float* scaling);
 
 	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, int userPointer);
 

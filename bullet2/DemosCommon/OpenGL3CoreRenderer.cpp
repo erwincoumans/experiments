@@ -5,6 +5,8 @@
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
 
+
+#include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
 #include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
 #include "BulletCollision/CollisionShapes/btCollisionShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
@@ -114,6 +116,114 @@ GraphicsShape* createGraphicsShapeFromConvexHull(const btConvexPolyhedron* utilP
 	}
 }
 
+GraphicsShape* createGraphicsShapeFromConcaveMesh(const btBvhTriangleMeshShape* trimesh)
+{
+	
+	btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
+	btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
+
+	const btStridingMeshInterface* meshInterface = trimesh->getMeshInterface();
+
+	btVector3 trimeshScaling(1,1,1);
+	for (int partId=0;partId<meshInterface->getNumSubParts();partId++)
+	{
+		
+		const unsigned char *vertexbase = 0;
+		int numverts = 0;
+		PHY_ScalarType type = PHY_INTEGER;
+		int stride = 0;
+		const unsigned char *indexbase = 0;
+		int indexstride = 0;
+		int numfaces = 0;
+		PHY_ScalarType indicestype = PHY_INTEGER;
+		//PHY_ScalarType indexType=0;
+
+		btVector3 triangleVerts[3];
+		meshInterface->getLockedReadOnlyVertexIndexBase(&vertexbase,numverts,	type,stride,&indexbase,indexstride,numfaces,indicestype,partId);
+		btVector3 aabbMin,aabbMax;
+
+		for (int triangleIndex = 0 ; triangleIndex < numfaces;triangleIndex++)
+		{
+			unsigned int* gfxbase = (unsigned int*)(indexbase+triangleIndex*indexstride);
+
+			for (int j=2;j>=0;j--)
+			{
+
+				int graphicsindex = indicestype==PHY_SHORT?((unsigned short*)gfxbase)[j]:gfxbase[j];
+				if (type == PHY_FLOAT)
+				{
+					float* graphicsbase = (float*)(vertexbase+graphicsindex*stride);
+					triangleVerts[j] = btVector3(
+						graphicsbase[0]*trimeshScaling.getX(),
+						graphicsbase[1]*trimeshScaling.getY(),
+						graphicsbase[2]*trimeshScaling.getZ());
+				}
+				else
+				{
+					double* graphicsbase = (double*)(vertexbase+graphicsindex*stride);
+					triangleVerts[j] = btVector3( btScalar(graphicsbase[0]*trimeshScaling.getX()), 
+						btScalar(graphicsbase[1]*trimeshScaling.getY()), 
+						btScalar(graphicsbase[2]*trimeshScaling.getZ()));
+				}
+			}
+			btVector3 normal = (triangleVerts[2]-triangleVerts[0]).cross(triangleVerts[1]-triangleVerts[0]);
+			normal.normalize();
+
+			GraphicsVertex vtx0,vtx1,vtx2;
+			vtx0.xyzw[0] = triangleVerts[0].getX();
+			vtx0.xyzw[1] = triangleVerts[0].getY();
+			vtx0.xyzw[2] = triangleVerts[0].getZ();
+			vtx0.xyzw[3] = 0;
+			vtx0.uv[0] = 0.5f;
+			vtx0.uv[1] = 0.5f;
+			vtx0.normal[0] = normal[0];
+			vtx0.normal[1] = normal[1];
+			vtx0.normal[2] = normal[2];
+
+			vtx1.xyzw[0] = triangleVerts[1].getX();
+			vtx1.xyzw[1] = triangleVerts[1].getY();
+			vtx1.xyzw[2] = triangleVerts[1].getZ();
+			vtx1.xyzw[3] = 0;
+			vtx1.uv[0] = 0.5f;
+			vtx1.uv[1] = 0.5f;
+			vtx1.normal[0] = normal[0];
+			vtx1.normal[1] = normal[1];
+			vtx1.normal[2] = normal[2];
+
+			vtx2.xyzw[0] = triangleVerts[2].getX();
+			vtx2.xyzw[1] = triangleVerts[2].getY();
+			vtx2.xyzw[2] = triangleVerts[2].getZ();
+			vtx2.xyzw[3] = 0;
+			vtx2.uv[0] = 0.5f;
+			vtx2.uv[1] = 0.5f;
+			vtx2.normal[0] = normal[0];
+			vtx2.normal[1] = normal[1];
+			vtx2.normal[2] = normal[2];
+
+//			triangleVerts[1]
+//			triangleVerts[1]
+//			triangleVerts[2]
+			vertices->push_back(vtx0);
+			vertices->push_back(vtx1);
+			vertices->push_back(vtx2);
+			indicesPtr->push_back(indicesPtr->size());
+			indicesPtr->push_back(indicesPtr->size());
+			indicesPtr->push_back(indicesPtr->size());
+		}
+	}
+
+		
+	GraphicsShape* gfxShape = new GraphicsShape;
+	gfxShape->m_vertices = &vertices->at(0).xyzw[0];
+	gfxShape->m_numvertices = vertices->size();
+	gfxShape->m_indices = &indicesPtr->at(0);
+	gfxShape->m_numIndices = indicesPtr->size();
+	for (int i=0;i<4;i++)
+		gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
+	return gfxShape;
+}
+
+
 
 //very incomplete conversion from physics to graphics
 void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly, int numObjects, btCollisionObject** colObjArray)
@@ -154,14 +264,26 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 		if (!syncTransformsOnly)
 		{
 			if (prevShape != colObj->getCollisionShape())
-			if (colObj->getCollisionShape()->isPolyhedral())
 			{
-				btPolyhedralConvexShape* polyShape = (btPolyhedralConvexShape*)colObj->getCollisionShape();
-				const btConvexPolyhedron* pol = polyShape->getConvexPolyhedron();
-				GraphicsShape* gfxShape = createGraphicsShapeFromConvexHull(pol);
+				if (colObj->getCollisionShape()->isPolyhedral())
+				{
+					btPolyhedralConvexShape* polyShape = (btPolyhedralConvexShape*)colObj->getCollisionShape();
+					const btConvexPolyhedron* pol = polyShape->getConvexPolyhedron();
+					GraphicsShape* gfxShape = createGraphicsShapeFromConvexHull(pol);
 
-				prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
-				prevShape = colObj->getCollisionShape();
+					prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+					prevShape = colObj->getCollisionShape();
+				} else
+				{
+					if (colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
+					{
+						btBvhTriangleMeshShape* trimesh = (btBvhTriangleMeshShape*) colObj->getCollisionShape();
+						GraphicsShape* gfxShape = createGraphicsShapeFromConcaveMesh(trimesh);
+						prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+						prevShape = colObj->getCollisionShape();
+					}
+
+				}
 			}
 		}
     
@@ -181,9 +303,23 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
                     renderer.writeSingleInstanceTransformToCPU(position,orientation,curGraphicsIndex);
                 
                 }
-                
                 curGraphicsIndex++;
-
+		} else
+		{
+			if (colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
+			{
+				float cubeScaling[4]={1,1,1,1};
+				if (!syncTransformsOnly)
+                {
+                    renderer.registerGraphicsInstance(prevGraphicsShapeIndex,position,orientation,color,cubeScaling);
+                }
+                else
+                {
+                    renderer.writeSingleInstanceTransformToCPU(position,orientation,curGraphicsIndex);
+                
+                }
+                curGraphicsIndex++;
+			}
 		}
 
        

@@ -30,6 +30,9 @@ subject to the following restrictions:
 ///btBulletDynamicsCommon.h is the main Bullet include file, contains most common include files.
 //#include "btBulletDynamicsCommon.h"
 
+
+#include "BulletCollision/CollisionShapes/btTriangleMesh.h"
+#include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
 #include "BulletCollision/CollisionShapes/btSphereShape.h"
 #include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
@@ -106,18 +109,40 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 
 	///create a few basic rigid bodies
 
-	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+	btCollisionShape* groundShape =0;
 //	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
-	
+
+	if (ci.m_useConcaveMesh)
+	{
+		btTriangleMesh* meshInterface = new btTriangleMesh();
+
+		btAlignedObjectArray<btVector3> concaveVertices;
+		concaveVertices.push_back(btVector3(0,-20,0));
+		concaveVertices.push_back(btVector3(80,10,80));
+		concaveVertices.push_back(btVector3(80,10,-80));
+		concaveVertices.push_back(btVector3(-80,10,-80));
+		concaveVertices.push_back(btVector3(-80,10,80));
+
+		meshInterface->addTriangle(concaveVertices[0],concaveVertices[1],concaveVertices[2],true);
+		meshInterface->addTriangle(concaveVertices[0],concaveVertices[2],concaveVertices[3],true);
+		meshInterface->addTriangle(concaveVertices[0],concaveVertices[3],concaveVertices[4],true);
+		meshInterface->addTriangle(concaveVertices[0],concaveVertices[4],concaveVertices[1],true);
+
+
+		groundShape = new btBvhTriangleMeshShape(meshInterface,true);//btStaticPlaneShape(btVector3(0,1,0),50);
+	} else
+	{
+		groundShape  = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+	}
 	
 	m_collisionShapes.push_back(groundShape);
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-50,0));
+	groundTransform.setOrigin(btVector3(0,0,0));
 
 	//We can also use DemoApplication::localCreateRigidBody, but for clarity it is provided here:
-	if (0)
+	if (ci.m_useConcaveMesh)
 	{
 		btScalar mass(0.);
 
@@ -175,18 +200,24 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 
 		for (int k=0;k<ci.arraySizeY;k++)
 		{
-			int sizeX = k==0? 100 : ci.arraySizeX;
-			int startX = k==0? -50 : 0;
-			float gapX = k==0? 2.05 : ci.gapX;
+			int sizeX = ci.arraySizeX;
+			if (!ci.m_useConcaveMesh && k==0)
+				sizeX = 30;
+
+			int startX = !ci.m_useConcaveMesh&&k==0? -20 : 0;
+			float gapX = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapX;
 			for (int i=0;i<sizeX;i++)
 			{
-				int sizeZ = k==0? 100 : ci.arraySizeZ;
-				int startZ = k==0? -50 : 0;
-				float gapZ = k==0? 2.05 : ci.gapZ;
+				int sizeZ = !ci.m_useConcaveMesh&&k==0? 30 : ci.arraySizeZ;
+				int startZ = (!ci.m_useConcaveMesh)&&k==0? -20 : 0;
+				float gapZ = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapZ;
 				for(int j = 0;j<sizeZ;j++)
 				{
 					btCollisionShape* shape = k==0? boxShape : colShape;
-						btScalar	mass = k==0? 0.f : 1.f;
+
+					btScalar	mass  = 1;
+					if (!ci.m_useConcaveMesh && k==0)
+						mass = k==0? 0.f : 1.f;
 
 					//rigidbody is dynamic if and only if mass is non zero, otherwise static
 					bool isDynamic = (mass != 0.f);

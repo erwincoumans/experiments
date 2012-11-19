@@ -24,7 +24,6 @@ extern bool useConvexHeightfield;
 #include "CLPhysicsDemo.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../basic_initialize/btOpenCLUtils.h"
-#include "../rendering/WavefrontObjLoader/objLoader.h"
 #include "../broadphase_benchmark/findPairsOpenCL.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btQuaternion.h"
@@ -201,13 +200,15 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
-int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj,const float* scaling)
+int		CLPhysicsDemo::registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices,const float* scaling1)
 {
+	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
+
 	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
 	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	
 	col.m_shapeType = CollisionShape::SHAPE_CONCAVE_TRIMESH;
-	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(obj,col,scaling);
+	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(vertices,indices,col,scaling);
 
 	
 
@@ -215,9 +216,9 @@ int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj,const float* scaling)
 	btVector3 myAabbMin(1e30f,1e30f,1e30f);
 	btVector3 myAabbMax(-1e30f,-1e30f,-1e30f);
 
-	for (int i=0;i<obj->vertexCount;i++)
+	for (int i=0;i<vertices->size();i++)
 	{
-		btVector3 vtx(obj->vertexList[i]->e[0]*scaling[0],obj->vertexList[i]->e[1]*scaling[1],obj->vertexList[i]->e[2]*scaling[2]);
+		btVector3 vtx(vertices->at(i)*scaling);
 		myAabbMin.setMin(vtx);
 		myAabbMax.setMax(vtx);
 	}
@@ -240,6 +241,8 @@ int		CLPhysicsDemo::registerConcaveMesh(objLoader* obj,const float* scaling)
 
 	return collidableIndex;
 }
+
+
 
 int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeightField)
 {

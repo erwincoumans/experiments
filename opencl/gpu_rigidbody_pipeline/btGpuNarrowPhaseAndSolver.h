@@ -16,6 +16,8 @@ subject to the following restrictions:
 #ifndef GPU_NARROWPHASE_SOLVER_H
 #define GPU_NARROWPHASE_SOLVER_H
 #include "LinearMath/btAlignedObjectArray.h"
+#include "LinearMath/btVector3.h"
+
 #include "btCollidable.h"
 
 //#define MAX_CONVEX_BODIES_CL 8*1024
@@ -78,6 +80,7 @@ public:
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
+	int registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, btCollidable& col, const float* scaling);
 	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col, const float* scaling);
 	int registerConvexHullShape(class btConvexUtility* convexPtr, btCollidable& col);
 	int registerConvexHeightfield(class ConvexHeightField* convexShape,btCollidable& col);

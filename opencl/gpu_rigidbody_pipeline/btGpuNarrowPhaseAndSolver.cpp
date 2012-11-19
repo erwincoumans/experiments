@@ -232,6 +232,78 @@ int btGpuNarrowphaseAndSolver::allocateCollidable()
 	return curSize;
 }
 
+
+int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices,btCollidable& col, const float* scaling1)
+{
+
+	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
+
+	m_internalData->m_convexData->resize(m_internalData->m_numAcceleratedShapes+1);
+	m_internalData->m_convexPolyhedra.resize(m_internalData->m_numAcceleratedShapes+1);
+	
+    
+	ConvexPolyhedronCL& convex = m_internalData->m_convexPolyhedra.at(m_internalData->m_convexPolyhedra.size()-1);
+	convex.mC = btVector3(0,0,0);
+	convex.mE = btVector3(0,0,0);
+	convex.m_extents= btVector3(0,0,0);
+	convex.m_localCenter = btVector3(0,0,0);
+	convex.m_radius = 0.f;
+	
+	convex.m_numUniqueEdges = 0;
+	int edgeOffset = m_internalData->m_uniqueEdges.size();
+	convex.m_uniqueEdgesOffset = edgeOffset;
+	
+	int faceOffset = m_internalData->m_convexFaces.size();
+	convex.m_faceOffset = faceOffset;
+	convex.m_numFaces = indices->size()/3;
+	m_internalData->m_convexFaces.resize(faceOffset+convex.m_numFaces);
+	for (int i=0;i<convex.m_numFaces;i++)
+	{
+		
+		btVector3 vert0(vertices->at(indices->at(i*3))*scaling);
+		btVector3 vert1(vertices->at(indices->at(i*3+1))*scaling);
+		btVector3 vert2(vertices->at(indices->at(i*3+2))*scaling);
+
+		btVector3 normal = ((vert1-vert0).cross(vert2-vert0)).normalize();
+		btScalar c = -(normal.dot(vert0));
+
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.x = normal.x();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.y = normal.y();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.z = normal.z();
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_plane.w = c;
+		int indexOffset = m_internalData->m_convexIndices.size();
+		int numIndices = 3;
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_numIndices = numIndices;
+		m_internalData->m_convexFaces[convex.m_faceOffset+i].m_indexOffset = indexOffset;
+		m_internalData->m_convexIndices.resize(indexOffset+numIndices);
+		for (int p=0;p<numIndices;p++)
+		{
+			int vi = indices->at(i*3+p);
+			m_internalData->m_convexIndices[indexOffset+p] = vi;//convexPtr->m_faces[i].m_indices[p];
+		}
+	}
+    
+	convex.m_numVertices = vertices->size();
+	int vertexOffset = m_internalData->m_convexVertices.size();
+	convex.m_vertexOffset =vertexOffset;
+	m_internalData->m_convexVertices.resize(vertexOffset+convex.m_numVertices);
+	for (int i=0;i<vertices->size();i++)
+	{
+		m_internalData->m_convexVertices[vertexOffset+i] = vertices->at(i)*scaling;
+	}
+
+	(*m_internalData->m_convexData)[m_internalData->m_numAcceleratedShapes] = 0;
+	
+	m_internalData->m_convexFacesGPU->copyFromHost(m_internalData->m_convexFaces);
+    
+	m_internalData->m_convexPolyhedraGPU->copyFromHost(m_internalData->m_convexPolyhedra);
+	m_internalData->m_uniqueEdgesGPU->copyFromHost(m_internalData->m_uniqueEdges);
+	m_internalData->m_convexVerticesGPU->copyFromHost(m_internalData->m_convexVertices);
+	m_internalData->m_convexIndicesGPU->copyFromHost(m_internalData->m_convexIndices);
+  
+	return m_internalData->m_numAcceleratedShapes++;
+}
+
 int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btCollidable& col, const float* scaling)
 {
 
@@ -276,7 +348,8 @@ int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(class objLoader* obj,btC
 		m_internalData->m_convexIndices.resize(indexOffset+numIndices);
 		for (int p=0;p<numIndices;p++)
 		{
-			m_internalData->m_convexIndices[indexOffset+p] = face->vertex_index[p];//convexPtr->m_faces[i].m_indices[p];
+			int vi = face->vertex_index[p];
+			m_internalData->m_convexIndices[indexOffset+p] = vi;//convexPtr->m_faces[i].m_indices[p];
 		}
 	}
     
