@@ -116,7 +116,7 @@ Solver::Solver(cl_context ctx, cl_device_id device, cl_command_queue queue, int 
 	
 	{
 		
-		cl_program solveContactProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, 0, &pErrNum,additionalMacros, SOLVER_CONTACT_KERNEL_PATH);
+		cl_program solveContactProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solveContactSource, &pErrNum,additionalMacros, SOLVER_CONTACT_KERNEL_PATH);
 		btAssert(solveContactProg);
 		
 		cl_program solveFrictionProg= btOpenCLUtils::compileCLProgramFromString( ctx, device, solveFrictionSource, &pErrNum,additionalMacros, SOLVER_FRICTION_KERNEL_PATH);

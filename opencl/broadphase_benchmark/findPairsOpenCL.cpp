@@ -90,7 +90,7 @@ void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies, cl_mem collidables)
 			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernelFull, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
-#if 0
+
 void	setupGpuAabbsSimple(btFindPairsIO& fpio)
 {
 
@@ -109,7 +109,7 @@ void	setupGpuAabbsSimple(btFindPairsIO& fpio)
 			ciErrNum = clEnqueueNDRangeKernel(fpio.m_cqCommandQue, fpio.m_initializeGpuAabbsKernelSimple, 1, NULL, &numWorkItems, &workGroupSize,0 ,0 ,0);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 }
-#endif
+
 
 
 void	setupBodies(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem, cl_mem bodies, cl_mem bodyInertias)
@@ -185,7 +185,7 @@ void	copyBodyVelocities(btFindPairsIO& fpio, cl_mem linVelMem, cl_mem angVelMem,
 
 }
 
-#if 0
+
 void	colorPairsOpenCL(btFindPairsIO&	fpio)
 {
 	int ciErrNum = 0;
@@ -209,7 +209,7 @@ void	colorPairsOpenCL(btFindPairsIO&	fpio)
 		oclCHECKERROR(ciErrNum, CL_SUCCESS);
 	}
 }
-#endif
+
 
 
 

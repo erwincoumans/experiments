@@ -76,10 +76,12 @@ void initFindPairs(btFindPairsIO& fpio,cl_context cxMainContext, cl_device_id de
 
 void	findPairsOpenCLBruteForce(btFindPairsIO& fpio);
 
-void	setupGpuAabbsSimple(btFindPairsIO& fpio);
+
 
 void	setupGpuAabbsFull(btFindPairsIO& fpio, cl_mem bodies, cl_mem collidables);
 
+
+void	setupGpuAabbsSimple(btFindPairsIO& fpio);
 
 void	colorPairsOpenCL(btFindPairsIO&	fpio);
 
