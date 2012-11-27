@@ -16,7 +16,7 @@ struct btSapAabb
 	union
 	{
 		float m_max[4];
-		//int m_signedMaxIndices[4];
+		int m_signedMaxIndices[4];
 		//unsigned int m_unsignedMaxIndices[4];
 	};
 };
@@ -32,18 +32,28 @@ class btGpuSapBroadphase
 	cl_kernel				m_flipFloatKernel;
 	cl_kernel				m_scatterKernel ;
 	cl_kernel				m_sapKernel;
+	cl_kernel				m_sap2Kernel;
 
 	class btRadixSort32CL* m_sorter;
 
 	public:
 	
-	btOpenCLArray<btSapAabb>	m_aabbsGPU;
-	btAlignedObjectArray<btSapAabb>	m_aabbsCPU;
+	btOpenCLArray<btSapAabb>	m_allAabbsGPU;
+	btAlignedObjectArray<btSapAabb>	m_allAabbsCPU;
+
+	btOpenCLArray<btSapAabb>	m_dynamicAabbsGPU;
+	btAlignedObjectArray<btSapAabb>	m_dynamicAabbsCPU;
+
+	btOpenCLArray<btSapAabb>	m_staticAabbsGPU;
+	btAlignedObjectArray<btSapAabb>	m_staticAabbsCPU;
+
 	btOpenCLArray<btInt2>		m_overlappingPairs;
 
 	//temporary gpu work memory
-	btOpenCLArray<btSortData>	m_gpuSortData;
-	btOpenCLArray<btSapAabb>	m_gpuSortedAabbs;
+	btOpenCLArray<btSortData>	m_gpuDynamicSortData;
+	btOpenCLArray<btSortData>	m_gpuStaticSortData;
+	btOpenCLArray<btSapAabb>	m_gpuDynamicSortedAabbs;
+	btOpenCLArray<btSapAabb>	m_gpuStaticSortedAabbs;
 
 
 	btGpuSapBroadphase(cl_context ctx,cl_device_id device, cl_command_queue  q );
@@ -52,6 +62,7 @@ class btGpuSapBroadphase
 	void  calculateOverlappingPairs();
 
 	void createProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask);
+	void createStaticProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask);
 
 	//call writeAabbsToGpu after done making all changes (createProxy etc)
 	void writeAabbsToGpu();
