@@ -103,22 +103,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			BeginPaint(hWnd, &ps);
 			EndPaint(hWnd, &ps);
 		}
-		return 0;
+		return 1;
 
 	case WM_ERASEBKGND:
-		return 0;
+		return 1;
 	
 	case WM_CLOSE:
 		if (sData)
 			sData->m_quit = true;
 		//PostQuitMessage(0);
-		return 0;
+		return 1;
 
 	case WM_DESTROY:
 		if (sData)
 			sData->m_quit = true;
 		//PostQuitMessage(0);
-		return 0;
+		return 1;
 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
@@ -218,19 +218,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		//m_cameraDistance -= zDelta*0.01;
 		if (sData && sData->m_wheelCallback)
 			(*sData->m_wheelCallback)(-float(zDelta)*0.05f,0);
-
+		return 1;
 		break;
 	}
 	case 0x020A://WM_MOUSEWHEEL:
 	{
-
+		
 		int  zDelta = (short)HIWORD(wParam);
 		int xPos = LOWORD(lParam); 
 		int yPos = HIWORD(lParam); 
 		//m_cameraDistance -= zDelta*0.01;
 		if (sData && sData->m_wheelCallback)
 			(*sData->m_wheelCallback)(0,float(zDelta)*0.05f);
-
+		return 1;
 		break;
 	}
 
