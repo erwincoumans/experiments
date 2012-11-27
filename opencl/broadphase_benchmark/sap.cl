@@ -67,22 +67,21 @@ __kernel void   computePairsKernelTwoArrays( __global const btAabbCL* unsortedAa
 	int i = get_global_id(0);
 	if (i>=numUnsortedAabbs)
 		return;
-	for (int j=0;j<numSortedAabbs;j++)
+
+	int j = get_global_id(1);
+	if (j>=numSortedAabbs)
+		return;
+
+	if (TestAabbAgainstAabb2GlobalGlobal(&unsortedAabbs[i],&sortedAabbs[j]))
 	{
-//  	if(unsortedAabbs[i].m_maxElems[axis] < (sortedAabbs[j].m_minElems[axis])) 
-	//  	continue;
+		int2 myPair;
+		myPair.x = sortedAabbs[j].m_minIndices[3];
+		myPair.y = unsortedAabbs[i].m_minIndices[3];
 
-		if (TestAabbAgainstAabb2GlobalGlobal(&unsortedAabbs[i],&sortedAabbs[j]))
+		int curPair = atomic_inc (pairCount);
+		if (curPair<maxPairs)
 		{
-			int2 myPair;
-			myPair.x = sortedAabbs[j].m_minIndices[3];
-			myPair.y = unsortedAabbs[i].m_minIndices[3];
-
-			int curPair = atomic_inc (pairCount);
-			if (curPair<maxPairs)
-			{
-					pairsOut[curPair] = myPair; //flush to main memory
-			}
+				pairsOut[curPair] = myPair; //flush to main memory
 		}
 	}
 }

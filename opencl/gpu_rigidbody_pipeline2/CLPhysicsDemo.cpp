@@ -398,12 +398,12 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 	
 		if (useSapGpuBroadphase)
 		{
-			if (1)//mass)
+			if (mass)
 			{
 				m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);
 			} else
 			{
-				m_data->m_BroadphaseSap->createStaticProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);	
+				m_data->m_BroadphaseSap->createLargeProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);	
 			}
 		}
 		else
