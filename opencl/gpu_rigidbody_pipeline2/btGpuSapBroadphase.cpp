@@ -200,7 +200,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 	
 	}
 
-	if (0)
+	if (1)
 	{
 		BT_PROFILE("Synchronize m_largeAabbsGPU (CPU/slow)");
 		btAlignedObjectArray<btSapAabb> allHostAabbs;
@@ -286,10 +286,11 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 					launcher.setConst( numSmallAabbs);
 					launcher.setConst( axis  );
 					launcher.setConst( maxPairs  );
-
-					launcher.launch2D( numLargeAabbs, numSmallAabbs,4,128);
+//@todo: use actual maximum work item sizes of the device instead of hardcoded values
+					launcher.launch2D( numLargeAabbs, numSmallAabbs,4,64);
                 
 					numPairs = pairCount.at(0);
+					
 				}
 			}
 			if (m_gpuSmallSortedAabbs.size())

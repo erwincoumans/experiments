@@ -53,12 +53,12 @@ bool enableExperimentalCpuConcaveCollision = false;
 
 
 
-//#ifdef __APPLE__
+#ifdef __APPLE__
 //the GPU batching is slower than CPU and not reliable on my Macbook
 int gpuBatchContacts = 0;
-//#else
-//int gpuBatchContacts = 1;
-//#endif
+#else
+int gpuBatchContacts = 1;
+#endif
 
 int gpuSolveConstraint = 1;
 
@@ -1180,7 +1180,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                 bool compareGPU = false;
                 if (gpuBatchContacts)
                 {
-					maxNumBatches=250;//for now
+					maxNumBatches=50;//for now
                     BT_PROFILE("gpu batchContacts");
                     m_internalData->m_solverGPU->batchContacts( contactNative, nContacts, m_internalData->m_solverGPU->m_numConstraints, m_internalData->m_solverGPU->m_offsets, csCfg.m_staticIdx );
                 } else
