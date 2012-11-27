@@ -397,7 +397,15 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 		//btBroadphaseProxy* proxy = m_data->m_Broadphase->createProxy(aabbMin,aabbMax,collisionShapeIndex,userPointer,1,1,0,0);//m_dispatcher);
 	
 		if (useSapGpuBroadphase)
-			m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);
+		{
+			if (mass)
+			{
+				m_data->m_BroadphaseSap->createProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);
+			} else
+			{
+				m_data->m_BroadphaseSap->createLargeProxy(aabbMin,aabbMax,userIndex,1,1);//m_dispatcher);	
+			}
+		}
 		else
 		{
 			void* userPtr = (void*)userIndex;
@@ -610,8 +618,8 @@ void	CLPhysicsDemo::stepSimulation()
 			if (useSapGpuBroadphase)
 			{
 				m_data->m_BroadphaseSap->calculateOverlappingPairs();
-				gFpIO.m_dAllOverlappingPairs = m_data->m_BroadphaseSap->getOverlappingPairBuffer();
 				gFpIO.m_numOverlap = m_data->m_BroadphaseSap->getNumOverlap();
+				gFpIO.m_dAllOverlappingPairs = m_data->m_BroadphaseSap->getOverlappingPairBuffer();
 			}
 			else
 			{

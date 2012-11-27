@@ -526,7 +526,7 @@ struct SolveTask// : public ThreadPool::Task
 
 
 void Solver::solveContactConstraintHost(  btOpenCLArray<RigidBodyBase::Body>* bodyBuf, btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
-			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n )
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n ,int maxNumBatches)
 {
 
 	btAlignedObjectArray<RigidBodyBase::Body> bodyNative;
@@ -558,7 +558,7 @@ void Solver::solveContactConstraintHost(  btOpenCLArray<RigidBodyBase::Body>* bo
 }
 
 void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
-			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n )
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n ,int maxNumBatches)
 {
 	
 	
@@ -568,7 +568,7 @@ void Solver::solveContactConstraint(  const btOpenCLArray<RigidBodyBase::Body>* 
 		const int nn = N_SPLIT*N_SPLIT;
 
 		cdata.x = 0;
-		cdata.y = 250;
+		cdata.y = maxNumBatches;//250;
 
 
 		int numWorkItems = 64*nn/N_BATCHES;

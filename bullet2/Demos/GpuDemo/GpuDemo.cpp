@@ -130,6 +130,9 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 
 
 		groundShape = new btBvhTriangleMeshShape(meshInterface,true);//btStaticPlaneShape(btVector3(0,1,0),50);
+//		btBoxShape* shape =new btBoxShape(btVector3(btScalar(150.),btScalar(10.),btScalar(150.)));
+	//	shape->initializePolyhedralFeatures();
+	//	groundShape = shape;
 	} else
 	{
 		groundShape  = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
@@ -202,13 +205,13 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		{
 			int sizeX = ci.arraySizeX;
 			if (!ci.m_useConcaveMesh && k==0)
-				sizeX = 30;
+				sizeX = 50;
 
 			int startX = !ci.m_useConcaveMesh&&k==0? -20 : 0;
 			float gapX = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapX;
 			for (int i=0;i<sizeX;i++)
 			{
-				int sizeZ = !ci.m_useConcaveMesh&&k==0? 30 : ci.arraySizeZ;
+				int sizeZ = !ci.m_useConcaveMesh&&k==0? 50 : ci.arraySizeZ;
 				int startZ = (!ci.m_useConcaveMesh)&&k==0? -20 : 0;
 				float gapZ = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapZ;
 				for(int j = 0;j<sizeZ;j++)

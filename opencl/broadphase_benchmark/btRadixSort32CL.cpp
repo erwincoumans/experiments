@@ -271,6 +271,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
         
 		cdata.m_startBit = ib;
 		
+		if (src->size())
 		{
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( srcHisto->getBufferCL() ) };
 			btLauncherCL launcher(m_commandQueue, m_streamCountSortDataKernel);
@@ -338,6 +339,7 @@ void btRadixSort32CL::execute(btOpenCLArray<btSortData>& keyValuesInOut, int sor
 #define USE_GPU
 #ifdef USE_GPU
         
+		if (src->size())
 		{//	local sort and distribute
 			btBufferInfoCL bInfo[] = { btBufferInfoCL( src->getBufferCL(), true ), btBufferInfoCL( destHisto->getBufferCL(), true ), btBufferInfoCL( dst->getBufferCL() )};
 			btLauncherCL launcher( m_commandQueue, m_sortAndScatterSortDataKernel );

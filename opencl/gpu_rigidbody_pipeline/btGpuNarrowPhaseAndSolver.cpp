@@ -53,12 +53,12 @@ bool enableExperimentalCpuConcaveCollision = false;
 
 
 
-#ifdef __APPLE__
+//#ifdef __APPLE__
 //the GPU batching is slower than CPU and not reliable on my Macbook
 int gpuBatchContacts = 0;
-#else
-int gpuBatchContacts = 1;
-#endif
+//#else
+//int gpuBatchContacts = 1;
+//#endif
 
 int gpuSolveConstraint = 1;
 
@@ -692,7 +692,7 @@ btAlignedObjectArray<Contact4> old;
 
 static
 __inline
-int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchData*	internalData)
+int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchData*	internalData, int staticIdx)
 {
 	int numIter = 0;
     
@@ -752,8 +752,8 @@ int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchDa
 				u32 bUnavailable = flg[ bIdx/32 ] & (1<<(bIdx&31));
                 
                 //use inv_mass!
-				aUnavailable = (bodyAS>=0)? aUnavailable:0;//
-				bUnavailable = (bodyBS>=0)? bUnavailable:0;
+				aUnavailable = (bodyAS>=0)&&bodyAS!=staticIdx? aUnavailable:0;//
+				bUnavailable = (bodyBS>=0)&&bodyBS!=staticIdx? bUnavailable:0;
                 
 				if( aUnavailable==0 && bUnavailable==0 ) // ok
 				{
@@ -1024,7 +1024,8 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
         int nContacts = nContactOut;
         
         bool useCPU=false;
-        
+		int maxNumBatches = 0;
+ 
         {
             
             if( m_internalData->m_solverGPU->m_contactBuffer)
@@ -1177,9 +1178,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                 
                 
                 bool compareGPU = false;
-                
                 if (gpuBatchContacts)
                 {
+					maxNumBatches=250;//for now
                     BT_PROFILE("gpu batchContacts");
                     m_internalData->m_solverGPU->batchContacts( contactNative, nContacts, m_internalData->m_solverGPU->m_numConstraints, m_internalData->m_solverGPU->m_offsets, csCfg.m_staticIdx );
                 } else
@@ -1203,7 +1204,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                     
                     
                     int numNonzeroGrid=0;
-                    int maxNumBatches = 0;
+                    
                     {
                         BT_PROFILE("batch grid");
                         for(int i=0; i<BT_SOLVER_N_SPLIT*BT_SOLVER_N_SPLIT; i++)
@@ -1217,7 +1218,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                                 //printf("cpu batch\n");
                                 
                                 int simdWidth = -1;
-                                int numBatches = sortConstraintByBatch( &cpuContacts[0]+offset, n, simdWidth,m_internalData );	//	on GPU
+                                int numBatches = sortConstraintByBatch( &cpuContacts[0]+offset, n, simdWidth,m_internalData,csCfg.m_staticIdx );	//	on GPU
                                 maxNumBatches = btMax(numBatches,maxNumBatches);
                                 
                                 clFinish(m_queue);
@@ -1229,7 +1230,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                         BT_PROFILE("m_contactBuffer->copyFromHost");
                         m_internalData->m_solverGPU->m_contactBuffer->copyFromHost(cpuContacts);
                     }
-                    //	printf("maxNumBatches = %d\n", maxNumBatches);
+                  //  printf("maxNumBatches = %d\n", maxNumBatches);
                     
                 }
                 
@@ -1256,9 +1257,9 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
             BT_PROFILE("GPU solveContactConstraint");
             m_internalData->m_solverGPU->m_nIterations = 4;//10
 			if (gpuSolveConstraint)
-				m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU,m_internalData->m_contactCGPU,0,nContactOut );
+				m_internalData->m_solverGPU->solveContactConstraint(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU,m_internalData->m_contactCGPU,0,nContactOut ,maxNumBatches);
 			else
-				m_internalData->m_solverGPU->solveContactConstraintHost(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU, m_internalData->m_contactCGPU,0, nContactOut );
+				m_internalData->m_solverGPU->solveContactConstraintHost(m_internalData->m_bodyBufferGPU, m_internalData->m_inertiaBufferGPU, m_internalData->m_contactCGPU,0, nContactOut ,maxNumBatches);
             
             clFinish(m_queue);
         }

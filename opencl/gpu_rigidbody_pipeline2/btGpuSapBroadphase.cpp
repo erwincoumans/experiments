@@ -9,17 +9,19 @@ static char* interopKernelString =
 #include "../broadphase_benchmark/integrateKernel.cl"
 #include "../broadphase_benchmark/sapKernels.h"
 #include "../broadphase_benchmark/sapFastKernels.h"
-
+	#include "LinearMath/btMinMax.h"
 
 
 btGpuSapBroadphase::btGpuSapBroadphase(cl_context ctx,cl_device_id device, cl_command_queue  q )
 :m_context(ctx),
 m_device(device),
 m_queue(q),
-m_aabbsGPU(ctx,q),
+m_allAabbsGPU(ctx,q),
+m_smallAabbsGPU(ctx,q),
+m_largeAabbsGPU(ctx,q),
 m_overlappingPairs(ctx,q),
-m_gpuSortData(ctx,q),
-m_gpuSortedAabbs(ctx,q)
+m_gpuSmallSortData(ctx,q),
+m_gpuSmallSortedAabbs(ctx,q)
 {
 	const char* sapSrc = sapCL;
     const char* sapFastSrc = sapFastCL;
@@ -35,6 +37,16 @@ m_gpuSortedAabbs(ctx,q)
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelOriginal",&errNum,sapProg );
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelBarrier",&errNum,sapProg );
 	//m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
+
+	
+	m_sap2Kernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelTwoArrays",&errNum,sapProg );
+	btAssert(errNum==CL_SUCCESS);
+
+#if 0
+
+	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelOriginal",&errNum,sapProg );
+	btAssert(errNum==CL_SUCCESS);
+#else
 #ifndef __APPLE__
 	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapFastSrc, "computePairsKernel",&errNum,sapFastProg );
 	btAssert(errNum==CL_SUCCESS);
@@ -42,7 +54,8 @@ m_gpuSortedAabbs(ctx,q)
 	m_sapKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,sapSrc, "computePairsKernelLocalSharedMemory",&errNum,sapProg );
 	btAssert(errNum==CL_SUCCESS);
 #endif
-    
+#endif
+
 
 	m_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
 
@@ -57,6 +70,7 @@ btGpuSapBroadphase::~btGpuSapBroadphase()
 	clReleaseKernel(m_scatterKernel);
 	clReleaseKernel(m_flipFloatKernel);
 	clReleaseKernel(m_sapKernel);
+	clReleaseKernel(m_sap2Kernel);
 
 }
 
@@ -71,77 +85,181 @@ static bool TestAabbAgainstAabb2(const btVector3 &aabbMin1, const btVector3 &aab
 	return overlap;
 }
 
-void  btGpuSapBroadphase::calculateOverlappingPairs()
+void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 {
 	int axis = 0;//todo on GPU for now hardcode
 
-	btAssert(m_aabbsCPU.size() == m_aabbsGPU.size());
+	btAssert(m_allAabbsCPU.size() == m_allAabbsGPU.size());
 	
 
-//#define FORCE_HOST
-#ifdef FORCE_HOST
-	
+	if (forceHost)
+	{
 
-	btAlignedObjectArray<btSapAabb> hostAabbs;
-	m_aabbsGPU.copyToHost(hostAabbs);
-	int numAabbs = hostAabbs.size();
+	btAlignedObjectArray<btSapAabb> allHostAabbs;
+	m_allAabbsGPU.copyToHost(allHostAabbs);
+	
+	{
+		int numSmallAabbs = m_smallAabbsCPU.size();
+		for (int j=0;j<numSmallAabbs;j++)
+		{
+			//sync aabb
+			int aabbIndex = m_smallAabbsCPU[j].m_signedMaxIndices[3];
+			m_smallAabbsCPU[j] = allHostAabbs[aabbIndex];
+			m_smallAabbsCPU[j].m_signedMaxIndices[3] = aabbIndex;
+		}
+	}
+
+	{
+		int numLargeAabbs = m_largeAabbsCPU.size();
+		for (int j=0;j<numLargeAabbs;j++)
+		{
+			//sync aabb
+			int aabbIndex = m_largeAabbsCPU[j].m_signedMaxIndices[3];
+			m_largeAabbsCPU[j] = allHostAabbs[aabbIndex];
+			m_largeAabbsCPU[j].m_signedMaxIndices[3] = aabbIndex;
+
+		}
+	}
 
 	btAlignedObjectArray<btInt2> hostPairs;
-	for (int i=0;i<hostAabbs.size();i++)
-	{
-		float reference = hostAabbs[i].m_max[axis];
 
-		for (int j=i+1;j<numAabbs;j++)
+	{
+		int numSmallAabbs = m_smallAabbsCPU.size();
+		for (int i=0;i<numSmallAabbs;i++)
 		{
-			if (TestAabbAgainstAabb2((btVector3&)hostAabbs[i].m_min, (btVector3&)hostAabbs[i].m_max,
-				(btVector3&)hostAabbs[j].m_min,(btVector3&)hostAabbs[j].m_max))
+			float reference = m_smallAabbsCPU[i].m_max[axis];
+
+			for (int j=i+1;j<numSmallAabbs;j++)
 			{
-				btInt2 pair;
-				pair.x = hostAabbs[i].m_minIndices[3];//store the original index in the unsorted aabb array
-				pair.y = hostAabbs[j].m_minIndices[3];
-				hostPairs.push_back(pair);
+				if (TestAabbAgainstAabb2((btVector3&)m_smallAabbsCPU[i].m_min, (btVector3&)m_smallAabbsCPU[i].m_max,
+					(btVector3&)m_smallAabbsCPU[j].m_min,(btVector3&)m_smallAabbsCPU[j].m_max))
+				{
+					btInt2 pair;
+					pair.x = m_smallAabbsCPU[i].m_minIndices[3];//store the original index in the unsorted aabb array
+					pair.y = m_smallAabbsCPU[j].m_minIndices[3];
+					hostPairs.push_back(pair);
+				}
 			}
 		}
 	}
 
+	
+	{
+		int numSmallAabbs = m_smallAabbsCPU.size();
+		for (int i=0;i<numSmallAabbs;i++)
+		{
+			float reference = m_smallAabbsCPU[i].m_max[axis];
+			int numLargeAabbs = m_largeAabbsCPU.size();
+
+			for (int j=0;j<numLargeAabbs;j++)
+			{
+				if (TestAabbAgainstAabb2((btVector3&)m_smallAabbsCPU[i].m_min, (btVector3&)m_smallAabbsCPU[i].m_max,
+					(btVector3&)m_largeAabbsCPU[j].m_min,(btVector3&)m_largeAabbsCPU[j].m_max))
+				{
+					btInt2 pair;
+					pair.x = m_largeAabbsCPU[j].m_minIndices[3];
+					pair.y = m_smallAabbsCPU[i].m_minIndices[3];//store the original index in the unsorted aabb array
+					hostPairs.push_back(pair);
+				}
+			}
+		}
+	}
+
+
 	if (hostPairs.size())
 	{
 		m_overlappingPairs.copyFromHost(hostPairs);
-	}
-#else
+	} else
 	{
+		m_overlappingPairs.resize(0);
+	}
+
+	return;
+	}
+
+	{
+
+
+	{
+		BT_PROFILE("Synchronize m_smallAabbsGPU (CPU/slow)");
+		btAlignedObjectArray<btSapAabb> allHostAabbs;
+		m_allAabbsGPU.copyToHost(allHostAabbs);
+
+		m_smallAabbsGPU.copyToHost(m_smallAabbsCPU);
+		{
+			int numSmallAabbs = m_smallAabbsCPU.size();
+			for (int j=0;j<numSmallAabbs;j++)
+			{
+				//sync aabb
+				int aabbIndex = m_smallAabbsCPU[j].m_signedMaxIndices[3];
+				m_smallAabbsCPU[j] = allHostAabbs[aabbIndex];
+				m_smallAabbsCPU[j].m_signedMaxIndices[3] = aabbIndex;
+			}
+		}
+		m_smallAabbsGPU.copyFromHost(m_smallAabbsCPU);
+	
+	}
+
+	if (0)
+	{
+		BT_PROFILE("Synchronize m_largeAabbsGPU (CPU/slow)");
+		btAlignedObjectArray<btSapAabb> allHostAabbs;
+		m_allAabbsGPU.copyToHost(allHostAabbs);
+
+		m_largeAabbsGPU.copyToHost(m_largeAabbsCPU);
+		{
+			int numLargeAabbs = m_largeAabbsCPU.size();
+			for (int j=0;j<numLargeAabbs;j++)
+			{
+				//sync aabb
+				int aabbIndex = m_largeAabbsCPU[j].m_signedMaxIndices[3];
+				m_largeAabbsCPU[j] = allHostAabbs[aabbIndex];
+				m_largeAabbsCPU[j].m_signedMaxIndices[3] = aabbIndex;
+			}
+		}
+		m_largeAabbsGPU.copyFromHost(m_largeAabbsCPU);
+	
+	}
+
+
+
+
 		BT_PROFILE("GPU SAP");
 		
-		int numAabbs = m_aabbsGPU.size();
-		m_gpuSortData.resize(numAabbs);
+		int numSmallAabbs = m_smallAabbsGPU.size();
+		m_gpuSmallSortData.resize(numSmallAabbs);
+		int numLargeAabbs = m_smallAabbsGPU.size();
+
 #if 1
+		if (m_smallAabbsGPU.size())
 		{
 			BT_PROFILE("flipFloatKernel");
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL())};
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_smallAabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSmallSortData.getBufferCL())};
 			btLauncherCL launcher(m_queue, m_flipFloatKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( numAabbs  );
+			launcher.setConst( numSmallAabbs  );
 			launcher.setConst( axis  );
 			
-			int num = numAabbs;
+			int num = numSmallAabbs;
 			launcher.launch1D( num);
 			clFinish(m_queue);
 		}
 
 		{
 			BT_PROFILE("gpu radix sort\n");
-			m_sorter->execute(m_gpuSortData);
+			m_sorter->execute(m_gpuSmallSortData);
 			clFinish(m_queue);
 		}
 
-		m_gpuSortedAabbs.resize(numAabbs);
+		m_gpuSmallSortedAabbs.resize(numSmallAabbs);
+		if (numSmallAabbs)
 		{
 			BT_PROFILE("scatterKernel");
-			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_aabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSortData.getBufferCL(),true),btBufferInfoCL(m_gpuSortedAabbs.getBufferCL())};
+			btBufferInfoCL bInfo[] = { btBufferInfoCL( m_smallAabbsGPU.getBufferCL(), true ), btBufferInfoCL( m_gpuSmallSortData.getBufferCL(),true),btBufferInfoCL(m_gpuSmallSortedAabbs.getBufferCL())};
 			btLauncherCL launcher(m_queue, m_scatterKernel );
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-			launcher.setConst( numAabbs);
-			int num = numAabbs;
+			launcher.setConst( numSmallAabbs);
+			int num = numSmallAabbs;
 			launcher.launch1D( num);
 			clFinish(m_queue);
 			
@@ -149,7 +267,7 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
         
 
 			int maxPairsPerBody = 64;
-			int maxPairs = maxPairsPerBody * numAabbs;//todo
+			int maxPairs = maxPairsPerBody * numSmallAabbs;//todo
 			m_overlappingPairs.resize(maxPairs);
 
 			btOpenCLArray<int> pairCount(m_context, m_queue);
@@ -157,16 +275,35 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
             int numPairs=0;
 
 			{
+				int numLargeAabbs = m_largeAabbsGPU.size();
+				if (numLargeAabbs && numSmallAabbs)
+				{
+					BT_PROFILE("sap2Kernel");
+					btBufferInfoCL bInfo[] = { btBufferInfoCL( m_largeAabbsGPU.getBufferCL() ),btBufferInfoCL( m_gpuSmallSortedAabbs.getBufferCL() ), btBufferInfoCL( m_overlappingPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
+					btLauncherCL launcher(m_queue, m_sap2Kernel);
+					launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+					launcher.setConst(   numLargeAabbs  );
+					launcher.setConst( numSmallAabbs);
+					launcher.setConst( axis  );
+					launcher.setConst( maxPairs  );
+
+					launcher.launch2D( numLargeAabbs, numSmallAabbs,4,128);
+                
+					numPairs = pairCount.at(0);
+				}
+			}
+			if (m_gpuSmallSortedAabbs.size())
+			{
 				BT_PROFILE("sapKernel");
-				btBufferInfoCL bInfo[] = { btBufferInfoCL( m_gpuSortedAabbs.getBufferCL() ), btBufferInfoCL( m_overlappingPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
+				btBufferInfoCL bInfo[] = { btBufferInfoCL( m_gpuSmallSortedAabbs.getBufferCL() ), btBufferInfoCL( m_overlappingPairs.getBufferCL() ), btBufferInfoCL(pairCount.getBufferCL())};
 				btLauncherCL launcher(m_queue, m_sapKernel);
 				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
-				launcher.setConst( numAabbs  );
+				launcher.setConst( numSmallAabbs  );
 				launcher.setConst( axis  );
 				launcher.setConst( maxPairs  );
 
 			
-				int num = numAabbs;
+				int num = numSmallAabbs;
 #if 0                
                 int buffSize = launcher.getSerializationBufferSize();
                 unsigned char* buf = new unsigned char[buffSize+sizeof(int)];
@@ -249,12 +386,29 @@ void  btGpuSapBroadphase::calculateOverlappingPairs()
 		
 	}//BT_PROFILE("GPU_RADIX SORT");
 
-#endif
 }
 
 void btGpuSapBroadphase::writeAabbsToGpu()
 {
-	m_aabbsGPU.copyFromHost(m_aabbsCPU);
+	m_allAabbsGPU.copyFromHost(m_allAabbsCPU);//might not be necessary, the 'setupGpuAabbsFull' already takes care of this
+	m_smallAabbsGPU.copyFromHost(m_smallAabbsCPU);
+	m_largeAabbsGPU.copyFromHost(m_largeAabbsCPU);
+
+}
+
+void btGpuSapBroadphase::createLargeProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask)
+{
+	int index = userPtr;
+	btSapAabb aabb;
+	for (int i=0;i<4;i++)
+	{
+		aabb.m_min[i] = aabbMin[i];
+		aabb.m_max[i] = aabbMax[i];
+	}
+	aabb.m_minIndices[3] = index;
+	aabb.m_signedMaxIndices[3] = m_allAabbsCPU.size();
+	m_largeAabbsCPU.push_back(aabb);
+	m_allAabbsCPU.push_back(aabb);
 }
 
 void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3& aabbMax, int userPtr ,short int collisionFilterGroup,short int collisionFilterMask)
@@ -266,13 +420,15 @@ void btGpuSapBroadphase::createProxy(const btVector3& aabbMin,  const btVector3&
 		aabb.m_min[i] = aabbMin[i];
 		aabb.m_max[i] = aabbMax[i];
 	}
-	aabb.m_minIndices[3] = index;//m_aabbs.size();
-	m_aabbsCPU.push_back(aabb);
+	aabb.m_minIndices[3] = index;
+	aabb.m_signedMaxIndices[3] = m_allAabbsCPU.size();
+	m_smallAabbsCPU.push_back(aabb);
+	m_allAabbsCPU.push_back(aabb);
 }
 
 cl_mem	btGpuSapBroadphase::getAabbBuffer()
 {
-	return m_aabbsGPU.getBufferCL();
+	return m_allAabbsGPU.getBufferCL();
 }
 
 int	btGpuSapBroadphase::getNumOverlap()

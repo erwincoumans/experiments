@@ -138,10 +138,10 @@ class Solver : public SolverBase
 
 		
 		void solveContactConstraint( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<RigidBodyBase::Inertia>* inertiaBuf, 
-			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n );
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n ,int maxNumBatches);
 
 		void solveContactConstraintHost(  btOpenCLArray<RigidBodyBase::Body>* bodyBuf, btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
-			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n );
+			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n ,int maxNumBatches);
 
 
 		void convertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
