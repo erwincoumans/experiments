@@ -21,6 +21,7 @@ subject to the following restrictions:
 
 
 #include "LinearMath/btScalar.h"
+#include "AdlMath.h"
 
 ATTRIBUTE_ALIGNED16(struct) Contact4
 {

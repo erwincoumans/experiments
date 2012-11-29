@@ -15,7 +15,7 @@ subject to the following restrictions:
 
 bool useSapGpuBroadphase = true;
 extern bool useConvexHeightfield;
-
+#include "btPgsJacobiSolver.h"
 #include "../../rendering/rendertest/OpenGLInclude.h"
 #ifdef _WIN32
 #include "windows.h"
@@ -32,12 +32,17 @@ extern bool useConvexHeightfield;
 #include "../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "../opencl/gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../../dynamics/basic_demo/ConvexHeightFieldShape.h"
+#include "../../dynamics/basic_demo/Stubs/AdlContact4.h"
+
 //#define USE_GRID_BROADPHASE
 //#ifdef USE_GRID_BROADPHASE
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
 //#else
 #include "btGpuSapBroadphase.h"
 //#endif //USE_GRID_BROADPHASE
+
+
+
 
 #include "../broadphase_benchmark/btAabbHost.h"
 #include "LinearMath/btQuickprof.h"
@@ -91,7 +96,9 @@ struct InternalData
 	btAlignedObjectArray<btVector3>	m_angVelHost;
 	btAlignedObjectArray<float> m_bodyTimesHost;
 
-	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
+	btPgsJacobiSolver*	m_pgsSolver;
+
+	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_BroadphaseSap(0),m_BroadphaseGrid(0),m_pgsSolver(0)
 	{
 		
 	}
@@ -278,7 +285,7 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		btVector3 localCenter(0,0,0);
 		for (int i=0;i<utilPtr->m_vertices.size();i++)
 			localCenter+=utilPtr->m_vertices[i];
-		localCenter*= (1./utilPtr->m_vertices.size());
+		localCenter*= (1.f/utilPtr->m_vertices.size());
 		utilPtr->m_localCenter = localCenter;
 
 		if (useConvexHeightfield)
@@ -477,6 +484,8 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	}		//g_cxMainContext ,g_device,g_cqCommandQue);
 	
 
+	m_data->m_pgsSolver = new btPgsJacobiSolver();
+
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
 	g_integrateTransformsKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel" ,0,prog);
 	g_integrateTransformsKernel2 = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel2" ,0,prog);
@@ -513,7 +522,7 @@ void	CLPhysicsDemo::cleanup()
 
 	delete m_data->m_BroadphaseSap;
 	delete m_data->m_BroadphaseGrid;
-
+	delete m_data->m_pgsSolver;
 
 	m_data=0;
 
@@ -637,17 +646,55 @@ void	CLPhysicsDemo::stepSimulation()
 			if (runOpenCLKernels)
 			{
 				{
-					//BT_PROFILE("setupBodies");
+					BT_PROFILE("setupBodies");
 					if (narrowphaseAndSolver)
 						setupBodies(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getBodyInertiasGpu());
 				}
 				
 				{
-					BT_PROFILE("computeContactsAndSolver");
+					BT_PROFILE("computeContacts");
 					if (narrowphaseAndSolver)
-						narrowphaseAndSolver->computeContactsAndSolver(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap, gFpIO.m_dAABB,gFpIO.m_numObjects);
+						narrowphaseAndSolver->computeContacts(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap, gFpIO.m_dAABB,gFpIO.m_numObjects);
 				}
 
+				bool useOpenCLSolver = true;
+				if (useOpenCLSolver)
+				{
+					BT_PROFILE("solve Contact Constraints (OpenCL)");
+					if (narrowphaseAndSolver)
+						narrowphaseAndSolver->solveContacts();
+				} else
+				{
+					BT_PROFILE("solve Contact Constraints CPU/serial");
+					if (narrowphaseAndSolver && m_data->m_pgsSolver && narrowphaseAndSolver->getNumContactsGpu())
+					{
+						btGpuNarrowphaseAndSolver* np = narrowphaseAndSolver;
+						
+						btAlignedObjectArray<RigidBodyBase::Body> hostBodies;
+						btOpenCLArray<RigidBodyBase::Body> gpuBodies(g_cxMainContext,g_cqCommandQue,0,true);
+						gpuBodies.setFromOpenCLBuffer(np->getBodiesGpu(),np->getNumBodiesGpu());
+						gpuBodies.copyToHost(hostBodies);
+
+						btAlignedObjectArray<RigidBodyBase::Inertia> hostInertias;
+						btOpenCLArray<RigidBodyBase::Inertia> gpuInertias(g_cxMainContext,g_cqCommandQue,0,true);
+						gpuInertias.setFromOpenCLBuffer(np->getBodyInertiasGpu(),np->getNumBodiesGpu());
+						gpuInertias.copyToHost(hostInertias);
+
+						btAlignedObjectArray<Contact4> hostContacts;
+						btOpenCLArray<Contact4> gpuContacts(g_cxMainContext,g_cqCommandQue,0,true);
+						gpuContacts.setFromOpenCLBuffer(np->getContactsGpu(),np->getNumContactsGpu());
+						gpuContacts.copyToHost(hostContacts);
+
+						{
+							BT_PROFILE("pgsSolver::solveContacts");
+							m_data->m_pgsSolver->solveContacts(np->getNumBodiesGpu(),&hostBodies[0],&hostInertias[0],np->getNumContactsGpu(),&hostContacts[0]);
+						}
+						
+						gpuBodies.copyFromHost(hostBodies);
+
+
+					}
+				}
 				
 				{
 					BT_PROFILE("copyBodyVelocities");

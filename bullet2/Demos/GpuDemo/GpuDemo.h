@@ -103,4 +103,3 @@ class GpuDemo : public DemoApplication
 };
 
 #endif //GPU_DEMO_H
-

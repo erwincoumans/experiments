@@ -42,7 +42,6 @@ bool enableExperimentalCpuConcaveCollision = false;
 #include "../../dynamics/basic_demo/Stubs/AdlQuaternion.h"
 #include "../../dynamics/basic_demo/Stubs/AdlRigidBody.h"
 
-
 #include "../../dynamics/basic_demo/Stubs/ChNarrowPhase.h"
 #include "../../dynamics/basic_demo/Stubs/Solver.h"
 
@@ -466,10 +465,22 @@ cl_mem	btGpuNarrowphaseAndSolver::getBodiesGpu()
 	return (cl_mem)m_internalData->m_bodyBufferGPU->getBufferCL();
 }
 
+
+int	btGpuNarrowphaseAndSolver::getNumBodiesGpu() const
+{
+	return m_internalData->m_bodyBufferGPU->size();
+}
+
 cl_mem	btGpuNarrowphaseAndSolver::getBodyInertiasGpu()
 {
 	return (cl_mem)m_internalData->m_inertiaBufferGPU->getBufferCL();
 }
+
+int	btGpuNarrowphaseAndSolver::getNumBodyInertiasGpu() const
+{
+	return m_internalData->m_inertiaBufferGPU->size();
+}
+
 
 btCollidable& btGpuNarrowphaseAndSolver::getCollidableCpu(int collidableIndex)
 {
@@ -486,6 +497,23 @@ cl_mem btGpuNarrowphaseAndSolver::getCollidablesGpu()
 	return m_internalData->m_collidablesGPU->getBufferCL();
 }
 
+int	btGpuNarrowphaseAndSolver::getNumCollidablesGpu() const
+{
+	return m_internalData->m_collidablesGPU->size();
+}
+
+
+
+
+
+int	btGpuNarrowphaseAndSolver::getNumContactsGpu() const
+{
+	return m_internalData->m_pBufContactOutGPU->size();
+}
+cl_mem btGpuNarrowphaseAndSolver::getContactsGpu()
+{
+	return m_internalData->m_pBufContactOutGPU->getBufferCL();
+}
 
 
 
@@ -811,7 +839,7 @@ int sortConstraintByBatch( Contact4* cs, int n, int simdWidth , CustomDispatchDa
 	return batchIdx;
 }
 
-void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem clAabbs, int numObjects)
+void btGpuNarrowphaseAndSolver::computeContacts(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem clAabbs, int numObjects)
 {
     
 	BT_PROFILE("computeContactsAndSolver");
@@ -1002,11 +1030,16 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
     
     m_internalData->m_pBufContactOutGPU->resize(nContactOut);
     
-    if (!nContactOut)
-        return;
     
-    
-    bool useSolver = true;//true;//false;
+}
+
+
+void btGpuNarrowphaseAndSolver::solveContacts()
+{
+	
+	int nContactOut = m_internalData->m_pBufContactOutGPU->size();
+
+	bool useSolver = true;
     
     if (useSolver)
     {
@@ -1020,7 +1053,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
         const btOpenCLArray<RigidBodyBase::Body>* bodyBuf = m_internalData->m_bodyBufferGPU;
         void* additionalData = m_internalData->m_frictionCGPU;
         const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf = m_internalData->m_inertiaBufferGPU;
-        btOpenCLArray<Constraint4>* contactCOut = m_internalData->m_contactCGPU;
+        btOpenCLArray<Constraint4>* contactConstraintOut = m_internalData->m_contactCGPU;
         int nContacts = nContactOut;
         
         bool useCPU=false;
@@ -1240,7 +1273,7 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
                 if (1)
                 {
                     //BT_PROFILE("gpu convertToConstraints");
-                    m_internalData->m_solverGPU->convertToConstraints( bodyBuf, shapeBuf, m_internalData->m_solverGPU->m_contactBuffer /*contactNative*/, contactCOut, additionalData, nContacts, csCfg );
+                    m_internalData->m_solverGPU->convertToConstraints( bodyBuf, shapeBuf, m_internalData->m_solverGPU->m_contactBuffer /*contactNative*/, contactConstraintOut, additionalData, nContacts, csCfg );
                     clFinish(m_queue);
                 }
                 
@@ -1277,5 +1310,5 @@ void btGpuNarrowphaseAndSolver::computeContactsAndSolver(cl_mem broadphasePairs,
 #endif
         
     }
-    
+
 }

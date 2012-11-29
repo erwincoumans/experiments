@@ -92,13 +92,21 @@ public:
 	void	readbackAllBodiesToCpu();
 	void	getObjectTransformFromCpu(float* position, float* orientation , int bodyIndex) const;
 
-	virtual void computeContactsAndSolver(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem aabbs, int numObjects);
+	virtual void computeContacts(cl_mem broadphasePairs, int numBroadphasePairs, cl_mem aabbs, int numObjects);
+	virtual void solveContacts();
 
 	cl_mem	getBodiesGpu();
-
+	int	getNumBodiesGpu() const;
 	cl_mem	getBodyInertiasGpu();
-	
+	int	getNumBodyInertiasGpu() const;
 	cl_mem	getCollidablesGpu();
+	int		getNumCollidablesGpu() const;
+	cl_mem	getContactsGpu();
+	int	getNumContactsGpu() const;
+
+
+
+
 
 	int allocateCollidable();
 

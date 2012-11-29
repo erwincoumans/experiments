@@ -19,9 +19,9 @@ subject to the following restrictions:
 
 #include "AdlQuaternion.h"
 #include "LinearMath/btScalar.h"
-class RigidBodyBase
+namespace RigidBodyBase
 {
-	public:
+	
 
 		ATTRIBUTE_ALIGNED16(struct) Body
 		{
@@ -36,6 +36,11 @@ class RigidBodyBase
 			float m_invMass;
 			float m_restituitionCoeff;
 			float m_frictionCoeff;
+
+			float	getInvMass() const
+			{
+					return m_invMass;
+			}
 			
 		};
 

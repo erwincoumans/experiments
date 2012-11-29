@@ -119,7 +119,13 @@ ATTRIBUTE_ALIGNED64 (struct)	btSolverBody
 	btVector3		m_linearVelocity;
 	btVector3		m_angularVelocity;
 
-	btRigidBody*	m_originalBody;
+	union 
+	{
+		void*	m_originalBody;
+		int		m_originalBodyIndex;
+	};
+
+
 	void	setWorldTransform(const btTransform& worldTransform)
 	{
 		m_worldTransform = worldTransform;
