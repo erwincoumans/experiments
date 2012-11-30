@@ -341,6 +341,7 @@ void OpenGL3CoreRenderer::renderPhysicsWorld(int numObjects, btCollisionObject**
 	
 
 	//render
-	 m_instanceRenderer->RenderScene();
+	
+	m_instanceRenderer->RenderScene();
 }
 

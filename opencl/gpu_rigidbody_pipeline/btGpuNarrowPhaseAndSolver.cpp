@@ -1213,7 +1213,7 @@ void btGpuNarrowphaseAndSolver::solveContacts()
                 bool compareGPU = false;
                 if (gpuBatchContacts)
                 {
-					maxNumBatches=50;//for now
+					maxNumBatches=250;//for now
                     BT_PROFILE("gpu batchContacts");
                     m_internalData->m_solverGPU->batchContacts( contactNative, nContacts, m_internalData->m_solverGPU->m_numConstraints, m_internalData->m_solverGPU->m_offsets, csCfg.m_staticIdx );
                 } else

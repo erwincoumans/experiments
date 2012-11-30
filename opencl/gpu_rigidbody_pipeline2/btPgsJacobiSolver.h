@@ -35,10 +35,13 @@ protected:
 	btAlignedObjectArray<int>	m_orderNonContactConstraintPool;
 	btAlignedObjectArray<int>	m_orderFrictionConstraintPool;
 	btAlignedObjectArray<btTypedConstraint::btConstraintInfo1> m_tmpConstraintSizesPool;
+	
+	btAlignedObjectArray<int>		m_bodyCount;
+
 	int							m_maxOverrideNumSolverIterations;
 	btScalar	getContactProcessingThreshold(Contact4* contact)
 	{
-		return 0.0f;
+		return 0.02f;
 	}
 	void setupFrictionConstraint(	RigidBodyBase::Body* bodies,RigidBodyBase::Inertia* inertias, btSolverConstraint& solverConstraint, const btVector3& normalAxis,int solverBodyIdA,int  solverBodyIdB,
 									btContactPoint& cp,const btVector3& rel_pos1,const btVector3& rel_pos2,

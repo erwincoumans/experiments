@@ -51,6 +51,16 @@ btMatrix3x3	getInvInertiaTensorWorld(RigidBodyBase::Inertia* inertia)
 {
 	btMatrix3x3	m;
 	m.setIdentity();
+	m[0][0] = inertia->m_initInvInertia.m_row[0].x;
+	m[0][1] = inertia->m_initInvInertia.m_row[0].y;
+	m[0][2] = inertia->m_initInvInertia.m_row[0].z;
+	m[1][0] = inertia->m_initInvInertia.m_row[1].x;
+	m[1][1] = inertia->m_initInvInertia.m_row[1].y;
+	m[1][2] = inertia->m_initInvInertia.m_row[1].z;
+	m[2][0] = inertia->m_initInvInertia.m_row[2].x;
+	m[2][1] = inertia->m_initInvInertia.m_row[2].y;
+	m[2][2] = inertia->m_initInvInertia.m_row[2].z;
+	//m = m.transpose();
 	return m;
 }
 
@@ -70,6 +80,7 @@ btVector3 getVelocityInLocalPoint(RigidBodyBase::Body* rb, const btVector3& rel_
 {
 	//we also calculate lin/ang velocity for kinematic objects
 	return getLinearVelocity(rb) + getAngularVelocity(rb).cross(rel_pos);
+	
 }
 
 struct	btContactPoint
@@ -121,13 +132,16 @@ void	getContactPoint(Contact4* contact, int contactIndex, btContactPoint& pointO
 	pointOut.m_contactCFM2 = 0.f;
 	pointOut.m_contactMotion1 = 0.f;
 	pointOut.m_contactMotion2 = 0.f;
-	pointOut.m_distance = contact->getPenetration(contactIndex);
+	pointOut.m_distance = contact->getPenetration(contactIndex)+0.01;
 	float4 n = contact->m_worldNormal;
 	btVector3 normalOnB(-n.x,-n.y,-n.z);
+	normalOnB.normalize();
+
 	btVector3 l1,l2;
 	btPlaneSpace1(normalOnB,l1,l2);
 
 	pointOut.m_normalWorldOnB = normalOnB;
+	//printf("normalOnB = %f,%f,%f\n",normalOnB.getX(),normalOnB.getY(),normalOnB.getZ());
 	pointOut.m_lateralFrictionDir1 = l1;
 	pointOut.m_lateralFrictionDir2 = l2;
 	pointOut.m_lateralFrictionInitialized = true;
@@ -159,7 +173,9 @@ void	btPgsJacobiSolver::solveContacts(int numBodies, RigidBodyBase::Body* bodies
 	infoGlobal.m_splitImpulse = false;
 	infoGlobal.m_timeStep = 1.f/60.f;
 	infoGlobal.m_numIterations = 4;
-	infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS|SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION;
+//	infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS|SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION;
+	//infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS;
+	infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS;
 
 	//if (infoGlobal.m_solverMode & SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS)
 	//if ((infoGlobal.m_solverMode & SOLVER_USE_2_FRICTION_DIRECTIONS) && (infoGlobal.m_solverMode & SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION))

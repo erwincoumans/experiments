@@ -70,6 +70,11 @@ public:
 	void	setCameraDistance(float dist);
 	float	getCameraDistance() const;
 
+	//set the camera 'target'
+	void	setCameraTargetPosition(float cameraPos[4]);
+	void	getCameraTargetPosition(float cameraPos[4]) const;
+
+
 	int getMaxShapeCapacity() const
 	{
 		return m_maxShapeCapacityInBytes;
