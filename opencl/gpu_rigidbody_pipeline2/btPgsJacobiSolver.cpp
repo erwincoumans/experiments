@@ -509,8 +509,9 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 	btSolverBody& solverBodyA = m_tmpSolverBodyPool[solverBodyIdA];
 	btSolverBody& solverBodyB = m_tmpSolverBodyPool[solverBodyIdB];
 
-	RigidBodyBase::Body* body0 = &bodies[solverBodyIdA];
-	RigidBodyBase::Body* body1 = &bodies[solverBodyIdB];
+	RigidBodyBase::Body* body0 = &bodies[solverBodyA.m_originalBodyIndex];
+	RigidBodyBase::Body* body1 = &bodies[solverBodyB.m_originalBodyIndex];
+
 
 	solverConstraint.m_solverBodyIdA = solverBodyIdA;
 	solverConstraint.m_solverBodyIdB = solverBodyIdB;
@@ -524,12 +525,12 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 	{
 		btVector3 ftorqueAxis1 = rel_pos1.cross(solverConstraint.m_contactNormal);
 		solverConstraint.m_relpos1CrossNormal = ftorqueAxis1;
-		solverConstraint.m_angularComponentA = body0 ? getInvInertiaTensorWorld(&inertias[solverBodyIdA])*ftorqueAxis1 : btVector3(0,0,0);
+		solverConstraint.m_angularComponentA = body0 ? getInvInertiaTensorWorld(&inertias[solverBodyA.m_originalBodyIndex])*ftorqueAxis1 : btVector3(0,0,0);
 	}
 	{
 		btVector3 ftorqueAxis1 = rel_pos2.cross(-solverConstraint.m_contactNormal);
 		solverConstraint.m_relpos2CrossNormal = ftorqueAxis1;
-		solverConstraint.m_angularComponentB = body1 ? getInvInertiaTensorWorld(&inertias[solverBodyIdB])*ftorqueAxis1 : btVector3(0,0,0);
+		solverConstraint.m_angularComponentB = body1 ? getInvInertiaTensorWorld(&inertias[solverBodyB.m_originalBodyIndex])*ftorqueAxis1 : btVector3(0,0,0);
 	}
 
 	{
@@ -611,18 +612,18 @@ void btPgsJacobiSolver::setupRollingFrictionConstraint(RigidBodyBase::Body* bodi
 	{
 		btVector3 ftorqueAxis1 = -normalAxis1;
 		solverConstraint.m_relpos1CrossNormal = ftorqueAxis1;
-		solverConstraint.m_angularComponentA = body0 ? getInvInertiaTensorWorld(&inertias[solverBodyIdA])*ftorqueAxis1 : btVector3(0,0,0);
+		solverConstraint.m_angularComponentA = body0 ? getInvInertiaTensorWorld(&inertias[solverBodyA.m_originalBodyIndex])*ftorqueAxis1 : btVector3(0,0,0);
 	}
 	{
 		btVector3 ftorqueAxis1 = normalAxis1;
 		solverConstraint.m_relpos2CrossNormal = ftorqueAxis1;
-		solverConstraint.m_angularComponentB = body1 ? getInvInertiaTensorWorld(&inertias[solverBodyIdB])*ftorqueAxis1 : btVector3(0,0,0);
+		solverConstraint.m_angularComponentB = body1 ? getInvInertiaTensorWorld(&inertias[solverBodyB.m_originalBodyIndex])*ftorqueAxis1 : btVector3(0,0,0);
 	}
 
 
 	{
-		btVector3 iMJaA = body0?getInvInertiaTensorWorld(&inertias[solverBodyIdA])*solverConstraint.m_relpos1CrossNormal:btVector3(0,0,0);
-		btVector3 iMJaB = body1?getInvInertiaTensorWorld(&inertias[solverBodyIdB])*solverConstraint.m_relpos2CrossNormal:btVector3(0,0,0);
+		btVector3 iMJaA = body0?getInvInertiaTensorWorld(&inertias[solverBodyA.m_originalBodyIndex])*solverConstraint.m_relpos1CrossNormal:btVector3(0,0,0);
+		btVector3 iMJaB = body1?getInvInertiaTensorWorld(&inertias[solverBodyB.m_originalBodyIndex])*solverConstraint.m_relpos2CrossNormal:btVector3(0,0,0);
 		btScalar sum = 0;
 		sum += iMJaA.dot(solverConstraint.m_relpos1CrossNormal);
 		sum += iMJaB.dot(solverConstraint.m_relpos2CrossNormal);
@@ -671,25 +672,34 @@ btSolverConstraint&	btPgsJacobiSolver::addRollingFrictionConstraint(RigidBodyBas
 
 int	btPgsJacobiSolver::getOrInitSolverBody(int bodyIndex, RigidBodyBase::Body* bodies,RigidBodyBase::Inertia* inertias)
 {
-	btAssert(bodyIndex< m_tmpSolverBodyPool.size());
+	//btAssert(bodyIndex< m_tmpSolverBodyPool.size());
 
 	RigidBodyBase::Body& body = bodies[bodyIndex];
-
-	if (m_tmpSolverBodyPool[bodyIndex].m_originalBodyIndex >= 0)
+	int curIndex = -1;
+	if (1)//body.getInvMass()==0.f)
 	{
-		//body has already been converted
-		btAssert(bodyIndex == m_tmpSolverBodyPool[bodyIndex].m_originalBodyIndex);
-		return bodyIndex;    
-
+		if (m_bodyCount[bodyIndex]<0)
+		{
+			curIndex = m_tmpSolverBodyPool.size();
+			btSolverBody& solverBody = m_tmpSolverBodyPool.expand();
+			initSolverBody(bodyIndex,&solverBody,&body);
+			solverBody.m_originalBodyIndex = bodyIndex;
+			m_bodyCount[bodyIndex] = curIndex;
+		} else
+		{
+			curIndex = m_bodyCount[bodyIndex];
+		}
 	} else
 	{
-		
-		btSolverBody& solverBody = m_tmpSolverBodyPool[bodyIndex];
+		btAssert(m_bodyCount[bodyIndex]>0);
+		curIndex = m_tmpSolverBodyPool.size();
+		btSolverBody& solverBody = m_tmpSolverBodyPool.expand();
 		initSolverBody(bodyIndex,&solverBody,&body);
-		m_tmpSolverBodyPool[bodyIndex].m_originalBodyIndex = bodyIndex;
+		solverBody.m_originalBodyIndex = bodyIndex;
 	}
 
-	return bodyIndex;
+	btAssert(curIndex>=0);
+	return curIndex;
 
 }
 #include <stdio.h>
@@ -719,9 +729,9 @@ void btPgsJacobiSolver::setupContactConstraint(RigidBodyBase::Body* bodies, Rigi
 			relaxation = 1.f;
 
 			btVector3 torqueAxis0 = rel_pos1.cross(cp.m_normalWorldOnB);
-			solverConstraint.m_angularComponentA = rb0 ? getInvInertiaTensorWorld(&inertias[solverBodyIdA])*torqueAxis0 : btVector3(0,0,0);
+			solverConstraint.m_angularComponentA = rb0 ? getInvInertiaTensorWorld(&inertias[bodyA->m_originalBodyIndex])*torqueAxis0 : btVector3(0,0,0);
 			btVector3 torqueAxis1 = rel_pos2.cross(cp.m_normalWorldOnB);		
-			solverConstraint.m_angularComponentB = rb1 ? getInvInertiaTensorWorld(&inertias[solverBodyIdB])*-torqueAxis1 : btVector3(0,0,0);
+			solverConstraint.m_angularComponentB = rb1 ? getInvInertiaTensorWorld(&inertias[bodyB->m_originalBodyIndex])*-torqueAxis1 : btVector3(0,0,0);
 
 				{
 #ifdef COMPUTE_IMPULSE_DENOM
@@ -860,10 +870,10 @@ void btPgsJacobiSolver::setFrictionConstraintImpulse( RigidBodyBase::Body* bodie
 		if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 		{
 			frictionConstraint1.m_appliedImpulse = cp.m_appliedImpulseLateral1 * infoGlobal.m_warmstartingFactor;
-			if (bodies[solverBodyIdA].m_invMass)
-				bodyA->internalApplyImpulse(frictionConstraint1.m_contactNormal*bodies[solverBodyIdA].m_invMass,frictionConstraint1.m_angularComponentA,frictionConstraint1.m_appliedImpulse);
-			if (bodies[solverBodyIdB].m_invMass)
-				bodyB->internalApplyImpulse(frictionConstraint1.m_contactNormal*bodies[solverBodyIdB].m_invMass,-frictionConstraint1.m_angularComponentB,-(btScalar)frictionConstraint1.m_appliedImpulse);
+			if (bodies[bodyA->m_originalBodyIndex].m_invMass)
+				bodyA->internalApplyImpulse(frictionConstraint1.m_contactNormal*bodies[bodyA->m_originalBodyIndex].m_invMass,frictionConstraint1.m_angularComponentA,frictionConstraint1.m_appliedImpulse);
+			if (bodies[bodyB->m_originalBodyIndex].m_invMass)
+				bodyB->internalApplyImpulse(frictionConstraint1.m_contactNormal*bodies[bodyB->m_originalBodyIndex].m_invMass,-frictionConstraint1.m_angularComponentB,-(btScalar)frictionConstraint1.m_appliedImpulse);
 		} else
 		{
 			frictionConstraint1.m_appliedImpulse = 0.f;
@@ -876,10 +886,10 @@ void btPgsJacobiSolver::setFrictionConstraintImpulse( RigidBodyBase::Body* bodie
 		if (infoGlobal.m_solverMode & SOLVER_USE_WARMSTARTING)
 		{
 			frictionConstraint2.m_appliedImpulse = cp.m_appliedImpulseLateral2  * infoGlobal.m_warmstartingFactor;
-			if (bodies[solverBodyIdA].m_invMass)
-				bodyA->internalApplyImpulse(frictionConstraint2.m_contactNormal*bodies[solverBodyIdA].m_invMass,frictionConstraint2.m_angularComponentA,frictionConstraint2.m_appliedImpulse);
-			if (bodies[solverBodyIdB].m_invMass)
-				bodyB->internalApplyImpulse(frictionConstraint2.m_contactNormal*bodies[solverBodyIdB].m_invMass,-frictionConstraint2.m_angularComponentB,-(btScalar)frictionConstraint2.m_appliedImpulse);
+			if (bodies[bodyA->m_originalBodyIndex].m_invMass)
+				bodyA->internalApplyImpulse(frictionConstraint2.m_contactNormal*bodies[bodyA->m_originalBodyIndex].m_invMass,frictionConstraint2.m_angularComponentA,frictionConstraint2.m_appliedImpulse);
+			if (bodies[bodyB->m_originalBodyIndex].m_invMass)
+				bodyB->internalApplyImpulse(frictionConstraint2.m_contactNormal*bodies[bodyB->m_originalBodyIndex].m_invMass,-frictionConstraint2.m_angularComponentB,-(btScalar)frictionConstraint2.m_appliedImpulse);
 		} else
 		{
 			frictionConstraint2.m_appliedImpulse = 0.f;
@@ -1045,116 +1055,38 @@ btScalar btPgsJacobiSolver::solveGroupCacheFriendlySetup(RigidBodyBase::Body* bo
 
 	m_maxOverrideNumSolverIterations = 0;
 
-#ifdef BT_SOLVER_DEBUG
-	 //make sure that dynamic bodies exist for all (enabled) constraints
-	for (int i=0;i<numConstraints;i++)
+
+
+	m_tmpSolverBodyPool.resize(0);
+	
+	
+	m_bodyCount.resize(0);
+	m_bodyCount.resize(numBodies,0);
+	int totalBodies = 0;
+
+	for (int i=0;i<numManifolds;i++)
 	{
-		btTypedConstraint* constraint = constraints[i];
-		if (constraint->isEnabled())
+		int bodyIndexA = manifoldPtr[i].getBodyA();
+		int bodyIndexB = manifoldPtr[i].getBodyB();
+		m_bodyCount[bodyIndexA]=-1;
+		m_bodyCount[bodyIndexB]=-1;
+		/*
+		if (bodies[bodyIndexA].getInvMass())
 		{
-			if (!constraint->getRigidBodyA().isStaticOrKinematicObject())
-			{
-				bool found=false;
-				for (int b=0;b<numBodies;b++)
-				{
-                
-					if (&constraint->getRigidBodyA()==bodies[b])
-					{
-						found = true;
-						break;
-					}
-				}
-				btAssert(found);
-			}
-			if (!constraint->getRigidBodyB().isStaticOrKinematicObject())
-			{
-				bool found=false;
-				for (int b=0;b<numBodies;b++)
-				{
-					if (&constraint->getRigidBodyB()==bodies[b])
-					{
-						found = true;
-						break;
-					}
-				}
-				btAssert(found);
-			}
+			m_bodyCount[bodyIndexA]++;
 		}
-	}
-    //make sure that dynamic bodies exist for all contact manifolds
-    for (int i=0;i<numManifolds;i++)
-    {
-        if (!manifoldPtr[i]->getBody0()->isStaticOrKinematicObject())
-        {
-            bool found=false;
-            for (int b=0;b<numBodies;b++)
-            {
-                
-                if (manifoldPtr[i]->getBody0()==bodies[b])
-                {
-                    found = true;
-                    break;
-                }
-            }
-            btAssert(found);
-        }
-        if (!manifoldPtr[i]->getBody1()->isStaticOrKinematicObject())
-        {
-            bool found=false;
-            for (int b=0;b<numBodies;b++)
-            {
-                if (manifoldPtr[i]->getBody1()==bodies[b])
-                {
-                    found = true;
-                    break;
-                }
-            }
-            btAssert(found);
-        }
-    }
-#endif //BT_DEBUG
-	
-	
-	
+		else
+			m_bodyCount[bodyIndexA]=-1;
 
-
-	m_tmpSolverBodyPool.resize(numBodies);
-	
-	for (int i = 0; i < numBodies; i++)
-	{
-		m_tmpSolverBodyPool[i].m_originalBodyIndex = -1;
-	}
-
-	
-
-
-	//convert all bodies
-
-	{
-		BT_PROFILE("convert bodies");
-		for (int i=0;i<numBodies;i++)
-		{
-			int bodyId = getOrInitSolverBody(i,bodies,inertias);
-			RigidBodyBase::Body* body = &bodies[bodyId];
-
-			//assume the forces (and gravity) have already been applied before calling the solver
-#if 0
-			if (body->getInvMass())
-			{
-				btSolverBody& solverBody = m_tmpSolverBodyPool[bodyId];
-				btVector3 gyroForce (0,0,0);
-				if (body->getFlags()&BT_ENABLE_GYROPSCOPIC_FORCE)
-				{
-					gyroForce = body->computeGyroscopicForce(infoGlobal.m_maxGyroscopicForce);
-				}
-				solverBody.m_linearVelocity += body->getTotalForce()*body->getInvMass()*infoGlobal.m_timeStep;
-				solverBody.m_angularVelocity += (body->getTotalTorque()-gyroForce)*body->getInvInertiaTensorWorld()*infoGlobal.m_timeStep;
-			}
-#endif
-
-		}
+		if (bodies[bodyIndexB].getInvMass())
+			m_bodyCount[bodyIndexB]++;
+		else
+			m_bodyCount[bodyIndexB]=-1;
+			*/
 
 	}
+
+
 	
 	if (1)
 	{
@@ -1748,7 +1680,7 @@ btScalar btPgsJacobiSolver::solveGroupCacheFriendlyFinish(RigidBodyBase::Body* b
 		for ( i=0;i<m_tmpSolverBodyPool.size();i++)
 		{
 			int bodyIndex = m_tmpSolverBodyPool[i].m_originalBodyIndex;
-			btAssert(i==bodyIndex);
+			//btAssert(i==bodyIndex);
 
 			RigidBodyBase::Body* body = &bodies[bodyIndex];
 			if (body->getInvMass())
