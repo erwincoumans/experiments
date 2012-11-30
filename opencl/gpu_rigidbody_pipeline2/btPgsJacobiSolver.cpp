@@ -31,7 +31,8 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedObjectArray.h"
 #include <string.h> //for memset
 #include "../../dynamics/basic_demo/Stubs/AdlContact4.h"
-float splitFactor = 1.7f;
+
+bool usePgs = true;
 int		gNumSplitImpulseRecoveries2 = 0;
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
@@ -158,7 +159,7 @@ int	getNumContacts(Contact4* contact)
 }
 
 btPgsJacobiSolver::btPgsJacobiSolver()
-:m_btSeed2(0),m_usePgs(true)
+:m_btSeed2(0),m_usePgs(usePgs)
 {
 
 }
@@ -533,6 +534,8 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 		solverConstraint.m_angularComponentB = body1 ? getInvInertiaTensorWorld(&inertias[solverBodyB.m_originalBodyIndex])*ftorqueAxis1 : btVector3(0,0,0);
 	}
 
+	btScalar scaledDenom;
+
 	{
 		btVector3 vec;
 		btScalar denom0 = 0.f;
@@ -551,13 +554,14 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 		btScalar denom;
 		if (m_usePgs)
 		{
-			denom = relaxation/(denom0+denom1);
+			scaledDenom = denom = relaxation/(denom0+denom1);
 		} else
 		{
-			btScalar countA = body0->getInvMass() ? splitFactor*btScalar(m_bodyCount[solverBodyA.m_originalBodyIndex]): 1.f;
-			btScalar countB = body1->getInvMass() ? splitFactor*btScalar(m_bodyCount[solverBodyB.m_originalBodyIndex]): 1.f;
+			denom = relaxation/(denom0+denom1);
+			btScalar countA = body0->getInvMass() ? btScalar(m_bodyCount[solverBodyA.m_originalBodyIndex]): 1.f;
+			btScalar countB = body1->getInvMass() ? btScalar(m_bodyCount[solverBodyB.m_originalBodyIndex]): 1.f;
 
-			denom = relaxation/(denom0*countA+denom1*countB);
+			scaledDenom = relaxation/(denom0*countA+denom1*countB);
 		}
 
 		solverConstraint.m_jacDiagABInv = denom;
@@ -577,7 +581,7 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 //		btScalar positionalError = 0.f;
 
 		btSimdScalar velocityError =  desiredVelocity - rel_vel;
-		btSimdScalar	velocityImpulse = velocityError * btSimdScalar(solverConstraint.m_jacDiagABInv);
+		btSimdScalar	velocityImpulse = velocityError * btSimdScalar(scaledDenom);//solverConstraint.m_jacDiagABInv);
 		solverConstraint.m_rhs = velocityImpulse;
 		solverConstraint.m_cfm = cfmSlip;
 		solverConstraint.m_lowerLimit = 0;
@@ -746,6 +750,7 @@ void btPgsJacobiSolver::setupContactConstraint(RigidBodyBase::Body* bodies, Rigi
 			btVector3 torqueAxis1 = rel_pos2.cross(cp.m_normalWorldOnB);		
 			solverConstraint.m_angularComponentB = rb1 ? getInvInertiaTensorWorld(&inertias[bodyB->m_originalBodyIndex])*-torqueAxis1 : btVector3(0,0,0);
 
+			btScalar scaledDenom;
 				{
 #ifdef COMPUTE_IMPULSE_DENOM
 					btScalar denom0 = rb0->computeImpulseDenominator(pos1,cp.m_normalWorldOnB);
@@ -770,13 +775,14 @@ void btPgsJacobiSolver::setupContactConstraint(RigidBodyBase::Body* bodies, Rigi
 					btScalar denom;
 					if (m_usePgs)
 					{
-						denom = relaxation/(denom0+denom1);
+						scaledDenom = denom = relaxation/(denom0+denom1);
 					} else
 					{
-						btScalar countA = rb0->m_invMass? splitFactor*btScalar(m_bodyCount[bodyA->m_originalBodyIndex]) : 1.f;
-						btScalar countB = rb1->m_invMass? splitFactor*btScalar(m_bodyCount[bodyB->m_originalBodyIndex]) : 1.f;
+						denom = relaxation/(denom0+denom1);
 
-						denom = relaxation/(denom0*countA+denom1*countB);
+						btScalar countA = rb0->m_invMass? btScalar(m_bodyCount[bodyA->m_originalBodyIndex]) : 1.f;
+						btScalar countB = rb1->m_invMass? btScalar(m_bodyCount[bodyB->m_originalBodyIndex]) : 1.f;
+						scaledDenom = relaxation/(denom0*countA+denom1*countB);
 					}
 					solverConstraint.m_jacDiagABInv = denom;
 				}
@@ -853,8 +859,8 @@ void btPgsJacobiSolver::setupContactConstraint(RigidBodyBase::Body* bodies, Rigi
 						positionalError = -penetration * erp/infoGlobal.m_timeStep;
 					}
 
-					btScalar  penetrationImpulse = positionalError*solverConstraint.m_jacDiagABInv;
-					btScalar velocityImpulse = velocityError *solverConstraint.m_jacDiagABInv;
+					btScalar  penetrationImpulse = positionalError*scaledDenom;//solverConstraint.m_jacDiagABInv;
+					btScalar velocityImpulse = velocityError *scaledDenom;//solverConstraint.m_jacDiagABInv;
 
 					if (!infoGlobal.m_splitImpulse || (penetration > infoGlobal.m_splitImpulsePenetrationThreshold))
 					{
@@ -1820,4 +1826,3 @@ void	btPgsJacobiSolver::reset()
 {
 	m_btSeed2 = 0;
 }
-
