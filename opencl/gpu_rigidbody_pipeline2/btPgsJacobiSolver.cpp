@@ -31,7 +31,7 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedObjectArray.h"
 #include <string.h> //for memset
 #include "../../dynamics/basic_demo/Stubs/AdlContact4.h"
-
+float splitFactor = 1.7f;
 int		gNumSplitImpulseRecoveries2 = 0;
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
@@ -158,7 +158,7 @@ int	getNumContacts(Contact4* contact)
 }
 
 btPgsJacobiSolver::btPgsJacobiSolver()
-:m_btSeed2(0)
+:m_btSeed2(0),m_usePgs(true)
 {
 
 }
@@ -457,8 +457,8 @@ int btPgsJacobiSolver::btRandInt2 (int n)
 void	btPgsJacobiSolver::initSolverBody(int bodyIndex, btSolverBody* solverBody, RigidBodyBase::Body* rb)
 {
 
-	solverBody->internalGetDeltaLinearVelocity().setValue(0.f,0.f,0.f);
-	solverBody->internalGetDeltaAngularVelocity().setValue(0.f,0.f,0.f);
+	solverBody->m_deltaLinearVelocity.setValue(0.f,0.f,0.f);
+	solverBody->m_deltaAngularVelocity.setValue(0.f,0.f,0.f);
 	solverBody->internalGetPushVelocity().setValue(0.f,0.f,0.f);
 	solverBody->internalGetTurnVelocity().setValue(0.f,0.f,0.f);
 
@@ -547,7 +547,19 @@ void btPgsJacobiSolver::setupFrictionConstraint(RigidBodyBase::Body* bodies,Rigi
 			vec = ( -solverConstraint.m_angularComponentB).cross(rel_pos2);
 			denom1 = body1->getInvMass() + normalAxis.dot(vec);
 		}
-		btScalar denom = relaxation/(denom0+denom1);
+
+		btScalar denom;
+		if (m_usePgs)
+		{
+			denom = relaxation/(denom0+denom1);
+		} else
+		{
+			btScalar countA = body0->getInvMass() ? splitFactor*btScalar(m_bodyCount[solverBodyA.m_originalBodyIndex]): 1.f;
+			btScalar countB = body1->getInvMass() ? splitFactor*btScalar(m_bodyCount[solverBodyB.m_originalBodyIndex]): 1.f;
+
+			denom = relaxation/(denom0*countA+denom1*countB);
+		}
+
 		solverConstraint.m_jacDiagABInv = denom;
 	}
 
@@ -676,7 +688,7 @@ int	btPgsJacobiSolver::getOrInitSolverBody(int bodyIndex, RigidBodyBase::Body* b
 
 	RigidBodyBase::Body& body = bodies[bodyIndex];
 	int curIndex = -1;
-	if (1)//body.getInvMass()==0.f)
+	if (m_usePgs || body.getInvMass()==0.f)
 	{
 		if (m_bodyCount[bodyIndex]<0)
 		{
@@ -692,6 +704,7 @@ int	btPgsJacobiSolver::getOrInitSolverBody(int bodyIndex, RigidBodyBase::Body* b
 	} else
 	{
 		btAssert(m_bodyCount[bodyIndex]>0);
+		m_bodyCountCheck[bodyIndex]++;
 		curIndex = m_tmpSolverBodyPool.size();
 		btSolverBody& solverBody = m_tmpSolverBodyPool.expand();
 		initSolverBody(bodyIndex,&solverBody,&body);
@@ -753,7 +766,18 @@ void btPgsJacobiSolver::setupContactConstraint(RigidBodyBase::Body* bodies, Rigi
 					}
 #endif //COMPUTE_IMPULSE_DENOM		
 
-					btScalar denom = relaxation/(denom0+denom1);
+					
+					btScalar denom;
+					if (m_usePgs)
+					{
+						denom = relaxation/(denom0+denom1);
+					} else
+					{
+						btScalar countA = rb0->m_invMass? splitFactor*btScalar(m_bodyCount[bodyA->m_originalBodyIndex]) : 1.f;
+						btScalar countB = rb1->m_invMass? splitFactor*btScalar(m_bodyCount[bodyB->m_originalBodyIndex]) : 1.f;
+
+						denom = relaxation/(denom0*countA+denom1*countB);
+					}
 					solverConstraint.m_jacDiagABInv = denom;
 				}
 
@@ -917,7 +941,7 @@ void	btPgsJacobiSolver::convertContact(RigidBodyBase::Body* bodies, RigidBodyBas
 
 
 	///avoid collision response between two static objects
-	if ((solverBodyA->m_invMass==0) && (solverBodyA->m_invMass==0))
+	if (solverBodyA->m_invMass.isZero() && solverBodyB->m_invMass.isZero())
 		return;
 
 	int rollingFriction=1;
@@ -1062,27 +1086,40 @@ btScalar btPgsJacobiSolver::solveGroupCacheFriendlySetup(RigidBodyBase::Body* bo
 	
 	m_bodyCount.resize(0);
 	m_bodyCount.resize(numBodies,0);
+	m_bodyCountCheck.resize(0);
+	m_bodyCountCheck.resize(numBodies,0);
+	
+	m_deltaLinearVelocities.resize(0);
+	m_deltaLinearVelocities.resize(numBodies,btVector3(0,0,0));
+	m_deltaAngularVelocities.resize(0);
+	m_deltaAngularVelocities.resize(numBodies,btVector3(0,0,0));
+	
 	int totalBodies = 0;
 
 	for (int i=0;i<numManifolds;i++)
 	{
 		int bodyIndexA = manifoldPtr[i].getBodyA();
 		int bodyIndexB = manifoldPtr[i].getBodyB();
-		m_bodyCount[bodyIndexA]=-1;
-		m_bodyCount[bodyIndexB]=-1;
-		/*
-		if (bodies[bodyIndexA].getInvMass())
+		if (m_usePgs)
 		{
-			m_bodyCount[bodyIndexA]++;
-		}
-		else
 			m_bodyCount[bodyIndexA]=-1;
-
-		if (bodies[bodyIndexB].getInvMass())
-			m_bodyCount[bodyIndexB]++;
-		else
 			m_bodyCount[bodyIndexB]=-1;
-			*/
+		} else
+		{
+			if (bodies[bodyIndexA].getInvMass())
+			{
+				//m_bodyCount[bodyIndexA]+=manifoldPtr[i].getNPoints();
+				m_bodyCount[bodyIndexA]++;
+			}
+			else
+				m_bodyCount[bodyIndexA]=-1;
+
+			if (bodies[bodyIndexB].getInvMass())
+			//	m_bodyCount[bodyIndexB]+=manifoldPtr[i].getNPoints();
+				m_bodyCount[bodyIndexB]++;
+			else
+				m_bodyCount[bodyIndexB]=-1;
+		}
 
 	}
 
@@ -1452,7 +1489,9 @@ btScalar btPgsJacobiSolver::solveSingleIteration(int iteration,btTypedConstraint
 					resolveSingleConstraintRowLowerLimitSIMD(m_tmpSolverBodyPool[solveManifold.m_solverBodyIdA],m_tmpSolverBodyPool[solveManifold.m_solverBodyIdB],solveManifold);
 
 				}
-		
+
+				if (!m_usePgs)
+					averageVelocities();
 				
 
 				///solve all friction constraints, using SIMD, if available
@@ -1621,11 +1660,57 @@ btScalar btPgsJacobiSolver::solveGroupCacheFriendlyIterations(btTypedConstraint*
 		for ( int iteration = 0 ; iteration< maxIterations ; iteration++)
 		//for ( int iteration = maxIterations-1  ; iteration >= 0;iteration--)
 		{			
+			
 			solveSingleIteration(iteration, constraints,numConstraints,infoGlobal);
+
+
+			if (!m_usePgs)
+			{
+				averageVelocities();
+			}
 		}
 		
 	}
 	return 0.f;
+}
+
+void	btPgsJacobiSolver::averageVelocities()
+{
+	BT_PROFILE("averaging");
+	//average the velocities
+	int numBodies = m_bodyCount.size();
+
+	m_deltaLinearVelocities.resize(0);
+	m_deltaLinearVelocities.resize(numBodies,btVector3(0,0,0));
+	m_deltaAngularVelocities.resize(0);
+	m_deltaAngularVelocities.resize(numBodies,btVector3(0,0,0));
+
+	for (int i=0;i<m_tmpSolverBodyPool.size();i++)
+	{
+		if (!m_tmpSolverBodyPool[i].m_invMass.isZero())
+		{
+			int orgBodyIndex = m_tmpSolverBodyPool[i].m_originalBodyIndex;
+			m_deltaLinearVelocities[orgBodyIndex]+=m_tmpSolverBodyPool[i].getDeltaLinearVelocity();
+			m_deltaAngularVelocities[orgBodyIndex]+=m_tmpSolverBodyPool[i].getDeltaAngularVelocity();
+		}
+	}
+				
+	for (int i=0;i<m_tmpSolverBodyPool.size();i++)
+	{
+		int orgBodyIndex = m_tmpSolverBodyPool[i].m_originalBodyIndex;
+
+		if (!m_tmpSolverBodyPool[i].m_invMass.isZero())
+		{
+						
+			btAssert(m_bodyCount[orgBodyIndex] == m_bodyCountCheck[orgBodyIndex]);
+						
+			btScalar factor = 1.f/btScalar(m_bodyCount[orgBodyIndex]);
+						
+
+			m_tmpSolverBodyPool[i].m_deltaLinearVelocity = m_deltaLinearVelocities[orgBodyIndex]*factor;
+			m_tmpSolverBodyPool[i].m_deltaAngularVelocity = m_deltaAngularVelocities[orgBodyIndex]*factor;
+		}
+	}
 }
 
 btScalar btPgsJacobiSolver::solveGroupCacheFriendlyFinish(RigidBodyBase::Body* bodies,RigidBodyBase::Inertia* inertias,int numBodies,const btContactSolverInfo& infoGlobal)
@@ -1690,8 +1775,23 @@ btScalar btPgsJacobiSolver::solveGroupCacheFriendlyFinish(RigidBodyBase::Body* b
 				else
 					m_tmpSolverBodyPool[i].writebackVelocity();
 
-				body->m_linVel = make_float4(m_tmpSolverBodyPool[i].m_linearVelocity.getX(),m_tmpSolverBodyPool[i].m_linearVelocity.getY(),m_tmpSolverBodyPool[i].m_linearVelocity.getZ());
-				body->m_angVel = make_float4(m_tmpSolverBodyPool[i].m_angularVelocity.getX(),m_tmpSolverBodyPool[i].m_angularVelocity.getY(),m_tmpSolverBodyPool[i].m_angularVelocity.getZ());
+				if (m_usePgs)
+				{
+					body->m_linVel = make_float4(m_tmpSolverBodyPool[i].m_linearVelocity.getX(),m_tmpSolverBodyPool[i].m_linearVelocity.getY(),m_tmpSolverBodyPool[i].m_linearVelocity.getZ());
+					body->m_angVel = make_float4(m_tmpSolverBodyPool[i].m_angularVelocity.getX(),m_tmpSolverBodyPool[i].m_angularVelocity.getY(),m_tmpSolverBodyPool[i].m_angularVelocity.getZ());
+				} else
+				{
+					btScalar factor = 1.f/btScalar(m_bodyCount[bodyIndex]);
+
+					btVector3 deltaLinVel = m_deltaLinearVelocities[bodyIndex]*factor;
+					btVector3 deltaAngVel = m_deltaAngularVelocities[bodyIndex]*factor;
+					//printf("body %d\n",bodyIndex);
+					//printf("deltaLinVel = %f,%f,%f\n",deltaLinVel.getX(),deltaLinVel.getY(),deltaLinVel.getZ());
+					//printf("deltaAngVel = %f,%f,%f\n",deltaAngVel.getX(),deltaAngVel.getY(),deltaAngVel.getZ());
+
+					body->m_linVel += make_float4(deltaLinVel.getX(),deltaLinVel.getY(),deltaLinVel.getZ(),0.f);
+					body->m_angVel += make_float4(deltaAngVel.getX(),deltaAngVel.getY(),deltaAngVel.getZ(),0.f);
+				}
 			
 				if (infoGlobal.m_splitImpulse)
 				{
@@ -1720,5 +1820,4 @@ void	btPgsJacobiSolver::reset()
 {
 	m_btSeed2 = 0;
 }
-
 

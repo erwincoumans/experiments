@@ -37,6 +37,13 @@ protected:
 	btAlignedObjectArray<btTypedConstraint::btConstraintInfo1> m_tmpConstraintSizesPool;
 	
 	btAlignedObjectArray<int>		m_bodyCount;
+	btAlignedObjectArray<int>		m_bodyCountCheck;
+	
+	btAlignedObjectArray<btVector3>	m_deltaLinearVelocities;
+	btAlignedObjectArray<btVector3>	m_deltaAngularVelocities;
+
+	bool						m_usePgs;
+	void						averageVelocities();
 
 	int							m_maxOverrideNumSolverIterations;
 	btScalar	getContactProcessingThreshold(Contact4* contact)
