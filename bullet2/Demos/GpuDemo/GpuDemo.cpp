@@ -197,7 +197,7 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		vertices.push_back(btVector3(-1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,1));
 		
-#if 0
+#if 1
 		btPolyhedralConvexShape* colShape = new btConvexHullShape(&vertices[0].getX(),vertices.size());
 		colShape->initializePolyhedralFeatures();
 #else

@@ -14,8 +14,8 @@
 #include "btGpuDynamicsWorld.h"
 #include <assert.h>
 
-#include "../OpenGLTrueTypeFont/fontstash.h"
-#include "../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
+#include "../rendering/OpenGLTrueTypeFont/fontstash.h"
+#include "../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
