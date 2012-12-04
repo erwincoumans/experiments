@@ -5,12 +5,17 @@
 #include "MacOpenGLWindow.h"
 #else
 #include "../rendering/rendertest/Win32OpenGLWindow.h"
-#include "../rendering/rendertest/GLPrimitiveRenderer.h"
 #endif
+
+#include "../rendering/rendertest/GLPrimitiveRenderer.h"
 #include "../rendering/rendertest/GLInstancingRenderer.h"
 #include "../../DemosCommon/OpenGL3CoreRenderer.h"
 #include "LinearMath/btQuickProf.h"
 #include "btGpuDynamicsWorld.h"
+#include <assert.h>
+
+#include "../OpenGLTrueTypeFont/fontstash.h"
+#include "../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
@@ -18,6 +23,117 @@ int g_OpenGLHeight = 768;
 btgWindowInterface* window=0;
 
 extern bool enableExperimentalCpuConcaveCollision;
+
+
+
+
+	int droidRegular, droidItalic, droidBold, droidJapanese, dejavu;
+
+sth_stash* stash=0;
+
+sth_stash* initFont()
+{
+	GLint err;
+
+		struct sth_stash* stash = 0;
+	int datasize;
+	unsigned char* data;
+	float sx,sy,dx,dy,lh;
+	GLuint texture;
+
+	stash = sth_create(512,512,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);//256,256);//,1024);//512,512);
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+	if (!stash)
+	{
+		fprintf(stderr, "Could not create stash.\n");
+		return 0;
+	}
+
+	const char* fontPaths[]={
+	"./",
+	"../../bin/",
+	"../bin/",
+	"bin/"
+	};
+
+	int numPaths=sizeof(fontPaths)/sizeof(char*);
+	
+	// Load the first truetype font from memory (just because we can).
+    
+	FILE* fp = 0;
+	const char* fontPath ="./";
+	char fullFontFileName[1024];
+
+	for (int i=0;i<numPaths;i++)
+	{
+		
+		fontPath = fontPaths[i];
+		//sprintf(fullFontFileName,"%s%s",fontPath,"OpenSans.ttf");//"DroidSerif-Regular.ttf");
+		sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//OpenSans.ttf");//"DroidSerif-Regular.ttf");
+		fp = fopen(fullFontFileName, "rb");
+		if (fp)
+			break;
+	}
+
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+    assert(fp);
+    if (fp)
+    {
+        fseek(fp, 0, SEEK_END);
+        datasize = (int)ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        data = (unsigned char*)malloc(datasize);
+        if (data == NULL)
+        {
+            assert(0);
+            return 0;
+        }
+        else
+            fread(data, 1, datasize, fp);
+        fclose(fp);
+        fp = 0;
+    }
+	if (!(droidRegular = sth_add_font_from_memory(stash, data)))
+    {
+        assert(0);
+        return 0;
+    }
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+
+	// Load the remaining truetype fonts directly.
+    sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Italic.ttf");
+
+	if (!(droidItalic = sth_add_font(stash,fullFontFileName)))
+	{
+        assert(0);
+        return 0;
+    }
+     sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Bold.ttf");
+
+	if (!(droidBold = sth_add_font(stash,fullFontFileName)))
+	{
+        assert(0);
+        return 0;
+    }
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+    
+     sprintf(fullFontFileName,"%s%s",fontPath,"DroidSansJapanese.ttf");
+    if (!(droidJapanese = sth_add_font(stash,fullFontFileName)))
+	{
+        assert(0);
+        return 0;
+    }
+    err = glGetError();
+    assert(err==GL_NO_ERROR);
+
+	return stash;
+}
 
 
 void MyKeyboardCallback(int key, int state)
@@ -94,8 +210,8 @@ int main(int argc, char* argv[])
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
-	ci.useOpenCL =!args.CheckCmdLineFlag("disable_opencl");
-	ci.m_useConcaveMesh = args.CheckCmdLineFlag("use_concave_mesh");
+	ci.useOpenCL = !args.CheckCmdLineFlag("disable_opencl");
+	ci.m_useConcaveMesh = true;//args.CheckCmdLineFlag("use_concave_mesh");
 	if (ci.m_useConcaveMesh)
 	{
 		enableExperimentalCpuConcaveCollision = true;
@@ -137,22 +253,62 @@ int main(int argc, char* argv[])
 	window->setWindowTitle("MyTest");
 	printf("-----------------------------------------------------\n");
 
-	glClearColor(1,0,0,1);
-	glClear(GL_COLOR_BUFFER_BIT);
-	window->startRendering();
-	glFinish();
-	
-//	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
-	float color[4] = {1,1,1,1};
-//	prim.drawRect(0,0,200,200,color);
-	window->endRendering();
-	glFinish();
+
 
 	static bool once=true;
 #ifdef _WIN32
 	glewInit();
 #endif
 	
+	stash = initFont();
+
+		glClearColor(1,0,0,1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	
+	{
+		window->startRendering();
+		glFinish();
+	
+		GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
+		float color[4] = {1,1,1,1};
+		prim.drawRect(0,0,200,200,color);
+		float retinaScale = 1;
+
+		  float x = 10;
+            float y=220;
+            float  dx=0;
+            if (1)
+            {
+                BT_PROFILE("font sth_draw_text");
+                
+				glEnable(GL_BLEND);
+				GLint err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				glDisable(GL_DEPTH_TEST);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+        
+
+				glDisable(GL_CULL_FACE);
+
+                sth_begin_draw(stash);
+                sth_flush_draw(stash);
+                sth_draw_text(stash, droidRegular,20.f, x, y, "Non-retina font rendering !@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,1);//retinaScale);
+                if (retinaScale!=1.f)
+                    sth_draw_text(stash, droidRegular,20.f*retinaScale, x, y+20, "Retina font rendering!@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,retinaScale);
+                sth_flush_draw(stash);
+                
+                sth_end_draw(stash);
+            }
+
+		window->endRendering();
+		glFinish();
+	}
 	once=false;
 
 	OpenGL3CoreRenderer render;

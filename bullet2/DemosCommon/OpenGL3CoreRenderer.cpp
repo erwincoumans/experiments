@@ -10,6 +10,7 @@
 #include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
 #include "BulletCollision/CollisionShapes/btCollisionShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
+#include "BulletCollision/CollisionShapes/btCompoundShape.h"
 
 
 OpenGL3CoreRenderer::OpenGL3CoreRenderer()
@@ -114,6 +115,71 @@ GraphicsShape* createGraphicsShapeFromConvexHull(const btConvexPolyhedron* utilP
 			gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
 		return gfxShape;
 	}
+}
+
+GraphicsShape* createGraphicsShapeFromCompoundShape(btCompoundShape* compound)
+{
+	GraphicsShape* gfxShape = new GraphicsShape();
+	btAlignedObjectArray<GraphicsVertex>* vertexArray = new btAlignedObjectArray<GraphicsVertex>;
+	btAlignedObjectArray<int>* indexArray = new btAlignedObjectArray<int>;
+
+
+
+	//create a graphics shape for each child, combine them into a single graphics shape using their child transforms
+	for (int i=0;i<compound->getNumChildShapes();i++)
+	{
+		btAssert(compound->getChildShape(i)->isPolyhedral());
+		if (compound->getChildShape(i)->isPolyhedral())
+		{
+			btPolyhedralConvexShape* convexHull = (btPolyhedralConvexShape*) compound->getChildShape(i);
+			btTransform tr = compound->getChildTransform(i);
+			
+			const btConvexPolyhedron* polyhedron = convexHull->getConvexPolyhedron();
+			GraphicsShape* childGfxShape = createGraphicsShapeFromConvexHull(polyhedron);
+			int baseIndex = vertexArray->size();
+
+			for (int j=0;j<childGfxShape->m_numIndices;j++)
+				indexArray->push_back(childGfxShape->m_indices[j]+baseIndex);
+			
+			GraphicsVertex* orgVerts = (GraphicsVertex*)childGfxShape->m_vertices;
+
+			for (int j=0;j<childGfxShape->m_numvertices;j++)
+			{
+				GraphicsVertex vtx;
+				btVector3 pos(orgVerts[j].xyzw[0],orgVerts[j].xyzw[1],orgVerts[j].xyzw[2]);
+				pos = tr*pos;
+				vtx.xyzw[0] = childGfxShape->m_scaling[0]*pos.x();
+				vtx.xyzw[1] = childGfxShape->m_scaling[1]*pos.y();
+				vtx.xyzw[2] = childGfxShape->m_scaling[2]*pos.z();
+				vtx.xyzw[3] = 10.f;
+				
+				vtx.uv[0] = 0.5f;
+				vtx.uv[1] = 0.5f;
+
+				btVector3 normal(orgVerts[j].normal[0],orgVerts[j].normal[1],orgVerts[j].normal[2]);
+				normal = tr.getBasis()*normal;
+				vtx.normal[0] = normal.x();
+				vtx.normal[1] = normal.y();
+				vtx.normal[2] = normal.z();
+				vertexArray->push_back(vtx);
+			}
+		}
+	}
+
+	btPolyhedralConvexShape* convexHull = (btPolyhedralConvexShape*) compound->getChildShape(0);
+	const btConvexPolyhedron* polyhedron = convexHull->getConvexPolyhedron();
+	GraphicsShape* childGfxShape = createGraphicsShapeFromConvexHull(polyhedron);
+
+	gfxShape->m_indices = &indexArray->at(0);
+	gfxShape->m_numIndices = indexArray->size();
+	gfxShape->m_vertices = &vertexArray->at(0).xyzw[0];
+	gfxShape->m_numvertices = vertexArray->size();
+	gfxShape->m_scaling[0] = 1;
+	gfxShape->m_scaling[1] = 1;
+	gfxShape->m_scaling[2] = 1;
+	gfxShape->m_scaling[3] = 1;
+	
+	return gfxShape;
 }
 
 GraphicsShape* createGraphicsShapeFromConcaveMesh(const btBvhTriangleMeshShape* trimesh)
@@ -281,6 +347,26 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 						GraphicsShape* gfxShape = createGraphicsShapeFromConcaveMesh(trimesh);
 						prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 						prevShape = colObj->getCollisionShape();
+					} else
+					{
+						if (colObj->getCollisionShape()->getShapeType()==COMPOUND_SHAPE_PROXYTYPE)
+						{
+							btCompoundShape* compound = (btCompoundShape*) colObj->getCollisionShape();
+							GraphicsShape* gfxShape = createGraphicsShapeFromCompoundShape(compound);
+							if (gfxShape)
+							{
+								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+								prevShape = colObj->getCollisionShape();
+							} else
+							{
+								prevGraphicsShapeIndex = -1;
+							}
+						} else
+						{
+							printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
+							prevGraphicsShapeIndex = -1;
+							btAssert(0);
+						}
 					}
 
 				}
@@ -306,7 +392,8 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
                 curGraphicsIndex++;
 		} else
 		{
-			if (colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
+			if ((colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)||
+				(colObj->getCollisionShape()->getShapeType()==COMPOUND_SHAPE_PROXYTYPE))
 			{
 				float cubeScaling[4]={1,1,1,1};
 				if (!syncTransformsOnly)

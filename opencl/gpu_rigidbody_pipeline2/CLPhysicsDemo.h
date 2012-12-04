@@ -57,6 +57,7 @@ struct CLPhysicsDemo
 	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 	int		registerConvexShape(class btConvexUtility* utilPtr , bool noHeightField);
 	int		registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, const float* scaling);
+	int		registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes);
 
 	int		registerPhysicsInstance(float mass, const float* position, const float* orientation, int collisionShapeIndex, int userPointer);
 

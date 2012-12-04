@@ -102,7 +102,7 @@ struct InternalDataRenderer
 	InternalDataRenderer() :m_instance_positions_ptr (0),m_instance_quaternion_ptr(0),m_instance_colors_ptr(0),m_instance_scale_ptr(0),
 		m_cameraPosition(btVector3(0,0,0)),
 		m_cameraTargetPosition(btVector3(15,2,-24)),
-		m_cameraDistance(40),
+		m_cameraDistance(100),
 		m_cameraUp(0,1,0),
 		m_azi(135.f),
 		m_ele(25.f),

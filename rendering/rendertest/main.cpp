@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
     window->setWheelCallback(btDefaultWheelCallback);
 
 
-    GLPrimitiveRenderer* pprender = new GLPrimitiveRenderer(g_OpenGLWidth,g_OpenGLHeight);
+    //GLPrimitiveRenderer* pprender = new GLPrimitiveRenderer(g_OpenGLWidth,g_OpenGLHeight);
    
    glUseProgram(0); 
 
@@ -338,31 +338,6 @@ int main(int argc, char* argv[])
 		{
 		BT_PROFILE("loop");
 
-		if (shootObject)
-		{
-			shootObject = false;
-			
-			btVector3 linVel;// = (m_cameraPosition-m_cameraTargetPosition).normalize()*-100;
-
-			int x,y;
-			window->getMouseCoordinates(x,y);
-			render.getMouseDirection(&linVel[0],x,y);
-			linVel.normalize();
-			linVel*=100;
-
-//			btVector3 startPos;
-			
-			float orn[4] = {0,0,0,1};
-			float pos[4];
-			render.getCameraPosition(pos);
-			
-//			demo.setObjectTransform(pos,orn,0);
-			//render.writeSingleInstanceTransformToGPU(pos,orn,0);
-//			createScene(render, demo);
-//			printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
-//			printf("numDynamicPhysicsInstances= %d\n", demo.m_numDynamicPhysicsInstances);
-//			render.writeTransforms();
-		}
 
 
 
@@ -380,10 +355,25 @@ int main(int argc, char* argv[])
             float x = 10;
             float y=220;
             float  dx=0;
-            if (0)
+            if (1)
             {
                 BT_PROFILE("font sth_draw_text");
                 
+			//	glEnable(GL_BLEND);
+				GLint err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+
+				glDisable(GL_DEPTH_TEST);
+				err = glGetError();
+				assert(err==GL_NO_ERROR);
+        
+
+				glDisable(GL_CULL_FACE);
+
                 sth_begin_draw(stash);
                 sth_flush_draw(stash);
                 sth_draw_text(stash, droidRegular,20.f, x, y, "Non-retina font rendering !@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,1);//retinaScale);
@@ -394,7 +384,7 @@ int main(int argc, char* argv[])
                 sth_end_draw(stash);
             }
     
-			if (1)
+			if (0)
 		{
 			BT_PROFILE("gwen RenderCanvas");
 	
@@ -498,7 +488,7 @@ int main(int argc, char* argv[])
 
 	}
 
-	delete pprender;
+	//delete pprender;
 //	render.CleanupShaders();
 	window->closeWindow();
 

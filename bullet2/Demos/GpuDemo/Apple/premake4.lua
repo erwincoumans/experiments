@@ -90,7 +90,10 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
-											
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",													
 	}
 
 	if os.is("windows") then
@@ -201,7 +204,10 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
-											
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",		
 	}
 	
 	if os.is("windows") then

@@ -94,7 +94,10 @@ if (hasCL) then
 			"../../../../rendering/rendertest/Win32Window.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
-											
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",
 	}
 
 	project "bullet2_gpu_demo_opengl3core_NVIDIA"
@@ -190,6 +193,10 @@ if (hasCL) then
 			"../../../../rendering/rendertest/Win32Window.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
+			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",
 											
 	}
 end

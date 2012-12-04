@@ -949,6 +949,7 @@ void btGpuNarrowphaseAndSolver::computeContacts(cl_mem broadphasePairs, int numB
 				} else
 				{
 					m_internalData->m_convexPairsOutGPU->resize(numBroadphasePairs);
+					//printf("numBroadphasePairs = %d\n", numBroadphasePairs);
                     
 					//convex versus concave convex
                     
@@ -1170,7 +1171,7 @@ void btGpuNarrowphaseAndSolver::solveContacts()
                         
                         
                         
-                        
+                        if (nContacts)
                         {	//	5. sort constraints by cellIdx
                             {
                                 BT_PROFILE("gpu m_reorderContactKernel");
@@ -1196,6 +1197,7 @@ void btGpuNarrowphaseAndSolver::solveContacts()
                 
                 clFinish(m_queue);
                 
+				if (nContacts)
                 {
                     BT_PROFILE("gpu m_copyConstraintKernel");
                     
@@ -1211,6 +1213,8 @@ void btGpuNarrowphaseAndSolver::solveContacts()
                 
                 
                 bool compareGPU = false;
+				if (nContacts)
+				{
                 if (gpuBatchContacts)
                 {
 					maxNumBatches=250;//for now
@@ -1264,13 +1268,13 @@ void btGpuNarrowphaseAndSolver::solveContacts()
                         m_internalData->m_solverGPU->m_contactBuffer->copyFromHost(cpuContacts);
                     }
                   //  printf("maxNumBatches = %d\n", maxNumBatches);
-                    
+				} 
                 }
                 
                 
                 
                 
-                if (1)
+                if (nContacts)
                 {
                     //BT_PROFILE("gpu convertToConstraints");
                     m_internalData->m_solverGPU->convertToConstraints( bodyBuf, shapeBuf, m_internalData->m_solverGPU->m_contactBuffer /*contactNative*/, contactConstraintOut, additionalData, nContacts, csCfg );

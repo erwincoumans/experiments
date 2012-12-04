@@ -207,6 +207,21 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
+/*int		CLPhysicsDemo::registerCompoundShape()
+{
+	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
+	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+
+	col.m_shapeType = CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS;
+	col.m_shapeIndex = narrowphaseAndSolver->registerCompoundShape(vertices,indices,col,scaling);
+	
+}
+*/
+
+
+	
+
 int		CLPhysicsDemo::registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices,const float* scaling1)
 {
 	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
@@ -291,7 +306,9 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		if (useConvexHeightfield)
 		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHeightfield(s_convexHeightField,col);
 		else
+		{
 			col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
+		}
 	}
 
 	if (col.m_shapeIndex>=0)

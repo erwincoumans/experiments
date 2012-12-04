@@ -62,8 +62,8 @@ class GpuDemo : public DemoApplication
 			arraySizeZ(5),
 			m_useConcaveMesh(false),
 			gapX(2.3),
-			gapY(2.0),
-			gapZ(2.3)
+			gapY(6.0),
+			gapZ(4.3)
 		{
 		}
 	};

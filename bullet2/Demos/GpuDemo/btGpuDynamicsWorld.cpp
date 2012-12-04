@@ -123,6 +123,7 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 			const float scaling[4]={1,1,1,1};
 			bool noHeightField=true;
 		
+			
 			gpuShapeIndex = m_gpuPhysics->registerCollisionShape(&tmpVertices[0].getX(), strideInBytes, numVertices, scaling, noHeightField);
 			m_uniqueShapeMapping.push_back(gpuShapeIndex);
 		} else
@@ -208,7 +209,7 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 
 			} else
 			{
-				printf("Error: unsupported shape type in btGpuDynamicsWorld::addRigidBody\n");
+				printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",body->getCollisionShape()->getShapeType());
 				index = -1;
 				btAssert(0);
 			}

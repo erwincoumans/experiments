@@ -36,6 +36,8 @@ subject to the following restrictions:
 #include "BulletCollision/CollisionShapes/btSphereShape.h"
 #include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
+#include "BulletCollision/CollisionShapes/btCompoundShape.h"
+
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btDefaultMotionState.h"
 #include "LinearMath/btQuickprof.h"
@@ -54,6 +56,18 @@ void GpuDemo::clientMoveAndDisplay()
 	///step the simulation
 	if (m_dynamicsWorld)
 	{
+		static bool once = true;
+		if (once)
+		{
+			once=false;
+			btDefaultSerializer*	serializer = new btDefaultSerializer();
+			m_dynamicsWorld->serialize(serializer);
+ 
+			FILE* file = fopen("testFile.bullet","wb");
+			fwrite(serializer->getBufferPointer(),serializer->getCurrentBufferSize(),1, file);
+			fclose(file);
+		}
+
 		m_dynamicsWorld->stepSimulation(dt);
 		static int count=0;
 		count++;
@@ -128,11 +142,14 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		meshInterface->addTriangle(concaveVertices[0],concaveVertices[3],concaveVertices[4],true);
 		meshInterface->addTriangle(concaveVertices[0],concaveVertices[4],concaveVertices[1],true);
 
-
+#if 0
 		groundShape = new btBvhTriangleMeshShape(meshInterface,true);//btStaticPlaneShape(btVector3(0,1,0),50);
-//		btBoxShape* shape =new btBoxShape(btVector3(btScalar(150.),btScalar(10.),btScalar(150.)));
-	//	shape->initializePolyhedralFeatures();
-	//	groundShape = shape;
+#else
+		btBoxShape* shape =new btBoxShape(btVector3(btScalar(150.),btScalar(10.),btScalar(150.)));
+		shape->initializePolyhedralFeatures();
+		groundShape = shape;
+#endif
+
 	} else
 	{
 		groundShape  = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
@@ -179,13 +196,35 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		vertices.push_back(btVector3(1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,1));
-			
+		
+#if 0
 		btPolyhedralConvexShape* colShape = new btConvexHullShape(&vertices[0].getX(),vertices.size());
 		colShape->initializePolyhedralFeatures();
+#else
+		btCompoundShape* compoundShape = 0;
+		{
+			btPolyhedralConvexShape* colShape = new btConvexHullShape(&vertices[0].getX(),vertices.size());
+			colShape->initializePolyhedralFeatures();
+			compoundShape = new btCompoundShape();
+			btTransform tr;
+			tr.setIdentity();
+			tr.setOrigin(btVector3(0,-1,0));
+			compoundShape->addChildShape(tr,colShape);
+			tr.setOrigin(btVector3(0,0,2));
+			compoundShape->addChildShape(tr,colShape);
+			tr.setOrigin(btVector3(2,0,0));
+			compoundShape->addChildShape(tr,colShape);
+		}
+		btCollisionShape* colShape = compoundShape;
+#endif
+
 
 
 		btPolyhedralConvexShape* boxShape = new btBoxShape(btVector3(SCALING*1,SCALING*1,SCALING*1));
 		boxShape->initializePolyhedralFeatures();
+		
+
+
 
 		//btCollisionShape* colShape = new btSphereShape(btScalar(1.));
 		m_collisionShapes.push_back(colShape);
