@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
-	ci.useOpenCL = !args.CheckCmdLineFlag("disable_opencl");
+	ci.useOpenCL = false;//!args.CheckCmdLineFlag("disable_opencl");
 	ci.m_useConcaveMesh = true;//args.CheckCmdLineFlag("use_concave_mesh");
 	if (ci.m_useConcaveMesh)
 	{
@@ -281,12 +281,13 @@ int main(int argc, char* argv[])
 	window = new Win32OpenGLWindow();
 #endif
 	btgWindowConstructionInfo wci(g_OpenGLWidth,g_OpenGLHeight);
+	
+	window->createWindow(wci);
 	window->setResizeCallback(MyResizeCallback);
 	window->setMouseMoveCallback(MyMouseMoveCallback);
 	window->setMouseButtonCallback(MyMouseButtonCallback);
 	window->setKeyboardCallback(MyKeyboardCallback);
 
-	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
 	printf("-----------------------------------------------------\n");
 
