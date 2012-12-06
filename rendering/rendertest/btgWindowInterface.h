@@ -101,6 +101,7 @@ class btgWindowInterface
 	
 		virtual void setWindowTitle(const char* title)=0;
 
+		virtual	float	getRetinaScale() const =0;
 
 };
 

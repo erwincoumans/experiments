@@ -46,16 +46,17 @@ int m_glutScreenHeight;
 bool useInterop = false;
 
 
+#include "../rendertest/GLPrimInternalData.h"
 
+static PrimInternalData sData;
 
-
-GLuint m_texturehandle;
-GLuint m_shaderProg;
+/*GLuint sData.m_texturehandle;
+GLuint sData.m_shaderProg;
 GLint m_positionUniform;
 GLint m_colourAttribute, m_positionAttribute,m_textureAttribute;
 GLuint m_vertexArrayObject,m_vertexBuffer;
 GLuint  m_indexBuffer;
-
+*/
 
 
 
@@ -85,31 +86,31 @@ void loadBufferData(){
     };
 
     
-    glGenVertexArrays(1, &m_vertexArrayObject);
-    glBindVertexArray(m_vertexArrayObject);
+	glGenVertexArrays(1, &sData.m_vertexArrayObject);
+    glBindVertexArray(sData.m_vertexArrayObject);
     
-    glGenBuffers(1, &m_vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glGenBuffers(1, &sData.m_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, sData.m_vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
     GLuint err = glGetError();
     btAssert(err==GL_NO_ERROR);
 
   
     
-    glGenBuffers(1, &m_indexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+    glGenBuffers(1, &sData.m_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sData.m_indexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(int), indexData,GL_STATIC_DRAW);
     
-    glEnableVertexAttribArray(m_positionAttribute);
-    glEnableVertexAttribArray(m_colourAttribute);
+    glEnableVertexAttribArray(sData.m_positionAttribute);
+    glEnableVertexAttribArray(sData.m_colourAttribute);
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(m_textureAttribute);
+	glEnableVertexAttribArray(sData.m_textureAttribute);
     
-    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(sData.m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(sData.m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(sData.m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
@@ -118,12 +119,12 @@ void loadBufferData(){
 void initTestTexture()
 {
     //	glEnable(GL_TEXTURE_2D);
-	glGenTextures(1,(GLuint*)&m_texturehandle);
+	glGenTextures(1,(GLuint*)&sData.m_texturehandle);
 	
     GLint err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
-    glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+    glBindTexture(GL_TEXTURE_2D,sData.m_texturehandle);
     
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
@@ -200,22 +201,22 @@ static const char* fragmentShader= \
 
 
 void loadShader(){
-	m_shaderProg= gltLoadShaderPair(vertexShader,fragmentShader);
+	sData.m_shaderProg= gltLoadShaderPair(vertexShader,fragmentShader);
     
-   m_positionUniform = glGetUniformLocation(m_shaderProg, "p");
-    if (m_positionUniform < 0) {
+   sData.m_positionUniform = glGetUniformLocation(sData.m_shaderProg, "p");
+    if (sData.m_positionUniform < 0) {
 		btAssert(0);
 	}
-	m_colourAttribute = glGetAttribLocation(m_shaderProg, "colour");
-	if (m_colourAttribute < 0) {
+	sData.m_colourAttribute = glGetAttribLocation(sData.m_shaderProg, "colour");
+	if (sData.m_colourAttribute < 0) {
         btAssert(0);
    }
-	m_positionAttribute = glGetAttribLocation(m_shaderProg, "position");
-	if (m_positionAttribute < 0) {
+	sData.m_positionAttribute = glGetAttribLocation(sData.m_shaderProg, "position");
+	if (sData.m_positionAttribute < 0) {
 		btAssert(0);
   	}
-	m_textureAttribute = glGetAttribLocation(m_shaderProg,"texuv");
-	if (m_textureAttribute < 0) {
+	sData.m_textureAttribute = glGetAttribLocation(sData.m_shaderProg,"texuv");
+	if (sData.m_textureAttribute < 0) {
 		btAssert(0);
 	}
     
@@ -223,59 +224,58 @@ void loadShader(){
 
 void display() {
    
-    glClearColor(.4, .4, 0.4, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    
     GLint err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
 	const float timeScale = 0.008f;
 	
-    glUseProgram(m_shaderProg);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-    glBindVertexArray(m_vertexArrayObject);
+    glUseProgram(sData.m_shaderProg);
+    glBindBuffer(GL_ARRAY_BUFFER, sData.m_vertexBuffer);
+    glBindVertexArray(sData.m_vertexArrayObject);
     
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
     
- //   glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+ //   glBindTexture(GL_TEXTURE_2D,sData.m_texturehandle);
     
     
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
     vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
-    glUniform2fv(m_positionUniform, 1, (const GLfloat *)&p);
+    glUniform2fv(sData.m_positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(m_positionAttribute);
+    glEnableVertexAttribArray(sData.m_positionAttribute);
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
 
-    glEnableVertexAttribArray(m_colourAttribute);
+    glEnableVertexAttribArray(sData.m_colourAttribute);
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(m_textureAttribute);
+	glEnableVertexAttribArray(sData.m_textureAttribute);
     
-    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(sData.m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(sData.m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(sData.m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     btAssert(err==GL_NO_ERROR);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sData.m_indexBuffer);
     
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
 
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+   // glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
     
@@ -377,7 +377,9 @@ int main(int argc, char* argv[])
 
 	int fontTextureWidth = 512;
 	int fontTextureHeight = 512;
-	stash = sth_create(fontTextureWidth,fontTextureHeight,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);
+	SimpleOpenGL2RenderCallbacks* renderCallbacks = new SimpleOpenGL2RenderCallbacks(&sData);
+
+	stash = sth_create(fontTextureWidth,fontTextureHeight,renderCallbacks);
 	
     err = glGetError();
     btAssert(err==GL_NO_ERROR);
@@ -476,8 +478,8 @@ int main(int argc, char* argv[])
         err = glGetError();
         btAssert(err==GL_NO_ERROR);
         
-		    glClearColor(1,1,1,1);//.4, .4, 0.4, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		glClearColor(1,1,1,1);//.4, .4, 0.4, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         //display();
       
@@ -521,7 +523,7 @@ int main(int argc, char* argv[])
 		
 		sth_begin_draw(stash);
 		
-		display2();
+		display();
 
 		dx = sx; dy = sy;
 		static int once=0;
@@ -529,6 +531,7 @@ int main(int argc, char* argv[])
 
 		//sth_draw_text(stash, droidRegular,12.f, dx, dy-50, "How does this OpenGL True Type font look? ", &dx,width,height);
 		int spacing = 512;
+		if (1)
 		for (int i=20;i<=110;i+=12)
 		{
 			char txt[512];

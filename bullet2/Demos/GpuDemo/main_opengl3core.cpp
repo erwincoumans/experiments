@@ -16,6 +16,7 @@
 
 #include "../rendering/OpenGLTrueTypeFont/fontstash.h"
 #include "../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
+#include "GwenUserInterface.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
@@ -31,7 +32,7 @@ extern bool enableExperimentalCpuConcaveCollision;
 
 sth_stash* stash=0;
 
-sth_stash* initFont()
+sth_stash* initFont(GLPrimitiveRenderer* primRender)
 {
 	GLint err;
 
@@ -41,7 +42,9 @@ sth_stash* initFont()
 	float sx,sy,dx,dy,lh;
 	GLuint texture;
 
-	stash = sth_create(512,512,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);//256,256);//,1024);//512,512);
+	OpenGL2RenderCallbacks* renderCallbacks = new OpenGL2RenderCallbacks(primRender);
+
+	stash = sth_create(512,512,renderCallbacks);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -260,7 +263,11 @@ int main(int argc, char* argv[])
 	glewInit();
 #endif
 	
-	stash = initFont();
+	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
+
+	stash = initFont(&prim);
+	GwenUserInterface* gui = new GwenUserInterface();
+	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
 
 		glClearColor(1,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -268,8 +275,10 @@ int main(int argc, char* argv[])
 	{
 		window->startRendering();
 		glFinish();
+
+		
 	
-		GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
+		
 		float color[4] = {1,1,1,1};
 		prim.drawRect(0,0,200,200,color);
 		float retinaScale = 1;
@@ -306,6 +315,7 @@ int main(int argc, char* argv[])
                 sth_end_draw(stash);
             }
 
+		gui->draw(g_OpenGLWidth,g_OpenGLHeight);
 		window->endRendering();
 		glFinish();
 	}
@@ -374,6 +384,7 @@ int main(int argc, char* argv[])
 				syncOnly = true;
 
 			}
+			gui->draw(g_OpenGLWidth,g_OpenGLHeight);
 			window->endRendering();
 			glFinish();
 

@@ -174,7 +174,7 @@ HGLRC CreateOpenGLDeviceContext()
 
 	int droidRegular, droidItalic, droidBold, droidJapanese, dejavu;
 
-sth_stash* initFont()
+sth_stash* initFont(GLPrimitiveRenderer* primRenderer)
 {
 	GLint err;
 
@@ -184,7 +184,10 @@ sth_stash* initFont()
 	float sx,sy,dx,dy,lh;
 	GLuint texture;
 
-	stash = sth_create(512,512,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);//256,256);//,1024);//512,512);
+	
+	OpenGL2RenderCallbacks* renderCallbacks = new OpenGL2RenderCallbacks(primRenderer);
+
+	stash = sth_create(512,512,renderCallbacks);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -301,9 +304,11 @@ int main()
 
 	retinaScale = window->getRetinaScale();
 
-	sth_stash* font = initFont();
-
 	GLPrimitiveRenderer* primRenderer = new GLPrimitiveRenderer(sWidth,sHeight);
+
+	sth_stash* font = initFont(primRenderer );
+
+	
 	GwenOpenGL3CoreRenderer* gwenRenderer = new GwenOpenGL3CoreRenderer(primRenderer,font,sWidth,sHeight,retinaScale);
 
 

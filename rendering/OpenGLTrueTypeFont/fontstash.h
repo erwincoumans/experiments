@@ -99,10 +99,13 @@ struct sth_texture
 };
 
 
-typedef void (*btUpdateTextureCallback)(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight);
-typedef void (*btFontRenderCallback)(sth_texture* texture);
+struct	RenderCallbacks
+{
+	virtual void updateTexture(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight)=0;
+	virtual void render(sth_texture* texture)=0;
+};
 
-struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btFontRenderCallback renderCallback);
+struct sth_stash* sth_create(int cachew, int cacheh, RenderCallbacks* callbacks);
 
 int sth_add_font(struct sth_stash* stash, const char* path);
 int sth_add_font_from_memory(struct sth_stash* stash, unsigned char* buffer);

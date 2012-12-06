@@ -91,8 +91,7 @@ struct sth_stash
 	struct sth_font* fonts;
 	int drawing;
 
-	btUpdateTextureCallback		m_updateTextureCallback;
-	btFontRenderCallback		m_renderCallback;
+	RenderCallbacks*	m_renderCallbacks;
 };
 
 
@@ -132,7 +131,7 @@ static unsigned int decutf8(unsigned int* state, unsigned int* codep, unsigned i
 
 
 
-struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback updateTextureCB, btFontRenderCallback renderCallback)
+struct sth_stash* sth_create(int cachew, int cacheh, RenderCallbacks* renderCallbacks)
 {
 	struct sth_stash* stash = NULL;
 	struct sth_texture* texture = NULL;
@@ -146,8 +145,7 @@ struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback upd
     }
 	memset(stash,0,sizeof(struct sth_stash));
 
-	stash->m_updateTextureCallback = updateTextureCB;
-	stash->m_renderCallback = renderCallback;
+	stash->m_renderCallbacks = renderCallbacks;
 	
 	// Allocate memory for the first texture
 	texture = (struct sth_texture*)malloc(sizeof(struct sth_texture));
@@ -165,7 +163,7 @@ struct sth_stash* sth_create(int cachew, int cacheh, btUpdateTextureCallback upd
 	stash->ith = 1.0f/cacheh;
 	stash->textures = texture;
 	
-	stash->m_updateTextureCallback(texture, 0, stash->tw, stash->th);    
+	stash->m_renderCallbacks->updateTexture(texture, 0, stash->tw, stash->th);    
     
 	return stash;
 	
@@ -425,7 +423,7 @@ static struct sth_glyph* get_glyph(struct sth_stash* stash, struct sth_font* fnt
 						if (texture == NULL) goto error;
 						memset(texture,0,sizeof(struct sth_texture));
 						
-						stash->m_updateTextureCallback(texture,0,stash->tw,stash->th);
+						stash->m_renderCallbacks->updateTexture(texture,0,stash->tw,stash->th);
 
                         
 					}
@@ -473,7 +471,7 @@ static struct sth_glyph* get_glyph(struct sth_stash* stash, struct sth_font* fnt
 		unsigned char* ptr = texture->m_texels+glyph->x0_+glyph->y0*stash->tw;
 		stbtt_MakeGlyphBitmap(&fnt->font,ptr , gw,gh,stash->tw, scale,scale, g);
 
-		stash->m_updateTextureCallback(texture,glyph, stash->tw, stash->th);
+		stash->m_renderCallbacks->updateTexture(texture,glyph, stash->tw, stash->th);
 
 	}
 	
@@ -548,7 +546,7 @@ static void flush_draw(struct sth_stash* stash)
 	{
 		if (texture->nverts > 0)
 		{
-			stash->m_renderCallback(texture);		
+			stash->m_renderCallbacks->render(texture);		
 			texture->nverts = 0;
 		}
 		texture = texture->next;
@@ -792,7 +790,7 @@ void sth_delete(struct sth_stash* stash)
 	while(tex != NULL) {
 		curtex = tex;
 		tex = tex->next;
-		stash->m_updateTextureCallback(curtex,0,0,0);
+		stash->m_renderCallbacks->updateTexture(curtex,0,0,0);
 		free(curtex);
 	}
 

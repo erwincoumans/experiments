@@ -15,7 +15,8 @@ if (hasCL) then
 
 		includedirs {
               "..",
-              "../../../../bullet2"
+              "../../../../bullet2",
+              "../../../../rendering/Gwen"
     }
 	
 
@@ -90,6 +91,8 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
+			"../../../../rendering/rendertest/TwFonts.cpp",
+			"../../../../rendering/rendertest/TwFonts.h",
 			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
 			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
 			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
@@ -127,7 +130,8 @@ if (hasCL) then
 
 		includedirs {
               "..",
-              "../../../../bullet2"
+              "../../../../bullet2",
+              "../../../../rendering/Gwen"
     }
 	
 
@@ -135,7 +139,8 @@ if (hasCL) then
 		"BulletSoftBody",
 		"BulletDynamics",
 		"BulletCollision",
-		"LinearMath"
+		"LinearMath",
+		"gwen",
 	}
 	
 
@@ -151,7 +156,8 @@ if (hasCL) then
 			"../btCpuDynamicsWorld.h",
 			"../btGpuIntegrateTransforms.cpp",
 			"../btGpuIntegrateTransforms.h",
-			
+			"../GwenUserInterface.cpp",
+			"../GwenUserInterface.h",			
 			"../main_opengl3core.cpp",
 	
 			"../../../../opencl/opengl_interop/btOpenCLGLInteropBuffer.cpp",
@@ -204,6 +210,8 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
+			"../../../../rendering/rendertest/TwFonts.cpp",
+			"../../../../rendering/rendertest/TwFonts.h",
 			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.cpp",
 			"../../../../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h",
 			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",

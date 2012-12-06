@@ -9,6 +9,7 @@ struct sth_stash;
 #include "../OpenGLTrueTypeFont/fontstash.h"
 #include "TwFonts.h"
 static float extraSpacing = 0.;//6f;
+#include <assert.h>
 
 static GLuint BindFont(const CTexFont *_Font)
 {
@@ -91,6 +92,56 @@ public:
 	virtual void Begin()
 	{
 		m_yOffset=0;
+		glEnable(GL_BLEND);
+		GLint err = glGetError();
+		assert(err==GL_NO_ERROR);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+        
+		glDisable(GL_DEPTH_TEST);
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+        
+		//glColor4ub(255,0,0,255);
+		
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+        
+		
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+	//	saveOpenGLState(width,height);//m_glutScreenWidth,m_glutScreenHeight);
+			
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+
+			
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+
+		glDisable(GL_CULL_FACE);
+
+		glDisable(GL_DEPTH_TEST);
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+            
+		glEnable(GL_BLEND);
+
+            
+		err = glGetError();
+		assert(err==GL_NO_ERROR);
+            
 	}
 	virtual void End()
 	{

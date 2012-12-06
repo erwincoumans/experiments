@@ -1,3 +1,6 @@
+#include "opengl_fontstashcallbacks.h"
+#include "../rendertest/GLPrimitiveRenderer.h"
+#include "../rendertest/GLPrimInternalData.h"
 
 #include "fontstash.h"
 #include "../rendertest/OpenGLInclude.h"
@@ -13,28 +16,35 @@ static unsigned int s_indexData[INDEX_COUNT];
 GLuint s_indexArrayObject, s_indexBuffer;
 GLuint s_vertexArrayObject,s_vertexBuffer;
 
-extern   GLuint m_shaderProg;
-extern    GLint m_positionUniform;
-extern    GLint m_colourAttribute;
-extern    GLint m_positionAttribute;
-extern    GLint m_textureAttribute;
-extern    GLuint m_vertexBuffer;
-extern    GLuint m_vertexArrayObject;
-extern    GLuint  m_indexBuffer;
-extern    GLuint m_texturehandle;
+OpenGL2RenderCallbacks::OpenGL2RenderCallbacks(GLPrimitiveRenderer* primRender)
+	:m_primRender2(primRender)
+{
 
+}
+OpenGL2RenderCallbacks::~OpenGL2RenderCallbacks()
+{
+}
 
+PrimInternalData* OpenGL2RenderCallbacks::getData()
+{
+	return m_primRender2->getData();
+}
+InternalOpenGL2RenderCallbacks::~InternalOpenGL2RenderCallbacks()
+{
 
+}
 
-void display2() {
+void InternalOpenGL2RenderCallbacks::display2() 
+{
     
     GLint err = glGetError();
     assert(err==GL_NO_ERROR);
    // glViewport(0,0,10,10);
     
 	//const float timeScale = 0.008f;
-	
-    glUseProgram(m_shaderProg);
+	PrimInternalData* data = getData();
+
+    glUseProgram(data->m_shaderProg);
     glBindBuffer(GL_ARRAY_BUFFER, s_vertexBuffer);
     glBindVertexArray(s_vertexArrayObject);
     
@@ -49,26 +59,26 @@ void display2() {
     assert(err==GL_NO_ERROR);
     
     vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
-    glUniform2fv(m_positionUniform, 1, (const GLfloat *)&p);
+    glUniform2fv(data->m_positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(m_positionAttribute);
+    glEnableVertexAttribArray(data->m_positionAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(m_colourAttribute);
+    glEnableVertexAttribArray(data->m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(m_textureAttribute);
+	glEnableVertexAttribArray(data->m_textureAttribute);
     
-    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(data->m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(data->m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(data->m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 /*    
@@ -89,7 +99,7 @@ void display2() {
 
 
 
-void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight)
+void InternalOpenGL2RenderCallbacks::updateTexture(sth_texture* texture, sth_glyph* glyph, int textureWidth, int textureHeight)
 {
 	GLint err;
     
@@ -178,7 +188,7 @@ void OpenGL2UpdateTextureCallback(sth_texture* texture, sth_glyph* glyph, int te
 	}
 }
 
-void OpenGL2RenderCallback(sth_texture* texture)
+void InternalOpenGL2RenderCallbacks::render(sth_texture* texture)
 {
 	display2();
 		

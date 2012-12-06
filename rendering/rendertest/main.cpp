@@ -118,7 +118,7 @@ void MyMouseMoveCallback( float x, float y)
 
 	int droidRegular, droidItalic, droidBold, droidJapanese, dejavu;
 
-sth_stash* initFont()
+sth_stash* initFont(GLPrimitiveRenderer* primRender)
 {
 	GLint err;
 
@@ -127,8 +127,8 @@ sth_stash* initFont()
 	unsigned char* data;
 	float sx,sy,dx,dy,lh;
 	GLuint texture;
-
-	stash = sth_create(512,512,OpenGL2UpdateTextureCallback,OpenGL2RenderCallback);//256,256);//,1024);//512,512);
+	OpenGL2RenderCallbacks* renderCallbacks = new OpenGL2RenderCallbacks(primRender);
+	stash = sth_create(512,512,renderCallbacks);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -292,8 +292,9 @@ int main(int argc, char* argv[])
 	int maxObjectCapacity=128*1024;
 	GLInstancingRenderer render(maxObjectCapacity);
 
+	GLPrimitiveRenderer* primRenderer = new GLPrimitiveRenderer(g_OpenGLWidth,g_OpenGLHeight);
 	
-	sth_stash* stash = initFont();
+	sth_stash* stash = initFont(primRenderer);
 		
 	render.InitShaders();
 
@@ -316,8 +317,11 @@ int main(int argc, char* argv[])
    
    glUseProgram(0); 
 
+   	
+   
+
 ////////////////////////////////
-	setupGUI(g_OpenGLWidth,g_OpenGLHeight,stash,retinaScale);
+	setupGUI(g_OpenGLWidth,g_OpenGLHeight,stash,retinaScale,primRenderer);
 
 	/////////////////////////////////////
 
@@ -359,7 +363,7 @@ int main(int argc, char* argv[])
             {
                 BT_PROFILE("font sth_draw_text");
                 
-			//	glEnable(GL_BLEND);
+				glEnable(GL_BLEND);
 				GLint err = glGetError();
 				assert(err==GL_NO_ERROR);
 
@@ -384,7 +388,7 @@ int main(int argc, char* argv[])
                 sth_end_draw(stash);
             }
     
-			if (0)
+			if (1)
 		{
 			BT_PROFILE("gwen RenderCanvas");
 	

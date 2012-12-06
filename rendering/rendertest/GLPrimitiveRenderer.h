@@ -8,7 +8,7 @@ class GLPrimitiveRenderer
     int m_screenWidth;
     int m_screenHeight;
 
- 
+	struct PrimInternalData*	m_data;
     
     void loadBufferData();
     
@@ -22,6 +22,10 @@ public:
     void drawLine();//float from[4], float to[4], float color[4]);
     void setScreenSize(int width, int height);
     
+	PrimInternalData*	getData()
+	{
+		return m_data;
+	}
 };
 
 #endif//_GL_PRIMITIVE_RENDERER_H

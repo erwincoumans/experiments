@@ -1,4 +1,6 @@
 #include "GLPrimitiveRenderer.h"
+#include "GLPrimInternalData.h"
+
 #include "LoadShader.h"
 
 #include <assert.h>
@@ -76,15 +78,7 @@ typedef struct
 } Vertex;
 
 
-   GLuint m_shaderProg;
-    GLint m_positionUniform;
-    GLint m_colourAttribute;
-    GLint m_positionAttribute;
-    GLint m_textureAttribute;
-    GLuint m_vertexBuffer;
-    GLuint m_vertexArrayObject;
-    GLuint  m_indexBuffer;
-    GLuint m_texturehandle;
+   
 
 
 GLPrimitiveRenderer::GLPrimitiveRenderer(int screenWidth, int screenHeight)
@@ -92,22 +86,24 @@ GLPrimitiveRenderer::GLPrimitiveRenderer(int screenWidth, int screenHeight)
 m_screenHeight(screenHeight)
 {
     
-    m_shaderProg = gltLoadShaderPair(vertexShader,fragmentShader);
+	m_data = new PrimInternalData;
+
+    m_data->m_shaderProg = gltLoadShaderPair(vertexShader,fragmentShader);
     
-    m_positionUniform = glGetUniformLocation(m_shaderProg, "p");
-    if (m_positionUniform < 0) {
+    m_data->m_positionUniform = glGetUniformLocation(m_data->m_shaderProg, "p");
+    if (m_data->m_positionUniform < 0) {
 		assert(0);
 	}
-	m_colourAttribute = glGetAttribLocation(m_shaderProg, "colour");
-	if (m_colourAttribute < 0) {
+	m_data->m_colourAttribute = glGetAttribLocation(m_data->m_shaderProg, "colour");
+	if (m_data->m_colourAttribute < 0) {
         assert(0);
     }
-	m_positionAttribute = glGetAttribLocation(m_shaderProg, "position");
-	if (m_positionAttribute < 0) {
+	m_data->m_positionAttribute = glGetAttribLocation(m_data->m_shaderProg, "position");
+	if (m_data->m_positionAttribute < 0) {
 		assert(0);
   	}
-	m_textureAttribute = glGetAttribLocation(m_shaderProg,"texuv");
-	if (m_textureAttribute < 0) {
+	m_data->m_textureAttribute = glGetAttribLocation(m_data->m_shaderProg,"texuv");
+	if (m_data->m_textureAttribute < 0) {
 		assert(0);
 	}
 
@@ -126,31 +122,31 @@ void GLPrimitiveRenderer::loadBufferData()
     };
     
         
-    glGenVertexArrays(1, &m_vertexArrayObject);
-    glBindVertexArray(m_vertexArrayObject);
+    glGenVertexArrays(1, &m_data->m_vertexArrayObject);
+    glBindVertexArray(m_data->m_vertexArrayObject);
     
-    glGenBuffers(1, &m_vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glGenBuffers(1, &m_data->m_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vertex), vertexData, GL_STATIC_DRAW);
     GLuint err = glGetError();
     assert(err==GL_NO_ERROR);
     
     
     
-    glGenBuffers(1, &m_indexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+    glGenBuffers(1, &m_data->m_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_data->m_indexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(int), s_indexData,GL_STATIC_DRAW);
     
-    glEnableVertexAttribArray(m_positionAttribute);
-    glEnableVertexAttribArray(m_colourAttribute);
+    glEnableVertexAttribArray(m_data->m_positionAttribute);
+    glEnableVertexAttribArray(m_data->m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(m_textureAttribute);
+	glEnableVertexAttribArray(m_data->m_textureAttribute);
     
-    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(m_data->m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(m_data->m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(m_data->m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
@@ -186,8 +182,8 @@ void GLPrimitiveRenderer::loadBufferData()
         }
     }
     
-    glGenTextures(1,(GLuint*)&m_texturehandle);
-    glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+    glGenTextures(1,(GLuint*)&m_data->m_texturehandle);
+    glBindTexture(GL_TEXTURE_2D,m_data->m_texturehandle);
     
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256,256,0,GL_RGB,GL_UNSIGNED_BYTE,image);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -207,7 +203,7 @@ GLPrimitiveRenderer::~GLPrimitiveRenderer()
 	glBindTexture(GL_TEXTURE_2D,0);
 	glUseProgram(0);
 	 glBindTexture(GL_TEXTURE_2D,0);
-    glDeleteProgram(m_shaderProg);
+    glDeleteProgram(m_data->m_shaderProg);
 }
 
 void GLPrimitiveRenderer::drawLine()
@@ -225,7 +221,7 @@ void GLPrimitiveRenderer::drawRect(float x0, float y0, float x1, float y1, float
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 	
-	 glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+	 glBindTexture(GL_TEXTURE_2D,m_data->m_texturehandle);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
 
@@ -243,13 +239,13 @@ void GLPrimitiveRenderer::drawTexturedRect(float x0, float y0, float x1, float y
     assert(err==GL_NO_ERROR);
    
     
-    glUseProgram(m_shaderProg);
+    glUseProgram(m_data->m_shaderProg);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-    glBindVertexArray(m_vertexArrayObject);
+    glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vertexBuffer);
+    glBindVertexArray(m_data->m_vertexArrayObject);
     
 	bool useFiltering = false;
 	if (useFiltering)
@@ -280,30 +276,30 @@ void GLPrimitiveRenderer::drawTexturedRect(float x0, float y0, float x1, float y
     assert(err==GL_NO_ERROR);
     
     vec2 p( 0.f,0.f);//?b?0.5f * sinf(timeValue), 0.5f * cosf(timeValue) );
-    glUniform2fv(m_positionUniform, 1, (const GLfloat *)&p);
+    glUniform2fv(m_data->m_positionUniform, 1, (const GLfloat *)&p);
     
     err = glGetError();
     assert(err==GL_NO_ERROR);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(m_positionAttribute);
+    glEnableVertexAttribArray(m_data->m_positionAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glEnableVertexAttribArray(m_colourAttribute);
+    glEnableVertexAttribArray(m_data->m_colourAttribute);
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-	glEnableVertexAttribArray(m_textureAttribute);
+	glEnableVertexAttribArray(m_data->m_textureAttribute);
     
-    glVertexAttribPointer(m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
-    glVertexAttribPointer(m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
-    glVertexAttribPointer(m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
+    glVertexAttribPointer(m_data->m_positionAttribute, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)0);
+    glVertexAttribPointer(m_data->m_colourAttribute  , 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)sizeof(vec4));
+    glVertexAttribPointer(m_data->m_textureAttribute , 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid *)(sizeof(vec4)+sizeof(vec4)));
 	err = glGetError();
     assert(err==GL_NO_ERROR);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_data->m_indexBuffer);
     
     //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     int indexCount = 6;
@@ -327,7 +323,7 @@ void GLPrimitiveRenderer::drawTexturedRect(float x0, float y0, float x1, float y
     err = glGetError();
     assert(err==GL_NO_ERROR);
 
-	//glDisableVertexAttribArray(m_textureAttribute);
+	//glDisableVertexAttribArray(m_data->m_textureAttribute);
     err = glGetError();
     assert(err==GL_NO_ERROR);
 
