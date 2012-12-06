@@ -33,8 +33,6 @@
 			"../btGpuSapBroadphase.h",
 			"../CLPhysicsDemo.cpp",
 			"../CLPhysicsDemo.h",
-			"../btPgsJacobiSolver.cpp",
-			"../btPgsJacobiSolver.h",
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
