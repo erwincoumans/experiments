@@ -9,8 +9,11 @@
 #include "Gwen/Controls/HorizontalSlider.h"
 #include "Gwen/Controls/GroupBox.h"
 #include "Gwen/Controls/CheckBox.h"
-#include "Gwen/Controls/MenuStrip.h"
 
+#include "Gwen/Controls/ComboBox.h"
+#include "Gwen/Controls/MenuStrip.h"
+#include "Gwen/Controls/Property/Text.h"
+#include "Gwen/Controls/SplitterBar.h"
 
 #include "Gwen/Gwen.h"
 #include "Gwen/Align.h"
@@ -80,7 +83,35 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 	m_data->pCanvas->SetDrawBackground( false);
 	m_data->pCanvas->SetBackgroundColor( Gwen::Color( 150, 170, 170, 255 ) );
 
-	MyTestMenuBar* menubar = new MyTestMenuBar(m_data->pCanvas);
+	//MyTestMenuBar* menubar = new MyTestMenuBar(m_data->pCanvas);
+
+	/*Gwen::Controls::GroupBox* box = new Gwen::Controls::GroupBox(m_data->pCanvas);
+	box->SetText("text");
+	box->SetName("name");
+	box->SetHeight(500);
+	*/
+	/*Gwen::Controls::WindowControl* windowLeft = new Gwen::Controls::WindowControl(m_data->pCanvas);
+	windowLeft->Dock(Gwen::Pos::Left);
+	windowLeft->SetTitle("title");
+
+	Gwen::Controls::WindowControl* windowBottom = new Gwen::Controls::WindowControl(m_data->pCanvas);
+	windowBottom->SetHeight(100);
+	windowBottom->Dock(Gwen::Pos::Bottom);
+	windowBottom->SetTitle("bottom");
+	*/
+//	Gwen::Controls::Property::Text* prop = new Gwen::Controls::Property::Text(m_data->pCanvas);
+	//prop->Dock(Gwen::Pos::Bottom);
+	/*Gwen::Controls::SplitterBar* split = new Gwen::Controls::SplitterBar(m_data->pCanvas);
+	split->Dock(Gwen::Pos::Center);
+	split->SetHeight(300);
+	split->SetWidth(300);
+	*/
+	Gwen::Controls::TabControl* tab = new Gwen::Controls::TabControl(m_data->pCanvas);
+	tab->SetHeight(300);
+	tab->SetWidth(100);
+	tab->Dock(Gwen::Pos::Left);
+	
+	Gwen::Controls::ComboBox* box = new Gwen::Controls::ComboBox(tab);
 
 }
 		
