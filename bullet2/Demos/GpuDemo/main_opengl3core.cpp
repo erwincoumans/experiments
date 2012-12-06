@@ -21,6 +21,12 @@
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
 
+void MyResizeCallback( float width, float height)
+{
+	g_OpenGLWidth = width;
+	g_OpenGLHeight = height;
+}
+
 btgWindowInterface* window=0;
 
 extern bool enableExperimentalCpuConcaveCollision;
@@ -251,7 +257,8 @@ int main(int argc, char* argv[])
 	window = new Win32OpenGLWindow();
 #endif
 	btgWindowConstructionInfo wci(g_OpenGLWidth,g_OpenGLHeight);
-	
+	window->setResizeCallback(MyResizeCallback);
+
 	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
 	printf("-----------------------------------------------------\n");

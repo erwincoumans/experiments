@@ -16,6 +16,8 @@ class GwenUserInterface
 		void	init(int width, int height,struct sth_stash* stash,float retinaScale);
 		
 		void	draw(int width, int height);
+
+		void	resize(int width, int height);
 				
 		
 };
