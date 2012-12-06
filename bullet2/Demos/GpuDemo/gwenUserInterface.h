@@ -19,7 +19,9 @@ class GwenUserInterface
 
 		void	resize(int width, int height);
 				
-		
+		bool	mouseMoveCallback( float x, float y);
+		bool	mouseButtonCallback(int button, int state, float x, float y);
+
 };
 
 #endif //_GWEN_USER_INTERFACE_H

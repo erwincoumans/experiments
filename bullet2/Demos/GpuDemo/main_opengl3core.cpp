@@ -21,13 +21,45 @@
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
 
-void MyResizeCallback( float width, float height)
+static void MyResizeCallback( float width, float height)
 {
 	g_OpenGLWidth = width;
 	g_OpenGLHeight = height;
 }
 
 btgWindowInterface* window=0;
+GwenUserInterface* gui  = 0;
+
+static void MyMouseMoveCallback( float x, float y)
+{
+	if (gui)
+	{
+		bool handled = gui ->mouseMoveCallback(x,y);
+		if (!handled)
+			btDefaultMouseMoveCallback(x,y);
+	}
+}
+static void MyMouseButtonCallback(int button, int state, float x, float y)
+{
+	if (gui)
+	{
+		bool handled = gui->mouseButtonCallback(button,state,x,y);
+		if (!handled)
+			btDefaultMouseButtonCallback(button,state,x,y);
+	}
+}
+
+
+void MyKeyboardCallback(int key, int state)
+{
+	if (key==BTG_ESCAPE && window)
+	{
+		window->setRequestExit();
+	}
+	btDefaultKeyboardCallback(key,state);
+}
+
+
 
 extern bool enableExperimentalCpuConcaveCollision;
 
@@ -145,14 +177,6 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
 }
 
 
-void MyKeyboardCallback(int key, int state)
-{
-	if (key==BTG_ESCAPE && window)
-	{
-		window->setRequestExit();
-	}
-	btDefaultKeyboardCallback(key,state);
-}
 
 
 #include "../rendering/rendertest/OpenGLInclude.h"
@@ -258,6 +282,9 @@ int main(int argc, char* argv[])
 #endif
 	btgWindowConstructionInfo wci(g_OpenGLWidth,g_OpenGLHeight);
 	window->setResizeCallback(MyResizeCallback);
+	window->setMouseMoveCallback(MyMouseMoveCallback);
+	window->setMouseButtonCallback(MyMouseButtonCallback);
+	window->setKeyboardCallback(MyKeyboardCallback);
 
 	window->createWindow(wci);
 	window->setWindowTitle("MyTest");
@@ -273,7 +300,7 @@ int main(int argc, char* argv[])
 	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
 
 	stash = initFont(&prim);
-	GwenUserInterface* gui = new GwenUserInterface();
+	gui = new GwenUserInterface();
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
 
 		glClearColor(1,0,0,1);
@@ -338,9 +365,7 @@ int main(int argc, char* argv[])
 	glFinish();
 
 	
-	window->setKeyboardCallback(MyKeyboardCallback);
-	window->setMouseButtonCallback(btDefaultMouseButtonCallback);
-	window->setMouseMoveCallback(btDefaultMouseMoveCallback);
+	
 	window->setWheelCallback(btDefaultWheelCallback);
 
 
