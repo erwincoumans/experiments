@@ -3,6 +3,8 @@
 
 struct GwenInternalData;
 
+typedef void (*btToggleButtonCallback)(int button, int state);
+
 class GwenUserInterface
 {
 	GwenInternalData*	m_data;
@@ -22,6 +24,8 @@ class GwenUserInterface
 		bool	mouseMoveCallback( float x, float y);
 		bool	mouseButtonCallback(int button, int state, float x, float y);
 
+		void	setToggleButtonCallback(btToggleButtonCallback callback);
+		void	registerToggleButton(int buttonId, const char* name);
 };
 
 #endif //_GWEN_USER_INTERFACE_H

@@ -10,11 +10,12 @@
 #include "Gwen/Controls/GroupBox.h"
 #include "Gwen/Controls/CheckBox.h"
 #include "Gwen/Controls/StatusBar.h"
+#include "Gwen/Controls/Button.h"
 #include "Gwen/Controls/ComboBox.h"
 #include "Gwen/Controls/MenuStrip.h"
 #include "Gwen/Controls/Property/Text.h"
 #include "Gwen/Controls/SplitterBar.h"
-
+#include "LinearMath/btAlignedObjectArray.h"
 #include "Gwen/Gwen.h"
 #include "Gwen/Align.h"
 #include "Gwen/Utility.h"
@@ -32,11 +33,15 @@ struct GwenInternalData
 	Gwen::Skin::Simple				skin;
 	Gwen::Controls::Canvas*			pCanvas;
 	GLPrimitiveRenderer* m_primRenderer;
+	Gwen::Controls::TabButton*		m_demoPage;
+	btAlignedObjectArray<struct MyHander*>	m_handlers;
+	btToggleButtonCallback			m_toggleButtonCallback;
 
 };
 GwenUserInterface::GwenUserInterface()
 {
 	m_data = new GwenInternalData();
+	m_data->m_toggleButtonCallback = 0;
 
 }
 		
@@ -77,6 +82,46 @@ void	GwenUserInterface::resize(int width, int height)
 {
 	m_data->pCanvas->SetSize(width,height);
 }
+
+
+struct MyHander   :public Gwen::Event::Handler
+{
+	GwenInternalData*	m_data;
+	int					m_buttonId;
+
+	MyHander  (GwenInternalData* data, int buttonId)
+		:m_data(data),
+		m_buttonId(buttonId)
+	{
+	}
+
+	void onButtonA( Gwen::Controls::Base* pControl )
+	{
+		Gwen::Controls::Button* but = (Gwen::Controls::Button*) pControl;
+		int dep = but->IsDepressed();
+		int tog = but->GetToggleState();
+		if (m_data->m_toggleButtonCallback)
+			(*m_data->m_toggleButtonCallback)(m_buttonId,tog);
+	}
+
+	void SliderMoved(Gwen::Controls::Base* pControl )
+	{
+		//Gwen::Controls::Slider* pSlider = (Gwen::Controls::Slider*)pControl;
+		//this->m_app->scaleYoungModulus(pSlider->GetValue());
+		//	printf("Slider Value: %.2f", pSlider->GetValue() );
+	}
+
+
+	void	OnCheckChangedStiffnessWarping (Gwen::Controls::Base* pControl)
+	{
+		//Gwen::Controls::CheckBox* labeled = (Gwen::Controls::CheckBox* )pControl;
+		//bool checked = labeled->IsChecked();
+		//m_app->m_stiffness_warp_on  = checked;
+	}
+
+
+};
+
 
 
 void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float retinaScale)
@@ -133,18 +178,25 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 	//tab->SetMargin( Gwen::Margin( 2, 2, 2, 2 ) );
 
 	Gwen::UnicodeString str1(L"Demo");
-	Gwen::Controls::TabButton* but1 = tab->AddPage(str1);
+	m_data->m_demoPage = tab->AddPage(str1);
 	
 	Gwen::UnicodeString str2(L"OpenCL");
 	tab->AddPage(str2);
 	//Gwen::UnicodeString str3(L"page3");
 //	tab->AddPage(str3);
 	
-	Gwen::Controls::ComboBox* combobox = new Gwen::Controls::ComboBox(but1->GetPage());
+	Gwen::Controls::ComboBox* combobox = new Gwen::Controls::ComboBox(m_data->m_demoPage->GetPage());
 	combobox->SetPos(10, 10 );
 	combobox->SetWidth( 100 );
 	//box->SetPos(120,130);
 	combobox->AddItem(str1);
+
+	
+	
+	//but->onPress.Add(handler, &MyHander::onButtonA);
+
+	
+	
 	//box->Dock(Gwen::Pos::Left);
 
 	/*Gwen::Controls::WindowControl* windowBottom = new Gwen::Controls::WindowControl(m_data->pCanvas);
@@ -164,7 +216,34 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 	
 	*/
 }
-		
+	
+
+void	GwenUserInterface::setToggleButtonCallback(btToggleButtonCallback callback)
+{
+	m_data->m_toggleButtonCallback = callback;
+}
+void	GwenUserInterface::registerToggleButton(int buttonId, const char* name)
+{
+	assert(m_data);
+	assert(m_data->m_demoPage);
+
+	Gwen::Controls::Button* but = new Gwen::Controls::Button(m_data->m_demoPage->GetPage());
+	
+	///some heuristic to find the button location
+	int ypos = m_data->m_handlers.size()*20;
+	but->SetPos(10, 50 );
+	but->SetWidth( 100 );
+	//but->SetBounds( 200, 30, 300, 200 );
+	
+	MyHander* handler = new MyHander(m_data, buttonId);
+	m_data->m_handlers.push_back(handler);
+	but->onToggle.Add(handler, &MyHander::onButtonA);
+	but->SetIsToggle(true);
+	but->SetToggleState(false);
+	but->SetText(name);
+
+}
+
 void	GwenUserInterface::draw(int width, int height)
 {
 	

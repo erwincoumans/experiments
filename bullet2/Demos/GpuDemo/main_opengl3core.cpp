@@ -29,6 +29,31 @@ static void MyResizeCallback( float width, float height)
 
 btgWindowInterface* window=0;
 GwenUserInterface* gui  = 0;
+bool gPause = false;
+bool gReset = false;
+
+enum
+{
+	PAUSE=1,
+	RESET,
+};
+
+void	MyButtonCallback(int buttonId, int state)
+{
+	switch (buttonId)
+	{
+	case PAUSE:
+		gPause =!gPause;
+		break;
+	case RESET:
+		gReset=!gReset;
+		break;
+
+	default:
+		{
+		}
+	}
+}
 
 static void MyMouseMoveCallback( float x, float y)
 {
@@ -302,9 +327,13 @@ int main(int argc, char* argv[])
 
 	stash = initFont(&prim);
 	gui = new GwenUserInterface();
-	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
+	
 
-		glClearColor(1,0,0,1);
+	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
+	gui->registerToggleButton(1,"Pause");
+	gui->setToggleButtonCallback(MyButtonCallback);
+
+	glClearColor(1,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	
 	{
@@ -405,7 +434,9 @@ int main(int argc, char* argv[])
 			glClearColor(0.6,0.6,0.6,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
-			demo->clientMoveAndDisplay();
+			
+			if (!gPause)
+				demo->clientMoveAndDisplay();
 
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
 			if (demo->getDynamicsWorld()->getNumCollisionObjects())
