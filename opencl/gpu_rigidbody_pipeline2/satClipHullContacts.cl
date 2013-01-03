@@ -54,10 +54,22 @@ typedef struct
 ///keep this in sync with btCollidable.h
 typedef struct
 {
+	int m_numChildShapes;
+	int m_unused2;
 	int m_shapeType;
 	int m_shapeIndex;
 	
 } btCollidableGpu;
+
+typedef struct
+{
+	float4	m_childPosition;
+	float4	m_childOrientation;
+	int m_shapeIndex;
+	int m_unused0;
+	int m_unused1;
+	int m_unused2;
+} btGpuChildShape;
 
 #define GET_NPOINTS(x) (x).m_worldNormal.w
 
@@ -1021,6 +1033,139 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 }
 
 
+__kernel void   clipCompoundsHullHullKernel( __global const int4* gpuCompoundPairs, 
+																					__global const BodyData* rigidBodies, 
+																					__global const btCollidableGpu* collidables,
+																					__global const ConvexPolyhedronCL* convexShapes, 
+																					__global const float4* vertices,
+																					__global const float4* uniqueEdges,
+																					__global const btGpuFace* faces,
+																					__global const int* indices,
+																					__global const btGpuChildShape* gpuChildShapes,
+																					__global const float4* gpuCompoundSepNormalsOut,
+																					__global const int* gpuHasCompoundSepNormalsOut,
+																					__global Contact4* restrict globalContactsOut,
+																					counter32_t nGlobalContactsOut,
+																					int numCompoundPairs)
+{
+
+	int i = get_global_id(0);
+	int pairIndex = i;
+	
+	float4 worldVertsB1[64];
+	float4 worldVertsB2[64];
+	int capacityWorldVerts = 64;	
+
+	float4 localContactsOut[64];
+	int localContactCapacity=64;
+	
+	float minDist = -1e30f;
+	float maxDist = 0.02f;
+
+	if (i<numCompoundPairs)
+	{
+
+		if (gpuHasCompoundSepNormalsOut[i])
+		{
+
+			int bodyIndexA = gpuCompoundPairs[i].x;
+			int bodyIndexB = gpuCompoundPairs[i].y;
+			
+			int childShapeIndexA = gpuCompoundPairs[i].z;
+			int childShapeIndexB = gpuCompoundPairs[i].w;
+			
+			int collidableIndexA = -1;
+			int collidableIndexB = -1;
+			
+			float4 ornA = rigidBodies[bodyIndexA].m_quat;
+			float4 posA = rigidBodies[bodyIndexA].m_pos;
+			
+			float4 ornB = rigidBodies[bodyIndexB].m_quat;
+			float4 posB = rigidBodies[bodyIndexB].m_pos;
+								
+			if (childShapeIndexA >= 0)
+			{
+				collidableIndexA = gpuChildShapes[childShapeIndexA].m_shapeIndex;
+				float4 childPosA = gpuChildShapes[childShapeIndexA].m_childPosition;
+				float4 childOrnA = gpuChildShapes[childShapeIndexA].m_childOrientation;
+				float4 newPosA = qtRotate(ornA,childPosA)+posA;
+				float4 newOrnA = qtMul(ornA,childOrnA);
+				posA = newPosA;
+				ornA = newOrnA;
+			} else
+			{
+				collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+			}
+			
+			if (childShapeIndexB>=0)
+			{
+				collidableIndexB = gpuChildShapes[childShapeIndexB].m_shapeIndex;
+				float4 childPosB = gpuChildShapes[childShapeIndexB].m_childPosition;
+				float4 childOrnB = gpuChildShapes[childShapeIndexB].m_childOrientation;
+				float4 newPosB = transform(&childPosB,&posB,&ornB);
+				float4 newOrnB = qtMul(ornB,childOrnB);
+				posB = newPosB;
+				ornB = newOrnB;
+			} else
+			{
+				collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;	
+			}
+			
+			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+
+			
+
+
+		
+			int numLocalContactsOut = clipHullAgainstHull(gpuCompoundSepNormalsOut[i],
+														&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],
+														posA,ornA,
+													  posB,ornB,
+													  worldVertsB1,worldVertsB2,capacityWorldVerts,
+														minDist, maxDist,
+														vertices,faces,indices,
+														localContactsOut,localContactCapacity);
+												
+		if (numLocalContactsOut>0)
+		{
+				float4 normal = -gpuCompoundSepNormalsOut[i];
+				int nPoints = numLocalContactsOut;
+				float4* pointsIn = localContactsOut;
+				int contactIdx[4];// = {-1,-1,-1,-1};
+
+				contactIdx[0] = -1;
+				contactIdx[1] = -1;
+				contactIdx[2] = -1;
+				contactIdx[3] = -1;
+		
+				int nReducedContacts = extractManifoldSequential(pointsIn, nPoints, normal, contactIdx);
+		
+				int dstIdx;
+				AppendInc( nGlobalContactsOut, dstIdx );
+				//if ((dstIdx+nReducedContacts) < capacity)
+				{
+					__global Contact4* c = globalContactsOut+ dstIdx;
+					c->m_worldNormal = normal;
+					c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
+					c->m_batchIdx = pairIndex;
+					int bodyA = gpuCompoundPairs[pairIndex].x;
+					int bodyB = gpuCompoundPairs[pairIndex].y;
+					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
+					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
+
+					for (int i=0;i<nReducedContacts;i++)
+					{
+						c->m_worldPos[i] = pointsIn[contactIdx[i]];
+					}
+					GET_NPOINTS(*c) = nReducedContacts;
+				}
+				
+			}//		if (numContactsOut>0)
+		}//		if (gpuHasCompoundSepNormalsOut[i])
+	}//	if (i<numCompoundPairs)
+
+}
 				
 
 __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,

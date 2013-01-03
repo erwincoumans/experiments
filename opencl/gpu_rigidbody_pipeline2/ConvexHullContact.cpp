@@ -56,6 +56,11 @@ m_totalContactsOut(m_context, m_queue)
 		btAssert(errNum==CL_SUCCESS);
 
 		m_findSeparatingAxisKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findSeparatingAxisKernel",&errNum,satProg );
+
+
+		m_findCompoundPairsKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findCompoundPairsKernel",&errNum,satProg );
+	
+		m_processCompoundPairsKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "processCompoundPairsKernel",&errNum,satProg );
 		btAssert(errNum==CL_SUCCESS);
 	}
 
@@ -67,6 +72,10 @@ m_totalContactsOut(m_context, m_queue)
 
 		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipHullHullKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
+
+		m_clipCompoundsHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipCompoundsHullHullKernel",&errNum,satClipContactsProg);
+		btAssert(errNum==CL_SUCCESS);
+		
 
         m_findClippingFacesKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "findClippingFacesKernel",&errNum,satClipContactsProg);
 		btAssert(errNum==CL_SUCCESS);
@@ -90,6 +99,7 @@ m_totalContactsOut(m_context, m_queue)
 	} else
 	{
 		m_clipHullHullKernel=0;
+		m_clipCompoundsHullHullKernel = 0;
         m_findClippingFacesKernel = 0;
         m_newContactReductionKernel=0;
         m_clipFacesAndContactReductionKernel = 0;
@@ -105,6 +115,11 @@ GpuSatCollision::~GpuSatCollision()
 	if (m_findSeparatingAxisKernel)
 		clReleaseKernel(m_findSeparatingAxisKernel);
 
+	if (m_findCompoundPairsKernel)
+		clReleaseKernel(m_findCompoundPairsKernel);
+
+	if (m_processCompoundPairsKernel)
+		clReleaseKernel(m_processCompoundPairsKernel);
     
     if (m_findClippingFacesKernel)
         clReleaseKernel(m_findClippingFacesKernel);
@@ -116,6 +131,9 @@ GpuSatCollision::~GpuSatCollision()
     
 	if (m_clipHullHullKernel)
 		clReleaseKernel(m_clipHullHullKernel);
+	if (m_clipCompoundsHullHullKernel)
+		clReleaseKernel(m_clipCompoundsHullHullKernel);
+
 	if (m_clipHullHullConcaveConvexKernel)
 		clReleaseKernel(m_clipHullHullConcaveConvexKernel);
 	if (m_extractManifoldAndAddContactKernel)
@@ -766,12 +784,12 @@ int extractManifold(const float4* p, int nPoints, float4& nearNormal, float4& ce
 
 void GpuSatCollision::computeConcaveConvexContactsGPUSATSingle(
 	int bodyIndexA, int bodyIndexB,
+
 			int collidableIndexA, int collidableIndexB,
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
+			btAlignedObjectArray<Contact4>* contactOut,
+			int& nContacts,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 			const btAlignedObjectArray<btVector3>& verticesB,
 			const btAlignedObjectArray<btVector3>& uniqueEdgesB,
@@ -974,11 +992,13 @@ void GpuSatCollision::computeConcaveConvexContactsGPUSATSingle(
 
 				computeConvexConvexContactsGPUSATSingle(
 																							bodyIndexB,bodyIndexA,
+														bodyBuf->at(bodyIndexB).m_pos,bodyBuf->at(bodyIndexB).m_quat,
+														bodyBuf->at(bodyIndexA).m_pos,bodyBuf->at(bodyIndexA).m_quat,
+														
 																							collidableIndexB,collidableIndexA,
 																							bodyBuf,
-																							0,
 																							contactOut,
-																							nContacts,cfg,
+																							nContacts,
 																							hostConvexDataB,
 																							hostConvexDataA,
 																							verticesB,
@@ -1002,12 +1022,16 @@ void GpuSatCollision::computeConcaveConvexContactsGPUSATSingle(
 
 void GpuSatCollision::clipHullHullSingle(
 			int bodyIndexA, int bodyIndexB,
+										 const float4& posA,
+										 const float4& ornA,
+										 const float4& posB,
+										 const float4& ornB,
+
 			int collidableIndexA, int collidableIndexB,
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
+			int& nContacts,
 			
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
@@ -1024,8 +1048,7 @@ void GpuSatCollision::clipHullHullSingle(
 
 			const btAlignedObjectArray<btCollidable>& hostCollidablesA,
 			const btAlignedObjectArray<btCollidable>& hostCollidablesB,
-			const btVector3& sepNormalWorldSpace,int numContactsOut
-			)
+			const btVector3& sepNormalWorldSpace			)
 {
 
 	ConvexPolyhedronCL hullA, hullB;
@@ -1068,12 +1091,12 @@ void GpuSatCollision::clipHullHullSingle(
 		{
 		//BT_PROFILE("transform computation");
 		//trA.setIdentity();
-		trA.setOrigin(btVector3(bodyBuf->at(bodyIndexA).m_pos.x,bodyBuf->at(bodyIndexA).m_pos.y,bodyBuf->at(bodyIndexA).m_pos.z));
-		trA.setRotation(btQuaternion(bodyBuf->at(bodyIndexA).m_quat.x,bodyBuf->at(bodyIndexA).m_quat.y,bodyBuf->at(bodyIndexA).m_quat.z,bodyBuf->at(bodyIndexA).m_quat.w));
+		trA.setOrigin(btVector3(posA.x,posA.y,posA.z));
+		trA.setRotation(btQuaternion(ornA.x,ornA.y,ornA.z,ornA.w));
 				
 		//trB.setIdentity();
-		trB.setOrigin(btVector3(bodyBuf->at(bodyIndexB).m_pos.x,bodyBuf->at(bodyIndexB).m_pos.y,bodyBuf->at(bodyIndexB).m_pos.z));
-		trB.setRotation(btQuaternion(bodyBuf->at(bodyIndexB).m_quat.x,bodyBuf->at(bodyIndexB).m_quat.y,bodyBuf->at(bodyIndexB).m_quat.z,bodyBuf->at(bodyIndexB).m_quat.w));
+		trB.setOrigin(btVector3(posB.x,posB.y,posB.z));
+		trB.setRotation(btQuaternion(ornB.x,ornB.y,ornB.z,ornB.w));
 		}
 
 		btQuaternion trAorn = trA.getRotation();
@@ -1147,13 +1170,16 @@ void GpuSatCollision::clipHullHullSingle(
 
 void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 			int bodyIndexA, int bodyIndexB,
+		  const float4& posA,
+		  const float4& ornA,
+		  const float4& posB,
+		  const float4& ornB,
 			int collidableIndexA, int collidableIndexB,
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
-			
+			btAlignedObjectArray<Contact4>* contactOut,
+															  int& nContacts,
+
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 	
@@ -1199,10 +1225,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 #endif
 	
 		bool foundSepAxis = findSeparatingAxis(hullA,hullB,
-							bodyBuf->at(bodyIndexA).m_pos,
-							bodyBuf->at(bodyIndexA).m_quat,
-							bodyBuf->at(bodyIndexB).m_pos,
-							bodyBuf->at(bodyIndexB).m_quat,
+							posA,
+							ornA,
+							posB,
+							ornB,
 
 							verticesA,uniqueEdgesA,facesA,indicesA,
 							verticesB,uniqueEdgesB,facesB,indicesB,
@@ -1215,11 +1241,12 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 	{
 		clipHullHullSingle(
 			bodyIndexA, bodyIndexB,
+						   posA,ornA,
+						   posB,ornB,
 			collidableIndexA, collidableIndexB,
 			bodyBuf, 
-			shapeBuf,
-			contactOut, 
-			nContacts, cfg , 
+			contactOut,
+			nContacts,
 			
 			hostConvexDataA,
 			hostConvexDataB,
@@ -1236,7 +1263,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 			hostCollidablesA,
 			hostCollidablesB,
-			sepNormalWorldSpace,numContactsOut);
+			sepNormalWorldSpace);
 
 	}
 
@@ -1245,14 +1272,15 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 
 void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpenCLArray<int2>* pairs, int nPairs, 
-			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
+			btOpenCLArray<Contact4>* contactOut, int& nContacts,
 			const btOpenCLArray<ConvexPolyhedronCL>& convexData,
 			const btOpenCLArray<btVector3>& gpuVertices,
 			const btOpenCLArray<btVector3>& gpuUniqueEdges,
 			const btOpenCLArray<btGpuFace>& gpuFaces,
 			const btOpenCLArray<int>& gpuIndices,
 			const btOpenCLArray<btCollidable>& gpuCollidables,
+			const btOpenCLArray<btGpuChildShape>& gpuChildShapes,
 			const btOpenCLArray<btYetAnotherAabb>& clAabbs, 
 			int numObjects,
 			int maxTriConvexPairCapacity,
@@ -1272,8 +1300,6 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 	bodyBuf->copyToHost(hostBodyBuf);
 
 	
-	btAlignedObjectArray<ChNarrowphase::ShapeData> hostShapeBuf;
-	shapeBuf->copyToHost(hostShapeBuf);
 
 	btAlignedObjectArray<ConvexPolyhedronCL> hostConvexData;
 	convexData.copyToHost(hostConvexData);
@@ -1289,6 +1315,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 	gpuIndices.copyToHost(hostIndices);
 	btAlignedObjectArray<btCollidable> hostCollidables;
 	gpuCollidables.copyToHost(hostCollidables);
+	
+	btAlignedObjectArray<btGpuChildShape> cpuChildShapes;
+	gpuChildShapes.copyToHost(cpuChildShapes);
+	
 
 	btAlignedObjectArray<int4> hostTriangleConvexPairs;
 
@@ -1307,7 +1337,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 			int curNumContacts = nContacts;
 
 			computeConcaveConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
-				collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+				collidableIndexA,collidableIndexB,&hostBodyBuf,&contactCpu,nContacts,
 				hostConvexData, hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,
 				hostAabbs,
 				numObjects,
@@ -1330,6 +1360,166 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 			btAssert(0);
 		}
 
+		if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+		{
+			int numChildrenA = hostCollidables[collidableIndexA].m_numChildShapes;
+			for (int c=0;c<numChildrenA;c++)
+			{
+				int childShapeIndexA = hostCollidables[collidableIndexA].m_shapeIndex+c;
+				int childColIndexA = cpuChildShapes[childShapeIndexA].m_shapeIndex;
+				
+				btAssert(hostCollidables[childColIndexA].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+				
+				float4 posA = hostBodyBuf[bodyIndexA].m_pos;
+				float4 ornA = hostBodyBuf[bodyIndexA].m_quat;
+				float4 childPosA = (float4&)cpuChildShapes[childShapeIndexA].m_childPosition;
+				float4 childOrnA = (float4&)cpuChildShapes[childShapeIndexA].m_childOrientation;
+				float4 newPosA = qtRotate(ornA,childPosA)+posA;
+				float4 newOrnA = qtMul(ornA,childOrnA);
+
+				
+				if (hostCollidables[collidableIndexB].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL)
+				{
+					btAlignedObjectArray<Contact4> contactCpu;
+					contactOut->copyToHost(contactCpu);
+					int curNumContacts = nContacts;
+
+					float4 ornB = hostBodyBuf[bodyIndexB].m_quat;
+					float4 posB = hostBodyBuf[bodyIndexB].m_pos;
+					
+
+					computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
+															newPosA,	newOrnA,
+															posB,		ornB,
+															childColIndexA,collidableIndexB,&hostBodyBuf,&contactCpu,nContacts,
+															hostConvexData,hostConvexData,
+															hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+															hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					
+					
+					
+					
+					if (curNumContacts != nContacts)
+					{
+						contactCpu[curNumContacts].m_batchIdx = i;
+					}
+					contactOut->copyFromHost(contactCpu);
+				}
+				
+				
+				//handle compound A against compound B and
+				if (hostCollidables[collidableIndexB].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+				{
+
+					int numChildrenB = hostCollidables[collidableIndexB].m_numChildShapes;
+					for (int b=0;b<numChildrenB;b++)
+					{
+						int childShapeIndexB = hostCollidables[collidableIndexB].m_shapeIndex+b;
+						int childColIndexB = cpuChildShapes[childShapeIndexB].m_shapeIndex;
+						
+						btAssert(hostCollidables[childColIndexB].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+						
+						btAlignedObjectArray<Contact4> contactCpu;
+						contactOut->copyToHost(contactCpu);
+						int curNumContacts = nContacts;
+
+						float4 ornB = hostBodyBuf[bodyIndexB].m_quat;
+						float4 posB = hostBodyBuf[bodyIndexB].m_pos;
+						float4 childPosB = (float4&)cpuChildShapes[childShapeIndexB].m_childPosition;
+						float4 childOrnB = (float4&)cpuChildShapes[childShapeIndexB].m_childOrientation;
+						float4 newPosB = qtRotate(ornB,childPosB)+posB;
+						float4 newOrnB = qtMul(ornB,childOrnB);
+						
+						computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
+																newPosA,					newOrnA,
+																newPosB,					newOrnB,
+																childColIndexA,childColIndexB,&hostBodyBuf,&contactCpu,nContacts,
+																hostConvexData,hostConvexData,
+																hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+																hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+						
+
+						if (curNumContacts != nContacts)
+						{
+							contactCpu[curNumContacts].m_batchIdx = i;
+						}
+						
+						contactOut->copyFromHost(contactCpu);
+					}
+					
+					
+				}
+				
+			
+			}
+
+			continue;
+		}
+
+		if (hostCollidables[collidableIndexB].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+		{
+			btAssert(hostCollidables[collidableIndexA].m_shapeType != CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS);
+
+			if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL)
+			{
+				float4 posA = hostBodyBuf[bodyIndexA].m_pos;
+				float4 ornA = hostBodyBuf[bodyIndexA].m_quat;
+				
+				int numChildrenB = hostCollidables[collidableIndexB].m_numChildShapes;
+				for (int b=0;b<numChildrenB;b++)
+				{
+					int childShapeIndexB = hostCollidables[collidableIndexB].m_shapeIndex+b;
+					int childColIndexB = cpuChildShapes[childShapeIndexB].m_shapeIndex;
+					
+					btAssert(hostCollidables[childColIndexB].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+					
+					
+					
+					btAlignedObjectArray<Contact4> contactCpu;
+					contactOut->copyToHost(contactCpu);
+					int curNumContacts = nContacts;
+					
+					
+					
+					
+					
+					float4 ornB = hostBodyBuf[bodyIndexB].m_quat;
+					float4 posB = hostBodyBuf[bodyIndexB].m_pos;
+					
+					
+					
+					float4 childPosB = (float4&)cpuChildShapes[childShapeIndexB].m_childPosition;
+					float4 childOrnB = (float4&)cpuChildShapes[childShapeIndexB].m_childOrientation;
+					
+					float4 newPosB = qtRotate(ornB,childPosB)+posB;
+					float4 newOrnB = qtMul(ornB,childOrnB);
+					
+					computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
+															posA,					ornA,
+															newPosB,					newOrnB,
+															collidableIndexA,childColIndexB,&hostBodyBuf,&contactCpu,nContacts,
+															hostConvexData,hostConvexData,
+															hostVertices,hostUniqueEdges,hostFaces,hostIndices,
+															hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
+					
+					
+					if (curNumContacts != nContacts)
+					{
+						contactCpu[curNumContacts].m_batchIdx = i;
+					}
+					
+					contactOut->copyFromHost(contactCpu);
+				}
+
+				
+			}
+
+			
+			continue;
+		}
+
+		
+
 		if (hostCollidables[collidableIndexA].m_shapeType != CollisionShape::SHAPE_CONVEX_HULL)
 			continue;
 
@@ -1344,7 +1534,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				int curNumContacts = nContacts;
 
 				computeConvexConvexContactsGPUSATSingle(bodyIndexB, bodyIndexA,
-					collidableIndexB,collidableIndexA,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostBodyBuf[bodyIndexB].m_pos,					hostBodyBuf[bodyIndexB].m_quat,
+					hostBodyBuf[bodyIndexA].m_pos,					hostBodyBuf[bodyIndexA].m_quat,
+
+					collidableIndexB,collidableIndexA,&hostBodyBuf,&contactCpu,nContacts,
 					hostConvexData,hostConvexData,
 					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
 					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
@@ -1363,7 +1556,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				int curNumContacts = nContacts;
 
 				computeConvexConvexContactsGPUSATSingle(bodyIndexA,bodyIndexB,
-					collidableIndexA,collidableIndexB,&hostBodyBuf,&hostShapeBuf,&contactCpu,nContacts,cfg,
+					hostBodyBuf[bodyIndexA].m_pos,					hostBodyBuf[bodyIndexA].m_quat,
+					hostBodyBuf[bodyIndexB].m_pos,					hostBodyBuf[bodyIndexB].m_quat,
+					collidableIndexA,collidableIndexB,&hostBodyBuf,&contactCpu,nContacts,
 					hostConvexData,hostConvexData,
 					hostVertices,hostUniqueEdges,hostFaces,hostIndices,
 					hostVertices,hostUniqueEdges,hostFaces,hostIndices,hostCollidables,hostCollidables);
@@ -1459,14 +1654,18 @@ extern int g_globalId;
 
 
 void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs,
-			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
+														
+			btOpenCLArray<Contact4>* contactOut, int& nContacts,
+														
 			const btOpenCLArray<ConvexPolyhedronCL>& convexData,
 			const btOpenCLArray<btVector3>& gpuVertices,
 			const btOpenCLArray<btVector3>& gpuUniqueEdges,
 			const btOpenCLArray<btGpuFace>& gpuFaces,
 			const btOpenCLArray<int>& gpuIndices,
 			const btOpenCLArray<btCollidable>& gpuCollidables,
+			const btOpenCLArray<btGpuChildShape>& gpuChildShapes,
+
 			const btOpenCLArray<btYetAnotherAabb>& clAabbs,
             btOpenCLArray<float4>& worldVertsB1GPU,
             btOpenCLArray<int4>& clippingFacesOutGPU,
@@ -1496,15 +1695,37 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 	btOpenCLArray<int> hasSeparatingNormals(m_context,m_queue);
 	hasSeparatingNormals.resize(nPairs);
 	
-	int concaveCapacity=8192;
+	int concaveCapacity=maxTriConvexPairCapacity;
 	btOpenCLArray<float4> concaveSepNormals(m_context,m_queue);
 	concaveSepNormals.resize(concaveCapacity);
 
 	btOpenCLArray<int> numConcavePairsOut(m_context,m_queue);
 	numConcavePairsOut.push_back(0);
 
+	int compoundPairCapacity=65536*10;
+	btOpenCLArray<btCompoundOverlappingPair> gpuCompoundPairs(m_context,m_queue);
+	gpuCompoundPairs.resize(compoundPairCapacity);
 
-	bool findSeparatingAxisOnGpu = true;
+	btOpenCLArray<btVector3> gpuCompoundSepNormals(m_context,m_queue);
+	gpuCompoundSepNormals.resize(compoundPairCapacity);
+	btAlignedObjectArray<btVector3> cpuCompoundSepNormals;
+
+	
+	btOpenCLArray<int> gpuHasCompoundSepNormals(m_context,m_queue);
+	gpuHasCompoundSepNormals.resize(compoundPairCapacity);
+	btAlignedObjectArray<int> cpuHasCompoundSepNormals;
+
+	btAlignedObjectArray<btCompoundOverlappingPair> cpuCompoundPairs; 
+
+	btOpenCLArray<int> numCompoundPairsOut(m_context,m_queue);
+	numCompoundPairsOut.push_back(0);
+
+	btAlignedObjectArray<btGpuChildShape> cpuChildShapes;
+	gpuChildShapes.copyToHost(cpuChildShapes);
+
+	int numCompoundPairs = 0;
+
+	bool findSeparatingAxisOnGpu = true;//false;
 	int numConcave =0;
 
 	{
@@ -1530,10 +1751,12 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 				btBufferInfoCL( concaveSepNormals.getBufferCL()),
 				btBufferInfoCL( numConcavePairsOut.getBufferCL())
 			};
+
 			btLauncherCL launcher(m_queue, m_findSeparatingAxisKernel);
 			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
 			launcher.setConst( nPairs  );
 			launcher.setConst( maxTriConvexPairCapacity);
+
 			int num = nPairs;
 			launcher.launch1D( num);
 			clFinish(m_queue);
@@ -1541,12 +1764,97 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			numConcave = numConcavePairsOut.at(0);
 			if (numConcave > maxTriConvexPairCapacity)
 				numConcave = maxTriConvexPairCapacity;
-
 			triangleConvexPairsOut.resize(numConcave);
+			
+
+
+
+			{
+				BT_PROFILE("findCompoundPairsKernel");
+				btBufferInfoCL bInfo[] = 
+				{ 
+					btBufferInfoCL( pairs->getBufferCL(), true ), 
+					btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+					btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
+					btBufferInfoCL( convexData.getBufferCL(),true),
+					btBufferInfoCL( gpuVertices.getBufferCL(),true),
+					btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+					btBufferInfoCL( gpuFaces.getBufferCL(),true),
+					btBufferInfoCL( gpuIndices.getBufferCL(),true),
+					btBufferInfoCL( clAabbs.getBufferCL(),true),
+					btBufferInfoCL( gpuChildShapes.getBufferCL(),true),
+					btBufferInfoCL( gpuCompoundPairs.getBufferCL()),
+					btBufferInfoCL( numCompoundPairsOut.getBufferCL())
+				};
+
+				btLauncherCL launcher(m_queue, m_findCompoundPairsKernel);
+				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+				launcher.setConst( nPairs  );
+				launcher.setConst( compoundPairCapacity);
+
+				int num = nPairs;
+				launcher.launch1D( num);
+				clFinish(m_queue);
+			}
+
+
+			numCompoundPairs = numCompoundPairsOut.at(0);
+			printf("numCompoundPairs =%d\n",numCompoundPairs );
+			if (numCompoundPairs > compoundPairCapacity)
+				numCompoundPairs = compoundPairCapacity;
+
+			gpuCompoundPairs.resize(numCompoundPairs);
+			gpuHasCompoundSepNormals.resize(numCompoundPairs);
+			gpuCompoundSepNormals.resize(numCompoundPairs);
+			
+
+			if (numCompoundPairs)
+			{
+				gpuCompoundPairs.copyToHost(cpuCompoundPairs);
+
+				BT_PROFILE("processCompoundPairsKernel");
+				btBufferInfoCL bInfo[] = 
+				{ 
+					btBufferInfoCL( gpuCompoundPairs.getBufferCL(), true ), 
+					btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+					btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
+					btBufferInfoCL( convexData.getBufferCL(),true),
+					btBufferInfoCL( gpuVertices.getBufferCL(),true),
+					btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+					btBufferInfoCL( gpuFaces.getBufferCL(),true),
+					btBufferInfoCL( gpuIndices.getBufferCL(),true),
+					btBufferInfoCL( clAabbs.getBufferCL(),true),
+					btBufferInfoCL( gpuChildShapes.getBufferCL(),true),
+					btBufferInfoCL( gpuCompoundSepNormals.getBufferCL()),
+					btBufferInfoCL( gpuHasCompoundSepNormals.getBufferCL())
+				};
+
+				btLauncherCL launcher(m_queue, m_processCompoundPairsKernel);
+				launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+				launcher.setConst( numCompoundPairs  );
+
+				int num = numCompoundPairs;
+				launcher.launch1D( num);
+				clFinish(m_queue);
+			
+			}
+
+			{
+				gpuChildShapes.copyToHost(cpuChildShapes);
+				gpuHasCompoundSepNormals.copyToHost(cpuHasCompoundSepNormals);
+				gpuCompoundSepNormals.copyToHost(cpuCompoundSepNormals);
+/*				for (int i=0;i<cpuHasCompoundSepNormals.size();i++)
+				{
+					if (cpuHasCompoundSepNormals[i])
+						printf("gpuHasCompoundSepNormals[%d]=%d\n",i,cpuHasCompoundSepNormals[i]);
+				}
+				*/
+			}
+
 
 			//printf("numConcave  = %d\n",numConcave);
 			
-		} else
+		} else//if (findSeparatingAxisOnGpu)
 		{
 
 
@@ -1613,8 +1921,204 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 				
 
 
+
 				int collidableA = hostBodyBuf[indexA].m_collidableIdx;
 				int collidableB = hostBodyBuf[indexB].m_collidableIdx;
+
+				if (cpuCollidables[collidableA].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS ||
+					cpuCollidables[collidableB].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+				{
+					btCompoundOverlappingPair compoundPair;
+					compoundPair.m_bodyIndexA = indexA;
+					compoundPair.m_bodyIndexB = indexB;
+					compoundPair.m_childShapeIndexA = -1;
+					compoundPair.m_childShapeIndexB = -1;
+
+					if (cpuCollidables[collidableA].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+					{
+						int numChildrenA = cpuCollidables[collidableA].m_numChildShapes;
+						for (int c=0;c<numChildrenA;c++)
+						{
+							ConvexPolyhedronCL hullA;
+							
+							int childShapeIndexA = cpuCollidables[collidableA].m_shapeIndex+c;
+							int childColIndexA = cpuChildShapes[childShapeIndexA].m_shapeIndex;
+				
+							compoundPair.m_childShapeIndexA= childShapeIndexA;
+
+							btAssert(cpuCollidables[childColIndexA].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+
+							btCollidable colA = cpuCollidables[childColIndexA];
+							hullA = hostConvexData[colA.m_shapeIndex];
+
+							float4 posA = hostBodyBuf[indexA].m_pos;
+							float4 ornA = hostBodyBuf[indexA].m_quat;
+							float4 childPosA = (float4&)cpuChildShapes[childShapeIndexA].m_childPosition;
+							float4 childOrnA = (float4&)cpuChildShapes[childShapeIndexA].m_childOrientation;
+							float4 newPosA = qtRotate(ornA,childPosA)+posA;
+							float4 newOrnA = qtMul(ornA,childOrnA);
+
+							if (cpuCollidables[collidableB].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+							{
+								int numChildrenB = cpuCollidables[collidableB].m_numChildShapes;
+								for (int b=0;b<numChildrenB;b++)
+								{
+									ConvexPolyhedronCL hullB;
+
+									int childShapeIndexB = cpuCollidables[collidableB].m_shapeIndex+b;
+									int childColIndexB = cpuChildShapes[childShapeIndexB].m_shapeIndex;
+
+									btAssert(cpuCollidables[childColIndexB].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+
+									compoundPair.m_childShapeIndexB= childShapeIndexB;
+
+
+									btCollidable colB = cpuCollidables[childColIndexB];
+
+									hullB = hostConvexData[colB.m_shapeIndex];
+
+									float4 posB = hostBodyBuf[indexB].m_pos;
+									float4 ornB = hostBodyBuf[indexB].m_quat;
+									float4 childPosB = (float4&)cpuChildShapes[childShapeIndexB].m_childPosition;
+									float4 childOrnB = (float4&)cpuChildShapes[childShapeIndexB].m_childOrientation;
+									float4 newPosB = qtRotate(ornB,childPosB)+posB;
+									float4 newOrnB = qtMul(ornB,childOrnB);
+
+									btVector3 sepNormalWorldSpace;
+
+									//printf("numvertsA = %d\n",hullA.m_numVertices);
+    
+    
+									hullB = hostConvexData[colB.m_shapeIndex];
+
+									bool foundSepAxis = findSeparatingAxis(hullA,hullB,
+											newPosA,
+											newOrnA,
+											newPosB,
+											newOrnB,
+
+											verticesA,uniqueEdges,faces,indices,
+											verticesA,uniqueEdges,faces,indices,
+							
+											sepNormalWorldSpace
+											);
+
+									if (foundSepAxis)
+									{
+										cpuCompoundPairs.push_back(compoundPair);
+										cpuCompoundSepNormals.push_back(sepNormalWorldSpace);
+										cpuHasCompoundSepNormals.push_back(1);
+									}
+
+								}
+
+							} else
+							{
+
+								float4 posB = hostBodyBuf[indexB].m_pos;
+								float4 ornB = hostBodyBuf[indexB].m_quat;
+								btVector3 sepNormalWorldSpace;
+
+								ConvexPolyhedronCL hullB;
+								btCollidable colB = cpuCollidables[collidableB];
+								hullB = hostConvexData[colB.m_shapeIndex];
+
+								compoundPair.m_childShapeIndexB = -1;
+
+
+								bool foundSepAxis = findSeparatingAxis(hullA,hullB,
+									newPosA,
+									newOrnA,
+									posB,
+									ornB,
+
+									verticesA,uniqueEdges,faces,indices,
+									verticesA,uniqueEdges,faces,indices,
+							
+									sepNormalWorldSpace
+								);
+
+								if (foundSepAxis)
+								{
+									cpuCompoundPairs.push_back(compoundPair);
+									cpuCompoundSepNormals.push_back(sepNormalWorldSpace);
+									cpuHasCompoundSepNormals.push_back(1);
+								}
+
+
+							}
+
+						}
+						continue;
+					}
+
+					if (cpuCollidables[collidableB].m_shapeType == CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS)
+					{
+						int numChildrenB = cpuCollidables[collidableB].m_numChildShapes;
+						for (int b=0;b<numChildrenB;b++)
+						{
+							ConvexPolyhedronCL hullB;
+
+							int childShapeIndexB = cpuCollidables[collidableB].m_shapeIndex+b;
+							int childColIndexB = cpuChildShapes[childShapeIndexB].m_shapeIndex;
+
+							btAssert(cpuCollidables[childColIndexB].m_shapeType == CollisionShape::SHAPE_CONVEX_HULL);
+
+							compoundPair.m_childShapeIndexB = childShapeIndexB;
+							compoundPair.m_childShapeIndexA = -1;
+
+							btCollidable colB = cpuCollidables[childColIndexB];
+
+							hullB = hostConvexData[colB.m_shapeIndex];
+
+							float4 posB = hostBodyBuf[indexB].m_pos;
+							float4 ornB = hostBodyBuf[indexB].m_quat;
+							float4 childPosB = (float4&)cpuChildShapes[childShapeIndexB].m_childPosition;
+							float4 childOrnB = (float4&)cpuChildShapes[childShapeIndexB].m_childOrientation;
+							float4 newPosB = qtRotate(ornB,childPosB)+posB;
+							float4 newOrnB = qtMul(ornB,childOrnB);
+
+							btVector3 sepNormalWorldSpace;
+
+							//printf("numvertsA = %d\n",hullA.m_numVertices);
+    
+    
+							hullB = hostConvexData[colB.m_shapeIndex];
+							float4 posA = hostBodyBuf[indexA].m_pos;
+							float4 ornA = hostBodyBuf[indexA].m_quat;
+					
+							btCollidable colA = cpuCollidables[hostBodyBuf[indexA].m_collidableIdx];
+							btAssert(colA.m_shapeType==CollisionShape::SHAPE_CONVEX_HULL);
+					
+							ConvexPolyhedronCL hullA;
+							hullA = hostConvexData[colA.m_shapeIndex];
+
+							bool foundSepAxis = findSeparatingAxis(hullA,hullB,
+									posA,
+									ornA,
+									newPosB,
+									newOrnB,
+
+									verticesA,uniqueEdges,faces,indices,
+									verticesA,uniqueEdges,faces,indices,
+							
+									sepNormalWorldSpace
+									);
+
+							if (foundSepAxis)
+							{
+								cpuCompoundPairs.push_back(compoundPair);
+								cpuCompoundSepNormals.push_back(sepNormalWorldSpace);
+								cpuHasCompoundSepNormals.push_back(1);
+							}
+						}
+						continue;
+					}
+
+
+
+					
+				}
 
 				if (cpuCollidables[collidableA].m_shapeType != CollisionShape::SHAPE_CONVEX_HULL)
 					continue;
@@ -1654,14 +2158,22 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 					hasSeparatingNormals.copyFromHost(hostHasSep);
 				}
 			}
-		}
+
+			gpuCompoundPairs.copyFromHost(cpuCompoundPairs);
+			gpuCompoundSepNormals.copyFromHost(cpuCompoundSepNormals);
+			gpuHasCompoundSepNormals.copyFromHost(cpuHasCompoundSepNormals);
+
+		}//if (findSeparatingAxisOnGpu)
+
 
 //		printf("hostNormals.size()=%d\n",hostNormals.size());
 		//int numPairs = pairCount.at(0);
 		
+		
+		
 	}
 #ifdef __APPLE__
- bool contactClippingOnGpu = true;
+	bool contactClippingOnGpu = false;//true;
 #else
  bool contactClippingOnGpu = true;
 #endif
@@ -1703,7 +2215,6 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 
 		//convex-convex contact clipping
-
         if (1)
 		{
 			BT_PROFILE("clipHullHullKernel");
@@ -2157,7 +2668,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
        
             
 #else
-            
+	 
+		if (nPairs)
+		{
 			btBufferInfoCL bInfo[] = {
 				btBufferInfoCL( pairs->getBufferCL(), true ), 
 				btBufferInfoCL( bodyBuf->getBufferCL(),true), 
@@ -2181,6 +2694,44 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		
 			nContacts = m_totalContactsOut.at(0);
 			contactOut->resize(nContacts);
+		}
+
+		int nCompoundsPairs = gpuCompoundPairs.size();
+
+		if (nCompoundsPairs)
+		{
+				btBufferInfoCL bInfo[] = {
+				btBufferInfoCL( gpuCompoundPairs.getBufferCL(), true ), 
+				btBufferInfoCL( bodyBuf->getBufferCL(),true), 
+				btBufferInfoCL( gpuCollidables.getBufferCL(),true), 
+				btBufferInfoCL( convexData.getBufferCL(),true),
+				btBufferInfoCL( gpuVertices.getBufferCL(),true),
+				btBufferInfoCL( gpuUniqueEdges.getBufferCL(),true),
+				btBufferInfoCL( gpuFaces.getBufferCL(),true),
+				btBufferInfoCL( gpuIndices.getBufferCL(),true),
+				btBufferInfoCL( gpuChildShapes.getBufferCL(),true),
+				btBufferInfoCL( gpuCompoundSepNormals.getBufferCL(),true),
+				btBufferInfoCL( gpuHasCompoundSepNormals.getBufferCL(),true),
+				btBufferInfoCL( contactOut->getBufferCL()),
+				btBufferInfoCL( m_totalContactsOut.getBufferCL())	
+			};
+			btLauncherCL launcher(m_queue, m_clipCompoundsHullHullKernel);
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst( nCompoundsPairs  );
+			int num = nCompoundsPairs;
+			launcher.launch1D( num);
+			clFinish(m_queue);
+		
+			nContacts = m_totalContactsOut.at(0);
+			contactOut->resize(nContacts);
+		}
+
+
+
+
+
+
+
 #endif
             
 #endif//DEBUG_CPU_CLIP
@@ -2189,7 +2740,9 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 	} else
 	{	
-			
+
+		//
+
 		triangleConvexPairsOut.resize(numConcave);
 		btAlignedObjectArray<int4> hostTriangleConvexPairsOut;
 		triangleConvexPairsOut.copyToHost(hostTriangleConvexPairsOut);
@@ -2234,11 +2787,6 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 			BT_PROFILE("copyToHost(hostBodyBuf");
 			bodyBuf->copyToHost(hostBodyBuf);
 		}
-		btAlignedObjectArray<ChNarrowphase::ShapeData> hostShapeBuf;
-		{
-			BT_PROFILE("copyToHost(hostShapeBuf");
-			shapeBuf->copyToHost(hostShapeBuf);
-		}
 
 		btAlignedObjectArray<btVector3> uniqueEdges;
 		{
@@ -2272,6 +2820,10 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		btAlignedObjectArray<btCollidable> cpuCollidables;
 		gpuCollidables.copyToHost(cpuCollidables);
 
+		gpuCompoundPairs.copyToHost(cpuCompoundPairs);
+		gpuCompoundSepNormals.copyToHost(cpuCompoundSepNormals);
+		gpuHasCompoundSepNormals.copyToHost(cpuHasCompoundSepNormals);
+
 
 #ifdef __APPLE__
 		bool reductionOnGpu = false;
@@ -2283,13 +2835,124 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 		m_hostContactOut.resize(nPairs+nContacts);//m_hostContactOut.size()+1);
 		int actualContacts = 0;
 
+		btAlignedObjectArray<Contact4> contactCpu;
+		contactOut->copyToHost(contactCpu);
+		int curContacts = nContacts;
+
+//		printf("numCompoundPairs = %d\n",cpuCompoundPairs.size());
+		for (int i=0;i<cpuCompoundPairs.size();i++)
+		{
+	//		clipHullHullSingle
+			if (!cpuHasCompoundSepNormals[i])
+				continue;
+			
+			btVector3 sepNormalWorldSpace = cpuCompoundSepNormals[i];
+			int objectIndexA = cpuCompoundPairs[i].m_bodyIndexA;
+			int objectIndexB = cpuCompoundPairs[i].m_bodyIndexB;
+			int collidableIndexA,collidableIndexB;
+
+/*			printf("pair %d = %d, %d, %d , %d\n",i, cpuCompoundPairs[i].m_bodyIndexA,
+				   cpuCompoundPairs[i].m_bodyIndexB,
+				   cpuCompoundPairs[i].m_childShapeIndexA,
+				   cpuCompoundPairs[i].m_childShapeIndexB);
+
+			printf("pair %d normal=%f ,%f ,%f, %f\n",i,cpuCompoundSepNormals[i].getX(),
+				   cpuCompoundSepNormals[i].getY(),
+				   cpuCompoundSepNormals[i].getZ(),
+				   cpuCompoundSepNormals[i][3]);
+	*/			   
+			btVector3 normal = cpuCompoundSepNormals[i];
+			if (normal.length2()<0.1)
+			{
+				continue;
+			}
+			
+			if (normal.length2()>2)
+			{
+				continue;
+			}
+			
+			
+			float4 posA,posB,ornA,ornB;
+			posA = hostBodyBuf[objectIndexA].m_pos;
+			ornA = hostBodyBuf[objectIndexA].m_quat;
+			posB = hostBodyBuf[objectIndexB].m_pos;
+			ornB = hostBodyBuf[objectIndexB].m_quat;
+				
+			if (cpuCompoundPairs[i].m_childShapeIndexA<0)
+			{
+				collidableIndexA = hostBodyBuf[objectIndexA].m_collidableIdx;
+			} else
+			{
+				int childShapeIndexA = cpuCompoundPairs[i].m_childShapeIndexA;
+				collidableIndexA  = cpuChildShapes[childShapeIndexA ].m_shapeIndex;
+				 
+				float4 childPosA = (float4&)cpuChildShapes[childShapeIndexA].m_childPosition;
+				float4 childOrnA = (float4&)cpuChildShapes[childShapeIndexA].m_childOrientation;
+				float4 newPosA = qtRotate(ornA,childPosA)+posA;
+				float4 newOrnA = qtMul(ornA,childOrnA);
+				posA = newPosA;
+				ornA = newOrnA;
+			}
+
+			if (cpuCompoundPairs[i].m_childShapeIndexB<0)
+			{
+				collidableIndexB = hostBodyBuf[objectIndexB].m_collidableIdx;
+			} else
+			{
+				int childShapeIndexB = 	cpuCompoundPairs[i].m_childShapeIndexB;
+				collidableIndexB = cpuChildShapes[childShapeIndexB].m_shapeIndex;
+				float4 childPosB = (float4&)cpuChildShapes[childShapeIndexB].m_childPosition;
+				float4 childOrnB = (float4&)cpuChildShapes[childShapeIndexB].m_childOrientation;
+				float4 newPosB = qtRotate(ornB,childPosB)+posB;
+				float4 newOrnB = qtMul(ornB,childOrnB);
+				posB = newPosB;
+				ornB = newOrnB;
+
+			}
+
+				
+
+//					int numContactsOut = 0;
+					clipHullHullSingle(
+						objectIndexA, objectIndexB,
+					   posA,ornA,
+					   posB,ornB,
+									   
+						collidableIndexA, collidableIndexB,
+						&hostBodyBuf, 
+						&contactCpu, 
+						nContacts,
+			
+						hostConvexData,
+						hostConvexData,
+	
+						vertices, 
+						uniqueEdges, 
+						faces,
+						indices,
+	
+						vertices,
+						uniqueEdges,
+						faces,
+						indices,
+
+						cpuCollidables,
+						cpuCollidables,
+						sepNormalWorldSpace);
+
+				
+
+		}
+			if (curContacts != nContacts)
+						contactOut->copyFromHost(contactCpu);
 		
 		for (int i=0;i<hostTriangleConvexPairsOut.size();i++)
 		{
-			int4 pair = hostTriangleConvexPairsOut[i];
-			int objectIndexA = pair.x;
-			int objectIndexB = pair.y;
-			int faceIndex = pair.z;
+			int4 pair1 = hostTriangleConvexPairsOut[i];
+			int objectIndexA = pair1.x;
+			int objectIndexB = pair1.y;
+			int faceIndex = pair1.z;
 			float4 sepNormalWorldSpace = concaveHostNormals[i];
 			int collidableIndexA = hostBodyBuf[objectIndexA].m_collidableIdx;
 			int collidableIndexB = hostBodyBuf[objectIndexB].m_collidableIdx;
@@ -2441,11 +3104,13 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 					int numContactsOut = 0;
 					clipHullHullSingle(
 						objectIndexA, objectIndexB,
+					   hostBodyBuf[objectIndexA].m_pos,					hostBodyBuf[objectIndexA].m_quat,
+					   hostBodyBuf[objectIndexB].m_pos,					hostBodyBuf[objectIndexB].m_quat,
+									   
 						collidableIndexA, collidableIndexB,
 						&hostBodyBuf, 
-						&hostShapeBuf,
 						&contactCpu, 
-						nContacts, cfg , 
+						nContacts,
 			
 						hostConvexDataA,
 						hostConvexData,
@@ -2462,7 +3127,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 						hostCollidablesA,
 						cpuCollidables,
-						(btVector3&)sepNormalWorldSpace,numContactsOut);
+						(btVector3&)sepNormalWorldSpace);
 
 					contactOut->copyFromHost(contactCpu);
 

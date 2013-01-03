@@ -268,7 +268,7 @@ int main(int argc, char* argv[])
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
-	ci.useOpenCL = false;//!args.CheckCmdLineFlag("disable_opencl");
+	ci.useOpenCL = true;//!args.CheckCmdLineFlag("disable_opencl");
 	ci.m_useConcaveMesh = true;//args.CheckCmdLineFlag("use_concave_mesh");
 	if (ci.m_useConcaveMesh)
 	{

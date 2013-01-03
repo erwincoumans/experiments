@@ -14,7 +14,7 @@ class CLPhysicsDemo;
 class btGpuDynamicsWorld : public btDynamicsWorld
 {
 	
-	btAlignedObjectArray<class btCollisionShape*> m_uniqueShapes;
+	btAlignedObjectArray<const class  btCollisionShape*> m_uniqueShapes;
 	btAlignedObjectArray<int> m_uniqueShapeMapping;
 
 
@@ -24,6 +24,9 @@ class btGpuDynamicsWorld : public btDynamicsWorld
 	
 	bool initOpenCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useInterop);
 	void exitOpenCL();
+	
+	int findOrRegisterCollisionShape(const btCollisionShape* colShape);
+
 	
 public:
 	btGpuDynamicsWorld(int preferredOpenCLPlatformIndex,int preferredOpenCLDeviceIndex);

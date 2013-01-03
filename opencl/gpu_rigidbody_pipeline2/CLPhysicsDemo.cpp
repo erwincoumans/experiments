@@ -207,17 +207,71 @@ void CLPhysicsDemo::writeBodiesToGpu()
 	
 }
 
-/*int		CLPhysicsDemo::registerCompoundShape()
+int		CLPhysicsDemo::registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes)
 {
-	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
+	
 	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
 	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
-
 	col.m_shapeType = CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS;
-	col.m_shapeIndex = narrowphaseAndSolver->registerCompoundShape(vertices,indices,col,scaling);
+	
+	col.m_shapeIndex = narrowphaseAndSolver->registerCompoundShape(childShapes);
+	col.m_numChildShapes = childShapes->size();
+	
+	
+	btAABBHost aabbMin, aabbMax;
+	btVector3 myAabbMin(1e30f,1e30f,1e30f);
+	btVector3 myAabbMax(-1e30f,-1e30f,-1e30f);
+	
+	//compute local AABB of the compound of all children
+	for (int i=0;i<childShapes->size();i++)
+	{
+		int childColIndex = childShapes->at(i).m_shapeIndex;
+		btCollidable& childCol = narrowphaseAndSolver->getCollidableCpu(childColIndex);
+		btAABBHost aabbMinLoc =m_data->m_localShapeAABBCPU->at(childColIndex*2);
+		btAABBHost aabbMaxLoc =m_data->m_localShapeAABBCPU->at(childColIndex*2+1);
+
+		btVector3 childLocalAabbMin(aabbMinLoc.fx,aabbMinLoc.fy,aabbMinLoc.fz);
+		btVector3 childLocalAabbMax(aabbMaxLoc.fx,aabbMaxLoc.fy,aabbMaxLoc.fz);
+		btVector3 aMin,aMax;
+		btScalar margin(0.f);
+		btTransform childTr;
+		childTr.setIdentity();
+
+		childTr.setOrigin(btVector3(childShapes->at(i).m_childPosition[0],
+									childShapes->at(i).m_childPosition[1],
+									childShapes->at(i).m_childPosition[2]));
+		childTr.setRotation(btQuaternion(childShapes->at(i).m_childOrientation[0],
+										 childShapes->at(i).m_childOrientation[1],
+										 childShapes->at(i).m_childOrientation[2],
+										 childShapes->at(i).m_childOrientation[3]));
+		btTransformAabb(childLocalAabbMin,childLocalAabbMax,margin,childTr,aMin,aMax);
+		myAabbMin.setMin(aMin);
+		myAabbMax.setMax(aMax);		
+	}
+	
+	aabbMin.fx = myAabbMin[0];//s_convexHeightField->m_aabb.m_min.x;
+	aabbMin.fy = myAabbMin[1];//s_convexHeightField->m_aabb.m_min.y;
+	aabbMin.fz= myAabbMin[2];//s_convexHeightField->m_aabb.m_min.z;
+	aabbMin.uw = 0;
+	
+	aabbMax.fx = myAabbMax[0];//s_convexHeightField->m_aabb.m_max.x;
+	aabbMax.fy = myAabbMax[1];//s_convexHeightField->m_aabb.m_max.y;
+	aabbMax.fz= myAabbMax[2];//s_convexHeightField->m_aabb.m_max.z;
+	aabbMax.uw = 0;
+	
+	m_data->m_localShapeAABBCPU->push_back(aabbMin);
+	m_data->m_localShapeAABBGPU->push_back(aabbMin);
+	
+	m_data->m_localShapeAABBCPU->push_back(aabbMax);
+	m_data->m_localShapeAABBGPU->push_back(aabbMax);
+	clFinish(g_cqCommandQue);
+	
+	
+	
+	
+	return collidableIndex;
 	
 }
-*/
 
 
 	
@@ -308,6 +362,8 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 		else
 		{
 			col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
+			//col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
+
 		}
 	}
 

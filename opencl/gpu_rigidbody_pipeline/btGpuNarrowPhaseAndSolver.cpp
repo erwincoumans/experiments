@@ -102,7 +102,8 @@ struct	CustomDispatchData
     btOpenCLArray<float4>* m_worldVertsA1GPU;
     btOpenCLArray<float4>* m_worldVertsB2GPU;
     
-    
+	btAlignedObjectArray<btGpuChildShape> m_cpuChildShapes;
+	btOpenCLArray<btGpuChildShape>*	m_gpuChildShapes;
     
 	btAlignedObjectArray<btGpuFace> m_convexFaces;
 	btOpenCLArray<btGpuFace>* m_convexFacesGPU;
@@ -184,7 +185,8 @@ m_queue(queue)
 	m_internalData->m_narrowPhase = new ChNarrowphase(ctx,device,queue);
     
 	m_internalData->m_convexFacesGPU = new btOpenCLArray<btGpuFace>(ctx,queue,MAX_CONVEX_SHAPES_CL*MAX_FACES_PER_SHAPE,false);
-    
+    m_internalData->m_gpuChildShapes = new btOpenCLArray<btGpuChildShape>(ctx,queue,MAX_COMPOUND_CHILD_SHAPES,false);
+	
 	m_internalData->m_convexPolyhedraGPU = new btOpenCLArray<ConvexPolyhedronCL>(ctx,queue,MAX_CONVEX_SHAPES_CL,false);
 	m_internalData->m_uniqueEdgesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_UNIQUE_EDGES,true);
 	m_internalData->m_convexVerticesGPU = new btOpenCLArray<btVector3>(ctx,queue,MAX_CONVEX_VERTICES,true);
@@ -231,6 +233,21 @@ int btGpuNarrowphaseAndSolver::allocateCollidable()
 	return curSize;
 }
 
+
+int btGpuNarrowphaseAndSolver::registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes)
+{
+	int curIndex = m_internalData->m_cpuChildShapes.size();
+	btAssert(curIndex+childShapes->size()<MAX_COMPOUND_CHILD_SHAPES);
+	
+	for (int i=0;i<childShapes->size();i++)
+	{
+		m_internalData->m_cpuChildShapes.push_back(childShapes->at(i));
+		
+	}
+	//if writing the data directly is too slow, we can delay it and do it all at once in
+	m_internalData->m_gpuChildShapes->copyFromHost(m_internalData->m_cpuChildShapes);
+	return curIndex;
+}
 
 int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices,btCollidable& col, const float* scaling1)
 {
@@ -689,6 +706,8 @@ btGpuNarrowphaseAndSolver::~btGpuNarrowphaseAndSolver(void)
 		delete m_internalData->m_narrowPhase;
 		delete m_internalData->m_gpuSatCollision;
 		delete m_internalData->m_convexFacesGPU;
+		delete m_internalData->m_gpuChildShapes;
+		
 		delete m_internalData->m_convexPolyhedraGPU;
 		delete m_internalData->m_uniqueEdgesGPU;
 		delete m_internalData->m_convexVerticesGPU;
@@ -932,13 +951,16 @@ void btGpuNarrowphaseAndSolver::computeContacts(cl_mem broadphasePairs, int numB
 					m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
 						m_internalData->m_convexPairsOutGPU,numPairsOut,
 						m_internalData->m_bodyBufferGPU,
-						m_internalData->m_ShapeBuffer,
 						m_internalData->m_pBufContactOutGPU,
-						nContactOut, cfgNP,
+						nContactOut,
                         *m_internalData->m_convexPolyhedraGPU,
                         *m_internalData->m_convexVerticesGPU,
                         *m_internalData->m_uniqueEdgesGPU,
-						*m_internalData->m_convexFacesGPU,*m_internalData->m_convexIndicesGPU,*m_internalData->m_collidablesGPU,
+						*m_internalData->m_convexFacesGPU,
+						*m_internalData->m_convexIndicesGPU,
+						*m_internalData->m_collidablesGPU,
+						*m_internalData->m_gpuChildShapes,
+
 						clAabbArray,
                         *m_internalData->m_worldVertsB1GPU,
                         *m_internalData->m_clippingFacesOutGPU,
@@ -959,15 +981,15 @@ void btGpuNarrowphaseAndSolver::computeContacts(cl_mem broadphasePairs, int numB
 						m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT_sequential(
 							&broadphasePairsGPU, numBroadphasePairs,
 							m_internalData->m_bodyBufferGPU,
-							m_internalData->m_ShapeBuffer,
-														m_internalData->m_pBufContactOutGPU,
-							nContactOut, cfgNP,
+							m_internalData->m_pBufContactOutGPU,
+							nContactOut, 
 							*m_internalData->m_convexPolyhedraGPU,
 							*m_internalData->m_convexVerticesGPU,
 							*m_internalData->m_uniqueEdgesGPU,
 							*m_internalData->m_convexFacesGPU,
 							*m_internalData->m_convexIndicesGPU,
 							*m_internalData->m_collidablesGPU,
+							*m_internalData->m_gpuChildShapes,
 							clAabbArray,
 							numObjects,
 							maxTriConvexPairCapacity,
@@ -978,15 +1000,16 @@ void btGpuNarrowphaseAndSolver::computeContacts(cl_mem broadphasePairs, int numB
 						m_internalData->m_gpuSatCollision->computeConvexConvexContactsGPUSAT(
 								&broadphasePairsGPU, numBroadphasePairs,
 								m_internalData->m_bodyBufferGPU,
-								m_internalData->m_ShapeBuffer,
 								m_internalData->m_pBufContactOutGPU,
-								nContactOut, cfgNP, 
+								nContactOut,
 								*m_internalData->m_convexPolyhedraGPU,
 								*m_internalData->m_convexVerticesGPU,
 								*m_internalData->m_uniqueEdgesGPU,
 								*m_internalData->m_convexFacesGPU,
 								*m_internalData->m_convexIndicesGPU,
 								*m_internalData->m_collidablesGPU,
+								*m_internalData->m_gpuChildShapes,
+
 								clAabbArray,
 								 *m_internalData->m_worldVertsB1GPU,
 								 *m_internalData->m_clippingFacesOutGPU,

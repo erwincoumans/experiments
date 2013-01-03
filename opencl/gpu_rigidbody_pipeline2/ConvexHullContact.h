@@ -4,12 +4,12 @@
 
 #include "../broadphase_benchmark/btOpenCLArray.h"
 #include "../../dynamics/basic_demo/Stubs/AdlRigidBody.h"
-#include "../../dynamics/basic_demo/Stubs/ChNarrowphase.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../gpu_rigidbody_pipeline/btConvexUtility.h"
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
 #include "../gpu_rigidbody_pipeline/btCollidable.h"
+#include "../../dynamics/basic_demo/Stubs/ChNarrowphase.h"
 
 
 struct btYetAnotherAabb
@@ -33,7 +33,11 @@ struct GpuSatCollision
 	cl_device_id			m_device;
 	cl_command_queue		m_queue;
 	cl_kernel				m_findSeparatingAxisKernel;
+	cl_kernel				m_findCompoundPairsKernel;
+	cl_kernel				m_processCompoundPairsKernel;
+
 	cl_kernel				m_clipHullHullKernel;
+	cl_kernel				m_clipCompoundsHullHullKernel;
     
     cl_kernel               m_clipFacesAndContactReductionKernel;
     cl_kernel               m_findClippingFacesKernel;
@@ -52,14 +56,16 @@ struct GpuSatCollision
 	
 
 	void computeConvexConvexContactsGPUSAT( const btOpenCLArray<int2>* pairs, int nPairs, 
-			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
+			btOpenCLArray<Contact4>* contactOut, int& nContacts,
 			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,
 			const btOpenCLArray<btVector3>& vertices,
 			const btOpenCLArray<btVector3>& uniqueEdges,
 			const btOpenCLArray<btGpuFace>& faces,
 			const btOpenCLArray<int>& indices,
 			const btOpenCLArray<btCollidable>& gpuCollidables,
+			const btOpenCLArray<btGpuChildShape>& gpuChildShapes,
+
 			const btOpenCLArray<btYetAnotherAabb>& clAabbs,
            btOpenCLArray<float4>& worldVertsB1GPU,
            btOpenCLArray<int4>& clippingFacesOutGPU,
@@ -73,15 +79,19 @@ struct GpuSatCollision
 			);
 
 	void computeConvexConvexContactsGPUSAT_sequential( const btOpenCLArray<int2>* pairs, int nPairs, 
-			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btOpenCLArray<Contact4>* contactOut, int& nContacts, const ChNarrowphase::Config& cfg , 
+			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
+													  
+			btOpenCLArray<Contact4>* contactOut, int& nContacts,
+													  
 			const btOpenCLArray<ConvexPolyhedronCL>& hostConvexData,
 			const btOpenCLArray<btVector3>& vertices,
 			const btOpenCLArray<btVector3>& uniqueEdges,
 			const btOpenCLArray<btGpuFace>& faces,
 			const btOpenCLArray<int>& indices,
 			const btOpenCLArray<btCollidable>& gpuCollidables,
-			const btOpenCLArray<btYetAnotherAabb>& clAabbs, 
+			const btOpenCLArray<btGpuChildShape>& gpuChildShapes,
+
+			const btOpenCLArray<btYetAnotherAabb>& clAabbs,
 			int numObjects,
 			int maxTriConvexPairCapacity,
 			btOpenCLArray<int4>& triangleConvexPairs,
@@ -91,13 +101,15 @@ struct GpuSatCollision
 
 		void computeConvexConvexContactsGPUSATSingle(
 			int bodyIndexA, int bodyIndexB,
+													 const float4& posA,
+													 const float4& ornA,
+													 const float4& posB,
+													 const float4& ornB,
 			int collidableIndexA, int collidableIndexB,
 
-			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
-			
+			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf,
+			btAlignedObjectArray<Contact4>* contactOut,
+			int& nContacts,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& gpuConvexDataB,
 	
@@ -116,13 +128,17 @@ struct GpuSatCollision
 
 		void clipHullHullSingle(
 			int bodyIndexA, int bodyIndexB,
+								const float4& posA,
+								const float4& ornA,
+								const float4& posB,
+								const float4& ornB,
+
 			int collidableIndexA, int collidableIndexB,
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
-			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
-			
+			btAlignedObjectArray<Contact4>* contactOut,
+			int& nContacts,
+								
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataA,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 	
@@ -138,7 +154,7 @@ struct GpuSatCollision
 
 			const btAlignedObjectArray<btCollidable>& hostCollidablesA,
 			const btAlignedObjectArray<btCollidable>& hostCollidablesB,
-			const btVector3& sepNormalWorldSpace,int numContactsOut
+			const btVector3& sepNormalWorldSpace
 			);
 
 		void computeConcaveConvexContactsGPUSATSingle(
@@ -146,9 +162,8 @@ struct GpuSatCollision
 			int collidableIndexA, int collidableIndexB,
 
 			const btAlignedObjectArray<RigidBodyBase::Body>* bodyBuf, 
-			const btAlignedObjectArray<ChNarrowphase::ShapeData>* shapeBuf,
 			btAlignedObjectArray<Contact4>* contactOut, 
-			int& nContacts, const ChNarrowphase::Config& cfg , 
+			int& nContacts,
 			const btAlignedObjectArray<ConvexPolyhedronCL>& hostConvexDataB,
 			const btAlignedObjectArray<btVector3>& verticesB,
 			const btAlignedObjectArray<btVector3>& uniqueEdgesB,

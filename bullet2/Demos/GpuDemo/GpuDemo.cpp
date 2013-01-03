@@ -145,14 +145,14 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 #if 0
 		groundShape = new btBvhTriangleMeshShape(meshInterface,true);//btStaticPlaneShape(btVector3(0,1,0),50);
 #else
-		btBoxShape* shape =new btBoxShape(btVector3(btScalar(150.),btScalar(10.),btScalar(150.)));
+		btBoxShape* shape =new btBoxShape(btVector3(btScalar(250.),btScalar(10.),btScalar(250.)));
 		shape->initializePolyhedralFeatures();
 		groundShape = shape;
 #endif
 
 	} else
 	{
-		groundShape  = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+		groundShape  = new btBoxShape(btVector3(btScalar(250.),btScalar(50.),btScalar(250.)));
 	}
 	
 	m_collisionShapes.push_back(groundShape);
@@ -197,7 +197,7 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 		vertices.push_back(btVector3(-1,-1,-1));
 		vertices.push_back(btVector3(-1,-1,1));
 		
-#if 1
+#if 0
 		btPolyhedralConvexShape* colShape = new btConvexHullShape(&vertices[0].getX(),vertices.size());
 		colShape->initializePolyhedralFeatures();
 #else
@@ -247,16 +247,19 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 				sizeX = 50;
 
 			int startX = !ci.m_useConcaveMesh&&k==0? -20 : 0;
-			float gapX = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapX;
+			float gapX = !ci.m_useConcaveMesh&&k==0? 3.05 : ci.gapX;
 			for (int i=0;i<sizeX;i++)
 			{
 				int sizeZ = !ci.m_useConcaveMesh&&k==0? 50 : ci.arraySizeZ;
 				int startZ = (!ci.m_useConcaveMesh)&&k==0? -20 : 0;
-				float gapZ = !ci.m_useConcaveMesh&&k==0? 2.05 : ci.gapZ;
+				float gapZ = !ci.m_useConcaveMesh&&k==0? 3.05 : ci.gapZ;
 				for(int j = 0;j<sizeZ;j++)
 				{
-					btCollisionShape* shape = k==0? boxShape : colShape;
+					//btCollisionShape* shape = k==0? boxShape : colShape;
 
+					btCollisionShape* shape = colShape;
+
+					
 					btScalar	mass  = 1;
 					if (!ci.m_useConcaveMesh && k==0)
 						mass = k==0? 0.f : 1.f;

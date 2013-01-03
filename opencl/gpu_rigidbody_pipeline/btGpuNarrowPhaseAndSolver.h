@@ -27,6 +27,8 @@ subject to the following restrictions:
 //#define MAX_PAIRS_PER_BODY_CL 64
 #define MAX_PAIRS_PER_BODY_CL 16
 #define MAX_CONVEX_SHAPES_CL 8192
+#define MAX_COMPOUND_CHILD_SHAPES 8192
+
 #define MAX_FACES_PER_SHAPE 64
 #define MAX_VERTICES_PER_FACE 64//mainly use for contact generation
 
@@ -80,6 +82,9 @@ public:
 
 	virtual ~btGpuNarrowphaseAndSolver(void);
 
+	
+	int registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes);
+	
 	int registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, btCollidable& col, const float* scaling);
 	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col, const float* scaling);
 	int registerConvexHullShape(class btConvexUtility* convexPtr, btCollidable& col);

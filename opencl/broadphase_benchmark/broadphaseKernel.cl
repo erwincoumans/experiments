@@ -74,6 +74,8 @@ typedef struct
 
 typedef struct Collidable
 {
+	int m_unused1;
+	int m_unused2;
 	int m_shapeType;
 	int m_shapeIndex;
 } Collidable;
@@ -303,8 +305,8 @@ __kernel void initializeGpuAabbsFull(  const int numNodes, __global Body* gBodie
 			
 		if (shapeIndex>=0)
 		{
-			btAABBCL minAabb = plocalShapeAABB[shapeIndex*2];
-			btAABBCL maxAabb = plocalShapeAABB[shapeIndex*2+1];
+			btAABBCL minAabb = plocalShapeAABB[collidableIndex*2];
+			btAABBCL maxAabb = plocalShapeAABB[collidableIndex*2+1];
 				
 			float4 halfExtents = ((float4)(maxAabb.fx - minAabb.fx,maxAabb.fy - minAabb.fy,maxAabb.fz - minAabb.fz,0.f))*0.5f;
 			float4 localCenter = ((float4)(maxAabb.fx + minAabb.fx,maxAabb.fy + minAabb.fy,maxAabb.fz + minAabb.fz,0.f))*0.5f;

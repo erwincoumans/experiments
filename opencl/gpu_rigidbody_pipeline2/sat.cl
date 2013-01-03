@@ -1,18 +1,33 @@
-
 //keep this enum in sync with the CPU version (in AdlCollisionShape.h)
 #define SHAPE_CONVEX_HULL 3
 #define SHAPE_CONCAVE_TRIMESH 5
 #define TRIANGLE_NUM_CONVEX_FACES 5
+#define SHAPE_COMPOUND_OF_CONVEX_HULLS 6
+
+
 
 typedef unsigned int u32;
 
 ///keep this in sync with btCollidable.h
 typedef struct
 {
+	int m_numChildShapes;
+	int blaat2;
 	int m_shapeType;
 	int m_shapeIndex;
 	
 } btCollidableGpu;
+
+typedef struct
+{
+	float4	m_childPosition;
+	float4	m_childOrientation;
+	int m_shapeIndex;
+	int m_unused0;
+	int m_unused1;
+	int m_unused2;
+} btGpuChildShape;
+
 
 typedef struct
 {
@@ -71,10 +86,23 @@ typedef struct
 
 #define make_float4 (float4)
 
+
 __inline
 float4 cross3(float4 a, float4 b)
 {
 	return cross(a,b);
+
+	
+//	float4 a1 = make_float4(a.xyz,0.f);
+//	float4 b1 = make_float4(b.xyz,0.f);
+
+//	return cross(a1,b1);
+
+//float4 c = make_float4(a.y*b.z - a.z*b.y,a.z*b.x - a.x*b.z,a.x*b.y - a.y*b.x,0.f);
+	
+	//	float4 c = make_float4(a.y*b.z - a.z*b.y,1.f,a.x*b.y - a.y*b.x,0.f);
+	
+	//return c;
 }
 
 __inline
@@ -88,6 +116,7 @@ float dot3F4(float4 a, float4 b)
 __inline
 float4 fastNormalize4(float4 v)
 {
+	v = make_float4(v.xyz,0.f);
 	return fast_normalize(v);
 }
 
@@ -246,7 +275,7 @@ inline bool TestSepAxisLocalA(const ConvexPolyhedronCL* hullA, __global const Co
 
 inline bool IsAlmostZero(const float4 v)
 {
-	if(fabs(v.x)>1e-6f || fabs(v.y)>1e-6f || fabs(v.z)>1e-6f)	
+	if(fabs(v.x)>1e-6f || fabs(v.y)>1e-6f || fabs(v.z)>1e-6f)
 		return false;
 	return true;
 }
@@ -475,7 +504,7 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 	__global const float4* uniqueEdges, 
 	__global const btGpuFace* faces,
 	__global const int*  indices,
-	__global volatile float4* sep,
+	float4* sep,
 	float* dmin)
 {
 	int i = get_global_id(0);
@@ -512,11 +541,12 @@ bool findSeparatingAxis(	__global const ConvexPolyhedronCL* hullA, __global cons
 		}
 	}
 
+
+		if((dot3F4(-DeltaC2,*sep))>0.0f)
+		{
+			*sep = -(*sep);
+		}
 	
-	if((dot3F4(-DeltaC2,*sep))>0.0f)
-	{
-		*sep = -(*sep);
-	}
 	return true;
 }
 
@@ -533,7 +563,7 @@ bool findSeparatingAxisEdgeEdge(	__global const ConvexPolyhedronCL* hullA, __glo
 	__global const float4* uniqueEdges, 
 	__global const btGpuFace* faces,
 	__global const int*  indices,
-	__global volatile float4* sep,
+	float4* sep,
 	float* dmin)
 {
 	int i = get_global_id(0);
@@ -605,7 +635,294 @@ bool findSeparatingAxisEdgeEdge(	__global const ConvexPolyhedronCL* hullA, __glo
 }
 
 
+// work-in-progress
+__kernel void   processCompoundPairsKernel( __global const int4* gpuCompoundPairs,
+																					__global const BodyData* rigidBodies, 
+																					__global const btCollidableGpu* collidables,
+																					__global const ConvexPolyhedronCL* convexShapes, 
+																					__global const float4* vertices,
+																					__global const float4* uniqueEdges,
+																					__global const btGpuFace* faces,
+																					__global const int* indices,
+																					__global btAabbCL* aabbs,
+																					__global const btGpuChildShape* gpuChildShapes,
+																					__global volatile float4* gpuCompoundSepNormalsOut,
+																					__global volatile int* gpuHasCompoundSepNormalsOut,
+																					int numCompoundPairs
+																					)
+{
 
+	int i = get_global_id(0);
+	if (i<numCompoundPairs)
+	{
+		int bodyIndexA = gpuCompoundPairs[i].x;
+		int bodyIndexB = gpuCompoundPairs[i].y;
+
+		int childShapeIndexA = gpuCompoundPairs[i].z;
+		int childShapeIndexB = gpuCompoundPairs[i].w;
+		
+		int collidableIndexA = -1;
+		int collidableIndexB = -1;
+		
+		float4 ornA = rigidBodies[bodyIndexA].m_quat;
+		float4 posA = rigidBodies[bodyIndexA].m_pos;
+		
+		float4 ornB = rigidBodies[bodyIndexB].m_quat;
+		float4 posB = rigidBodies[bodyIndexB].m_pos;
+							
+		if (childShapeIndexA >= 0)
+		{
+			collidableIndexA = gpuChildShapes[childShapeIndexA].m_shapeIndex;
+			float4 childPosA = gpuChildShapes[childShapeIndexA].m_childPosition;
+			float4 childOrnA = gpuChildShapes[childShapeIndexA].m_childOrientation;
+			float4 newPosA = qtRotate(ornA,childPosA)+posA;
+			float4 newOrnA = qtMul(ornA,childOrnA);
+			posA = newPosA;
+			ornA = newOrnA;
+		} else
+		{
+			collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+		}
+		
+		if (childShapeIndexB>=0)
+		{
+			collidableIndexB = gpuChildShapes[childShapeIndexB].m_shapeIndex;
+			float4 childPosB = gpuChildShapes[childShapeIndexB].m_childPosition;
+			float4 childOrnB = gpuChildShapes[childShapeIndexB].m_childOrientation;
+			float4 newPosB = transform(&childPosB,&posB,&ornB);
+			float4 newOrnB = qtMul(ornB,childOrnB);
+			posB = newPosB;
+			ornB = newOrnB;
+		} else
+		{
+			collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;	
+		}
+	
+		gpuHasCompoundSepNormalsOut[i] = 0;
+	
+		int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+		int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+	
+		int hasSeparatingAxis = 5;
+							
+		int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+		float dmin = FLT_MAX;
+		posA.w = 0.f;
+		posB.w = 0.f;
+		float4 c0local = convexShapes[shapeIndexA].m_localCenter;
+		float4 c0 = transform(&c0local, &posA, &ornA);
+		float4 c1local = convexShapes[shapeIndexB].m_localCenter;
+		float4 c1 = transform(&c1local,&posB,&ornB);
+		const float4 DeltaC2 = c0 - c1;
+		float4 sepNormal = make_float4(1,0,0,0);
+		bool sepA = findSeparatingAxis(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],posA,ornA,posB,ornB,DeltaC2,vertices,uniqueEdges,faces,indices,&sepNormal,&dmin);
+		hasSeparatingAxis = 4;
+		if (!sepA)
+		{
+			hasSeparatingAxis = 0;
+		} else
+		{
+			bool sepB = findSeparatingAxis(	&convexShapes[shapeIndexB],&convexShapes[shapeIndexA],posB,ornB,posA,ornA,DeltaC2,vertices,uniqueEdges,faces,indices,&sepNormal,&dmin);
+
+			if (!sepB)
+			{
+				hasSeparatingAxis = 0;
+			} else//(!sepB)
+			{
+				bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],posA,ornA,posB,ornB,DeltaC2,vertices,uniqueEdges,faces,indices,&sepNormal,&dmin);
+				if (sepEE)
+				{
+						gpuCompoundSepNormalsOut[i] = sepNormal;//fastNormalize4(sepNormal);
+						gpuHasCompoundSepNormalsOut[i] = 1;
+				}//sepEE
+			}//(!sepB)
+		}//(!sepA)
+		
+		
+	}
+		
+}
+
+// work-in-progress
+__kernel void   findCompoundPairsKernel( __global const int2* pairs, 
+	__global const BodyData* rigidBodies, 
+	__global const btCollidableGpu* collidables,
+	__global const ConvexPolyhedronCL* convexShapes, 
+	__global const float4* vertices,
+	__global const float4* uniqueEdges,
+	__global const btGpuFace* faces,
+	__global const int* indices,
+	__global btAabbCL* aabbs,
+	__global const btGpuChildShape* gpuChildShapes,
+	__global volatile int4* gpuCompoundPairsOut,
+	__global volatile int* numCompoundPairsOut,
+	int numPairs,
+	int maxNumCompoundPairsCapacity
+	)
+{
+
+	int i = get_global_id(0);
+
+	if (i<numPairs)
+	{
+		int bodyIndexA = pairs[i].x;
+		int bodyIndexB = pairs[i].y;
+
+		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+
+		int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
+		int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+
+
+		//once the broadphase avoids static-static pairs, we can remove this test
+		if ((rigidBodies[bodyIndexA].m_invMass==0) &&(rigidBodies[bodyIndexB].m_invMass==0))
+		{
+			return;
+		}
+
+		if ((collidables[collidableIndexA].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS) ||(collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS))
+		{
+
+			if (collidables[collidableIndexA].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS) 
+			{
+
+				int numChildrenA = collidables[collidableIndexA].m_numChildShapes;
+				for (int c=0;c<numChildrenA;c++)
+				{
+					int childShapeIndexA = collidables[collidableIndexA].m_shapeIndex+c;
+					int childColIndexA = gpuChildShapes[childShapeIndexA].m_shapeIndex;
+
+					float4 posA = rigidBodies[bodyIndexA].m_pos;
+					float4 ornA = rigidBodies[bodyIndexA].m_quat;
+					float4 childPosA = gpuChildShapes[childShapeIndexA].m_childPosition;
+					float4 childOrnA = gpuChildShapes[childShapeIndexA].m_childOrientation;
+					float4 newPosA = qtRotate(ornA,childPosA)+posA;
+					float4 newOrnA = qtMul(ornA,childOrnA);
+
+					int shapeIndexA = collidables[childColIndexA].m_shapeIndex;
+
+					if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+					{
+						int numChildrenB = collidables[collidableIndexB].m_numChildShapes;
+						for (int b=0;b<numChildrenB;b++)
+						{
+							int childShapeIndexB = collidables[collidableIndexB].m_shapeIndex+b;
+							int childColIndexB = gpuChildShapes[childShapeIndexB].m_shapeIndex;
+							float4 ornB = rigidBodies[bodyIndexB].m_quat;
+							float4 posB = rigidBodies[bodyIndexB].m_pos;
+							float4 childPosB = gpuChildShapes[childShapeIndexB].m_childPosition;
+							float4 childOrnB = gpuChildShapes[childShapeIndexB].m_childOrientation;
+							float4 newPosB = transform(&childPosB,&posB,&ornB);
+							float4 newOrnB = qtMul(ornB,childOrnB);
+
+							int shapeIndexB = collidables[childColIndexB].m_shapeIndex;
+
+							if (1)
+							{
+								int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+								float dmin = FLT_MAX;
+								float4 posA = newPosA;
+								posA.w = 0.f;
+								float4 posB = newPosB;
+								posB.w = 0.f;
+								float4 c0local = convexShapes[shapeIndexA].m_localCenter;
+								float4 ornA = newOrnA;
+								float4 c0 = transform(&c0local, &posA, &ornA);
+								float4 c1local = convexShapes[shapeIndexB].m_localCenter;
+								float4 ornB =newOrnB;
+								float4 c1 = transform(&c1local,&posB,&ornB);
+								const float4 DeltaC2 = c0 - c1;
+
+								{//
+									int compoundPairIdx = atomic_inc(numCompoundPairsOut);
+									if (compoundPairIdx<maxNumCompoundPairsCapacity)
+									{
+										gpuCompoundPairsOut[compoundPairIdx]  = (int4)(bodyIndexA,bodyIndexB,childShapeIndexA,childShapeIndexB);
+									}
+								}//
+							}//fi(1)
+						} //for (int b=0
+					}//if (collidables[collidableIndexB].
+					else//if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+					{
+						if (1)
+						{
+							int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+							float dmin = FLT_MAX;
+							float4 posA = newPosA;
+							posA.w = 0.f;
+							float4 posB = rigidBodies[bodyIndexB].m_pos;
+							posB.w = 0.f;
+							float4 c0local = convexShapes[shapeIndexA].m_localCenter;
+							float4 ornA = newOrnA;
+							float4 c0 = transform(&c0local, &posA, &ornA);
+							float4 c1local = convexShapes[shapeIndexB].m_localCenter;
+							float4 ornB = rigidBodies[bodyIndexB].m_quat;
+							float4 c1 = transform(&c1local,&posB,&ornB);
+							const float4 DeltaC2 = c0 - c1;
+
+							{
+								int compoundPairIdx = atomic_inc(numCompoundPairsOut);
+								if (compoundPairIdx<maxNumCompoundPairsCapacity)
+								{
+									gpuCompoundPairsOut[compoundPairIdx] = (int4)(bodyIndexA,bodyIndexB,childShapeIndexA,-1);
+								}//if (compoundPairIdx<maxNumCompoundPairsCapacity)
+							}//
+						}//fi (1)
+					}//if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+				}//for (int b=0;b<numChildrenB;b++)	
+				return;
+			}//if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+			if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+			{
+				int numChildrenB = collidables[collidableIndexB].m_numChildShapes;
+				for (int b=0;b<numChildrenB;b++)
+				{
+					int childShapeIndexB = collidables[collidableIndexB].m_shapeIndex+b;
+					int childColIndexB = gpuChildShapes[childShapeIndexB].m_shapeIndex;
+					float4 ornB = rigidBodies[bodyIndexB].m_quat;
+					float4 posB = rigidBodies[bodyIndexB].m_pos;
+					float4 childPosB = gpuChildShapes[childShapeIndexB].m_childPosition;
+					float4 childOrnB = gpuChildShapes[childShapeIndexB].m_childOrientation;
+					float4 newPosB = qtRotate(ornB,childPosB)+posB;
+					float4 newOrnB = qtMul(ornB,childOrnB);
+
+					int shapeIndexB = collidables[childColIndexB].m_shapeIndex;
+
+
+					//////////////////////////////////////
+
+					if (1)
+					{
+						int numFacesA = convexShapes[shapeIndexA].m_numFaces;
+						float dmin = FLT_MAX;
+						float4 posA = rigidBodies[bodyIndexA].m_pos;
+						posA.w = 0.f;
+						float4 posB = newPosB;
+						posB.w = 0.f;
+						float4 c0local = convexShapes[shapeIndexA].m_localCenter;
+						float4 ornA = rigidBodies[bodyIndexA].m_quat;
+						float4 c0 = transform(&c0local, &posA, &ornA);
+						float4 c1local = convexShapes[shapeIndexB].m_localCenter;
+						float4 ornB =newOrnB;
+						float4 c1 = transform(&c1local,&posB,&ornB);
+						const float4 DeltaC2 = c0 - c1;
+						{//
+							int compoundPairIdx = atomic_inc(numCompoundPairsOut);
+							if (compoundPairIdx<maxNumCompoundPairsCapacity)
+							{
+								gpuCompoundPairsOut[compoundPairIdx] = (int4)(bodyIndexA,bodyIndexB,-1,childShapeIndexB);
+							}//fi (compoundPairIdx<maxNumCompoundPairsCapacity)
+						}//
+					}//fi (1)	
+				}//for (int b=0;b<numChildrenB;b++)
+				return;
+			}//if (collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS)
+			return;
+		}//fi ((collidables[collidableIndexA].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS) ||(collidables[collidableIndexB].m_shapeType==SHAPE_COMPOUND_OF_CONVEX_HULLS))
+	}//i<numPairs
+}
 
 // work-in-progress
 __kernel void   findSeparatingAxisKernel( __global const int2* pairs, 
@@ -623,7 +940,7 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 																					__global float4* concaveSeparatingNormalsOut,
 																					__global volatile int* numConcavePairsOut,
 																					int numPairs,
-																					int maxnumConcavePairsCapacity
+																					int maxNumConcavePairsCapacity
 																					)
 {
 
@@ -631,14 +948,24 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 	
 	if (i<numPairs)
 	{
+
+	
 		int bodyIndexA = pairs[i].x;
 		int bodyIndexB = pairs[i].y;
 
 		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
 		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
-
+	
 		int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
 		int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
+		
+		
+		//once the broadphase avoids static-static pairs, we can remove this test
+		if ((rigidBodies[bodyIndexA].m_invMass==0) &&(rigidBodies[bodyIndexB].m_invMass==0))
+		{
+			hasSeparatingAxis[i] = 0;
+			return;
+		}
 		
 		if ((collidables[collidableIndexA].m_shapeType==SHAPE_CONCAVE_TRIMESH))// && (collidables[collidableIndexB].m_shapeType==SHAPE_CONVEX_HULL))
 		{
@@ -846,7 +1173,7 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 					if (hasSeparatingAxis)
 					{
 						int pairIdx = atomic_inc(numConcavePairsOut);
-						if (pairIdx<maxnumConcavePairsCapacity)
+						if (pairIdx<maxNumConcavePairsCapacity)
 						{
 							concavePairsOut[pairIdx].x = bodyIndexA;
 							concavePairsOut[pairIdx].y = bodyIndexB;
@@ -858,10 +1185,12 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 					}
 				}
 			}
-			//todo
+			//todo//??
 			hasSeparatingAxis[i] = 0;
 			return;
 		}		
+
+	
 
 		if ((collidables[collidableIndexA].m_shapeType!=SHAPE_CONVEX_HULL) ||(collidables[collidableIndexB].m_shapeType!=SHAPE_CONVEX_HULL))
 		{
@@ -870,12 +1199,6 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 		}
 			
 
-//once the broadphase avoids static-static pairs, we can remove this test
-		if ((rigidBodies[bodyIndexA].m_invMass==0) &&(rigidBodies[bodyIndexB].m_invMass==0))
-		{
-			hasSeparatingAxis[i] = 0;
-			return;
-		}
 
 
 		
@@ -894,40 +1217,42 @@ __kernel void   findSeparatingAxisKernel( __global const int2* pairs,
 		float4 ornB =rigidBodies[bodyIndexB].m_quat;
 		float4 c1 = transform(&c1local,&posB,&ornB);
 		const float4 DeltaC2 = c0 - c1;
+		float4 sepNormal;
 		
-		bool sepA = findSeparatingAxis(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
-																								rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,
+		bool sepA = findSeparatingAxis(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],posA,ornA,
+																								posB,ornB,
 																								DeltaC2,
 																								vertices,uniqueEdges,faces,
-																								indices,&separatingNormals[i],&dmin);
+																								indices,&sepNormal,&dmin);
 		hasSeparatingAxis[i] = 4;
 		if (!sepA)
 		{
 			hasSeparatingAxis[i] = 0;
 		} else
 		{
-			bool sepB = findSeparatingAxis(	&convexShapes[shapeIndexB],&convexShapes[shapeIndexA],rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,
-																									rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
+			bool sepB = findSeparatingAxis(	&convexShapes[shapeIndexB],&convexShapes[shapeIndexA],posB,ornB,
+																									posA,ornA,
 																									DeltaC2,
 																									vertices,uniqueEdges,faces,
-																									indices,&separatingNormals[i],&dmin);
+																									indices,&sepNormal,&dmin);
 
 			if (!sepB)
 			{
 				hasSeparatingAxis[i] = 0;
 			} else
 			{
-				bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],rigidBodies[bodyIndexA].m_pos,rigidBodies[bodyIndexA].m_quat,
-																									rigidBodies[bodyIndexB].m_pos,rigidBodies[bodyIndexB].m_quat,
+				bool sepEE = findSeparatingAxisEdgeEdge(	&convexShapes[shapeIndexA], &convexShapes[shapeIndexB],posA,ornA,
+																									posB,ornB,
 																									DeltaC2,
 																									vertices,uniqueEdges,faces,
-																									indices,&separatingNormals[i],&dmin);
+																									indices,&sepNormal,&dmin);
 				if (!sepEE)
 				{
 					hasSeparatingAxis[i] = 0;
 				} else
 				{
 					hasSeparatingAxis[i] = 1;
+					separatingNormals[i] = sepNormal;
 				}
 			}
 		}

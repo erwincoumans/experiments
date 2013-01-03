@@ -328,9 +328,12 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 			int bodyIndexB = hostPairs[i].y;
 
 			int curContactOut = numContacts;
-
+			btAssert(0);
+			/*
 			m_satCollision->computeConvexConvexContactsGPUSATSingle(
 								bodyIndexA,bodyIndexB,
+								bodyBuf[bodyIndexA].m_pos,bodyBuf[bodyIndexA].m_quat,
+								bodyBuf[bodyIndexB].m_pos,bodyBuf[bodyIndexB].m_quat,
 								bodyBuf[bodyIndexA].m_collidableIdx,bodyBuf[bodyIndexB].m_collidableIdx,
 								&bodyBuf,&shapeBuf,
 								&contactOut,numContacts,cfg,
@@ -338,6 +341,7 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 								m_vertices,m_uniqueEdges,m_faces,m_indices,
 								m_vertices,m_uniqueEdges,m_faces,m_indices,
 								m_hostCollidables,m_hostCollidables);
+								*/
 			if (curContactOut !=numContacts)
 			{
 				contactOut[curContactOut].m_batchIdx = i;//?
@@ -390,6 +394,8 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 			btOpenCLArray<float4> worldVertsB2GPU(m_ctx,m_queue);
 
 			{
+				btAssert(0);
+				/*
 				BT_PROFILE("computeConvexConvexContactsGPUSAT");
 				m_satCollision->computeConvexConvexContactsGPUSAT(
 					&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
@@ -397,15 +403,20 @@ void	btGpuDispatcher::dispatchAllCollisionPairs(btOverlappingPairCache* pairCach
 					gpuCollidables,clAabbs,
 					worldVertsB1GPU,clippingFacesOutGPU,worldNormalsAGPU,worldVertsA1GPU,worldVertsB2GPU,
 					numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
-				}
+				*/
+
+			}
 
 		} else
 		{
+			btAssert(0);
+	/*
 			BT_PROFILE("computeConvexConvexContactsGPUSAT_sequential");
 			m_satCollision->computeConvexConvexContactsGPUSAT_sequential(
 				&gpuPairs,gpuPairs.size(),&gpuBodyBuf,&gpuShapeBuf,
 				&gpuContacts,numContacts,cfg,gpuConvexData,gpuVertices,gpuUniqueEdges,gpuFaces,gpuIndices,
 				gpuCollidables,clAabbs,numObjects,maxTriConvexPairCapacity,triangleConvexPairs,numTriConvexPairsOut);
+		*/
 		}
 
 		{

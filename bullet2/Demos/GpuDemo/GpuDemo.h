@@ -54,14 +54,14 @@ class GpuDemo : public DemoApplication
 		float gapY;
 		float gapZ;
 		ConstructionInfo()
-			:useOpenCL(true),
+			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(5),
-			arraySizeY(5),
-			arraySizeZ(5),
+			arraySizeX(10),
+			arraySizeY(30 ),
+			arraySizeZ(10),
 			m_useConcaveMesh(false),
-			gapX(2.3),
+			gapX(4.3),
 			gapY(6.0),
 			gapZ(4.3)
 		{

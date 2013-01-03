@@ -5,6 +5,7 @@
 #include "../../../opencl/gpu_rigidbody_pipeline/btGpuNarrowPhaseAndSolver.h"
 #include "BulletCollision/CollisionShapes/btPolyhedralConvexShape.h"
 #include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
+#include "BulletCollision/CollisionShapes/btCompoundShape.h"
 
 
 #include "LinearMath/btQuickprof.h"
@@ -14,10 +15,7 @@
 	#include <wiNdOws.h>
 #endif
 
-struct btGpuInternalData
-{
 
-};
 
 btGpuDynamicsWorld::btGpuDynamicsWorld(int preferredOpenCLPlatformIndex,int preferredOpenCLDeviceIndex)
 :btDynamicsWorld(0,0,0),
@@ -99,22 +97,18 @@ void	btGpuDynamicsWorld::setGravity(const btVector3& gravity)
 {
 }
 
-void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
+int btGpuDynamicsWorld::findOrRegisterCollisionShape(const btCollisionShape* colShape)
 {
-
-	body->setMotionState(0);
-	int gpuShapeIndex = -1;
-
-	int index = m_uniqueShapes.findLinearSearch(body->getCollisionShape());
+	int index = m_uniqueShapes.findLinearSearch(colShape);
 	if (index==m_uniqueShapes.size())
 	{
-		if (body->getCollisionShape()->isPolyhedral())
+		if (colShape->isPolyhedral())
 		{
-			m_uniqueShapes.push_back(body->getCollisionShape());
-
-			btPolyhedralConvexShape* convex = (btPolyhedralConvexShape*)body->getCollisionShape();
+			m_uniqueShapes.push_back(colShape);
+			
+			btPolyhedralConvexShape* convex = (btPolyhedralConvexShape*)colShape;
 			int numVertices=convex->getNumVertices();
-		
+			
 			int strideInBytes=sizeof(btVector3);
 			btAlignedObjectArray<btVector3> tmpVertices;
 			tmpVertices.resize(numVertices);
@@ -122,25 +116,24 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 				convex->getVertex(i,tmpVertices[i]);
 			const float scaling[4]={1,1,1,1};
 			bool noHeightField=true;
-		
 			
-			gpuShapeIndex = m_gpuPhysics->registerCollisionShape(&tmpVertices[0].getX(), strideInBytes, numVertices, scaling, noHeightField);
+			int gpuShapeIndex = m_gpuPhysics->registerCollisionShape(&tmpVertices[0].getX(), strideInBytes, numVertices, scaling, noHeightField);
 			m_uniqueShapeMapping.push_back(gpuShapeIndex);
 		} else
 		{
-			if (body->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
+			if (colShape->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
 			{
-				m_uniqueShapes.push_back(body->getCollisionShape());
-
-				btBvhTriangleMeshShape* trimesh = (btBvhTriangleMeshShape*) body->getCollisionShape();
+				m_uniqueShapes.push_back(colShape);
+				
+				btBvhTriangleMeshShape* trimesh = (btBvhTriangleMeshShape*) colShape;
 				btStridingMeshInterface* meshInterface = trimesh->getMeshInterface();
 				btAlignedObjectArray<btVector3> vertices;
 				btAlignedObjectArray<int> indices;
-
+				
 				btVector3 trimeshScaling(1,1,1);
 				for (int partId=0;partId<meshInterface->getNumSubParts();partId++)
 				{
-		
+					
 					const unsigned char *vertexbase = 0;
 					int numverts = 0;
 					PHY_ScalarType type = PHY_INTEGER;
@@ -150,33 +143,33 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 					int numfaces = 0;
 					PHY_ScalarType indicestype = PHY_INTEGER;
 					//PHY_ScalarType indexType=0;
-
+					
 					btVector3 triangleVerts[3];
 					meshInterface->getLockedReadOnlyVertexIndexBase(&vertexbase,numverts,	type,stride,&indexbase,indexstride,numfaces,indicestype,partId);
 					btVector3 aabbMin,aabbMax;
-
+					
 					for (int triangleIndex = 0 ; triangleIndex < numfaces;triangleIndex++)
 					{
 						unsigned int* gfxbase = (unsigned int*)(indexbase+triangleIndex*indexstride);
-
+						
 						for (int j=2;j>=0;j--)
 						{
-
+							
 							int graphicsindex = indicestype==PHY_SHORT?((unsigned short*)gfxbase)[j]:gfxbase[j];
 							if (type == PHY_FLOAT)
 							{
 								float* graphicsbase = (float*)(vertexbase+graphicsindex*stride);
 								triangleVerts[j] = btVector3(
-									graphicsbase[0]*trimeshScaling.getX(),
-									graphicsbase[1]*trimeshScaling.getY(),
-									graphicsbase[2]*trimeshScaling.getZ());
+															 graphicsbase[0]*trimeshScaling.getX(),
+															 graphicsbase[1]*trimeshScaling.getY(),
+															 graphicsbase[2]*trimeshScaling.getZ());
 							}
 							else
 							{
 								double* graphicsbase = (double*)(vertexbase+graphicsindex*stride);
-								triangleVerts[j] = btVector3( btScalar(graphicsbase[0]*trimeshScaling.getX()), 
-									btScalar(graphicsbase[1]*trimeshScaling.getY()), 
-									btScalar(graphicsbase[2]*trimeshScaling.getZ()));
+								triangleVerts[j] = btVector3( btScalar(graphicsbase[0]*trimeshScaling.getX()),
+															 btScalar(graphicsbase[1]*trimeshScaling.getY()),
+															 btScalar(graphicsbase[2]*trimeshScaling.getZ()));
 							}
 						}
 						vertices.push_back(triangleVerts[0]);
@@ -188,16 +181,16 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 					}
 				}
 				//GraphicsShape* gfxShape = 0;//btBulletDataExtractor::createGraphicsShapeFromWavefrontObj(objData);
-
+				
 				//GraphicsShape* gfxShape = btBulletDataExtractor::createGraphicsShapeFromConvexHull(&sUnitSpherePoints[0],MY_UNITSPHERE_POINTS);
 				float meshScaling[4] = {1,1,1,1};
 				//int shapeIndex = renderer.registerShape(gfxShape->m_vertices,gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 				float groundPos[4] = {0,0,0,0};
-
+				
 				//renderer.registerGraphicsInstance(shapeIndex,groundPos,rotOrn,color,meshScaling);
 				if (vertices.size() && indices.size())
 				{
-					gpuShapeIndex = m_gpuPhysics->registerConcaveMesh(&vertices,&indices, meshScaling);
+					int gpuShapeIndex = m_gpuPhysics->registerConcaveMesh(&vertices,&indices, meshScaling);
 					m_uniqueShapeMapping.push_back(gpuShapeIndex);
 				} else
 				{
@@ -205,17 +198,65 @@ void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
 					index = -1;
 					btAssert(0);
 				}
-			
-
+				
+				
 			} else
 			{
-				printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",body->getCollisionShape()->getShapeType());
-				index = -1;
-				btAssert(0);
+				if (colShape->getShapeType()==COMPOUND_SHAPE_PROXYTYPE)
+				{
+					
+					btCompoundShape* compound = (btCompoundShape*) colShape;
+					btAlignedObjectArray<btGpuChildShape> childShapes;
+					
+					for (int i=0;i<compound->getNumChildShapes();i++)
+					{
+						//for now, only support polyhedral child shapes
+						btAssert(compound->getChildShape(i)->isPolyhedral());
+						btGpuChildShape child;
+						child.m_shapeIndex = findOrRegisterCollisionShape(compound->getChildShape(i));
+						btVector3 pos = compound->getChildTransform(i).getOrigin();
+						btQuaternion orn = compound->getChildTransform(i).getRotation();
+						for (int v=0;v<4;v++)
+						{
+							child.m_childPosition[v] = pos[v];
+							child.m_childOrientation[v] = orn[v];
+						}
+						childShapes.push_back(child);
+					}
+					index = m_uniqueShapes.size();
+					m_uniqueShapes.push_back(colShape);
+					
+					int gpuShapeIndex = m_gpuPhysics->registerCompoundShape(&childShapes);
+					m_uniqueShapeMapping.push_back(gpuShapeIndex);
+
+					
+					
+					
+					/*printf("Error: unsupported compound type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
+					index = -1;
+					btAssert(0);
+					 */
+				} else
+				{
+					printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
+					index = -1;
+					btAssert(0);
+				}
 			}
 		}
-
+		
 	}
+	
+	return index;
+}
+
+void	btGpuDynamicsWorld::addRigidBody(btRigidBody* body)
+{
+
+	body->setMotionState(0);
+	
+
+	int index = findOrRegisterCollisionShape(body->getCollisionShape());
 
 	if (index>=0)
 	{
