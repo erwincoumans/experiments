@@ -52,7 +52,7 @@ namespace RigidBodyBase
 			float m_frictionCoeff;
 			int m_padding;
 */
-			Matrix3x3 m_invInertia;
+			Matrix3x3 m_invInertiaWorld;
 			Matrix3x3 m_initInvInertia;
 		};
 };

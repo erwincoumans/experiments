@@ -35,6 +35,8 @@
 			"../CLPhysicsDemo.h",
 			"../ConvexHullContact.cpp",
 			"../ConvexHullContact.h",
+			"../btPgsJacobiSolver.cpp",
+			"../btPgsJacobiSolver.h",
 			"../../broadphase_benchmark/btPrefixScanCL.cpp",
 			"../../broadphase_benchmark/btPrefixScanCL.h",
 			"../../broadphase_benchmark/btRadixSort32CL.cpp",

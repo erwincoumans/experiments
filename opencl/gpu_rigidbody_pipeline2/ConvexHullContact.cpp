@@ -1799,7 +1799,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT( const btOpenCLArray<int
 
 
 			numCompoundPairs = numCompoundPairsOut.at(0);
-			printf("numCompoundPairs =%d\n",numCompoundPairs );
+			//printf("numCompoundPairs =%d\n",numCompoundPairs );
 			if (numCompoundPairs > compoundPairCapacity)
 				numCompoundPairs = compoundPairCapacity;
 

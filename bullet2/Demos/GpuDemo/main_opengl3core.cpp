@@ -20,6 +20,7 @@
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
+bool dump_timings = false;
 
 static void MyResizeCallback( float width, float height)
 {
@@ -35,6 +36,7 @@ bool gReset = false;
 enum
 {
 	PAUSE=1,
+	PROFILE=2,
 	RESET,
 };
 
@@ -43,14 +45,23 @@ void	MyButtonCallback(int buttonId, int state)
 	switch (buttonId)
 	{
 	case PAUSE:
+		{
 		gPause =!gPause;
 		break;
+		}
+	case PROFILE:
+		{
+		dump_timings = !dump_timings;
+		break;
+		}
 	case RESET:
+		{
 		gReset=!gReset;
 		break;
-
+		}
 	default:
 		{
+			printf("hello\n");
 		}
 	}
 }
@@ -267,8 +278,8 @@ int main(int argc, char* argv[])
 	}
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
-	bool dump_timings=args.CheckCmdLineFlag("dump_timings");
-	ci.useOpenCL = true;//!args.CheckCmdLineFlag("disable_opencl");
+	dump_timings=args.CheckCmdLineFlag("dump_timings");
+	ci.useOpenCL = !args.CheckCmdLineFlag("disable_opencl");
 	ci.m_useConcaveMesh = true;//args.CheckCmdLineFlag("use_concave_mesh");
 	if (ci.m_useConcaveMesh)
 	{
@@ -330,8 +341,13 @@ int main(int argc, char* argv[])
 	
 
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
-	gui->registerToggleButton(1,"Pause");
+	gui->registerToggleButton(PAUSE,"Pause");
 	gui->setToggleButtonCallback(MyButtonCallback);
+
+	gui->registerToggleButton(PROFILE,"Profile");
+	gui->setToggleButtonCallback(MyButtonCallback);
+
+
 
 	glClearColor(1,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -453,7 +469,7 @@ int main(int argc, char* argv[])
 			glFinish();
 
 
-		if (dump_timings)
+		if (dump_timings && !gPause)
 			CProfileManager::dumpAll();
 
 		if (f)

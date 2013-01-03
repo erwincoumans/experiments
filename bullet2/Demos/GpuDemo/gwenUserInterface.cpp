@@ -230,8 +230,8 @@ void	GwenUserInterface::registerToggleButton(int buttonId, const char* name)
 	Gwen::Controls::Button* but = new Gwen::Controls::Button(m_data->m_demoPage->GetPage());
 	
 	///some heuristic to find the button location
-	int ypos = m_data->m_handlers.size()*20;
-	but->SetPos(10, 50 );
+	int ypos = m_data->m_handlers.size()*20+50;
+	but->SetPos(10, ypos );
 	but->SetWidth( 100 );
 	//but->SetBounds( 200, 30, 300, 200 );
 	

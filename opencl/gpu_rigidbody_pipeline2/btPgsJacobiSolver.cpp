@@ -32,7 +32,7 @@ subject to the following restrictions:
 #include <string.h> //for memset
 #include "../../dynamics/basic_demo/Stubs/AdlContact4.h"
 
-bool usePgs = true;
+bool usePgs = false;
 int		gNumSplitImpulseRecoveries2 = 0;
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
@@ -173,7 +173,7 @@ void	btPgsJacobiSolver::solveContacts(int numBodies, RigidBodyBase::Body* bodies
 	btContactSolverInfo infoGlobal;
 	infoGlobal.m_splitImpulse = false;
 	infoGlobal.m_timeStep = 1.f/60.f;
-	infoGlobal.m_numIterations = 4;
+	infoGlobal.m_numIterations = 10;//4;
 //	infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS|SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION;
 	//infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS|SOLVER_INTERLEAVE_CONTACT_AND_FRICTION_CONSTRAINTS;
 	infoGlobal.m_solverMode|=SOLVER_USE_2_FRICTION_DIRECTIONS;

@@ -37,7 +37,7 @@ struct DemoApplication
 
 	}
 
-	void setCameraDistance(float distance)
+	virtual void setCameraDistance(float distance)
 	{
 
 	}

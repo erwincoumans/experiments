@@ -598,7 +598,7 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass
 			m_static0Index = 0;
         
 		shapeInfo.m_initInvInertia = mtZero();
-		shapeInfo.m_invInertia = mtZero();
+		shapeInfo.m_invInertiaWorld = mtZero();
 	} else
 	{
         
@@ -632,7 +632,7 @@ int btGpuNarrowphaseAndSolver::registerRigidBody(int collidableIndex, float mass
         
 		Matrix3x3 m = qtGetRotationMatrix( body.m_quat);
 		Matrix3x3 mT = mtTranspose( m );
-		shapeInfo.m_invInertia = mtMul( mtMul( m, shapeInfo.m_initInvInertia ), mT );
+		shapeInfo.m_invInertiaWorld = mtMul( mtMul( m, shapeInfo.m_initInvInertia ), mT );
         
 	}
     

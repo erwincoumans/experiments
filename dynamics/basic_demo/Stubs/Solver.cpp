@@ -484,8 +484,8 @@ struct SolveTask// : public ThreadPool::Task
 				float maxRambdaDt[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 				float minRambdaDt[4] = {0.f,0.f,0.f,0.f};
 
-				solveContact<false>( m_constraints[i], bodyA.m_pos, (float4&)bodyA.m_linVel, (float4&)bodyA.m_angVel, bodyA.m_invMass, m_shapes[aIdx].m_invInertia, 
-					bodyB.m_pos, (float4&)bodyB.m_linVel, (float4&)bodyB.m_angVel, bodyB.m_invMass, m_shapes[bIdx].m_invInertia,
+				solveContact<false>( m_constraints[i], bodyA.m_pos, (float4&)bodyA.m_linVel, (float4&)bodyA.m_angVel, bodyA.m_invMass, m_shapes[aIdx].m_invInertiaWorld, 
+					bodyB.m_pos, (float4&)bodyB.m_linVel, (float4&)bodyB.m_angVel, bodyB.m_invMass, m_shapes[bIdx].m_invInertiaWorld,
 					maxRambdaDt, minRambdaDt );
 
 			}
@@ -506,8 +506,8 @@ struct SolveTask// : public ThreadPool::Task
 					minRambdaDt[j] = -maxRambdaDt[j];
 				}
 
-			solveFriction( m_constraints[i], bodyA.m_pos, (float4&)bodyA.m_linVel, (float4&)bodyA.m_angVel, bodyA.m_invMass, m_shapes[aIdx].m_invInertia, 
-					bodyB.m_pos, (float4&)bodyB.m_linVel, (float4&)bodyB.m_angVel, bodyB.m_invMass, m_shapes[bIdx].m_invInertia,
+			solveFriction( m_constraints[i], bodyA.m_pos, (float4&)bodyA.m_linVel, (float4&)bodyA.m_angVel, bodyA.m_invMass, m_shapes[aIdx].m_invInertiaWorld, 
+					bodyB.m_pos, (float4&)bodyB.m_linVel, (float4&)bodyB.m_angVel, bodyB.m_invMass, m_shapes[bIdx].m_invInertiaWorld,
 					maxRambdaDt, minRambdaDt );
 			
 			}

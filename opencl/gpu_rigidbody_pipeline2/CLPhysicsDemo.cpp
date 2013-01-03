@@ -15,7 +15,7 @@ subject to the following restrictions:
 
 bool useSapGpuBroadphase = true;
 extern bool useConvexHeightfield;
-//#include "btPgsJacobiSolver.h"
+#include "btPgsJacobiSolver.h"
 #include "../../rendering/rendertest/OpenGLInclude.h"
 #ifdef _WIN32
 #include "windows.h"
@@ -96,7 +96,7 @@ struct InternalData
 	btAlignedObjectArray<btVector3>	m_angVelHost;
 	btAlignedObjectArray<float> m_bodyTimesHost;
 
-	//btPgsJacobiSolver*	m_pgsSolver;
+	btPgsJacobiSolver*	m_pgsSolver;
 
 	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
 	{
@@ -557,7 +557,8 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	}		//g_cxMainContext ,g_device,g_cqCommandQue);
 	
 
-	//m_data->m_pgsSolver = new btPgsJacobiSolver();
+	m_data->m_pgsSolver = new btPgsJacobiSolver();
+	
 
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
 	g_integrateTransformsKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel" ,0,prog);
@@ -595,7 +596,7 @@ void	CLPhysicsDemo::cleanup()
 
 	delete m_data->m_BroadphaseSap;
 	delete m_data->m_BroadphaseGrid;
-	//delete m_data->m_pgsSolver;
+	delete m_data->m_pgsSolver;
 
 	m_data=0;
 
@@ -738,7 +739,7 @@ void	CLPhysicsDemo::stepSimulation()
 						narrowphaseAndSolver->solveContacts();
 				} else
 				{
-					/*BT_PROFILE("solve Contact Constraints CPU/serial");
+					BT_PROFILE("solve Contact Constraints CPU/serial");
 					if (narrowphaseAndSolver && m_data->m_pgsSolver && narrowphaseAndSolver->getNumContactsGpu())
 					{
 						btGpuNarrowphaseAndSolver* np = narrowphaseAndSolver;
@@ -767,7 +768,7 @@ void	CLPhysicsDemo::stepSimulation()
 
 
 					}
-					 */
+					
 					
 				}
 				

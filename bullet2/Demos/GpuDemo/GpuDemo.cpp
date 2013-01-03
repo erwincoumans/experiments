@@ -101,13 +101,14 @@ void GpuDemo::displayCallback(void) {
 
 btAlignedObjectArray<btVector3> vertices;
 
+
 void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 {
 
 	setTexturing(true);
 	setShadows(false);
 
-	setCameraDistance(btScalar(SCALING*50.));
+	setCameraDistance(btScalar(SCALING*250.));
 
 	///collision configuration contains default setup for memory, collision setup
 	if (ci.useOpenCL)

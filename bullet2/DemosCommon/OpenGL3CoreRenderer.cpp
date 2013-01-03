@@ -17,7 +17,7 @@ OpenGL3CoreRenderer::OpenGL3CoreRenderer()
 {
 	int maxNumObjects = 128*1024;
 	m_instanceRenderer = new GLInstancingRenderer(maxNumObjects);
-	m_instanceRenderer->setCameraDistance(50);
+	m_instanceRenderer->setCameraDistance(150);
 }
 OpenGL3CoreRenderer::~OpenGL3CoreRenderer()
 {
