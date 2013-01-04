@@ -555,22 +555,22 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 
 								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 								*/
-
-								/*
-								int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
-								int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
-								prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
-								*/
-								/*
-								int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
-								int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
-								prevGraphicsShapeIndex = renderer.registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
-								*/
-
-								int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
-								int numIndices = sizeof(low_sphere_indices)/sizeof(int);
-								prevGraphicsShapeIndex = renderer.registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
-								
+								if (radius>=100)
+								{
+									int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
+									int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
+									prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
+								} else if (radius>=10)
+								{
+									int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
+									int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
+									prevGraphicsShapeIndex = renderer.registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
+								} else
+								{
+									int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
+									int numIndices = sizeof(low_sphere_indices)/sizeof(int);
+									prevGraphicsShapeIndex = renderer.registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
+								}
 
 								prevShape = sphere;
 								const btVector3& scaling = prevShape->getLocalScaling();
