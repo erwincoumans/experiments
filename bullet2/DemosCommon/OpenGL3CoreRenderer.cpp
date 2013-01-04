@@ -509,9 +509,11 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 								
 								//btConvexHullShape* spherePoly = new btConvexHullShape(
 								//const btConvexPolyhedron* pol = polyShape->getConvexPolyhedron();
-								/*objLoader loader;
 								
-								int result = loader.load("../../bin/wavefront/sphere1.obj");
+								/*
+								objLoader loader;
+								
+								int result = loader.load("../../bin/wavefront/sphere_low.obj");
 								
 
 								GraphicsShape* gfxShape = createGraphicsShapeFromWavefrontObj(&loader);
@@ -553,12 +555,30 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 
 								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 								*/
+
+								/*
 								int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
 								int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
 								prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
+								*/
+								/*
+								int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
+								int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
+								prevGraphicsShapeIndex = renderer.registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
+								*/
+
+								int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
+								int numIndices = sizeof(low_sphere_indices)/sizeof(int);
+								prevGraphicsShapeIndex = renderer.registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
+								
+
 								prevShape = sphere;
 								const btVector3& scaling = prevShape->getLocalScaling();
-								localScaling[0] = radius*scaling.getX();localScaling[1] = radius*scaling.getY();localScaling[2] = radius*scaling.getZ();
+								//assume uniform scaling, using X component
+								float sphereScale = radius*scaling.getX();
+								localScaling[0] = sphereScale;
+								localScaling[1] = sphereScale;
+								localScaling[2] = sphereScale;
 							} else
 							{
 								printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
