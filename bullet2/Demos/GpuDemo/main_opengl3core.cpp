@@ -365,6 +365,11 @@ int main(int argc, char* argv[])
 		gui = new GwenUserInterface();
 	
 
+	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
+	
+	stash = initFont(&prim);
+
+	
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
 	
 	gui->setToggleButtonCallback(MyButtonCallback);
@@ -401,9 +406,6 @@ int main(int argc, char* argv[])
 	static bool once=true;
 
 	
-	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
-
-	stash = initFont(&prim);
 
 
 	glClearColor(1,0,0,1);
