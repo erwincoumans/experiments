@@ -34,14 +34,16 @@ struct GwenInternalData
 	Gwen::Controls::Canvas*			pCanvas;
 	GLPrimitiveRenderer* m_primRenderer;
 	Gwen::Controls::TabButton*		m_demoPage;
-	btAlignedObjectArray<struct MyHander*>	m_handlers;
+	btAlignedObjectArray<struct Gwen::Event::Handler*>	m_handlers;
 	btToggleButtonCallback			m_toggleButtonCallback;
+	btComboBoxCallback				m_comboBoxCallback;
 
 };
 GwenUserInterface::GwenUserInterface()
 {
 	m_data = new GwenInternalData();
 	m_data->m_toggleButtonCallback = 0;
+	m_data->m_comboBoxCallback = 0;
 
 }
 		
@@ -84,12 +86,37 @@ void	GwenUserInterface::resize(int width, int height)
 }
 
 
-struct MyHander   :public Gwen::Event::Handler
+struct MyComboBoxHander   :public Gwen::Event::Handler
 {
 	GwenInternalData*	m_data;
 	int					m_buttonId;
 
-	MyHander  (GwenInternalData* data, int buttonId)
+	MyComboBoxHander  (GwenInternalData* data, int buttonId)
+		:m_data(data),
+		m_buttonId(buttonId)
+	{
+	}
+
+	void onSelect( Gwen::Controls::Base* pControl )
+	{
+		Gwen::Controls::ComboBox* but = (Gwen::Controls::ComboBox*) pControl;
+		
+		
+		
+		Gwen::String str = Gwen::Utility::UnicodeToString(	but->GetSelectedItem()->GetText());
+		
+		if (m_data->m_comboBoxCallback)
+			(*m_data->m_comboBoxCallback)(m_buttonId,str.c_str());
+	}
+
+};
+
+struct MyButtonHander   :public Gwen::Event::Handler
+{
+	GwenInternalData*	m_data;
+	int					m_buttonId;
+
+	MyButtonHander  (GwenInternalData* data, int buttonId)
 		:m_data(data),
 		m_buttonId(buttonId)
 	{
@@ -103,22 +130,6 @@ struct MyHander   :public Gwen::Event::Handler
 		if (m_data->m_toggleButtonCallback)
 			(*m_data->m_toggleButtonCallback)(m_buttonId,tog);
 	}
-
-	void SliderMoved(Gwen::Controls::Base* pControl )
-	{
-		//Gwen::Controls::Slider* pSlider = (Gwen::Controls::Slider*)pControl;
-		//this->m_app->scaleYoungModulus(pSlider->GetValue());
-		//	printf("Slider Value: %.2f", pSlider->GetValue() );
-	}
-
-
-	void	OnCheckChangedStiffnessWarping (Gwen::Controls::Base* pControl)
-	{
-		//Gwen::Controls::CheckBox* labeled = (Gwen::Controls::CheckBox* )pControl;
-		//bool checked = labeled->IsChecked();
-		//m_app->m_stiffness_warp_on  = checked;
-	}
-
 
 };
 
@@ -170,6 +181,7 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 
 	//windowLeft->SetSkin(
 	Gwen::Controls::TabControl* tab = new Gwen::Controls::TabControl(windowLeft);
+	
 	//tab->SetHeight(300);
 	tab->SetWidth(140);
 	tab->SetHeight(250);
@@ -177,21 +189,18 @@ void	GwenUserInterface::init(int width, int height,struct sth_stash* stash,float
 	tab->Dock( Gwen::Pos::Fill );
 	//tab->SetMargin( Gwen::Margin( 2, 2, 2, 2 ) );
 
-	Gwen::UnicodeString str1(L"Demo");
+	Gwen::UnicodeString str1(L"Main");
 	m_data->m_demoPage = tab->AddPage(str1);
+
+	
+
 	
 	Gwen::UnicodeString str2(L"OpenCL");
 	tab->AddPage(str2);
 	//Gwen::UnicodeString str3(L"page3");
 //	tab->AddPage(str3);
 	
-	Gwen::Controls::ComboBox* combobox = new Gwen::Controls::ComboBox(m_data->m_demoPage->GetPage());
-	combobox->SetPos(10, 10 );
-	combobox->SetWidth( 100 );
-	//box->SetPos(120,130);
-	combobox->AddItem(str1);
-
-	
+		
 	
 	//but->onPress.Add(handler, &MyHander::onButtonA);
 
@@ -230,18 +239,40 @@ void	GwenUserInterface::registerToggleButton(int buttonId, const char* name)
 	Gwen::Controls::Button* but = new Gwen::Controls::Button(m_data->m_demoPage->GetPage());
 	
 	///some heuristic to find the button location
-	int ypos = m_data->m_handlers.size()*20+50;
+	int ypos = m_data->m_handlers.size()*20;
 	but->SetPos(10, ypos );
 	but->SetWidth( 100 );
 	//but->SetBounds( 200, 30, 300, 200 );
 	
-	MyHander* handler = new MyHander(m_data, buttonId);
+	MyButtonHander* handler = new MyButtonHander(m_data, buttonId);
 	m_data->m_handlers.push_back(handler);
-	but->onToggle.Add(handler, &MyHander::onButtonA);
+	but->onToggle.Add(handler, &MyButtonHander::onButtonA);
 	but->SetIsToggle(true);
 	but->SetToggleState(false);
 	but->SetText(name);
 
+}
+
+void	GwenUserInterface::setComboBoxCallback(btComboBoxCallback callback)
+{
+	m_data->m_comboBoxCallback = callback;
+}
+
+void	GwenUserInterface::registerComboBox(int comboboxId, int numItems, const char** items)
+{
+	Gwen::Controls::ComboBox* combobox = new Gwen::Controls::ComboBox(m_data->m_demoPage->GetPage());
+	MyComboBoxHander* handler = new MyComboBoxHander(m_data, comboboxId);
+	m_data->m_handlers.push_back(handler);
+	
+	combobox->onSelection.Add(handler,&MyComboBoxHander::onSelect);
+	int ypos = m_data->m_handlers.size()*20;
+	combobox->SetPos(10, ypos );
+	combobox->SetWidth( 100 );
+	//box->SetPos(120,130);
+	for (int i=0;i<numItems;i++)
+		combobox->AddItem(Gwen::Utility::StringToUnicode(items[i]));
+	
+	
 }
 
 void	GwenUserInterface::draw(int width, int height)

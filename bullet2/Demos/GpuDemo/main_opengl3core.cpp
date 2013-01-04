@@ -13,7 +13,7 @@
 #include "LinearMath/btQuickProf.h"
 #include "btGpuDynamicsWorld.h"
 #include <assert.h>
-
+#include <string.h>
 #include "../rendering/OpenGLTrueTypeFont/fontstash.h"
 #include "../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
 #include "GwenUserInterface.h"
@@ -35,26 +35,58 @@ bool gReset = false;
 
 enum
 {
-	PAUSE=1,
-	PROFILE=2,
-	RESET,
+	MYPAUSE=1,
+	MYPROFILE=2,
+	MYRESET,
 };
 
+enum
+{
+	MYCOMBOBOX1 = 1,
+};
+
+btAlignedObjectArray<const char*> demoNames;
+int selectedDemo = 0;
+GpuDemo::CreateFunc* allDemos[]=
+{
+	GpuDemo1::CreateFunc,
+	EmptyDemo::CreateFunc,
+};
+
+
+void	MyComboBoxCallback(int comboId, const char* item)
+{
+	int numDemos = demoNames.size();
+	for (int i=0;i<numDemos;i++)
+	{
+		if (!strcmp(demoNames[i],item))
+		{
+			if (selectedDemo != i)
+			{
+				gReset = true;
+				selectedDemo = i;
+				printf("selected demo %s!\n", item);
+			}
+		}
+	}
+	
+	
+}
 void	MyButtonCallback(int buttonId, int state)
 {
 	switch (buttonId)
 	{
-	case PAUSE:
+	case MYPAUSE:
 		{
 		gPause =!gPause;
 		break;
 		}
-	case PROFILE:
+	case MYPROFILE:
 		{
 		dump_timings = !dump_timings;
 		break;
 		}
-	case RESET:
+	case MYRESET:
 		{
 		gReset=!gReset;
 		break;
@@ -279,7 +311,7 @@ int main(int argc, char* argv[])
 
 	bool benchmark=args.CheckCmdLineFlag("benchmark");
 	dump_timings=args.CheckCmdLineFlag("dump_timings");
-	ci.useOpenCL = !args.CheckCmdLineFlag("disable_opencl");
+	ci.useOpenCL = false;//!args.CheckCmdLineFlag("disable_opencl");
 	ci.m_useConcaveMesh = true;//args.CheckCmdLineFlag("use_concave_mesh");
 	if (ci.m_useConcaveMesh)
 	{
@@ -309,9 +341,7 @@ int main(int argc, char* argv[])
 #endif //BT_NO_PROFILE
 
 
-	bool syncOnly = false;
-
-#ifdef __APPLE__
+	#ifdef __APPLE__
 	window = new MacOpenGLWindow();
 #else
 	window = new Win32OpenGLWindow();
@@ -328,25 +358,52 @@ int main(int argc, char* argv[])
 	printf("-----------------------------------------------------\n");
 
 
-
-	static bool once=true;
 #ifdef _WIN32
 	glewInit();
 #endif
 	
-	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
-
-	stash = initFont(&prim);
-	gui = new GwenUserInterface();
+		gui = new GwenUserInterface();
 	
 
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
-	gui->registerToggleButton(PAUSE,"Pause");
+	
 	gui->setToggleButtonCallback(MyButtonCallback);
 
-	gui->registerToggleButton(PROFILE,"Profile");
-	gui->setToggleButtonCallback(MyButtonCallback);
+	gui->registerToggleButton(MYPAUSE,"Pause");
+	gui->registerToggleButton(MYPROFILE,"Profile");
+	gui->registerToggleButton(MYRESET,"Reset");
+	
+	
+	
 
+	
+	int numItems = sizeof(allDemos)/sizeof(GpuDemo::CreateFunc*);
+	demoNames.clear();
+	for (int i=0;i<numItems;i++)
+	{
+		GpuDemo* demo = allDemos[i]();
+		demoNames.push_back(demo->getName());
+		delete demo;
+	}
+	
+	gui->registerComboBox(MYCOMBOBOX1,numItems,&demoNames[0]);
+	gui->setComboBoxCallback(MyComboBoxCallback);
+
+
+	do
+	{
+		bool syncOnly = false;
+		gReset = false;
+
+
+
+
+	static bool once=true;
+
+	
+	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
+
+	stash = initFont(&prim);
 
 
 	glClearColor(1,0,0,1);
@@ -416,9 +473,9 @@ int main(int argc, char* argv[])
 
 
 	
-
+	
 	{
-		GpuDemo* demo = new GpuDemo;
+		GpuDemo* demo = allDemos[selectedDemo]();
 		demo->myinit();
 		bool useGpu = false;
 		
@@ -485,7 +542,8 @@ int main(int argc, char* argv[])
 			count++;
 		}
 
-		} while (!window->requestedExit());
+		} while (!window->requestedExit() && !gReset);
+			
 
 		demo->exitPhysics();
 		delete demo;
@@ -495,10 +553,16 @@ int main(int argc, char* argv[])
 
 	
 	
+	} while (gReset);
+
+
+	gui->setComboBoxCallback(0);
+	delete gui;
+	gui=0;
+
 	window->closeWindow();
 	delete window;
 	window = 0;
-
 
 	return 0;
 }

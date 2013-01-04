@@ -31,8 +31,10 @@ class btDynamicsWorld;
 ///GpuDemo is good starting point for learning the code base and porting.
 
 
+
 class GpuDemo : public DemoApplication
 {
+	protected:
 
 	btDynamicsWorld*	m_dynamicsWorld;
 
@@ -40,6 +42,8 @@ class GpuDemo : public DemoApplication
 	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
 
 	public:
+
+	typedef class GpuDemo* (CreateFunc)();
 
 	struct ConstructionInfo
 	{
@@ -57,9 +61,9 @@ class GpuDemo : public DemoApplication
 			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(10),
-			arraySizeY(30 ),
-			arraySizeZ(10),
+			arraySizeX(3),
+			arraySizeY(3 ),
+			arraySizeZ(3),
 			m_useConcaveMesh(false),
 			gapX(4.3),
 			gapY(6.0),
@@ -79,6 +83,9 @@ class GpuDemo : public DemoApplication
 	}
 	void	initPhysics(const ConstructionInfo& ci);
 
+	virtual void setupScene(const ConstructionInfo& ci)=0;
+	virtual const char* getName()=0;
+
 	void	exitPhysics();
 
 	const btDynamicsWorld* getDynamicsWorld() const
@@ -90,16 +97,41 @@ class GpuDemo : public DemoApplication
 	virtual void displayCallback();
 	//virtual void	clientResetScene();
 	
-/*	static DemoApplication* Create()
-	{
-		GpuDemo* demo = new GpuDemo;
-		demo->myinit();
-		demo->initPhysics();
-		return demo;
-	}
-	*/
+	
 
 	
 };
+
+class GpuDemo1 : public GpuDemo
+{
+public:
+	virtual void setupScene(const ConstructionInfo& ci);
+	virtual const char* getName()
+	{
+		return "GpuDemo1";
+	}
+	static GpuDemo* CreateFunc()
+	{
+		GpuDemo* demo = new GpuDemo1;
+		return demo;
+	}
+};
+
+class EmptyDemo : public GpuDemo
+{
+public:
+	virtual void setupScene(const ConstructionInfo& ci);
+	virtual const char* getName()
+	{
+		return "EmptyDemo";
+	}
+	static GpuDemo* CreateFunc()
+	{
+		GpuDemo* demo = new EmptyDemo;
+		return demo;
+	}
+	
+};
+
 
 #endif //GPU_DEMO_H

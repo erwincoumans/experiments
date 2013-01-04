@@ -3,6 +3,7 @@
 
 struct GwenInternalData;
 
+typedef void (*btComboBoxCallback) (int combobox, const char* item);
 typedef void (*btToggleButtonCallback)(int button, int state);
 
 class GwenUserInterface
@@ -26,6 +27,9 @@ class GwenUserInterface
 
 		void	setToggleButtonCallback(btToggleButtonCallback callback);
 		void	registerToggleButton(int buttonId, const char* name);
+
+		void	setComboBoxCallback(btComboBoxCallback callback);
+		void	registerComboBox(int buttonId, int numItems, const char** items);
 };
 
 #endif //_GWEN_USER_INTERFACE_H

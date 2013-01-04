@@ -101,30 +101,14 @@ void GpuDemo::displayCallback(void) {
 
 btAlignedObjectArray<btVector3> vertices;
 
-
-void	GpuDemo::initPhysics(const ConstructionInfo& ci)
+void	EmptyDemo::setupScene(const ConstructionInfo& ci)
 {
+	//empty test
+}
 
-	setTexturing(true);
-	setShadows(false);
-
-	setCameraDistance(btScalar(SCALING*250.));
-
-	///collision configuration contains default setup for memory, collision setup
-	if (ci.useOpenCL)
-	{
-		m_dynamicsWorld = new btGpuDynamicsWorld(ci.preferredOpenCLPlatformIndex,ci.preferredOpenCLDeviceIndex);
-	} else
-	{
-		m_dynamicsWorld = new btCpuDynamicsWorld();
-	}
-
-	
-	m_dynamicsWorld->setGravity(btVector3(0,-10,0));
-
-	///create a few basic rigid bodies
-
-	btCollisionShape* groundShape =0;
+void	GpuDemo1::setupScene(const ConstructionInfo& ci)
+{
+		btCollisionShape* groundShape =0;
 //	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
 
 	if (ci.m_useConcaveMesh)
@@ -289,6 +273,31 @@ void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 			}
 		}
 	}
+}
+
+void	GpuDemo::initPhysics(const ConstructionInfo& ci)
+{
+
+	setTexturing(true);
+	setShadows(false);
+
+	setCameraDistance(btScalar(SCALING*250.));
+
+	///collision configuration contains default setup for memory, collision setup
+	if (ci.useOpenCL)
+	{
+		m_dynamicsWorld = new btGpuDynamicsWorld(ci.preferredOpenCLPlatformIndex,ci.preferredOpenCLDeviceIndex);
+	} else
+	{
+		m_dynamicsWorld = new btCpuDynamicsWorld();
+	}
+
+	
+	m_dynamicsWorld->setGravity(btVector3(0,-10,0));
+
+	///create a few basic rigid bodies
+
+	setupScene(ci);
 
 
 }

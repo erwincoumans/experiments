@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
 
 	{
-		GpuDemo* demo = new GpuDemo;
+		GpuDemo* demo = new GpuDemo1;
 		
 		demo->myinit();
 		GLint err = glGetError();
