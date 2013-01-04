@@ -4,14 +4,17 @@
 #include "../../rendering/rendertest/ShapeData.h"
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
-
+#include "LinearMath/btQuickprof.h"
 
 #include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
 #include "BulletCollision/CollisionShapes/btConvexPolyhedron.h"
+#include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btCollisionShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletCollision/CollisionShapes/btCompoundShape.h"
+#include "BulletCollision/CollisionShapes/btSphereShape.h"
 
+#include "../../rendering/WavefrontObjLoader/objLoader.h"
 
 OpenGL3CoreRenderer::OpenGL3CoreRenderer()
 {
@@ -291,12 +294,138 @@ GraphicsShape* createGraphicsShapeFromConcaveMesh(const btBvhTriangleMeshShape* 
 }
 
 
+GraphicsShape* createGraphicsShapeFromWavefrontObj(objLoader* obj)
+{
+	btAlignedObjectArray<GraphicsVertex>* vertices = new btAlignedObjectArray<GraphicsVertex>;
+	{
+//		int numVertices = obj->vertexCount;
+	//	int numIndices = 0;
+		btAlignedObjectArray<int>* indicesPtr = new btAlignedObjectArray<int>;
+			/*
+		for (int v=0;v<obj->vertexCount;v++)
+		{
+			vtx.xyzw[0] = obj->vertexList[v]->e[0];
+			vtx.xyzw[1] = obj->vertexList[v]->e[1];
+			vtx.xyzw[2] = obj->vertexList[v]->e[2];
+			btVector3 n(vtx.xyzw[0],vtx.xyzw[1],vtx.xyzw[2]);
+			if (n.length2()>SIMD_EPSILON)
+			{
+				n.normalize();
+				vtx.normal[0] = n[0];
+				vtx.normal[1] = n[1];
+				vtx.normal[2] = n[2];
+
+			} else
+			{
+				vtx.normal[0] = 0; //todo
+				vtx.normal[1] = 1;
+				vtx.normal[2] = 0;
+			}
+			vtx.uv[0] = 0.5f;vtx.uv[1] = 0.5f;	//todo
+			vertices->push_back(vtx);
+		}
+		*/
+
+		for (int f=0;f<obj->faceCount;f++)
+		{
+			obj_face* face = obj->faceList[f];
+			//btVector3 normal(face.m_plane[0],face.m_plane[1],face.m_plane[2]);
+			if (face->vertex_count>=3)
+			{
+				btVector3 normal(0,1,0);
+				int vtxBaseIndex = vertices->size();
+
+				if (face->vertex_count<=4)
+				{
+					indicesPtr->push_back(vtxBaseIndex);
+					indicesPtr->push_back(vtxBaseIndex+1);
+					indicesPtr->push_back(vtxBaseIndex+2);
+					
+					GraphicsVertex vtx0;
+					vtx0.xyzw[0] = obj->vertexList[face->vertex_index[0]]->e[0];
+					vtx0.xyzw[1] = obj->vertexList[face->vertex_index[0]]->e[1];
+					vtx0.xyzw[2] = obj->vertexList[face->vertex_index[0]]->e[2];
+					vtx0.uv[0] = obj->textureList[face->vertex_index[0]]->e[0];
+					vtx0.uv[1] = obj->textureList[face->vertex_index[0]]->e[1];
+
+					GraphicsVertex vtx1;
+					vtx1.xyzw[0] = obj->vertexList[face->vertex_index[1]]->e[0];
+					vtx1.xyzw[1] = obj->vertexList[face->vertex_index[1]]->e[1];
+					vtx1.xyzw[2] = obj->vertexList[face->vertex_index[1]]->e[2];
+					vtx1.uv[0] = obj->textureList[face->vertex_index[1]]->e[0];
+					vtx1.uv[1] = obj->textureList[face->vertex_index[1]]->e[1];
+
+					GraphicsVertex vtx2;
+					vtx2.xyzw[0] = obj->vertexList[face->vertex_index[2]]->e[0];
+					vtx2.xyzw[1] = obj->vertexList[face->vertex_index[2]]->e[1];
+					vtx2.xyzw[2] = obj->vertexList[face->vertex_index[2]]->e[2];
+					vtx2.uv[0] = obj->textureList[face->vertex_index[2]]->e[0];
+					vtx2.uv[1] = obj->textureList[face->vertex_index[2]]->e[1];
+
+
+					btVector3 v0(vtx0.xyzw[0],vtx0.xyzw[1],vtx0.xyzw[2]);
+					btVector3 v1(vtx1.xyzw[0],vtx1.xyzw[1],vtx1.xyzw[2]);
+					btVector3 v2(vtx2.xyzw[0],vtx2.xyzw[1],vtx2.xyzw[2]);
+
+					normal = (v1-v0).cross(v2-v0);
+					normal.normalize();
+					vtx0.normal[0] = normal[0];
+					vtx0.normal[1] = normal[1];
+					vtx0.normal[2] = normal[2];
+					vtx1.normal[0] = normal[0];
+					vtx1.normal[1] = normal[1];
+					vtx1.normal[2] = normal[2];
+					vtx2.normal[0] = normal[0];
+					vtx2.normal[1] = normal[1];
+					vtx2.normal[2] = normal[2];
+					vertices->push_back(vtx0);
+					vertices->push_back(vtx1);
+					vertices->push_back(vtx2);
+				}
+				if (face->vertex_count==4)
+				{
+
+					indicesPtr->push_back(vtxBaseIndex);
+					indicesPtr->push_back(vtxBaseIndex+1);
+					indicesPtr->push_back(vtxBaseIndex+2);
+					indicesPtr->push_back(vtxBaseIndex+3);
+//
+					GraphicsVertex vtx3;
+					vtx3.xyzw[0] = obj->vertexList[face->vertex_index[3]]->e[0];
+					vtx3.xyzw[1] = obj->vertexList[face->vertex_index[3]]->e[1];
+					vtx3.xyzw[2] = obj->vertexList[face->vertex_index[3]]->e[2];
+					vtx3.uv[0] = 0.5;
+					vtx3.uv[1] = 0.5;
+
+					vtx3.normal[0] = normal[0];
+					vtx3.normal[1] = normal[1];
+					vtx3.normal[2] = normal[2];
+
+					vertices->push_back(vtx3);
+
+				}
+			}
+		}
+		
+		
+		GraphicsShape* gfxShape = new GraphicsShape;
+		gfxShape->m_vertices = &vertices->at(0).xyzw[0];
+		gfxShape->m_numvertices = vertices->size();
+		gfxShape->m_indices = &indicesPtr->at(0);
+		gfxShape->m_numIndices = indicesPtr->size();
+		for (int i=0;i<4;i++)
+			gfxShape->m_scaling[i] = 1;//bake the scaling into the vertices 
+		return gfxShape;
+	}
+}
+
+
 
 //very incomplete conversion from physics to graphics
 void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOnly, int numObjects, btCollisionObject** colObjArray)
 {
 	///@todo: we need to sort the objects based on collision shape type, so we can share instances
-
+	BT_PROFILE("graphics_from_physics");
     
 	int strideInBytes = sizeof(float)*9;
     
@@ -306,6 +435,9 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
     
 	int numColObj = numObjects;
     int curGraphicsIndex = 0;
+
+	float localScaling[4] = {1,1,1,1};
+
     
     for (int i=0;i<numColObj;i++)
     {
@@ -340,6 +472,8 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 
 					prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 					prevShape = colObj->getCollisionShape();
+					const btVector3& scaling = prevShape->getLocalScaling();
+					localScaling[0] = scaling.getX();localScaling[1] = scaling.getY();localScaling[2] = scaling.getZ();
 				} else
 				{
 					if (colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)
@@ -348,6 +482,8 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 						GraphicsShape* gfxShape = createGraphicsShapeFromConcaveMesh(trimesh);
 						prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 						prevShape = colObj->getCollisionShape();
+						const btVector3& scaling = prevShape->getLocalScaling();
+						localScaling[0] = scaling.getX();localScaling[1] = scaling.getY();localScaling[2] = scaling.getZ();
 					} else
 					{
 						if (colObj->getCollisionShape()->getShapeType()==COMPOUND_SHAPE_PROXYTYPE)
@@ -358,15 +494,77 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 							{
 								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 								prevShape = colObj->getCollisionShape();
+								const btVector3& scaling = prevShape->getLocalScaling();
+								localScaling[0] = scaling.getX();localScaling[1] = scaling.getY();localScaling[2] = scaling.getZ();
 							} else
 							{
 								prevGraphicsShapeIndex = -1;
 							}
 						} else
 						{
-							printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
-							prevGraphicsShapeIndex = -1;
-							btAssert(0);
+							if (colObj->getCollisionShape()->getShapeType()==SPHERE_SHAPE_PROXYTYPE)
+							{
+								btSphereShape* sphere = (btSphereShape*) colObj->getCollisionShape();
+								btScalar radius = sphere->getRadius();
+								
+								//btConvexHullShape* spherePoly = new btConvexHullShape(
+								//const btConvexPolyhedron* pol = polyShape->getConvexPolyhedron();
+								/*objLoader loader;
+								
+								int result = loader.load("../../bin/wavefront/sphere1.obj");
+								
+
+								GraphicsShape* gfxShape = createGraphicsShapeFromWavefrontObj(&loader);
+								
+
+								int vertexStrideInBytes = 9*sizeof(float);
+
+								
+								printf("vertices (%d):\n",gfxShape->m_numvertices);
+								for (int i=0;i<gfxShape->m_numvertices;i++)
+								{
+									gfxShape->m_vertices[i*9+4] = gfxShape->m_vertices[i*9];
+									gfxShape->m_vertices[i*9+5] = gfxShape->m_vertices[i*9+1];
+									gfxShape->m_vertices[i*9+6] = gfxShape->m_vertices[i*9+2];
+
+									printf("%f,%f,%f,%f,%f,%f,%f,%f,%f,\n",
+										gfxShape->m_vertices[i*9],
+										gfxShape->m_vertices[i*9+1],
+										gfxShape->m_vertices[i*9+2],
+										0.f,//gfxShape->m_vertices[i*9+3],
+										//gfxShape->m_vertices[i*9+4],//face normals
+										//gfxShape->m_vertices[i*9+5],
+										//gfxShape->m_vertices[i*9+6],
+
+										gfxShape->m_vertices[i*9+0],
+										gfxShape->m_vertices[i*9+1],
+										gfxShape->m_vertices[i*9+2],
+
+										gfxShape->m_vertices[i*9+7],
+										gfxShape->m_vertices[i*9+8]);
+								}
+								printf("indices (%d):\n",gfxShape->m_numIndices);
+								for (int i=0;i<gfxShape->m_numIndices/3;i++)
+								{
+									printf("%d,%d,%d,\n",gfxShape->m_indices[i*3],
+										gfxShape->m_indices[i*3+1],
+										gfxShape->m_indices[i*3+2]);
+								}
+
+								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
+								*/
+								int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
+								int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
+								prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
+								prevShape = sphere;
+								const btVector3& scaling = prevShape->getLocalScaling();
+								localScaling[0] = radius*scaling.getX();localScaling[1] = radius*scaling.getY();localScaling[2] = radius*scaling.getZ();
+							} else
+							{
+								printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
+								prevGraphicsShapeIndex = -1;
+								btAssert(0);
+							}
 						}
 					}
 
@@ -374,16 +572,16 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 			}
 		}
     
-		if (colObj->getCollisionShape()->isPolyhedral())
+		
+		
 		{
-				btPolyhedralConvexShape* polyShape = (btPolyhedralConvexShape*)colObj->getCollisionShape();
-				const btVector3& localScaling = polyShape ->getLocalScaling();
-
-				float cubeScaling[4] = {localScaling.getX(),localScaling.getY(), localScaling.getZ(),1};
-                
                 if (!syncTransformsOnly)
                 {
-                    renderer.registerGraphicsInstance(prevGraphicsShapeIndex,position,orientation,color,cubeScaling);
+					if (prevShape && prevGraphicsShapeIndex>=0)
+					{
+						
+						renderer.registerGraphicsInstance(prevGraphicsShapeIndex,position,orientation,color,localScaling);
+					}
                 }
                 else
                 {
@@ -391,23 +589,6 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
                 
                 }
                 curGraphicsIndex++;
-		} else
-		{
-			if ((colObj->getCollisionShape()->getShapeType()==TRIANGLE_MESH_SHAPE_PROXYTYPE)||
-				(colObj->getCollisionShape()->getShapeType()==COMPOUND_SHAPE_PROXYTYPE))
-			{
-				float cubeScaling[4]={1,1,1,1};
-				if (!syncTransformsOnly)
-                {
-                    renderer.registerGraphicsInstance(prevGraphicsShapeIndex,position,orientation,color,cubeScaling);
-                }
-                else
-                {
-                    renderer.writeSingleInstanceTransformToCPU(position,orientation,curGraphicsIndex);
-                
-                }
-                curGraphicsIndex++;
-			}
 		}
 
        

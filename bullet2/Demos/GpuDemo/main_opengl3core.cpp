@@ -49,6 +49,7 @@ btAlignedObjectArray<const char*> demoNames;
 int selectedDemo = 0;
 GpuDemo::CreateFunc* allDemos[]=
 {
+	SpheresDemo::CreateFunc,
 	GpuDemo1::CreateFunc,
 	EmptyDemo::CreateFunc,
 };
@@ -504,16 +505,24 @@ int main(int argc, char* argv[])
 		do
 		{
 
-			
+				
 			window->startRendering();
+			
 			glClearColor(0.6,0.6,0.6,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			
 			if (!gPause)
-				demo->clientMoveAndDisplay();
+				demo->clientMoveAndDisplay(); 
+			else
+			{
+				
+				CProfileManager::Reset();
+				CProfileManager::Increment_Frame_Counter();
+			}
 
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
+
 			if (demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
 				btAlignedObjectArray<btCollisionObject*> arr = demo->getDynamicsWorld()->getCollisionObjectArray();
@@ -523,9 +532,17 @@ int main(int argc, char* argv[])
 				syncOnly = true;
 
 			}
-			gui->draw(g_OpenGLWidth,g_OpenGLHeight);
-			window->endRendering();
-			glFinish();
+			{
+				BT_PROFILE("gui->draw");
+				gui->draw(g_OpenGLWidth,g_OpenGLHeight);
+			}
+			{
+				BT_PROFILE("window->endRendering");
+				window->endRendering();
+			}
+			{
+				BT_PROFILE("glFinish");
+			}
 
 
 		if (dump_timings && !gPause)

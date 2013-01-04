@@ -61,9 +61,9 @@ class GpuDemo : public DemoApplication
 			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(3),
-			arraySizeY(3 ),
-			arraySizeZ(3),
+			arraySizeX(43),
+			arraySizeY(4 ),
+			arraySizeZ(43),
 			m_useConcaveMesh(false),
 			gapX(4.3),
 			gapY(6.0),
@@ -133,5 +133,20 @@ public:
 	
 };
 
+class SpheresDemo : public GpuDemo
+{
+public:
+	virtual void setupScene(const ConstructionInfo& ci);
+	virtual const char* getName()
+	{
+		return "SpheresDemo";
+	}
+	static GpuDemo* CreateFunc()
+	{
+		GpuDemo* demo = new SpheresDemo;
+		return demo;
+	}
+	
+};
 
 #endif //GPU_DEMO_H

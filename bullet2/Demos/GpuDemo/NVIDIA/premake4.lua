@@ -87,6 +87,16 @@ if (hasCL) then
 			"../../../DemosCommon/GL_ShapeDrawer.h",
 			"../../../DemosCommon/OpenGL2Renderer.cpp",
 			"../../../DemosCommon/OpenGL2Renderer.h",
+			
+			"../../../../rendering/WavefrontObjLoader/string_extra.cpp",
+			"../../../../rendering/WavefrontObjLoader/string_extra.h",
+			"../../../../rendering/WavefrontObjLoader/objLoader.cpp",
+			"../../../../rendering/WavefrontObjLoader/objLoader.h",
+			"../../../../rendering/WavefrontObjLoader/obj_parser.cpp",
+			"../../../../rendering/WavefrontObjLoader/obj_parser.h",
+			"../../../../rendering/WavefrontObjLoader/list.cpp",
+			"../../../../rendering/WavefrontObjLoader/list.h",
+			
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.cpp",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
 			"../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
@@ -189,6 +199,16 @@ if (hasCL) then
 			"../../../DemosCommon/GL_ShapeDrawer.h",
 			"../../../DemosCommon/OpenGL3CoreRenderer.cpp",
 			"../../../DemosCommon/OpenGL3CoreRenderer.h",
+			
+			"../../../../rendering/WavefrontObjLoader/string_extra.cpp",
+			"../../../../rendering/WavefrontObjLoader/string_extra.h",
+			"../../../../rendering/WavefrontObjLoader/objLoader.cpp",
+			"../../../../rendering/WavefrontObjLoader/objLoader.h",
+			"../../../../rendering/WavefrontObjLoader/obj_parser.cpp",
+			"../../../../rendering/WavefrontObjLoader/obj_parser.h",
+			"../../../../rendering/WavefrontObjLoader/list.cpp",
+			"../../../../rendering/WavefrontObjLoader/list.h",
+			
 			"../../../../rendering/rendertest/GLInstancingRenderer.cpp",
 			"../../../../rendering/rendertest/GLInstancingRenderer.h",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.cpp",

@@ -500,6 +500,7 @@ void GLInstancingRenderer::writeTransforms()
     
 }
 
+
 int GLInstancingRenderer::registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling)
 {
 	btAssert(shapeIndex == (m_graphicsInstances.size()-1));

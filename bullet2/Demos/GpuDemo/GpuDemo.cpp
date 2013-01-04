@@ -106,6 +106,95 @@ void	EmptyDemo::setupScene(const ConstructionInfo& ci)
 	//empty test
 }
 
+void SpheresDemo::setupScene(const ConstructionInfo& ci)
+{
+	
+	{
+		btSphereShape* sphere = new btSphereShape(100);
+		btScalar mass(0.);
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+		btVector3 localInertia(0,0,0);
+		if (isDynamic)
+			sphere->calculateLocalInertia(mass,localInertia);
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(0,-100,0));
+
+		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,sphere,localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+		//add the body to the dynamics world
+		m_dynamicsWorld->addRigidBody(body);
+	}
+
+	{
+		btSphereShape* sphere = new btSphereShape(1);
+			m_collisionShapes.push_back(sphere);
+
+		/// Create Dynamic Objects
+		btTransform startTransform;
+		startTransform.setIdentity();
+
+	
+
+		float start_x = START_POS_X - ci.gapX*ci.arraySizeX/2;
+		float start_y = START_POS_Y;
+		float start_z = START_POS_Z - ci.gapZ*ci.arraySizeZ/2;
+
+		for (int k=0;k<ci.arraySizeY;k++)
+		{
+			int sizeX = ci.arraySizeX;
+			int startX = -sizeX/2;
+			float gapX = ci.gapX;
+
+			for (int i=0;i<sizeX;i++)
+			{
+				int sizeZ = ci.arraySizeZ;
+				int startZ = -sizeX/2;
+				float gapZ =ci.gapZ;
+				for(int j = 0;j<sizeZ;j++)
+				{
+					//btCollisionShape* shape = k==0? boxShape : colShape;
+
+					btCollisionShape* shape = sphere;
+
+					
+					btScalar	mass  = 1;
+					if (!ci.m_useConcaveMesh && k==0)
+						mass = k==0? 0.f : 1.f;
+
+					//rigidbody is dynamic if and only if mass is non zero, otherwise static
+					bool isDynamic = (mass != 0.f);
+
+					btVector3 localInertia(0,0,0);
+					if (isDynamic)
+						shape->calculateLocalInertia(mass,localInertia);
+
+					startTransform.setOrigin(SCALING*btVector3(
+										btScalar(gapX*i + start_x),
+										btScalar(ci.gapY*k + start_y),
+										btScalar(gapZ*j + start_z)));
+
+			
+					//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+					btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+					btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
+					btRigidBody* body = new btRigidBody(rbInfo);
+					
+
+					m_dynamicsWorld->addRigidBody(body);
+				}
+			}
+		}
+	}
+
+}
+
 void	GpuDemo1::setupScene(const ConstructionInfo& ci)
 {
 		btCollisionShape* groundShape =0;
