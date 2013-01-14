@@ -6,6 +6,7 @@
 #include "BulletCollision/CollisionShapes/btPolyhedralConvexShape.h"
 #include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
 #include "BulletCollision/CollisionShapes/btCompoundShape.h"
+#include "BulletCollision/CollisionShapes/btSphereShape.h"
 
 
 #include "LinearMath/btQuickprof.h"
@@ -69,7 +70,7 @@ int		btGpuDynamicsWorld::stepSimulation( btScalar timeStep,int maxSubSteps, btSc
 
 		
 		{
-			BT_PROFILE("scatter transforms into rigidbody");
+			BT_PROFILE("scatter transforms into rigidbody (CPU)");
 			for (int i=0;i<this->m_collisionObjects.size();i++)
 			{
 				btVector3 pos;
@@ -117,7 +118,7 @@ int btGpuDynamicsWorld::findOrRegisterCollisionShape(const btCollisionShape* col
 			const float scaling[4]={1,1,1,1};
 			bool noHeightField=true;
 			
-			int gpuShapeIndex = m_gpuPhysics->registerCollisionShape(&tmpVertices[0].getX(), strideInBytes, numVertices, scaling, noHeightField);
+			int gpuShapeIndex = m_gpuPhysics->registerConvexPolyhedron(&tmpVertices[0].getX(), strideInBytes, numVertices, scaling, noHeightField);
 			m_uniqueShapeMapping.push_back(gpuShapeIndex);
 		} else
 		{
@@ -238,9 +239,19 @@ int btGpuDynamicsWorld::findOrRegisterCollisionShape(const btCollisionShape* col
 					 */
 				} else
 				{
-					printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
-					index = -1;
-					btAssert(0);
+					if (colShape->getShapeType()==SPHERE_SHAPE_PROXYTYPE)
+					{
+						m_uniqueShapes.push_back(colShape);
+						btSphereShape* sphere = (btSphereShape*)colShape;
+						
+						int gpuShapeIndex = m_gpuPhysics->registerSphereShape(sphere->getRadius());
+						m_uniqueShapeMapping.push_back(gpuShapeIndex);
+					} else
+					{
+						printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
+						index = -1;
+						btAssert(0);
+					}
 				}
 			}
 		}

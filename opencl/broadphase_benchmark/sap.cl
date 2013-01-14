@@ -284,6 +284,20 @@ float IFloatFlip(unsigned int f)
 	return *(float*)&fl;
 }
 
+
+
+
+__kernel void   copyAabbsKernel( __global const btAabbCL* allAabbs, __global btAabbCL* destAabbs, int numObjects)
+{
+	int i = get_global_id(0);
+	if (i>=numObjects)
+		return;
+	int src = destAabbs[i].m_maxIndices[3];
+	destAabbs[i] = allAabbs[src];
+	destAabbs[i].m_maxIndices[3] = src;
+}
+
+
 __kernel void   flipFloatKernel( __global const btAabbCL* aabbs, volatile __global int2* sortData, int numObjects, int axis)
 {
 	int i = get_global_id(0);

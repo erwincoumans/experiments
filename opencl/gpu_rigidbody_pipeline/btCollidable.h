@@ -5,7 +5,7 @@
 struct btCollidable
 {
 	int m_numChildShapes;
-	int blaat2;
+	float m_radius;
 	int m_shapeType;
 	int m_shapeIndex;
 };

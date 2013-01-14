@@ -487,6 +487,34 @@ typedef struct
 } ConstBufferSSD;
 
 
+void btPlaneSpace1 (float4 n, float4* p, float4* q);
+ void btPlaneSpace1 (float4 n, float4* p, float4* q)
+{
+  if (fabs(n.z) > 0.70710678f) {
+    // choose p in y-z plane
+    float a = n.y*n.y + n.z*n.z;
+    float k = 1.f/sqrt(a);
+    p[0].x = 0;
+	p[0].y = -n.z*k;
+	p[0].z = n.y*k;
+    // set q = n x p
+    q[0].x = a*k;
+	q[0].y = -n.x*p[0].z;
+	q[0].z = n.x*p[0].y;
+  }
+  else {
+    // choose p in x-y plane
+    float a = n.x*n.x + n.y*n.y;
+    float k = 1.f/sqrt(a);
+    p[0].x = -n.y*k;
+	p[0].y = n.x*k;
+	p[0].z = 0;
+    // set q = n x p
+    q[0].x = -n.z*p[0].y;
+	q[0].y = n.z*p[0].x;
+	q[0].z = a*k;
+  }
+}
 
 
 void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVelA, float invMassA, const Matrix3x3 invInertiaA,
@@ -539,17 +567,16 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 		}
 	}
 
-	if( src->m_worldNormal.w > 1 )//npoints
+	if( src->m_worldNormal.w > 0 )//npoints
 	{	//	prepare friction
 		float4 center = make_float4(0.f);
-		for(int i=0; i<src->m_worldNormal.w; i++) center += src->m_worldPos[i];
+		for(int i=0; i<src->m_worldNormal.w; i++) 
+			center += src->m_worldPos[i];
 		center /= (float)src->m_worldNormal.w;
 
 		float4 tangent[2];
-		tangent[0] = cross3( src->m_worldNormal, src->m_worldPos[0]-center );
-		tangent[1] = cross3( tangent[0], src->m_worldNormal );
-		tangent[0] = normalize3( tangent[0] );
-		tangent[1] = normalize3( tangent[1] );
+		btPlaneSpace1(src->m_worldNormal,&tangent[0],&tangent[1]);
+		
 		float4 r[2];
 		r[0] = center - posA;
 		r[1] = center - posB;
@@ -564,10 +591,6 @@ void setConstraint4( const float4 posA, const float4 linVelA, const float4 angVe
 			dstC->m_fAppliedRambdaDt[i] = 0.f;
 		}
 		dstC->m_center = center;
-	}
-	else
-	{
-		//	single point constraint
 	}
 
 	for(int i=0; i<4; i++)

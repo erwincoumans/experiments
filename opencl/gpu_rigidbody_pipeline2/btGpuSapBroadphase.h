@@ -31,6 +31,7 @@ class btGpuSapBroadphase
 	cl_command_queue		m_queue;
 	cl_kernel				m_flipFloatKernel;
 	cl_kernel				m_scatterKernel ;
+	cl_kernel				m_copyAabbsKernel;
 	cl_kernel				m_sapKernel;
 	cl_kernel				m_sap2Kernel;
 

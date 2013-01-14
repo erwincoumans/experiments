@@ -54,8 +54,10 @@ struct CLPhysicsDemo
 	
 	cl_mem	getBodiesGpu();
 
-	int		registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
-	int		registerConvexShape(class btConvexUtility* utilPtr , bool noHeightField);
+	int		registerConvexPolyhedron(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
+	int		registerSphereShape(float radius);
+
+	int		registerConvexPolyhedron(class btConvexUtility* utilPtr , bool noHeightField);
 	int		registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, const float* scaling);
 	int		registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes);
 

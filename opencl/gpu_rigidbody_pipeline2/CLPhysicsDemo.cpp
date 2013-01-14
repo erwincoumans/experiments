@@ -320,7 +320,7 @@ int		CLPhysicsDemo::registerConcaveMesh(btAlignedObjectArray<btVector3>* vertice
 
 
 
-int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeightField)
+int		CLPhysicsDemo::registerConvexPolyhedron(btConvexUtility* utilPtr , bool noHeightField)
 {
 	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
 
@@ -407,7 +407,47 @@ int		CLPhysicsDemo::registerConvexShape(btConvexUtility* utilPtr , bool noHeight
 
 }
 
-int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField)
+
+
+int		CLPhysicsDemo::registerSphereShape(float radius)
+{
+	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+
+	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	col.m_shapeType = CollisionShape::SHAPE_SPHERE;
+	col.m_shapeIndex = 0;
+	col.m_radius = radius;
+	
+	if (col.m_shapeIndex>=0)
+	{
+		btAABBHost aabbMin, aabbMax;
+		btVector3 myAabbMin(-radius,-radius,-radius);
+		btVector3 myAabbMax(radius,radius,radius);
+
+		aabbMin.fx = myAabbMin[0];//s_convexHeightField->m_aabb.m_min.x;
+		aabbMin.fy = myAabbMin[1];//s_convexHeightField->m_aabb.m_min.y;
+		aabbMin.fz= myAabbMin[2];//s_convexHeightField->m_aabb.m_min.z;
+		aabbMin.uw = 0;
+
+		aabbMax.fx = myAabbMax[0];//s_convexHeightField->m_aabb.m_max.x;
+		aabbMax.fy = myAabbMax[1];//s_convexHeightField->m_aabb.m_max.y;
+		aabbMax.fz= myAabbMax[2];//s_convexHeightField->m_aabb.m_max.z;
+		aabbMax.uw = 0;
+
+		m_data->m_localShapeAABBCPU->push_back(aabbMin);
+		m_data->m_localShapeAABBGPU->push_back(aabbMin);
+
+		m_data->m_localShapeAABBCPU->push_back(aabbMax);
+		m_data->m_localShapeAABBGPU->push_back(aabbMax);
+		//m_data->m_localShapeAABB->copyFromHostPointer(&aabbMin,1,shapeIndex*2);
+		//m_data->m_localShapeAABB->copyFromHostPointer(&aabbMax,1,shapeIndex*2+1);
+		clFinish(g_cqCommandQue);
+	}
+	
+	return collidableIndex;
+}
+
+int		CLPhysicsDemo::registerConvexPolyhedron(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField)
 {
 	btAlignedObjectArray<btVector3> verts;
 	
@@ -444,7 +484,7 @@ int		CLPhysicsDemo::registerCollisionShape(const float* vertices, int strideInBy
 #endif
 
 	
-	int shapeIndex = registerConvexShape(utilPtr,noHeightField);
+	int shapeIndex = registerConvexPolyhedron(utilPtr,noHeightField);
 	
 	return shapeIndex;
 }

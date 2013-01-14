@@ -136,7 +136,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 	{
 		float sphereScaling[4] = {3,3,3,1};
 		bool noHeightField = false;
-		int sphereCollisionShapeIndex = physicsSim.registerCollisionShape(&sUnitSpherePoints[0].getX(),sizeof(btVector3), MY_UNITSPHERE_POINTS,&sphereScaling[0],noHeightField);
+		int sphereCollisionShapeIndex = physicsSim.registerConvexPolyhedron(&sUnitSpherePoints[0].getX(),sizeof(btVector3), MY_UNITSPHERE_POINTS,&sphereScaling[0],noHeightField);
 		position[0] = 11120;	
 		position[1] = -1120;
 		position[2] = 11120;
@@ -193,7 +193,7 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 
 
 	float cubeScaling[4] = {1.,1.,1.,1};
-	int cubeCollisionShapeIndex = physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
+	int cubeCollisionShapeIndex = physicsSim.registerConvexPolyhedron(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
 
 
 	{
@@ -415,9 +415,9 @@ void createSceneProgrammatically(GLInstancingRenderer& renderer,CLPhysicsDemo& p
 			
 				
 #ifdef USE_POINTS
-				int cubeCollisionShapeIndex2 = physicsSim.registerCollisionShape(&points[0].getX(),sizeof(btVector3),numVertices,groundScaling,true);
+				int cubeCollisionShapeIndex2 = physicsSim.registerConvexPolyhedron(&points[0].getX(),sizeof(btVector3),numVertices,groundScaling,true);
 #else
-				int cubeCollisionShapeIndex2 = physicsSim.registerConvexShape(&convex, noHeightField);
+				int cubeCollisionShapeIndex2 = physicsSim.registerConvexPolyhedron(&convex, noHeightField);
 #endif
 
 			
@@ -689,7 +689,7 @@ void btBulletDataExtractor::convertAllObjects(bParse::btBulletFile* bulletFile2)
 
 		float groundScaling[4] = {2.5,2,2.5,1};
 		bool noHeightField = true;
-		int cubeCollisionShapeIndex2 = m_physicsSim.registerCollisionShape(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
+		int cubeCollisionShapeIndex2 = m_physicsSim.registerConvexPolyhedron(&tetra_vertices[0],strideInBytes, sizeof(tetra_vertices)/strideInBytes,&groundScaling[0],noHeightField);
 
 		for (int i=0;i<50;i++)
 			for (int j=0;j<50;j++)
@@ -777,7 +777,7 @@ int btBulletDataExtractor::convertCollisionShape(  Bullet::btCollisionShapeData*
 							int strideInBytes = sizeof(btVector3);
 							strideInBytes = 4*sizeof(float);
 							int noHeightField = 1;
-							shapeIndex  = m_physicsSim.registerCollisionShape(&tmpPoints[0].m_floats[0],strideInBytes, numPoints,&unitScaling[0],noHeightField);
+							shapeIndex  = m_physicsSim.registerConvexPolyhedron(&tmpPoints[0].m_floats[0],strideInBytes, numPoints,&unitScaling[0],noHeightField);
 
 							printf("createConvexHull with %d vertices\n",numPoints);
 
@@ -975,7 +975,7 @@ int btBulletDataExtractor::createBoxShape( const Bullet::btVector3FloatData& hal
 		1};
 	int strideInBytes = sizeof(float)*9;
 	int noHeightField = 1;
-	int cubeCollisionShapeIndex = m_physicsSim.registerCollisionShape(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
+	int cubeCollisionShapeIndex = m_physicsSim.registerConvexPolyhedron(&cube_vertices[0],strideInBytes, sizeof(cube_vertices)/strideInBytes,&cubeScaling[0],noHeightField);
 
 	{
 		int numVertices = sizeof(cube_vertices)/strideInBytes;

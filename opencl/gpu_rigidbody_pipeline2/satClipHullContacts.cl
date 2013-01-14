@@ -1,6 +1,7 @@
 
 #define TRIANGLE_NUM_CONVEX_FACES 5
 
+#define SHAPE_SPHERE 7
 
 #pragma OPENCL EXTENSION cl_amd_printf : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
@@ -55,7 +56,7 @@ typedef struct
 typedef struct
 {
 	int m_numChildShapes;
-	int m_unused2;
+	float m_radius;
 	int m_shapeType;
 	int m_shapeIndex;
 	
@@ -968,14 +969,60 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 	if (i<numPairs)
 	{
 
+		int bodyIndexA = pairs[i].x;
+		int bodyIndexB = pairs[i].y;
+			
+		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+	
+	
+		if (collidables[collidableIndexA].m_shapeType == SHAPE_SPHERE &&
+			collidables[collidableIndexB].m_shapeType == SHAPE_SPHERE)
+		{
+			//sphere-sphere
+			float radiusA = collidables[collidableIndexA].m_radius;
+			float radiusB = collidables[collidableIndexB].m_radius;
+			float4 posA = rigidBodies[bodyIndexA].m_pos;
+			float4 posB = rigidBodies[bodyIndexB].m_pos;
+
+			float4 diff = posA-posB;
+			float len = length(diff);
+			
+			///iff distance positive, don't generate a new contact
+			if ( len <= (radiusA+radiusB))
+			{
+				///distance (negative means penetration)
+				float dist = len - (radiusA+radiusB);
+				float4 normalOnSurfaceB = make_float4(1.f,0.f,0.f,0.f);
+				if (len > 0.00001)
+				{
+					normalOnSurfaceB = diff / len;
+				}
+				float4 contactPosB = posB + normalOnSurfaceB*radiusB;
+				contactPosB.w = dist;
+								
+				int dstIdx;
+        AppendInc( nGlobalContactsOut, dstIdx );
+				
+				if (dstIdx < numPairs)
+				{
+					__global Contact4* c = &globalContactsOut[dstIdx];
+					c->m_worldNormal = -normalOnSurfaceB;
+					c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
+					c->m_batchIdx = pairIndex;
+					int bodyA = pairs[pairIndex].x;
+					int bodyB = pairs[pairIndex].y;
+					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
+					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
+					c->m_worldPos[0] = contactPosB;
+					GET_NPOINTS(*c) = 1;
+				}//if (dstIdx < numPairs)
+			}//if ( len <= (radiusA+radiusB))
+		}//SHAPE_SPHERE SHAPE_SPHERE
+
 		if (hasSeparatingAxis[i])
 		{
 
-			int bodyIndexA = pairs[i].x;
-			int bodyIndexB = pairs[i].y;
-			
-			int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
-			int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
 			
 			int shapeIndexA = collidables[collidableIndexA].m_shapeIndex;
 			int shapeIndexB = collidables[collidableIndexB].m_shapeIndex;
@@ -1166,7 +1213,75 @@ __kernel void   clipCompoundsHullHullKernel( __global const int4* gpuCompoundPai
 	}//	if (i<numCompoundPairs)
 
 }
+
+
+
+__kernel void   sphereSphereCollisionKernel( __global const int2* pairs, 
+																					__global const BodyData* rigidBodies, 
+																					__global const btCollidableGpu* collidables,
+																					__global const float4* separatingNormals,
+																					__global const int* hasSeparatingAxis,
+																					__global Contact4* restrict globalContactsOut,
+																					counter32_t nGlobalContactsOut,
+																					int numPairs)
+{
+
+	int i = get_global_id(0);
+	int pairIndex = i;
+	
+	if (i<numPairs)
+	{
+		int bodyIndexA = pairs[i].x;
+		int bodyIndexB = pairs[i].y;
+			
+		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
+		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
+
+		if (collidables[collidableIndexA].m_shapeType == SHAPE_SPHERE &&
+			collidables[collidableIndexB].m_shapeType == SHAPE_SPHERE)
+		{
+			//sphere-sphere
+			float radiusA = collidables[collidableIndexA].m_radius;
+			float radiusB = collidables[collidableIndexB].m_radius;
+			float4 posA = rigidBodies[bodyIndexA].m_pos;
+			float4 posB = rigidBodies[bodyIndexB].m_pos;
+
+			float4 diff = posA-posB;
+			float len = length(diff);
+			
+			///iff distance positive, don't generate a new contact
+			if ( len <= (radiusA+radiusB))
+			{
+				///distance (negative means penetration)
+				float dist = len - (radiusA+radiusB);
+				float4 normalOnSurfaceB = make_float4(1.f,0.f,0.f,0.f);
+				if (len > 0.00001)
+				{
+					normalOnSurfaceB = diff / len;
+				}
+				float4 contactPosB = posB + normalOnSurfaceB*radiusB;
+				contactPosB.w = dist;
+								
+				int dstIdx;
+        AppendInc( nGlobalContactsOut, dstIdx );
 				
+				if (dstIdx < numPairs)
+				{
+					__global Contact4* c = &globalContactsOut[dstIdx];
+					c->m_worldNormal = normalOnSurfaceB;
+					c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
+					c->m_batchIdx = pairIndex;
+					int bodyA = pairs[pairIndex].x;
+					int bodyB = pairs[pairIndex].y;
+					c->m_bodyAPtrAndSignBit = rigidBodies[bodyA].m_invMass==0?-bodyA:bodyA;
+					c->m_bodyBPtrAndSignBit = rigidBodies[bodyB].m_invMass==0?-bodyB:bodyB;
+					c->m_worldPos[0] = contactPosB;
+					GET_NPOINTS(*c) = 1;
+				}//if (dstIdx < numPairs)
+			}//if ( len <= (radiusA+radiusB))
+		}//SHAPE_SPHERE SHAPE_SPHERE
+	}//if (i<numPairs)
+}				
 
 __kernel void   clipHullHullConcaveConvexKernel( __global int4* concavePairsIn,
 																					__global const BodyData* rigidBodies, 

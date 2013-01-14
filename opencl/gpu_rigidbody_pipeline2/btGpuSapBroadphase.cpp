@@ -59,6 +59,8 @@ m_gpuSmallSortedAabbs(ctx,q)
 
 	m_flipFloatKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "flipFloatKernel",&errNum,sapProg );
 
+	m_copyAabbsKernel= btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "copyAabbsKernel",&errNum,sapProg );
+
 	m_scatterKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,interopKernelString, "scatterKernel",&errNum,sapProg );
 
 	m_sorter = new btRadixSort32CL(m_context,m_device,m_queue);
@@ -69,6 +71,7 @@ btGpuSapBroadphase::~btGpuSapBroadphase()
 	delete m_sorter;
 	clReleaseKernel(m_scatterKernel);
 	clReleaseKernel(m_flipFloatKernel);
+	clReleaseKernel(m_copyAabbsKernel);
 	clReleaseKernel(m_sapKernel);
 	clReleaseKernel(m_sap2Kernel);
 
@@ -179,7 +182,9 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 
 	{
 
+	bool syncOnHost = false;
 
+	if (syncOnHost)
 	{
 		BT_PROFILE("Synchronize m_smallAabbsGPU (CPU/slow)");
 		btAlignedObjectArray<btSapAabb> allHostAabbs;
@@ -198,9 +203,26 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 		}
 		m_smallAabbsGPU.copyFromHost(m_smallAabbsCPU);
 	
+	} else
+	{
+		{
+			int numSmallAabbs = m_smallAabbsGPU.size();
+			BT_PROFILE("copyAabbsKernelSmall");
+			btBufferInfoCL bInfo[] = { 
+				btBufferInfoCL( m_allAabbsGPU.getBufferCL(), true ), 
+				btBufferInfoCL( m_smallAabbsGPU.getBufferCL()),
+			};
+
+			btLauncherCL launcher(m_queue, m_copyAabbsKernel );
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst( numSmallAabbs  );
+			int num = numSmallAabbs;
+			launcher.launch1D( num);
+			clFinish(m_queue);
+		}
 	}
 
-	if (1)
+	if (syncOnHost)
 	{
 		BT_PROFILE("Synchronize m_largeAabbsGPU (CPU/slow)");
 		btAlignedObjectArray<btSapAabb> allHostAabbs;
@@ -219,6 +241,23 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 		}
 		m_largeAabbsGPU.copyFromHost(m_largeAabbsCPU);
 	
+	} else
+	{
+		{
+			int numLargeAabbs = m_largeAabbsGPU.size();
+			BT_PROFILE("copyAabbsKernelLarge");
+			btBufferInfoCL bInfo[] = { 
+				btBufferInfoCL( m_allAabbsGPU.getBufferCL(), true ), 
+				btBufferInfoCL( m_largeAabbsGPU.getBufferCL()),
+			};
+
+			btLauncherCL launcher(m_queue, m_copyAabbsKernel );
+			launcher.setBuffers( bInfo, sizeof(bInfo)/sizeof(btBufferInfoCL) );
+			launcher.setConst( numLargeAabbs  );
+			int num = numLargeAabbs;
+			launcher.launch1D( num);
+			clFinish(m_queue);
+		}
 	}
 
 

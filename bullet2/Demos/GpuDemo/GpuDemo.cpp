@@ -20,7 +20,7 @@ subject to the following restrictions:
 
 #define SCALING 1.
 #define START_POS_X -5
-#define START_POS_Y -5
+#define START_POS_Y 15
 #define START_POS_Z -3
 
 #include "LinearMath/btVector3.h"
