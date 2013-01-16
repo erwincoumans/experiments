@@ -37,6 +37,7 @@ subject to the following restrictions:
 #include "BulletCollision/CollisionShapes/btConvexHullShape.h"
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletCollision/CollisionShapes/btCompoundShape.h"
+#include "BulletCollision/CollisionShapes/btStaticPlaneShape.h"
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btDefaultMotionState.h"
@@ -99,29 +100,8 @@ void	EmptyDemo::setupScene(const ConstructionInfo& ci)
 void SpheresDemo::setupScene(const ConstructionInfo& ci)
 {
 	
-	{
-		btSphereShape* sphere = new btSphereShape(100);
-		btScalar mass(0.);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			sphere->calculateLocalInertia(mass,localInertia);
-		btTransform groundTransform;
-		groundTransform.setIdentity();
-		groundTransform.setOrigin(btVector3(0,-100,0));
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,sphere,localInertia);
-		btRigidBody* body = new btRigidBody(rbInfo);
-
-		//add the body to the dynamics world
-		m_dynamicsWorld->addRigidBody(body);
-	}
-
+	
+	if (1)
 	{
 		btSphereShape* sphere = new btSphereShape(1);
 			m_collisionShapes.push_back(sphere);
@@ -183,6 +163,34 @@ void SpheresDemo::setupScene(const ConstructionInfo& ci)
 		}
 	}
 
+	{
+		btVector3 planeNormal(0,1,0);
+		btScalar planeConstant=0;
+
+		//btCollisionShape* shape = new btStaticPlaneShape(planeNormal,planeConstant);
+		//btBoxShape* plane = new btBoxShape(btVector3(100,1,100));
+		//plane->initializePolyhedralFeatures();
+		btSphereShape* shape = new btSphereShape(1000);
+
+		btScalar mass(0.);
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+		btVector3 localInertia(0,0,0);
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setRotation(btQuaternion(btVector3(1,0,0),0.3));
+		groundTransform.setOrigin(btVector3(0,-1000,0));
+
+		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
+		btRigidBody* body = new btRigidBody(rbInfo);
+
+		//add the body to the dynamics world
+		m_dynamicsWorld->addRigidBody(body);
+	}
 }
 
 void	GpuDemo1::setupScene(const ConstructionInfo& ci)

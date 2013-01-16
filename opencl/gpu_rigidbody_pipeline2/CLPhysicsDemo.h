@@ -56,6 +56,7 @@ struct CLPhysicsDemo
 
 	int		registerConvexPolyhedron(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField);
 	int		registerSphereShape(float radius);
+	int		registerPlaneShape(const btVector3& planeNormal, float planeConstant);
 
 	int		registerConvexPolyhedron(class btConvexUtility* utilPtr , bool noHeightField);
 	int		registerConcaveMesh(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, const float* scaling);

@@ -7,7 +7,7 @@
 #include "BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h"
 #include "BulletCollision/CollisionShapes/btCompoundShape.h"
 #include "BulletCollision/CollisionShapes/btSphereShape.h"
-
+#include "BulletCollision/CollisionShapes/btStaticPlaneShape.h"
 
 #include "LinearMath/btQuickprof.h"
 
@@ -248,9 +248,19 @@ int btGpuDynamicsWorld::findOrRegisterCollisionShape(const btCollisionShape* col
 						m_uniqueShapeMapping.push_back(gpuShapeIndex);
 					} else
 					{
-						printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
-						index = -1;
-						btAssert(0);
+						if (colShape->getShapeType()==STATIC_PLANE_PROXYTYPE)
+						{
+							m_uniqueShapes.push_back(colShape);
+							btStaticPlaneShape* plane = (btStaticPlaneShape*)colShape;
+						
+							int gpuShapeIndex = m_gpuPhysics->registerPlaneShape(plane->getPlaneNormal(),plane->getPlaneConstant());
+							m_uniqueShapeMapping.push_back(gpuShapeIndex);
+						} else
+						{
+							printf("Error: unsupported shape type (%d) in btGpuDynamicsWorld::addRigidBody\n",colShape->getShapeType());
+							index = -1;
+							btAssert(0);
+						}
 					}
 				}
 			}

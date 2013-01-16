@@ -249,6 +249,18 @@ int btGpuNarrowphaseAndSolver::registerCompoundShape(btAlignedObjectArray<btGpuC
 	return curIndex;
 }
 
+int btGpuNarrowphaseAndSolver::registerFace(const btVector3& faceNormal, float faceConstant)
+{
+	int faceOffset = m_internalData->m_convexFaces.size();
+	btGpuFace& face = m_internalData->m_convexFaces.expand();
+	face.m_plane.x = faceNormal.getX();
+	face.m_plane.y = faceNormal.getY();
+	face.m_plane.z = faceNormal.getZ();
+	face.m_plane.w = faceConstant;
+	m_internalData->m_convexFacesGPU->copyFromHost(m_internalData->m_convexFaces);
+	return faceOffset;
+}
+
 int btGpuNarrowphaseAndSolver::registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices,btCollidable& col, const float* scaling1)
 {
 

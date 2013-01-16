@@ -13,6 +13,7 @@
 #include "BulletCollision/CollisionShapes/btBoxShape.h"
 #include "BulletCollision/CollisionShapes/btCompoundShape.h"
 #include "BulletCollision/CollisionShapes/btSphereShape.h"
+#include "BulletCollision/CollisionShapes/btStaticPlaneShape.h"
 
 #include "../../rendering/WavefrontObjLoader/objLoader.h"
 
@@ -595,9 +596,35 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 								localScaling[2] = sphereScale;
 							} else
 							{
-								printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
-								prevGraphicsShapeIndex = -1;
-								btAssert(0);
+								if (colObj->getCollisionShape()->getShapeType()==STATIC_PLANE_PROXYTYPE)
+								{
+									btStaticPlaneShape* plane= (btStaticPlaneShape*) colObj->getCollisionShape();
+									prevShape = colObj->getCollisionShape();
+
+									//plane->getPlaneNormal()
+									//plane->getPlaneConstant()
+									if (1)
+									{
+										int numVertices = sizeof(quad_vertices)/strideInBytes;
+										int numIndices = sizeof(quad_indices)/sizeof(int);
+									
+										prevGraphicsShapeIndex = renderer.registerShape(&quad_vertices[0],numVertices,quad_indices,numIndices);
+									} else
+									{
+										int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
+										int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
+										prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
+									}
+							
+									localScaling[0] = 100;
+									localScaling[1] = 1;
+									localScaling[2] = 100;
+								} else
+								{
+									printf("Error: unsupported collision shape type in %s %d\n", __FILE__, __LINE__);
+									prevGraphicsShapeIndex = -1;
+									btAssert(0);
+								}
 							}
 						}
 					}

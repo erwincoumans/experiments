@@ -447,6 +447,39 @@ int		CLPhysicsDemo::registerSphereShape(float radius)
 	return collidableIndex;
 }
 
+
+int		CLPhysicsDemo::registerPlaneShape(const btVector3& planeNormal, float planeConstant)
+{
+	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+
+	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	col.m_shapeType = CollisionShape::SHAPE_PLANE;
+	col.m_shapeIndex = narrowphaseAndSolver->registerFace(planeNormal,planeConstant);
+	col.m_radius = planeConstant;
+	
+	if (col.m_shapeIndex>=0)
+	{
+		btAABBHost aabbMin;
+		aabbMin.fx = -1e30f;
+		aabbMin.fy = -1e30f;
+		aabbMin.fz = -1e30f;
+		aabbMin.uw = 0;
+		btAABBHost aabbMax;
+		aabbMax.fx = 1e30f;
+		aabbMax.fy = 1e30f;
+		aabbMax.fz = 1e30f;
+		aabbMax.uw = 0;
+		m_data->m_localShapeAABBCPU->push_back(aabbMin);
+		m_data->m_localShapeAABBGPU->push_back(aabbMin);
+		m_data->m_localShapeAABBCPU->push_back(aabbMax);
+		m_data->m_localShapeAABBGPU->push_back(aabbMax);
+		clFinish(g_cqCommandQue);
+	}
+	
+	return collidableIndex;
+}
+
+
 int		CLPhysicsDemo::registerConvexPolyhedron(const float* vertices, int strideInBytes, int numVertices, const float* scaling, bool noHeightField)
 {
 	btAlignedObjectArray<btVector3> verts;

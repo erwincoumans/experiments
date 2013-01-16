@@ -85,7 +85,7 @@ public:
 
 	
 	int registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes);
-	
+	int registerFace(const btVector3& faceNormal, float faceConstant);
 	int registerConcaveMeshShape(btAlignedObjectArray<btVector3>* vertices, btAlignedObjectArray<int>* indices, btCollidable& col, const float* scaling);
 	int registerConcaveMeshShape(class objLoader* obj, btCollidable& col, const float* scaling);
 	int registerConvexHullShape(class btConvexUtility* convexPtr, btCollidable& col);
