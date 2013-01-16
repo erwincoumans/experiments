@@ -42,8 +42,9 @@ struct btGraphicsInstance
 	
 	int m_instanceOffset;
 	int m_vertexArrayOffset;
+	int	m_primitiveType;
 
-	btGraphicsInstance() :m_cube_vao(-1),m_index_vbo(-1),m_numIndices(-1),m_numVertices(-1),m_numGraphicsInstances(0),m_instanceOffset(0),m_vertexArrayOffset(0)
+	btGraphicsInstance() :m_cube_vao(-1),m_index_vbo(-1),m_numIndices(-1),m_numVertices(-1),m_numGraphicsInstances(0),m_instanceOffset(0),m_vertexArrayOffset(0),m_primitiveType(BT_GL_TRIANGLES)
 	{
 	}
 
@@ -182,6 +183,7 @@ void btDefaultKeyboardCallback(int key, int state)
 
 
 static GLuint               instancingShader;        // The instancing renderer
+static GLuint               instancingShaderPointSprite;        // The point sprite instancing renderer
 
 GLuint               cube_vbo=2;
 
@@ -189,8 +191,14 @@ static GLuint				m_texturehandle;
 
 static bool                 done = false;
 static GLint                angle_loc = 0;
-static GLint ModelViewMatrix;
-static GLint ProjectionMatrix;
+static GLint	ModelViewMatrix=0;
+static GLint	ProjectionMatrix=0;
+static GLint                uniform_texture_diffuse = 0;
+
+static GLint	screenWidthPointSprite=0;
+static GLint	ModelViewMatrixPointSprite=0;
+static GLint	ProjectionMatrixPointSprite=0;
+static GLint	uniform_texture_diffusePointSprite= 0;
 
 
 
@@ -218,7 +226,7 @@ GLInstancingRenderer::~GLInstancingRenderer()
 }
 
 
-static GLint                uniform_texture_diffuse = 0;
+
 
 //used for dynamic loading from disk (default switched off)
 //#define MAX_SHADER_LENGTH   8192
@@ -349,6 +357,138 @@ static const char* fragmentShader= \
 "	at = texel.a;\n"
 "		\n"
 "	color  = vec4(ct * cf, at * af);	\n"
+"}\n"
+;
+
+
+static const char* vertexShaderPointSprite= \
+"#version 330\n"
+"precision highp float;\n"
+"\n"
+"\n"
+"\n"
+"layout (location = 0) in vec4 position;\n"
+"layout (location = 1) in vec4 instance_position;\n"
+"layout (location = 2) in vec4 instance_quaternion;\n"
+"layout (location = 3) in vec2 uvcoords;\n"
+"layout (location = 4) in vec3 vertexnormal;\n"
+"layout (location = 5) in vec4 instance_color;\n"
+"layout (location = 6) in vec3 instance_scale;\n"
+"\n"
+"\n"
+"uniform float angle = 0.0;\n"
+"uniform float screenWidth = 700.f;\n"
+"uniform mat4 ModelViewMatrix;\n"
+"uniform mat4 ProjectionMatrix;\n"
+"\n"
+"out Fragment\n"
+"{\n"
+"     vec4 color;\n"
+"} fragment;\n"
+"\n"
+"out Vert\n"
+"{\n"
+"	vec2 texcoord;\n"
+"} vert;\n"
+"\n"
+"\n"
+"vec4 quatMul ( in vec4 q1, in vec4 q2 )\n"
+"{\n"
+"    vec3  im = q1.w * q2.xyz + q1.xyz * q2.w + cross ( q1.xyz, q2.xyz );\n"
+"    vec4  dt = q1 * q2;\n"
+"    float re = dot ( dt, vec4 ( -1.0, -1.0, -1.0, 1.0 ) );\n"
+"    return vec4 ( im, re );\n"
+"}\n"
+"\n"
+"vec4 quatFromAxisAngle(vec4 axis, in float angle)\n"
+"{\n"
+"    float cah = cos(angle*0.5);\n"
+"    float sah = sin(angle*0.5);\n"
+"	float d = inversesqrt(dot(axis,axis));\n"
+"	vec4 q = vec4(axis.x*sah*d,axis.y*sah*d,axis.z*sah*d,cah);\n"
+"	return q;\n"
+"}\n"
+"//\n"
+"// vector rotation via quaternion\n"
+"//\n"
+"vec4 quatRotate3 ( in vec3 p, in vec4 q )\n"
+"{\n"
+"    vec4 temp = quatMul ( q, vec4 ( p, 0.0 ) );\n"
+"    return quatMul ( temp, vec4 ( -q.x, -q.y, -q.z, q.w ) );\n"
+"}\n"
+"vec4 quatRotate ( in vec4 p, in vec4 q )\n"
+"{\n"
+"    vec4 temp = quatMul ( q, p );\n"
+"    return quatMul ( temp, vec4 ( -q.x, -q.y, -q.z, q.w ) );\n"
+"}\n"
+"\n"
+"out vec3 ambient;\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	vec4 q = instance_quaternion;\n"
+"	ambient = vec3(0.3,.3,0.3);\n"
+"		\n"
+"		\n"
+"	vec4 axis = vec4(1,1,1,0);\n"
+"	vec4 vertexPos = ProjectionMatrix * ModelViewMatrix *(instance_position);\n"
+"	vec3 posEye = vec3(ModelViewMatrix * vec4(instance_position.xyz, 1.0));\n"
+"   float dist = length(posEye);\n"
+"	float pointRadius = 1.f;\n"
+"    gl_PointSize = instance_scale.x * pointRadius * (screenWidth / dist);\n"
+"\n"
+"	gl_Position = vertexPos;\n"
+"	\n"
+"	fragment.color = instance_color;\n"
+"	vert.texcoord = uvcoords;\n"
+"}\n"
+;
+
+
+static const char* fragmentShaderPointSprite= \
+"#version 330\n"
+"precision highp float;\n"
+"\n"
+"in Fragment\n"
+"{\n"
+"     vec4 color;\n"
+"} fragment;\n"
+"\n"
+"in Vert\n"
+"{\n"
+"	vec2 texcoord;\n"
+"} vert;\n"
+"\n"
+"uniform sampler2D Diffuse;\n"
+"\n"
+"in vec3 lightDir,normal,ambient;\n"
+"\n"
+"out vec4 color;\n"
+"\n"
+"void main_textured(void)\n"
+"{\n"
+"    color =  fragment.color;//texture2D(Diffuse,vert.texcoord);//fragment.color;\n"
+"}\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	vec3 N;\n"
+"	N.xy = gl_PointCoord.st*vec2(2.0, -2.0) + vec2(-1.0, 1.0);\n"
+"    float mag = dot(N.xy, N.xy);\n"
+"    if (mag > 1.0) discard; \n"
+"    vec4 texel = vec4(1,0,0,1);\n"//fragment.color*texture(Diffuse,vert.texcoord);//fragment.color;\n"
+"	vec3 ct,cf;\n"
+"	float intensity,at,af;\n"
+"	intensity = max(dot(lightDir,normalize(normal)),0);\n"
+"	cf = intensity*vec3(1.0,1.0,1.0)+ambient;"
+"	af = 1.0;\n"
+"		\n"
+"	ct = texel.rgb;\n"
+"	at = texel.a;\n"
+"		\n"
+" vec3 lightDir= vec3(1,0,0);\n"
+"	float diffuse = max(0.0, dot(lightDir, N));\n"
+"	color  = vec4(ct * diffuse, at * af);	\n"
 "}\n"
 ;
 
@@ -536,9 +676,10 @@ int GLInstancingRenderer::registerGraphicsInstance(int shapeIndex, const float* 
 }
 
 
-int GLInstancingRenderer::registerShape(const float* vertices, int numvertices, const int* indices, int numIndices)
+int GLInstancingRenderer::registerShape(const float* vertices, int numvertices, const int* indices, int numIndices,int primitiveType)
 {
 	btGraphicsInstance* gfxObj = new btGraphicsInstance;
+	gfxObj->m_primitiveType = primitiveType;
 	
 	if (m_graphicsInstances.size())
 	{
@@ -602,6 +743,14 @@ void GLInstancingRenderer::InitShaders()
 	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
 	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
 	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
+
+	instancingShaderPointSprite = gltLoadShaderPair(vertexShaderPointSprite,fragmentShaderPointSprite);
+	glUseProgram(instancingShaderPointSprite);
+	ModelViewMatrixPointSprite = glGetUniformLocation(instancingShaderPointSprite, "ModelViewMatrix");
+	ProjectionMatrixPointSprite = glGetUniformLocation(instancingShaderPointSprite, "ProjectionMatrix");
+	screenWidthPointSprite = glGetUniformLocation(instancingShaderPointSprite, "screenWidth");
+	
+
 
 	//GLuint offset = 0;
 
@@ -813,6 +962,11 @@ void    btCreateLookAt(const btVector3& eye, const btVector3& center,const btVec
 }
 
 
+void	GLInstancingRenderer::resize(int width, int height)
+{
+	m_glutScreenWidth = width;
+	m_glutScreenHeight = height;
+}
 
 void GLInstancingRenderer::updateCamera() 
 {
@@ -1050,6 +1204,8 @@ void GLInstancingRenderer::RenderScene(void)
 	{
 		
 		btGraphicsInstance* gfxObj = m_graphicsInstances[i];
+		if (gfxObj->m_numGraphicsInstances)
+		{
 	//	int myOffset = gfxObj->m_instanceOffset*4*sizeof(float);
 
 		int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
@@ -1089,27 +1245,52 @@ void GLInstancingRenderer::RenderScene(void)
 		glVertexAttribDivisorARB(5, 1);
 		glVertexAttribDivisorARB(6, 1);
         
-		glUseProgram(instancingShader);
-		glUniform1f(angle_loc, 0);
-		glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
-
-		glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
-
-		glUniform1i(uniform_texture_diffuse, 0);
+		
+		
 
 		{
 			BT_PROFILE("glFlush");
 			glFlush();
 		}
-		if (gfxObj->m_numGraphicsInstances)
-		{
+		
 			int indexCount = gfxObj->m_numIndices;
 			int indexOffset = 0;
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gfxObj->m_index_vbo);
 			{
 				BT_PROFILE("glDrawElementsInstanced");
-				glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
+				
+				if (gfxObj->m_primitiveType==BT_GL_POINTS)
+				{
+					glUseProgram(instancingShaderPointSprite);
+					glUniformMatrix4fv(ProjectionMatrixPointSprite, 1, false, &projectionMatrix[0]);
+					glUniformMatrix4fv(ModelViewMatrixPointSprite, 1, false, &modelviewMatrix[0]);
+					glUniform1f(screenWidthPointSprite,m_glutScreenWidth);
+					
+					//glUniform1i(uniform_texture_diffusePointSprite, 0);
+					  err = glGetError();
+    assert(err==GL_NO_ERROR);
+					glPointSize(20);
+
+#ifndef __APPLE__
+					glEnable(GL_POINT_SPRITE_ARB);
+					glTexEnvi(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
+#endif
+
+					glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+					glDrawElementsInstanced(GL_POINTS, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
+				} else
+				{
+				glUseProgram(instancingShader);
+					glUniform1f(angle_loc, 0);
+					glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
+					glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
+					glUniform1i(uniform_texture_diffuse, 0);
+					glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
+					
+				}
+
+				
 				//glDrawElementsInstanced(GL_LINE_LOOP, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
 			}
 		}

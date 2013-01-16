@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
 		
 		 if (printStats && !pauseSimulation)
 		 {
-			static int count = 10;
+			static int count = 2;
 			count--;
 			if (count>0)
 			{

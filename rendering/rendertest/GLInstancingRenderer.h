@@ -23,6 +23,11 @@ void btDefaultMouseMoveCallback(  float x, float y);
 void btDefaultKeyboardCallback(int key, int state);
 void btDefaultWheelCallback( float deltax, float deltay);
 
+enum
+{
+	BT_GL_TRIANGLES = 1,
+	BT_GL_POINTS
+};
 
 class GLInstancingRenderer
 {
@@ -49,8 +54,8 @@ public:
 	void CleanupShaders();
 
 	///vertices must be in the format x,y,z, nx,ny,nz, u,v
-	int registerShape(const float* vertices, int numvertices, const int* indices, int numIndices);
-
+	int registerShape(const float* vertices, int numvertices, const int* indices, int numIndices, int primitiveType=BT_GL_TRIANGLES);
+		
 	///position x,y,z, quaternion x,y,z,w, color r,g,b,a, scaling x,y,z
 	int registerGraphicsInstance(int shapeIndex, const float* position, const float* quaternion, const float* color, const float* scaling);
 
@@ -74,6 +79,7 @@ public:
 	void	setCameraTargetPosition(float cameraPos[4]);
 	void	getCameraTargetPosition(float cameraPos[4]) const;
 
+	void	resize(int width, int height);
 
 	int getMaxShapeCapacity() const
 	{

@@ -30,7 +30,7 @@ static void MyResizeCallback( float width, float height)
 
 btgWindowInterface* window=0;
 GwenUserInterface* gui  = 0;
-bool gPause = false;
+bool gPause = true;
 bool gReset = false;
 
 enum
@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
 	{
 		enableExperimentalCpuConcaveCollision = true;
 	}
-	ci.preferredOpenCLPlatformIndex=1;
+	
 	args.GetCmdLineArgument("cl_device", ci.preferredOpenCLDeviceIndex);
 	args.GetCmdLineArgument("cl_platform", ci.preferredOpenCLPlatformIndex);
 	args.GetCmdLineArgument("x_dim", ci.arraySizeX);
@@ -546,7 +546,7 @@ int main(int argc, char* argv[])
 			}
 
 
-		if (dump_timings && !gPause)
+		if (dump_timings)
 			CProfileManager::dumpAll();
 
 		if (f)

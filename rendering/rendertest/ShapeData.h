@@ -4459,6 +4459,7 @@ const int medium_sphere_indices[]=
 957,958,959
 };
 
+
 const float low_sphere_vertices[]=
 {
 	0.000000,-1.000000,0.000000,0.000000,0.000000,-1.000000,0.000000,0.999999,0.020053,
@@ -4786,4 +4787,16 @@ const int low_sphere_indices[]=
 234,235,236,
 237,238,239
 };
+
+const float point_sphere_vertices[]=
+{
+	0.000000,0.000000,0.000000,0.000000,0.000000,-1.000000,0.000000,0.48f,	0.48f,
+};
+
+const int point_sphere_indices[]=
+{
+	0
+};
+
+
 #endif //SHAPE_DATA_H

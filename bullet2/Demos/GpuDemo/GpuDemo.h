@@ -61,9 +61,9 @@ class GpuDemo : public DemoApplication
 			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(43),
-			arraySizeY(4 ),
-			arraySizeZ(43),
+			arraySizeX(4),
+			arraySizeY(50 ),
+			arraySizeZ(50),
 			m_useConcaveMesh(false),
 			gapX(4.3),
 			gapY(6.0),
@@ -94,7 +94,7 @@ class GpuDemo : public DemoApplication
 	}
 	virtual void clientMoveAndDisplay();
 
-	virtual void displayCallback();
+	
 	//virtual void	clientResetScene();
 	
 	

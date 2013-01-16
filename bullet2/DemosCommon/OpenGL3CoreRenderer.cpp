@@ -18,7 +18,7 @@
 
 OpenGL3CoreRenderer::OpenGL3CoreRenderer()
 {
-	int maxNumObjects = 128*1024;
+	int maxNumObjects = 256*1024;
 	m_instanceRenderer = new GLInstancingRenderer(maxNumObjects);
 	m_instanceRenderer->setCameraDistance(150);
 }
@@ -36,6 +36,7 @@ void OpenGL3CoreRenderer::init()
 
 void OpenGL3CoreRenderer::reshape(int w, int h)
 {
+	m_instanceRenderer->resize(w,h);
 }
 void OpenGL3CoreRenderer::keyboardCallback(unsigned char key)
 {
@@ -437,7 +438,7 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
     int curGraphicsIndex = 0;
 
 	float localScaling[4] = {1,1,1,1};
-
+	
     
     for (int i=0;i<numColObj;i++)
     {
@@ -462,6 +463,7 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
         
 		if (!syncTransformsOnly)
 		{
+			
 			if (prevShape != colObj->getCollisionShape())
 			{
 				if (colObj->getCollisionShape()->isPolyhedral())
@@ -549,29 +551,41 @@ void graphics_from_physics(GLInstancingRenderer& renderer, bool syncTransformsOn
 								for (int i=0;i<gfxShape->m_numIndices/3;i++)
 								{
 									printf("%d,%d,%d,\n",gfxShape->m_indices[i*3],
-										gfxShape->m_indices[i*3+1],
-										gfxShape->m_indices[i*3+2]);
+									gfxShape->m_indices[i*3+1],
+									gfxShape->m_indices[i*3+2]);
 								}
 
 								prevGraphicsShapeIndex = renderer.registerShape(&gfxShape->m_vertices[0],gfxShape->m_numvertices,gfxShape->m_indices,gfxShape->m_numIndices);
 								*/
+								
 								if (radius>=100)
 								{
 									int numVertices = sizeof(detailed_sphere_vertices)/strideInBytes;
 									int numIndices = sizeof(detailed_sphere_indices)/sizeof(int);
 									prevGraphicsShapeIndex = renderer.registerShape(&detailed_sphere_vertices[0],numVertices,detailed_sphere_indices,numIndices);
-								} else if (radius>=10)
-								{
-									int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
-									int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
-									prevGraphicsShapeIndex = renderer.registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
 								} else
 								{
-									int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
-									int numIndices = sizeof(low_sphere_indices)/sizeof(int);
-									prevGraphicsShapeIndex = renderer.registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
+									bool usePointSprites = true;
+									if (usePointSprites)
+									{
+										int numVertices = sizeof(point_sphere_vertices)/strideInBytes;
+										int numIndices = sizeof(point_sphere_indices)/sizeof(int);
+										prevGraphicsShapeIndex = renderer.registerShape(&point_sphere_vertices[0],numVertices,point_sphere_indices,numIndices,BT_GL_POINTS);
+									} else
+									{
+										if (radius>=10)
+										{
+											int numVertices = sizeof(medium_sphere_vertices)/strideInBytes;
+											int numIndices = sizeof(medium_sphere_indices)/sizeof(int);
+											prevGraphicsShapeIndex = renderer.registerShape(&medium_sphere_vertices[0],numVertices,medium_sphere_indices,numIndices);
+										} else
+										{
+											int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
+											int numIndices = sizeof(low_sphere_indices)/sizeof(int);
+											prevGraphicsShapeIndex = renderer.registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
+										}
+									}
 								}
-
 								prevShape = sphere;
 								const btVector3& scaling = prevShape->getLocalScaling();
 								//assume uniform scaling, using X component
