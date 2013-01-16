@@ -1368,7 +1368,7 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 				float distance = 0.f;
 				int numPoints = 1;
 				contact.m_worldPos[0] = (float4&)contactPosB;
-				contact.m_worldNormal = (float4&)-normalOnSurfaceB; 
+				contact.m_worldNormal = -(float4&)normalOnSurfaceB;
 				contact.m_worldNormal.w = numPoints;
 				
 

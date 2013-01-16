@@ -80,6 +80,17 @@ GLuint gltLoadShaderPair(const char *szVertexProg, const char *szFragmentProg)
 	glGetProgramiv(hReturn, GL_LINK_STATUS, &testVal);
 	if(testVal == GL_FALSE)
 	{
+		GLsizei maxLen = 4096;
+		GLchar infoLog[4096];
+		GLsizei actualLen;
+		
+		glGetProgramInfoLog(	hReturn,
+								maxLen,
+								 &actualLen,
+								 infoLog);
+
+		printf("Warning/Error in GLSL shader:\n");
+		printf("%s\n",infoLog);
 		glDeleteProgram(hReturn);
 		return (GLuint)NULL;
 	}

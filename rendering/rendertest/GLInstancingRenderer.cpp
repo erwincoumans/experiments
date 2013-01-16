@@ -376,7 +376,6 @@ static const char* vertexShaderPointSprite= \
 "layout (location = 6) in vec3 instance_scale;\n"
 "\n"
 "\n"
-"uniform float angle = 0.0;\n"
 "uniform float screenWidth = 700.f;\n"
 "uniform mat4 ModelViewMatrix;\n"
 "uniform mat4 ProjectionMatrix;\n"
@@ -386,10 +385,6 @@ static const char* vertexShaderPointSprite= \
 "     vec4 color;\n"
 "} fragment;\n"
 "\n"
-"out Vert\n"
-"{\n"
-"	vec2 texcoord;\n"
-"} vert;\n"
 "\n"
 "\n"
 "vec4 quatMul ( in vec4 q1, in vec4 q2 )\n"
@@ -440,7 +435,6 @@ static const char* vertexShaderPointSprite= \
 "	gl_Position = vertexPos;\n"
 "	\n"
 "	fragment.color = instance_color;\n"
-"	vert.texcoord = uvcoords;\n"
 "}\n"
 ;
 
@@ -454,14 +448,8 @@ static const char* fragmentShaderPointSprite= \
 "     vec4 color;\n"
 "} fragment;\n"
 "\n"
-"in Vert\n"
-"{\n"
-"	vec2 texcoord;\n"
-"} vert;\n"
 "\n"
-"uniform sampler2D Diffuse;\n"
-"\n"
-"in vec3 lightDir,normal,ambient;\n"
+"in vec3 ambient;\n"
 "\n"
 "out vec4 color;\n"
 "\n"
@@ -477,10 +465,8 @@ static const char* fragmentShaderPointSprite= \
 "    float mag = dot(N.xy, N.xy);\n"
 "    if (mag > 1.0) discard; \n"
 "    vec4 texel = vec4(1,0,0,1);\n"//fragment.color*texture(Diffuse,vert.texcoord);//fragment.color;\n"
-"	vec3 ct,cf;\n"
-"	float intensity,at,af;\n"
-"	intensity = max(dot(lightDir,normalize(normal)),0);\n"
-"	cf = intensity*vec3(1.0,1.0,1.0)+ambient;"
+"	vec3 ct;\n"
+"	float at,af;\n"
 "	af = 1.0;\n"
 "		\n"
 "	ct = texel.rgb;\n"
@@ -735,20 +721,23 @@ void GLInstancingRenderer::InitShaders()
 	int SCALE_BUFFER_SIZE = (m_maxNumObjectCapacity*sizeof(float)*3);
 
 
-	instancingShader = gltLoadShaderPair(vertexShader,fragmentShader);
-
-	glLinkProgram(instancingShader);
-	glUseProgram(instancingShader);
-	angle_loc = glGetUniformLocation(instancingShader, "angle");
-	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
-	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
-	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
 
 	instancingShaderPointSprite = gltLoadShaderPair(vertexShaderPointSprite,fragmentShaderPointSprite);
 	glUseProgram(instancingShaderPointSprite);
 	ModelViewMatrixPointSprite = glGetUniformLocation(instancingShaderPointSprite, "ModelViewMatrix");
 	ProjectionMatrixPointSprite = glGetUniformLocation(instancingShaderPointSprite, "ProjectionMatrix");
 	screenWidthPointSprite = glGetUniformLocation(instancingShaderPointSprite, "screenWidth");
+	
+
+	instancingShader = gltLoadShaderPair(vertexShader,fragmentShader);
+	glLinkProgram(instancingShader);
+	glUseProgram(instancingShader);
+	angle_loc = glGetUniformLocation(instancingShader, "angle");
+	ModelViewMatrix = glGetUniformLocation(instancingShader, "ModelViewMatrix");
+	ProjectionMatrix = glGetUniformLocation(instancingShader, "ProjectionMatrix");
+	uniform_texture_diffuse = glGetUniformLocation(instancingShader, "Diffuse");
+	glUseProgram(0);
+	
 	
 
 

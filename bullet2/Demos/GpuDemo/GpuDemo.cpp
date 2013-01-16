@@ -86,17 +86,7 @@ void GpuDemo::clientMoveAndDisplay()
 
 
 
-void GpuDemo::displayCallback(void) {
 
-	
-	renderme();
-
-	//optional but useful: debug drawing to detect problems
-	if (m_dynamicsWorld)
-		m_dynamicsWorld->debugDrawWorld();
-
-	swapBuffers();
-}
 
 
 btAlignedObjectArray<btVector3> vertices;
