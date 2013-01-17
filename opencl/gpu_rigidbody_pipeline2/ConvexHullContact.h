@@ -176,6 +176,11 @@ struct GpuSatCollision
 			btAlignedObjectArray<int4>& triangleConvexPairs,
 			int& numTriConvexPairsOut);
 
+		void	computeContactPlaneConvex(int bodyIndexA, int bodyIndexB, int collidableIndexA, int collidableIndexB, btAlignedObjectArray<btCollidable>&hostCollidables,
+				btAlignedObjectArray<btGpuFace>& hostFaces, const float4& posA,const Quaternion& ornA, const float4& posB, const Quaternion& ornB,
+				float invMassA, float invMassB,	btOpenCLArray<Contact4>* contactOut, int& nContacts);
+
+
 };
 
 #endif //_CONVEX_HULL_CONTACT_H

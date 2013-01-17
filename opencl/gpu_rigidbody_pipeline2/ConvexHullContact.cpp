@@ -1270,6 +1270,95 @@ void GpuSatCollision::computeConvexConvexContactsGPUSATSingle(
 
 }
 
+void	GpuSatCollision::computeContactPlaneConvex(int bodyIndexA, int bodyIndexB, int collidableIndexA, int collidableIndexB, btAlignedObjectArray<btCollidable>&hostCollidables,
+	btAlignedObjectArray<btGpuFace>& hostFaces, const float4& posA1,const Quaternion& ornA1, const float4& posB1, const Quaternion& ornB1,
+	float invMassA, float invMassB,
+	btOpenCLArray<Contact4>* contactOut, int& nContacts)
+{
+	float4 planeEq = hostFaces[hostCollidables[collidableIndexA].m_shapeIndex].m_plane;
+	float radius = hostCollidables[collidableIndexB].m_radius;
+			
+	bool hasCollision = false;
+	btVector3 planeNormal(planeEq.x,planeEq.y,planeEq.z);
+	const btScalar& planeConstant = planeEq.w;
+			
+	const btVector3& posA = (const btVector3&)posA1;
+	const btVector3& posB = (const btVector3&)posB1;
+	const btQuaternion& ornA = (const btQuaternion&) ornA1;
+	const btQuaternion& ornB = (const btQuaternion&) ornB1;
+
+	btTransform planeTrA;
+	planeTrA.setIdentity();
+	planeTrA.setOrigin(posA);
+	planeTrA.setRotation(ornA);
+
+
+	btTransform convexTrB;
+	convexTrB.setIdentity();
+	convexTrB.setOrigin(posB);
+	convexTrB.setRotation(ornB);
+			
+
+						
+	btTransform planeInConvex;
+	planeInConvex= convexTrB.inverse() * planeTrA;
+	btTransform convexInPlaneTrans;
+	btTransform p1 = planeTrA.inverse();
+	btQuaternion p1orn = p1.getRotation();
+
+	convexInPlaneTrans= planeTrA.inverse() * convexTrB;
+
+	btQuaternion invOrn = ornA.inverse();
+	btVector3 invPos = btMatrix3x3(invOrn) * -posA;
+	btTransform tr1(invOrn,invPos);
+
+	float4 invPosA;
+	Quaternion invOrnA;
+
+	inverseTransforms(posA1,ornA1,invPosA,invOrnA);
+	float4 convexInPlaneTransPos1;
+	Quaternion convexInPlaneTransOrn1;
+
+	mulTransforms(invPosA,invOrnA,posB1,ornB1,convexInPlaneTransPos1,convexInPlaneTransOrn1);
+	
+
+
+
+	//btVector3 vtx = convexShape->localGetSupportingVertex(planeInConvex.getBasis()*-planeNormal);
+	btVector3 vtx = planeInConvex.getBasis()*-planeNormal * radius;
+	btVector3 vtxInPlane = convexInPlaneTrans(vtx);
+	btScalar distance = (planeNormal.dot(vtxInPlane) - planeConstant);
+
+	btVector3 vtxInPlaneProjected = vtxInPlane - distance*planeNormal;
+	btVector3 vtxInPlaneWorld = planeTrA * vtxInPlaneProjected;
+
+	hasCollision = distance < 0.f;//m_manifoldPtr->getContactBreakingThreshold();
+			
+	if (hasCollision)
+	{
+		/// report a contact. internally this will be kept persistent, and contact reduction is done
+		btVector3 normalOnSurfaceB = planeTrA.getBasis() * planeNormal;
+		btVector3 pOnB = vtxInPlaneWorld+normalOnSurfaceB*distance;
+		pOnB[3] = distance;
+		//resultOut->addContactPoint(normalOnSurfaceB,pOnB,distance);
+
+		btAlignedObjectArray<Contact4> contactCpu;
+		contactOut->copyToHost(contactCpu);
+
+		Contact4& contact = contactCpu.expand();
+		contact.m_batchIdx = 0;//i;
+		contact.m_bodyAPtrAndSignBit = (invMassA==0)? -bodyIndexA:bodyIndexA;
+		contact.m_bodyBPtrAndSignBit = (invMassB==0)? -bodyIndexB:bodyIndexB;
+		contact.m_frictionCoeffCmp = 45874;
+		contact.m_restituitionCoeffCmp = 0;//45874;
+		int numPoints = 1;
+		contact.m_worldPos[0] = (float4&)pOnB;
+		contact.m_worldNormal = (float4&)normalOnSurfaceB;
+		contact.m_worldNormal.w = numPoints;
+		nContacts++;
+		contactOut->copyFromHost(contactCpu);
+	}
+}
 
 void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpenCLArray<int2>* pairs, int nPairs, 
 			const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
@@ -1382,133 +1471,37 @@ void GpuSatCollision::computeConvexConvexContactsGPUSAT_sequential( const btOpen
 		if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_SPHERE &&
 			hostCollidables[collidableIndexB].m_shapeType == CollisionShape::SHAPE_PLANE)
 		{
-			printf("found!\n");
+			float4 posA = hostBodyBuf[bodyIndexB].m_pos;
+			float4	posB = hostBodyBuf[bodyIndexA].m_pos;
+			Quaternion ornA = hostBodyBuf[bodyIndexB].m_quat;
+			Quaternion ornB = hostBodyBuf[bodyIndexA].m_quat;
+			float invMassA = hostBodyBuf[bodyIndexB].m_invMass;
+			float invMassB = hostBodyBuf[bodyIndexA].m_invMass;
+
+			computeContactPlaneConvex( bodyIndexB,bodyIndexA,  collidableIndexB,collidableIndexA, hostCollidables,
+				hostFaces, posA,ornA, posB, ornB,
+				invMassA, invMassB,	contactOut, nContacts);
 		}
 
 		if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_PLANE&&
 			hostCollidables[collidableIndexB].m_shapeType == CollisionShape::SHAPE_SPHERE )
 		{
 
-			btScalar radius = hostCollidables[collidableIndexB].m_radius;
-			float4 planeEq = hostFaces[hostCollidables[collidableIndexA].m_shapeIndex].m_plane;
+			const float4& posA = hostBodyBuf[bodyIndexA].m_pos;
+			const float4& posB = hostBodyBuf[bodyIndexB].m_pos;
+			Quaternion ornA = hostBodyBuf[bodyIndexA].m_quat;
+			Quaternion ornB = hostBodyBuf[bodyIndexB].m_quat;
+			float invMassA = hostBodyBuf[bodyIndexA].m_invMass;
+			float invMassB = hostBodyBuf[bodyIndexB].m_invMass;
 
+			computeContactPlaneConvex(bodyIndexA, bodyIndexB, collidableIndexA, collidableIndexB, hostCollidables,
+				hostFaces, posA,ornA, posB, ornB,
+				invMassA, invMassB,	contactOut, nContacts);
+
+
+			//computeContactPlaneConvex();
 			
-			bool hasCollision = false;
-			btVector3 planeNormal(planeEq.x,planeEq.y,planeEq.z);
-			const btScalar& planeConstant = planeEq.w;
-			
-			btVector3 posA = (btVector3&)hostBodyBuf[bodyIndexA].m_pos;
-			btVector3 posB = (btVector3&)hostBodyBuf[bodyIndexB].m_pos;
-			btQuaternion ornA = (btQuaternion&)hostBodyBuf[bodyIndexA].m_quat;
-			btQuaternion ornB = (btQuaternion&)hostBodyBuf[bodyIndexB].m_quat;
-			
-			btTransform convexTrA;
-			convexTrA.setIdentity();
-			convexTrA.setOrigin(posB);
-			convexTrA.setRotation(ornB);
-			
-			btTransform planeTrB;
-			planeTrB.setIdentity();
-			planeTrB.setOrigin(posA);
-			planeTrB.setRotation(ornA);
-
-						
-			btTransform planeInConvex;
-			planeInConvex= convexTrA.inverse() * planeTrB;
-			btTransform convexInPlaneTrans;
-			convexInPlaneTrans= planeTrB.inverse() * convexTrA;
-
-			//btVector3 vtx = convexShape->localGetSupportingVertex(planeInConvex.getBasis()*-planeNormal);
-			btVector3 vtx = planeInConvex.getBasis()*-planeNormal * radius;
-			btVector3 vtxInPlane = convexInPlaneTrans(vtx);
-			btScalar distance = (planeNormal.dot(vtxInPlane) - planeConstant);
-
-			btVector3 vtxInPlaneProjected = vtxInPlane - distance*planeNormal;
-			btVector3 vtxInPlaneWorld = planeTrB * vtxInPlaneProjected;
-
-			hasCollision = distance < 0.f;//m_manifoldPtr->getContactBreakingThreshold();
-			
-			if (hasCollision)
-			{
-				/// report a contact. internally this will be kept persistent, and contact reduction is done
-				btVector3 normalOnSurfaceB = planeTrB.getBasis() * planeNormal;
-				btVector3 pOnB = vtxInPlaneWorld;
-				pOnB[3] = distance;
-				//resultOut->addContactPoint(normalOnSurfaceB,pOnB,distance);
-
-				btAlignedObjectArray<Contact4> contactCpu;
-				contactOut->copyToHost(contactCpu);
-
-				Contact4& contact = contactCpu.expand();
-
-				contact.m_batchIdx = 0;//i;
-				contact.m_bodyAPtrAndSignBit = (bodyBuf->at(bodyIndexA).m_invMass==0)? -bodyIndexA:bodyIndexA;
-				contact.m_bodyBPtrAndSignBit = (bodyBuf->at(bodyIndexB).m_invMass==0)? -bodyIndexB:bodyIndexB;
-
-				contact.m_frictionCoeffCmp = 45874;
-				contact.m_restituitionCoeffCmp = 0;
-					
-				float distance = 0.f;
-				int numPoints = 1;
-				contact.m_worldPos[0] = (float4&)pOnB;
-				contact.m_worldNormal = (float4&)normalOnSurfaceB;
-				contact.m_worldNormal.w = numPoints;
-				
-
-				nContacts++;
-
-				contactOut->copyFromHost(contactCpu);
-
-			}
-#if 0
-			//sphere-sphere
-			float radiusA = hostCollidables[collidableIndexA].m_radius;
-			float radiusB = hostCollidables[collidableIndexB].m_radius;
-			btVector3 posA = (btVector3&)hostBodyBuf[bodyIndexA].m_pos;
-			btVector3 posB = (btVector3&)hostBodyBuf[bodyIndexB].m_pos;
-
-			btVector3 diff = posA-posB;
-			btScalar len = diff.length();
-			
-			///iff distance positive, don't generate a new contact
-			if ( len <= (radiusA+radiusB))
-			{
-				///distance (negative means penetration)
-				btScalar dist = len - (radiusA+radiusB);
-				btVector3 normalOnSurfaceB(1,0,0);
-				if (len > SIMD_EPSILON)
-				{
-					normalOnSurfaceB = diff / len;
-				}
-				btVector3 contactPosB = posB + radiusB* normalOnSurfaceB;
-				contactPosB[3] = dist;
-				btAlignedObjectArray<Contact4> contactCpu;
-				contactOut->copyToHost(contactCpu);
-
-				Contact4& contact = contactCpu.expand();
-
-				contact.m_batchIdx = 0;//i;
-				contact.m_bodyAPtrAndSignBit = (bodyBuf->at(bodyIndexA).m_invMass==0)? -bodyIndexA:bodyIndexA;
-				contact.m_bodyBPtrAndSignBit = (bodyBuf->at(bodyIndexB).m_invMass==0)? -bodyIndexB:bodyIndexB;
-
-				contact.m_frictionCoeffCmp = 45874;
-				contact.m_restituitionCoeffCmp = 0;
-					
-				float distance = 0.f;
-				int numPoints = 1;
-				contact.m_worldPos[0] = (float4&)contactPosB;
-				contact.m_worldNormal = -(float4&)normalOnSurfaceB;
-				contact.m_worldNormal.w = numPoints;
-				
-
-				nContacts++;
-
-				contactOut->copyFromHost(contactCpu);
-
-			}
-#endif
 			continue;
-
 		}
 
 		if (hostCollidables[collidableIndexA].m_shapeType == CollisionShape::SHAPE_CONCAVE_TRIMESH)

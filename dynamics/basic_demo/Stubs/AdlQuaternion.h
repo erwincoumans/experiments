@@ -151,5 +151,21 @@ float4 invTransform(const float4& p, const float4& translation, const Quaternion
 	return qtRotate( qtInvert( orientation ), p-translation ); // use qtInvRotate
 }
 
+__inline
+void	inverseTransforms(const float4& translationIn, const Quaternion& orientationIn,
+		float4& translationOut, Quaternion& orientationOut)
+{
+	orientationOut = qtInvert(orientationIn);
+	translationOut = qtRotate(orientationOut, -translationIn);
+}
+
+__inline 
+	void	mulTransforms(const float4& translationA, const Quaternion& orientationA,const float4& translationB, const Quaternion& orientationB,
+		float4& translationOut, Quaternion& orientationOut)
+{
+	orientationOut = qtMul(orientationA,orientationB);
+	translationOut = transform(translationB,translationA,orientationA);
+}
+
 #endif
 
