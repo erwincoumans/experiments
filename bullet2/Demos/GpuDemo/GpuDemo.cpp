@@ -167,10 +167,10 @@ void SpheresDemo::setupScene(const ConstructionInfo& ci)
 		btVector3 planeNormal(0,1,0);
 		btScalar planeConstant=0;
 
-		//btCollisionShape* shape = new btStaticPlaneShape(planeNormal,planeConstant);
+		btCollisionShape* shape = new btStaticPlaneShape(planeNormal,planeConstant);
 		//btBoxShape* plane = new btBoxShape(btVector3(100,1,100));
 		//plane->initializePolyhedralFeatures();
-		btSphereShape* shape = new btSphereShape(1000);
+		//btSphereShape* shape = new btSphereShape(1000);
 
 		btScalar mass(0.);
 
@@ -181,7 +181,7 @@ void SpheresDemo::setupScene(const ConstructionInfo& ci)
 		btTransform groundTransform;
 		groundTransform.setIdentity();
 		groundTransform.setRotation(btQuaternion(btVector3(1,0,0),0.3));
-		groundTransform.setOrigin(btVector3(0,-1000,0));
+		groundTransform.setOrigin(btVector3(0,0,0));
 
 		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);

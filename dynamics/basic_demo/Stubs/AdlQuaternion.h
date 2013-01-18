@@ -152,7 +152,7 @@ float4 invTransform(const float4& p, const float4& translation, const Quaternion
 }
 
 __inline
-void	inverseTransforms(const float4& translationIn, const Quaternion& orientationIn,
+void	trInverse(const float4& translationIn, const Quaternion& orientationIn,
 		float4& translationOut, Quaternion& orientationOut)
 {
 	orientationOut = qtInvert(orientationIn);
@@ -160,7 +160,7 @@ void	inverseTransforms(const float4& translationIn, const Quaternion& orientatio
 }
 
 __inline 
-	void	mulTransforms(const float4& translationA, const Quaternion& orientationA,const float4& translationB, const Quaternion& orientationB,
+	void	trMul(const float4& translationA, const Quaternion& orientationA,const float4& translationB, const Quaternion& orientationB,
 		float4& translationOut, Quaternion& orientationOut)
 {
 	orientationOut = qtMul(orientationA,orientationB);

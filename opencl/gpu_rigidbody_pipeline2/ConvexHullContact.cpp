@@ -1279,72 +1279,34 @@ void	GpuSatCollision::computeContactPlaneConvex(int bodyIndexA, int bodyIndexB, 
 	float radius = hostCollidables[collidableIndexB].m_radius;
 			
 	bool hasCollision = false;
-	btVector3 planeNormal(planeEq.x,planeEq.y,planeEq.z);
-	const btScalar& planeConstant = planeEq.w;
-			
-	const btVector3& posA = (const btVector3&)posA1;
-	const btVector3& posB = (const btVector3&)posB1;
-	const btQuaternion& ornA = (const btQuaternion&) ornA1;
-	const btQuaternion& ornB = (const btQuaternion&) ornB1;
-
-	btTransform planeTrA;
-	planeTrA.setIdentity();
-	planeTrA.setOrigin(posA);
-	planeTrA.setRotation(ornA);
-
-
-	btTransform convexTrB;
-	convexTrB.setIdentity();
-	convexTrB.setOrigin(posB);
-	convexTrB.setRotation(ornB);
-			
-
-						
-	btTransform planeInConvex;
-	planeInConvex= convexTrB.inverse() * planeTrA;
-	btTransform convexInPlaneTrans;
-	btTransform p1 = planeTrA.inverse();
-	btQuaternion p1orn = p1.getRotation();
-
-	convexInPlaneTrans= planeTrA.inverse() * convexTrB;
-
-	btQuaternion invOrn = ornA.inverse();
-	btVector3 invPos = btMatrix3x3(invOrn) * -posA;
-	btTransform tr1(invOrn,invPos);
-
-	float4 invPosA;
-	Quaternion invOrnA;
-
-	inverseTransforms(posA1,ornA1,invPosA,invOrnA);
-	float4 convexInPlaneTransPos1;
-	Quaternion convexInPlaneTransOrn1;
-
-	mulTransforms(invPosA,invOrnA,posB1,ornB1,convexInPlaneTransPos1,convexInPlaneTransOrn1);
-	
-
-
-
-	//btVector3 vtx = convexShape->localGetSupportingVertex(planeInConvex.getBasis()*-planeNormal);
-	btVector3 vtx = planeInConvex.getBasis()*-planeNormal * radius;
-	btVector3 vtxInPlane = convexInPlaneTrans(vtx);
-	btScalar distance = (planeNormal.dot(vtxInPlane) - planeConstant);
-
-	btVector3 vtxInPlaneProjected = vtxInPlane - distance*planeNormal;
-	btVector3 vtxInPlaneWorld = planeTrA * vtxInPlaneProjected;
-
+	float4 planeNormal1 = make_float4(planeEq.x,planeEq.y,planeEq.z,0.f);
+	float planeConstant = planeEq.w;
+	float4 convexInPlaneTransPos1; Quaternion convexInPlaneTransOrn1;
+	{
+		float4 invPosA;Quaternion invOrnA;
+		trInverse(posA1,ornA1,invPosA,invOrnA);
+		trMul(invPosA,invOrnA,posB1,ornB1,convexInPlaneTransPos1,convexInPlaneTransOrn1);
+	}
+	float4 planeInConvexPos1;	Quaternion planeInConvexOrn1;
+	{
+		float4 invPosB;Quaternion invOrnB;
+		trInverse(posB1,ornB1,invPosB,invOrnB);
+		trMul(invPosB,invOrnB,posA1,ornA1,planeInConvexPos1,planeInConvexOrn1);	
+	}
+	float4 vtx1 = qtRotate(planeInConvexOrn1,-planeNormal1)*radius;
+	float4 vtxInPlane1 = transform(vtx1,convexInPlaneTransPos1,convexInPlaneTransOrn1);
+	float distance = dot3F4(planeNormal1,vtxInPlane1) - planeConstant;
 	hasCollision = distance < 0.f;//m_manifoldPtr->getContactBreakingThreshold();
-			
 	if (hasCollision)
 	{
-		/// report a contact. internally this will be kept persistent, and contact reduction is done
-		btVector3 normalOnSurfaceB = planeTrA.getBasis() * planeNormal;
-		btVector3 pOnB = vtxInPlaneWorld+normalOnSurfaceB*distance;
-		pOnB[3] = distance;
-		//resultOut->addContactPoint(normalOnSurfaceB,pOnB,distance);
+		float4 vtxInPlaneProjected1 = vtxInPlane1 -   distance*planeNormal1;
+		float4 vtxInPlaneWorld1 = transform(vtxInPlaneProjected1,posA1,ornA1);
+		float4 normalOnSurfaceB1 = qtRotate(ornA1,planeNormal1);
+		float4 pOnB1 = vtxInPlaneWorld1+normalOnSurfaceB1*distance;
+		pOnB1.w = distance;
 
 		btAlignedObjectArray<Contact4> contactCpu;
 		contactOut->copyToHost(contactCpu);
-
 		Contact4& contact = contactCpu.expand();
 		contact.m_batchIdx = 0;//i;
 		contact.m_bodyAPtrAndSignBit = (invMassA==0)? -bodyIndexA:bodyIndexA;
@@ -1352,8 +1314,8 @@ void	GpuSatCollision::computeContactPlaneConvex(int bodyIndexA, int bodyIndexB, 
 		contact.m_frictionCoeffCmp = 45874;
 		contact.m_restituitionCoeffCmp = 0;//45874;
 		int numPoints = 1;
-		contact.m_worldPos[0] = (float4&)pOnB;
-		contact.m_worldNormal = (float4&)normalOnSurfaceB;
+		contact.m_worldPos[0] = pOnB1;
+		contact.m_worldNormal = normalOnSurfaceB1;
 		contact.m_worldNormal.w = numPoints;
 		nContacts++;
 		contactOut->copyFromHost(contactCpu);

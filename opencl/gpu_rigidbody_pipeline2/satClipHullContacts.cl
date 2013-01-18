@@ -1,6 +1,7 @@
 
 #define TRIANGLE_NUM_CONVEX_FACES 5
 
+#define SHAPE_PLANE 4
 #define SHAPE_SPHERE 7
 
 #pragma OPENCL EXTENSION cl_amd_printf : enable
@@ -938,6 +939,83 @@ __kernel void   extractManifoldAndAddContactKernel(__global const int2* pairs,
 }
 
 
+void	trInverse(float4 translationIn, Quaternion orientationIn,
+		float4* translationOut, Quaternion* orientationOut)
+{
+	*orientationOut = qtInvert(orientationIn);
+	*translationOut = qtRotate(*orientationOut, -translationIn);
+}
+
+void	trMul(float4 translationA, Quaternion orientationA,
+						float4 translationB, Quaternion orientationB,
+		float4* translationOut, Quaternion* orientationOut)
+{
+	*orientationOut = qtMul(orientationA,orientationB);
+	*translationOut = transform(&translationB,&translationA,&orientationA);
+}
+
+void	computeContactPlaneConvex(int pairIndex,
+																int bodyIndexA, int bodyIndexB, 
+																int collidableIndexA, int collidableIndexB, 
+																__global const BodyData* rigidBodies, 
+																__global const btCollidableGpu* collidables,
+																__global const btGpuFace* faces,
+																__global Contact4* restrict globalContactsOut,
+																counter32_t nGlobalContactsOut,
+																int numPairs)
+{
+	float4 planeEq = faces[collidables[collidableIndexA].m_shapeIndex].m_plane;
+	float radius = collidables[collidableIndexB].m_radius;
+	float4 posA1 = rigidBodies[bodyIndexA].m_pos;
+	float4 ornA1 = rigidBodies[bodyIndexA].m_quat;
+	float4 posB1 = rigidBodies[bodyIndexB].m_pos;
+	float4 ornB1 = rigidBodies[bodyIndexB].m_quat;
+	
+	bool hasCollision = false;
+	float4 planeNormal1 = make_float4(planeEq.x,planeEq.y,planeEq.z,0.f);
+	float planeConstant = planeEq.w;
+	float4 convexInPlaneTransPos1; Quaternion convexInPlaneTransOrn1;
+	{
+		float4 invPosA;Quaternion invOrnA;
+		trInverse(posA1,ornA1,&invPosA,&invOrnA);
+		trMul(invPosA,invOrnA,posB1,ornB1,&convexInPlaneTransPos1,&convexInPlaneTransOrn1);
+	}
+	float4 planeInConvexPos1;	Quaternion planeInConvexOrn1;
+	{
+		float4 invPosB;Quaternion invOrnB;
+		trInverse(posB1,ornB1,&invPosB,&invOrnB);
+		trMul(invPosB,invOrnB,posA1,ornA1,&planeInConvexPos1,&planeInConvexOrn1);	
+	}
+	float4 vtx1 = qtRotate(planeInConvexOrn1,-planeNormal1)*radius;
+	float4 vtxInPlane1 = transform(&vtx1,&convexInPlaneTransPos1,&convexInPlaneTransOrn1);
+	float distance = dot3F4(planeNormal1,vtxInPlane1) - planeConstant;
+	hasCollision = distance < 0.f;//m_manifoldPtr->getContactBreakingThreshold();
+	if (hasCollision)
+	{
+		float4 vtxInPlaneProjected1 = vtxInPlane1 -   distance*planeNormal1;
+		float4 vtxInPlaneWorld1 = transform(&vtxInPlaneProjected1,&posA1,&ornA1);
+		float4 normalOnSurfaceB1 = qtRotate(ornA1,planeNormal1);
+		float4 pOnB1 = vtxInPlaneWorld1+normalOnSurfaceB1*distance;
+		pOnB1.w = distance;
+
+		int dstIdx;
+    AppendInc( nGlobalContactsOut, dstIdx );
+		
+		if (dstIdx < numPairs)
+		{
+			__global Contact4* c = &globalContactsOut[dstIdx];
+			c->m_worldNormal = normalOnSurfaceB1;
+			c->m_coeffs = (u32)(0.f*0xffff) | ((u32)(0.7f*0xffff)<<16);
+			c->m_batchIdx = pairIndex;
+			c->m_bodyAPtrAndSignBit = rigidBodies[bodyIndexA].m_invMass==0?-bodyIndexA:bodyIndexA;
+			c->m_bodyBPtrAndSignBit = rigidBodies[bodyIndexB].m_invMass==0?-bodyIndexB:bodyIndexB;
+			c->m_worldPos[0] = pOnB1;
+			GET_NPOINTS(*c) = 1;
+		}//if (dstIdx < numPairs)
+	}//if (hasCollision)
+}
+
+
 __kernel void   clipHullHullKernel( __global const int2* pairs, 
 																					__global const BodyData* rigidBodies, 
 																					__global const btCollidableGpu* collidables,
@@ -975,6 +1053,27 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 		int collidableIndexA = rigidBodies[bodyIndexA].m_collidableIdx;
 		int collidableIndexB = rigidBodies[bodyIndexB].m_collidableIdx;
 	
+
+		if (collidables[collidableIndexA].m_shapeType == SHAPE_SPHERE &&
+			collidables[collidableIndexB].m_shapeType == SHAPE_PLANE)
+		{
+
+
+			computeContactPlaneConvex( pairIndex, bodyIndexB,bodyIndexA,  collidableIndexB,collidableIndexA, 
+																rigidBodies,collidables,faces,	globalContactsOut, nGlobalContactsOut,numPairs);
+			return;
+		}
+
+		if (collidables[collidableIndexA].m_shapeType == SHAPE_PLANE &&
+			collidables[collidableIndexB].m_shapeType == SHAPE_SPHERE)
+		{
+
+
+			computeContactPlaneConvex(pairIndex, bodyIndexA, bodyIndexB, collidableIndexA, collidableIndexB, 
+																rigidBodies,collidables,faces, globalContactsOut, nGlobalContactsOut,numPairs);
+			return;
+			
+		}
 	
 		if (collidables[collidableIndexA].m_shapeType == SHAPE_SPHERE &&
 			collidables[collidableIndexB].m_shapeType == SHAPE_SPHERE)
@@ -1018,6 +1117,8 @@ __kernel void   clipHullHullKernel( __global const int2* pairs,
 					GET_NPOINTS(*c) = 1;
 				}//if (dstIdx < numPairs)
 			}//if ( len <= (radiusA+radiusB))
+
+			return;
 		}//SHAPE_SPHERE SHAPE_SPHERE
 
 		if (hasSeparatingAxis[i])
