@@ -243,8 +243,10 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 	
 	} else
 	{
+		int numLargeAabbs = m_largeAabbsGPU.size();
+		
+		if (numLargeAabbs)
 		{
-			int numLargeAabbs = m_largeAabbsGPU.size();
 			BT_PROFILE("copyAabbsKernelLarge");
 			btBufferInfoCL bInfo[] = { 
 				btBufferInfoCL( m_allAabbsGPU.getBufferCL(), true ), 
