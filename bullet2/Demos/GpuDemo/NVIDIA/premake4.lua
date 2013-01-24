@@ -153,6 +153,9 @@ if (hasCL) then
 			"../btGpuIntegrateTransforms.h",
 			"../GwenUserInterface.cpp",
 			"../GwenUserInterface.h",
+			"../ParticleDemo.cpp",
+			"../ParticleDemo.h",
+	
 			"../main_opengl3core.cpp",
 	
 			"../../../../opencl/opengl_interop/btOpenCLGLInteropBuffer.cpp",

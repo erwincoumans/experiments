@@ -19,25 +19,25 @@
 
 OpenGL3CoreRenderer::OpenGL3CoreRenderer()
 {
-	int maxNumObjects = 256*1024;
-	m_instanceRenderer = new GLInstancingRenderer(maxNumObjects);
-	m_instanceRenderer->setCameraDistance(150);
+	int maxNumObjects = 512*1024;
+	m_instancingRenderer = new GLInstancingRenderer(maxNumObjects);
+	m_instancingRenderer->setCameraDistance(150);
 }
 OpenGL3CoreRenderer::~OpenGL3CoreRenderer()
 {
-	delete m_instanceRenderer;
+	delete m_instancingRenderer;
 }
 
 void OpenGL3CoreRenderer::init()
 {
-	m_instanceRenderer->InitShaders();
+	m_instancingRenderer->InitShaders();
 }
 
 
 
 void OpenGL3CoreRenderer::reshape(int w, int h)
 {
-	m_instanceRenderer->resize(w,h);
+	m_instancingRenderer->resize(w,h);
 }
 void OpenGL3CoreRenderer::keyboardCallback(unsigned char key)
 {
@@ -665,13 +665,13 @@ void OpenGL3CoreRenderer::renderPhysicsWorld(int numObjects, btCollisionObject**
 	//for now, we don't deal with adding/removing objects to the world during the simulation, to keep the rendererer simpler
 
 
-	m_instanceRenderer->writeTransforms();
+	m_instancingRenderer->writeTransforms();
 	
-	graphics_from_physics(*m_instanceRenderer,syncOnly,numObjects, colObjArray);
+	graphics_from_physics(*m_instancingRenderer,syncOnly,numObjects, colObjArray);
 	
 
 	//render
 	
-	m_instanceRenderer->RenderScene();
+	m_instancingRenderer->RenderScene();
 }
 

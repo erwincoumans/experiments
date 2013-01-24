@@ -78,10 +78,10 @@ void GpuDemo::clientMoveAndDisplay()
 		}
 	}
 		
-	renderme(); 
+//	renderme(); 
 
 
-	swapBuffers();
+	//swapBuffers();
 
 }
 
@@ -365,10 +365,10 @@ void	GpuDemo1::setupScene(const ConstructionInfo& ci)
 void	GpuDemo::initPhysics(const ConstructionInfo& ci)
 {
 
-	setTexturing(true);
-	setShadows(false);
+//	setTexturing(true);
+	//setShadows(false);
 
-	setCameraDistance(btScalar(SCALING*250.));
+//	setCameraDistance(btScalar(SCALING*250.));
 
 	///collision configuration contains default setup for memory, collision setup
 	if (ci.useOpenCL)

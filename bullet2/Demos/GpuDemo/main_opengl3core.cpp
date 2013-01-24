@@ -17,6 +17,7 @@
 #include "../rendering/OpenGLTrueTypeFont/fontstash.h"
 #include "../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
 #include "GwenUserInterface.h"
+#include "ParticleDemo.h"
 
 int g_OpenGLWidth=1024;
 int g_OpenGLHeight = 768;
@@ -49,7 +50,7 @@ btAlignedObjectArray<const char*> demoNames;
 int selectedDemo = 0;
 GpuDemo::CreateFunc* allDemos[]=
 {
-	
+	ParticleDemo::CreateFunc,
 	SpheresDemo::CreateFunc,
 	GpuDemo1::CreateFunc,
 	EmptyDemo::CreateFunc,
@@ -480,13 +481,14 @@ int main(int argc, char* argv[])
 	
 	{
 		GpuDemo* demo = allDemos[selectedDemo]();
-		demo->myinit();
+//		demo->myinit();
 		bool useGpu = false;
 		
 		
+		ci.m_instancingRenderer = render.getInstancingRenderer();
+		render.init();
 
 		demo->initPhysics(ci);
-		render.init();
 		printf("-----------------------------------------------------\n");
 		
 		FILE* f = 0;
@@ -506,15 +508,21 @@ int main(int argc, char* argv[])
 		do
 		{
 
-				
+			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
+
 			window->startRendering();
 			
+			
+
 			glClearColor(0.6,0.6,0.6,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
+
 			
 			if (!gPause)
+			{
 				demo->clientMoveAndDisplay(); 
+			}
 			else
 			{
 				
@@ -522,9 +530,13 @@ int main(int argc, char* argv[])
 				CProfileManager::Increment_Frame_Counter();
 			}
 
-			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
+			{
+				BT_PROFILE("renderScene");
+				demo->renderScene();
+			}
+			
 
-			if (demo->getDynamicsWorld()->getNumCollisionObjects())
+			if (demo->getDynamicsWorld() && demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
 				btAlignedObjectArray<btCollisionObject*> arr = demo->getDynamicsWorld()->getCollisionObjectArray();
 				btCollisionObject** colObjArray = &arr[0];

@@ -225,8 +225,8 @@ void btParticlesDynamicsWorld::adjustGrid()
 	m_worldMin-=btVector3(2,2,2);
 	m_worldMax+=btVector3(2,2,2);
 
-//	m_worldMin.setValue(-WORLD_SIZE, -WORLD_SIZE, -WORLD_SIZE);
-	//m_worldMax.setValue( WORLD_SIZE,  WORLD_SIZE,  WORLD_SIZE);
+	m_worldMin.setValue(-WORLD_SIZE, -WORLD_SIZE, -WORLD_SIZE);
+	m_worldMax.setValue( WORLD_SIZE,  WORLD_SIZE,  WORLD_SIZE);
 	wsize = m_worldMax - m_worldMin;
 
 	m_cellSize[0] = m_cellSize[1] = m_cellSize[2] = m_particleRad * btScalar(2.f);

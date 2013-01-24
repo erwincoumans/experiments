@@ -44,7 +44,7 @@ class GLInstancingRenderer
 
 	
 public:
-	GLInstancingRenderer(int m_maxObjectCapacity, int maxShapeCapacity = 512*1024);
+	GLInstancingRenderer(int m_maxObjectCapacity, int maxShapeCapacityInBytes = 512*1024);
 	virtual ~GLInstancingRenderer();
 
 	void init();
@@ -68,6 +68,8 @@ public:
 	void writeSingleInstanceColorToCPU(float* color, int srcIndex);
 
 	void getMouseDirection(float* dir, int mouseX, int mouseY);
+
+	struct	GLInstanceRendererInternalData* getInternalData();
 
 	void updateCamera();
 

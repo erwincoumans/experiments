@@ -52,6 +52,7 @@ struct btGraphicsInstance
 
 
 
+
 bool m_ortho = false;
 int m_glutScreenWidth = 1024;
 int m_glutScreenHeight = 768;
@@ -77,16 +78,12 @@ extern int gShapeIndex;
 
 
 
-int VBOsize =0;
 
 
+#include "GLInstanceRendererInternalData.h"
 
-struct InternalDataRenderer
+struct InternalDataRenderer : public GLInstanceRendererInternalData
 {
-	GLfloat* m_instance_positions_ptr;
-	GLfloat* m_instance_quaternion_ptr;
-	GLfloat* m_instance_colors_ptr;
-	GLfloat* m_instance_scale_ptr;
 
 
 	btVector3 m_cameraPosition;
@@ -100,7 +97,7 @@ struct InternalDataRenderer
 	float m_mouseYpos;
 	bool m_mouseInitialized;
 	
-	InternalDataRenderer() :m_instance_positions_ptr (0),m_instance_quaternion_ptr(0),m_instance_colors_ptr(0),m_instance_scale_ptr(0),
+	InternalDataRenderer() :
 		m_cameraPosition(btVector3(0,0,0)),
 		m_cameraTargetPosition(btVector3(15,2,-24)),
 		m_cameraDistance(150),
@@ -160,6 +157,11 @@ struct InternalDataRenderer
 
 };
 
+struct	GLInstanceRendererInternalData* GLInstancingRenderer::getInternalData()
+{
+	return m_data;
+}
+
 void btDefaultWheelCallback(float deltax, float deltay)
 {
 	if (sData2)
@@ -185,7 +187,6 @@ void btDefaultKeyboardCallback(int key, int state)
 static GLuint               instancingShader;        // The instancing renderer
 static GLuint               instancingShaderPointSprite;        // The point sprite instancing renderer
 
-GLuint               cube_vbo=2;
 
 static GLuint				m_texturehandle;
 
@@ -212,10 +213,10 @@ GLInstancingRenderer::GLInstancingRenderer(int maxNumObjectCapacity, int maxShap
 	m_data = new InternalDataRenderer;
 	sData2 = m_data;
 
-	m_data->m_instance_positions_ptr = (GLfloat*)new float[m_maxNumObjectCapacity*4];
-	m_data->m_instance_quaternion_ptr = (GLfloat*)new float[m_maxNumObjectCapacity*4];
-	m_data->m_instance_colors_ptr = (GLfloat*)new float[m_maxNumObjectCapacity*4];
-	m_data->m_instance_scale_ptr = (GLfloat*)new float[m_maxNumObjectCapacity*3];
+	m_data->m_instance_positions_ptr.resize(m_maxNumObjectCapacity*4);
+	m_data->m_instance_quaternion_ptr.resize(m_maxNumObjectCapacity*4);
+	m_data->m_instance_colors_ptr.resize(m_maxNumObjectCapacity*4);
+	m_data->m_instance_scale_ptr.resize(m_maxNumObjectCapacity*3);
 
 }
 
@@ -485,7 +486,7 @@ void GLInstancingRenderer::writeSingleInstanceColorToCPU(float* color, int srcIn
 
 void GLInstancingRenderer::writeSingleInstanceTransformToGPU(float* position, float* orientation, int objectIndex)
 {
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 	glFlush();
 
 	char* orgBase =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);
@@ -522,76 +523,83 @@ void GLInstancingRenderer::writeSingleInstanceTransformToGPU(float* position, fl
 
 void GLInstancingRenderer::writeTransforms()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 	glFlush();
 	
 	char* orgBase =  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_READ_WRITE);
-
-	int totalNumInstances= 0;
-
-	for (int k=0;k<m_graphicsInstances.size();k++)
+	if (orgBase)
 	{
-		btGraphicsInstance* gfxObj = m_graphicsInstances[k];
-		totalNumInstances+=gfxObj->m_numGraphicsInstances;
-	}
+		
 
+		int totalNumInstances= 0;
 
-
-	for (int k=0;k<m_graphicsInstances.size();k++)
-	{
-		//int k=0;
-		btGraphicsInstance* gfxObj = m_graphicsInstances[k];
-
-	
-
-		int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
-		int ORIENTATION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
-		int COLOR_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
-	//	int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
-
-		char* base = orgBase;
-
-		float* positions = (float*)(base+m_maxShapeCapacityInBytes);
-		float* orientations = (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE);
-		float* colors= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
-		float* scaling= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
-
-		//static int offset=0;
-		//offset++;
-
-
-		for (int i=0;i<gfxObj->m_numGraphicsInstances;i++)
+		for (int k=0;k<m_graphicsInstances.size();k++)
 		{
-
-			int srcIndex=i+gfxObj->m_instanceOffset;
-
-			positions[srcIndex*4] = m_data->m_instance_positions_ptr[srcIndex*4];
-			positions[srcIndex*4+1] = m_data->m_instance_positions_ptr[srcIndex*4+1];
-			positions[srcIndex*4+2] = m_data->m_instance_positions_ptr[srcIndex*4+2];
-			positions[srcIndex*4+3] = m_data->m_instance_positions_ptr[srcIndex*4+3];
-
-			orientations[srcIndex*4]=m_data->m_instance_quaternion_ptr[srcIndex*4];
-			orientations[srcIndex*4+1]=m_data->m_instance_quaternion_ptr[srcIndex*4+1];
-			orientations[srcIndex*4+2]=m_data->m_instance_quaternion_ptr[srcIndex*4+2];
-			orientations[srcIndex*4+3]=m_data->m_instance_quaternion_ptr[srcIndex*4+3];
-
-			colors[srcIndex*4]=m_data->m_instance_colors_ptr[srcIndex*4];
-			colors[srcIndex*4+1]=m_data->m_instance_colors_ptr[srcIndex*4+1];
-			colors[srcIndex*4+2]=m_data->m_instance_colors_ptr[srcIndex*4+2];
-			colors[srcIndex*4+3]=m_data->m_instance_colors_ptr[srcIndex*4+3];
-
-			scaling[srcIndex*3]=m_data->m_instance_scale_ptr[srcIndex*3];
-			scaling[srcIndex*3+1]=m_data->m_instance_scale_ptr[srcIndex*3+1];
-			scaling[srcIndex*3+2]=m_data->m_instance_scale_ptr[srcIndex*3+2];
-	
+			btGraphicsInstance* gfxObj = m_graphicsInstances[k];
+			totalNumInstances+=gfxObj->m_numGraphicsInstances;
 		}
-	}
 
+
+
+		for (int k=0;k<m_graphicsInstances.size();k++)
+		{
+			//int k=0;
+			btGraphicsInstance* gfxObj = m_graphicsInstances[k];
+
+	
+
+			int POSITION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
+			int ORIENTATION_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
+			int COLOR_BUFFER_SIZE = (totalNumInstances*sizeof(float)*4);
+		//	int SCALE_BUFFER_SIZE = (totalNumInstances*sizeof(float)*3);
+
+			char* base = orgBase;
+
+			float* positions = (float*)(base+m_maxShapeCapacityInBytes);
+			float* orientations = (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE);
+			float* colors= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE);
+			float* scaling= (float*)(base+m_maxShapeCapacityInBytes + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE);
+
+			//static int offset=0;
+			//offset++;
+
+
+			for (int i=0;i<gfxObj->m_numGraphicsInstances;i++)
+			{
+
+				int srcIndex=i+gfxObj->m_instanceOffset;
+
+				positions[srcIndex*4] = m_data->m_instance_positions_ptr[srcIndex*4];
+				positions[srcIndex*4+1] = m_data->m_instance_positions_ptr[srcIndex*4+1];
+				positions[srcIndex*4+2] = m_data->m_instance_positions_ptr[srcIndex*4+2];
+				positions[srcIndex*4+3] = m_data->m_instance_positions_ptr[srcIndex*4+3];
+
+				orientations[srcIndex*4]=m_data->m_instance_quaternion_ptr[srcIndex*4];
+				orientations[srcIndex*4+1]=m_data->m_instance_quaternion_ptr[srcIndex*4+1];
+				orientations[srcIndex*4+2]=m_data->m_instance_quaternion_ptr[srcIndex*4+2];
+				orientations[srcIndex*4+3]=m_data->m_instance_quaternion_ptr[srcIndex*4+3];
+
+				colors[srcIndex*4]=m_data->m_instance_colors_ptr[srcIndex*4];
+				colors[srcIndex*4+1]=m_data->m_instance_colors_ptr[srcIndex*4+1];
+				colors[srcIndex*4+2]=m_data->m_instance_colors_ptr[srcIndex*4+2];
+				colors[srcIndex*4+3]=m_data->m_instance_colors_ptr[srcIndex*4+3];
+
+				scaling[srcIndex*3]=m_data->m_instance_scale_ptr[srcIndex*3];
+				scaling[srcIndex*3+1]=m_data->m_instance_scale_ptr[srcIndex*3+1];
+				scaling[srcIndex*3+2]=m_data->m_instance_scale_ptr[srcIndex*3+2];
+	
+			}
+		}
+	} else
+	{
+		printf("ERROR glMapBuffer failed\n");
+	}
 	glUnmapBuffer( GL_ARRAY_BUFFER);
 	//if this glFinish is removed, the animation is not always working/blocks
 	//@todo: figure out why
 	glFlush();
-	glBindBuffer(GL_ARRAY_BUFFER, 0);//cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);//m_data->m_vbo);
 
     GLint err = glGetError();
     assert(err==GL_NO_ERROR);
@@ -654,7 +662,7 @@ int GLInstancingRenderer::registerShape(const float* vertices, int numvertices, 
 	gfxObj->m_numVertices = numvertices;
 	
 	
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 	char* dest=  (char*)glMapBuffer( GL_ARRAY_BUFFER,GL_WRITE_ONLY);//GL_WRITE_ONLY
 	int vertexStrideInBytes = 9*sizeof(float);
 	int sz = numvertices*vertexStrideInBytes;
@@ -672,7 +680,7 @@ int GLInstancingRenderer::registerShape(const float* vertices, int numvertices, 
 	
 	glGenVertexArrays(1, &gfxObj->m_cube_vao);
 	glBindVertexArray(gfxObj->m_cube_vao);
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 	glBindVertexArray(0);
@@ -715,14 +723,14 @@ void GLInstancingRenderer::InitShaders()
 
 	//GLuint offset = 0;
 
-	glGenBuffers(1, &cube_vbo);
+	glGenBuffers(1, &m_data->m_vbo);
     checkError("glGenBuffers");
 
-	glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 
 
 	int size = m_maxShapeCapacityInBytes  + POSITION_BUFFER_SIZE+ORIENTATION_BUFFER_SIZE+COLOR_BUFFER_SIZE+SCALE_BUFFER_SIZE;
-	VBOsize = size;
+	m_data->m_vboSize = size;
 
 	glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);//GL_STATIC_DRAW);
 
@@ -1140,7 +1148,7 @@ void GLInstancingRenderer::RenderScene(void)
 	{
 		BT_PROFILE("glFlush2");
 
-		glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m_data->m_vbo);
 		glFlush();
 	}
     err = glGetError();
@@ -1274,9 +1282,4 @@ void GLInstancingRenderer::RenderScene(void)
 
 void GLInstancingRenderer::CleanupShaders()
 {
-	
-	delete []m_data->m_instance_positions_ptr;
-	delete []m_data->m_instance_quaternion_ptr;
-	delete []m_data->m_instance_colors_ptr;
-	delete []m_data->m_instance_scale_ptr;
 }

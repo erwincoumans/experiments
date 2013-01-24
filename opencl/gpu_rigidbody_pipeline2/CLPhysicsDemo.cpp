@@ -166,7 +166,7 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 
 CLPhysicsDemo::CLPhysicsDemo(int maxShapeBufferCapacity, int maxNumObjects)
 {
-	m_maxShapeBufferCapacity = maxShapeBufferCapacity;
+	m_maxShapeBufferCapacityInBytes = maxShapeBufferCapacity;
 	m_maxNumPhysicsInstances = maxNumObjects;
 	m_numPhysicsInstances=0;
 	m_numDynamicPhysicsInstances = 0;
@@ -869,7 +869,7 @@ void	CLPhysicsDemo::stepSimulation()
 				if (integrateOnGpu)
 				{
 					int numObjects = m_numPhysicsInstances;
-					int offset = m_maxShapeBufferCapacity/4;
+					int offset = m_maxShapeBufferCapacityInBytes/4;
 
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 0, sizeof(int), &offset);
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 1, sizeof(int), &numObjects);

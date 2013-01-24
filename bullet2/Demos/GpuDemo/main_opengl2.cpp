@@ -80,7 +80,8 @@ int main(int argc, char* argv[])
 	{
 		GpuDemo* demo = new GpuDemo1;
 		
-		demo->myinit();
+		//demo->myinit();
+
 		GLint err = glGetError();
 		btAssert(err==GL_NO_ERROR);
 		
@@ -110,7 +111,7 @@ int main(int argc, char* argv[])
 			err = glGetError();
 			btAssert(err==GL_NO_ERROR);
 			
-			if (demo->getDynamicsWorld()->getNumCollisionObjects())
+			if (demo->getDynamicsWorld() && demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
 				btAlignedObjectArray<btCollisionObject*> arr = demo->getDynamicsWorld()->getCollisionObjectArray();
 				btCollisionObject** colObjArray = &arr[0];

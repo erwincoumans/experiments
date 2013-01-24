@@ -35,7 +35,7 @@ struct CLPhysicsDemo
 
 	int m_numPhysicsInstances;
 	int m_numDynamicPhysicsInstances;
-	int m_maxShapeBufferCapacity;
+	int m_maxShapeBufferCapacityInBytes;
 	int m_maxNumPhysicsInstances;
 	
 	

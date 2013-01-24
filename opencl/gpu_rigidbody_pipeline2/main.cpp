@@ -20,6 +20,7 @@ subject to the following restrictions:
 #endif
 
 #include "GLInstancingRenderer.h"
+#include "GLInstanceRendererInternalData.h"
 
 #ifdef _WIN32
 #include "Win32OpenGLWindow.h"
@@ -70,9 +71,8 @@ char* hostPtr=0;
 cl_bool blocking=  CL_TRUE;
 
 
-extern GLuint               cube_vbo;
 
-void GL2CL(CLPhysicsDemo& demo);
+void GL2CL(CLPhysicsDemo& demo,GLInstancingRenderer& render);
 void CL2GL(CLPhysicsDemo& demo);
 extern btFindPairsIO gFpIO;
 
@@ -161,13 +161,14 @@ int main(int argc, char* argv[])
 	
 	
 	demo.init(-1,-1,useInterop);
+	
 
 	render.InitShaders();
 
 	if (useInterop)
 	{
 #ifdef _WIN32
-	g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,cube_vbo);
+		g_interopBuffer = new btOpenCLGLInteropBuffer(g_cxMainContext,g_cqCommandQue,render.getInternalData()->m_vbo);
 	clFinish(g_cqCommandQue);
 #endif
 	}
@@ -224,7 +225,7 @@ int main(int argc, char* argv[])
 		}
 		if (!pauseSimulation )
 		{
-			GL2CL(demo);
+			GL2CL(demo,render);
 			demo.stepSimulation();
 
 			{
@@ -294,10 +295,10 @@ int main(int argc, char* argv[])
 
 
 
-void GL2CL(CLPhysicsDemo& demo)
+void GL2CL(CLPhysicsDemo& demo, GLInstancingRenderer& render)
 {
 	BT_PROFILE("simulationLoop");
-	int VBOsize = demo.m_maxShapeBufferCapacity+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
+	int VBOsize = demo.m_maxShapeBufferCapacityInBytes+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
 	
 	cl_int ciErrNum = CL_SUCCESS;
 
@@ -320,7 +321,7 @@ void GL2CL(CLPhysicsDemo& demo)
 	} else
 	{
 
-		glBindBuffer(GL_ARRAY_BUFFER, cube_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, render.getInternalData()->m_vbo);
 		glFlush();
 
 		BT_PROFILE("glMapBuffer and clEnqueueWriteBuffer");
@@ -331,10 +332,9 @@ void GL2CL(CLPhysicsDemo& demo)
 
 		if (!clBuffer)
 		{
-			int maxVBOsize = demo.m_maxShapeBufferCapacity+MAX_CONVEX_BODIES_CL*(4+4+4+3)*sizeof(float);
+			int maxVBOsize = demo.m_maxShapeBufferCapacityInBytes+MAX_CONVEX_BODIES_CL*(4+4+4+3)*sizeof(float);
 			clBuffer = clCreateBuffer(g_cxMainContext, CL_MEM_READ_WRITE,maxVBOsize, 0, &ciErrNum);
-		} 
-		clFinish(g_cqCommandQue);
+			clFinish(g_cqCommandQue);
 			oclCHECKERROR(ciErrNum, CL_SUCCESS);
 
 		ciErrNum = clEnqueueWriteBuffer (	g_cqCommandQue,
@@ -345,15 +345,17 @@ void GL2CL(CLPhysicsDemo& demo)
  			hostPtr,0,0,0
 		);
 		clFinish(g_cqCommandQue);
+		} 
+		
 	}
 
 	gFpIO.m_clObjectsBuffer = clBuffer;
-	gFpIO.m_positionOffset = demo.m_maxShapeBufferCapacity/4;
+	gFpIO.m_positionOffset = demo.m_maxShapeBufferCapacityInBytes/4;
 }
 
 void CL2GL(CLPhysicsDemo& demo)
 {
-	int VBOsize = demo.m_maxShapeBufferCapacity+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
+	int VBOsize = demo.m_maxShapeBufferCapacityInBytes+demo.m_numPhysicsInstances*(4+4+4+3)*sizeof(float);
 
 	int ciErrNum;
 	if(useInterop)

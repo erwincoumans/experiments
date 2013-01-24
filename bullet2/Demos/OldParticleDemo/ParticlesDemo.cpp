@@ -20,10 +20,10 @@ subject to the following restrictions:
 //#define START_POS_Z btScalar(40.f)
 //#define START_POS_Y btScalar(0.4f)
 //#define START_POS_Z btScalar(0.4f)
-#define ARRAY_SIZE_X 64
-#define ARRAY_SIZE_Y 64
+#define ARRAY_SIZE_X 16
+#define ARRAY_SIZE_Y 16
 //#define ARRAY_SIZE_Y 16
-#define ARRAY_SIZE_Z 64
+#define ARRAY_SIZE_Z 32
 //16
 //#define ARRAY_SIZE_Z 1
 //#define DIST btScalar(2.f)

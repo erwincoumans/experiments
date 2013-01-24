@@ -78,6 +78,7 @@ end
 	--include "../bullet2/Demos/BasicDemo"
 	include "../bullet2/Demos/GpuDemo"
 	include "../bullet2/Demos/GpuDemo2/Apple"
+	include "../bullet2/Demos/OldParticleDemo"
 
 	include "../opencl/gpu_rigidbody_pipeline2"
 	

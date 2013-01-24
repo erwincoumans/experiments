@@ -27,21 +27,27 @@ class btConstraintSolver;
 struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
 class btDynamicsWorld;
+class GLInstancingRenderer;
 
 ///GpuDemo is good starting point for learning the code base and porting.
 
 
 
-class GpuDemo : public DemoApplication
+class GpuDemo// : public DemoApplication
 {
-	protected:
+
+protected:
 
 	btDynamicsWorld*	m_dynamicsWorld;
 
 	//keep the collision shapes, for deletion/cleanup
 	btAlignedObjectArray<btCollisionShape*>	m_collisionShapes;
 
-	public:
+	float getDeltaTimeInSeconds()
+	{
+		return 1./60.f;
+	}
+public:
 
 	typedef class GpuDemo* (CreateFunc)();
 
@@ -57,20 +63,26 @@ class GpuDemo : public DemoApplication
 		float gapX;
 		float gapY;
 		float gapZ;
+		GLInstancingRenderer*	m_instancingRenderer;
 		ConstructionInfo()
 			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
 			arraySizeX(4),
-			arraySizeY(50 ),
-			arraySizeZ(50),
+			arraySizeY(3 ),
+			arraySizeZ(3),
 			m_useConcaveMesh(false),
 			gapX(4.3),
 			gapY(6.0),
-			gapZ(4.3)
+			gapZ(4.3),
+			m_instancingRenderer(0)
 		{
 		}
 	};
+
+protected:
+		virtual void setupScene(const ConstructionInfo& ci)=0;
+public:
 
 	GpuDemo()
 	{
@@ -81,17 +93,22 @@ class GpuDemo : public DemoApplication
 	{
 		exitPhysics();
 	}
-	void	initPhysics(const ConstructionInfo& ci);
+	virtual void	initPhysics(const ConstructionInfo& ci);
 
-	virtual void setupScene(const ConstructionInfo& ci)=0;
 	virtual const char* getName()=0;
 
-	void	exitPhysics();
+	virtual void	exitPhysics();
 
-	const btDynamicsWorld* getDynamicsWorld() const
+	virtual const btDynamicsWorld* getDynamicsWorld() const
 	{
 		return m_dynamicsWorld;
 	}
+
+	virtual void renderScene()
+	{
+
+	}
+
 	virtual void clientMoveAndDisplay();
 
 	

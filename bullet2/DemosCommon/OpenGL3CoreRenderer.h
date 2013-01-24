@@ -7,7 +7,7 @@ class GLInstancingRenderer;
 class OpenGL3CoreRenderer
 {
 
-	GLInstancingRenderer* m_instanceRenderer;
+	GLInstancingRenderer* m_instancingRenderer;
 public:
 	OpenGL3CoreRenderer();
 	virtual ~OpenGL3CoreRenderer();
@@ -16,6 +16,10 @@ public:
 	void keyboardCallback(unsigned char key);
 	void renderPhysicsWorld(int numObjects, btCollisionObject** colObjArray, bool syncOnly);
 
+	GLInstancingRenderer*	getInstancingRenderer()
+	{
+		return m_instancingRenderer;
+	}
 };
 
 #endif //OPENGL3_CORE_RENDERER_H
