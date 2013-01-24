@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/205/trunk/Oolong%20Engine2/Utility/MemoryManager
+END
+mmgr.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/205/trunk/Oolong%20Engine2/Utility/MemoryManager/mmgr.cpp
+END
+nommgr.h
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/104/trunk/Oolong%20Engine2/Utility/MemoryManager/nommgr.h
+END
+mmgr.h
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/205/trunk/Oolong%20Engine2/Utility/MemoryManager/mmgr.h
+END
+readme.txt
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/101/trunk/Oolong%20Engine2/Utility/MemoryManager/readme.txt
+END
+MemoryTemplates.h
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/129/trunk/Oolong%20Engine2/Utility/MemoryManager/MemoryTemplates.h
+END

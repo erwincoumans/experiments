@@ -13,11 +13,12 @@ static char* particleKernelsString =
 #include "../../rendering/rendertest/OpenGLInclude.h"
 #include "../../rendering/rendertest/GLInstanceRendererInternalData.h"
 #include "../../opencl/broadphase_benchmark/btLauncherCL.h"
+#include "LinearMath/btQuickprof.h"
 
 //1000000 particles
-//#define NUM_PARTICLES_X 100
-//#define NUM_PARTICLES_Y 100
-//#define NUM_PARTICLES_Z 100
+#define NUM_PARTICLES_X 100
+#define NUM_PARTICLES_Y 100
+#define NUM_PARTICLES_Z 100
 
 //512k particles
 //#define NUM_PARTICLES_X 80
@@ -30,9 +31,9 @@ static char* particleKernelsString =
 //#define NUM_PARTICLES_Z 60
 
 //27k particles
-#define NUM_PARTICLES_X 30
-#define NUM_PARTICLES_Y 30
-#define NUM_PARTICLES_Z 30
+//#define NUM_PARTICLES_X 30
+//#define NUM_PARTICLES_Y 30
+//#define NUM_PARTICLES_Z 30
 
 struct myfloat4
 {

@@ -507,7 +507,9 @@ int main(int argc, char* argv[])
 		printf("-----------------------------------------------------\n");
 		do
 		{
-
+			CProfileManager::Reset();
+			CProfileManager::Increment_Frame_Counter();
+			
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
 
 			window->startRendering();
@@ -521,13 +523,13 @@ int main(int argc, char* argv[])
 			
 			if (!gPause)
 			{
-				demo->clientMoveAndDisplay(); 
+				BT_PROFILE("simulate");
+
+				demo->clientMoveAndDisplay();
 			}
 			else
 			{
 				
-				CProfileManager::Reset();
-				CProfileManager::Increment_Frame_Counter();
 			}
 
 			{
@@ -538,6 +540,7 @@ int main(int argc, char* argv[])
 
 			if (demo->getDynamicsWorld() && demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
+				BT_PROFILE("renderPhysicsWorld");
 				btAlignedObjectArray<btCollisionObject*> arr = demo->getDynamicsWorld()->getCollisionObjectArray();
 				btCollisionObject** colObjArray = &arr[0];
 
@@ -573,6 +576,8 @@ int main(int argc, char* argv[])
 				window->setRequestExit();
 			count++;
 		}
+
+			
 
 		} while (!window->requestedExit() && !gReset);
 			

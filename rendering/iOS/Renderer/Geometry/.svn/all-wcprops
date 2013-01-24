@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/146/trunk/Oolong%20Engine2/Renderer/Geometry
+END
+Model3DS.h
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/107/trunk/Oolong%20Engine2/Renderer/Geometry/Model3DS.h
+END
+TriStrip.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/27/trunk/Oolong%20Engine2/Renderer/Geometry/TriStrip.cpp
+END
+Vertex.h
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/Vertex.h
+END
+ModelPOD.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/146/trunk/Oolong%20Engine2/Renderer/Geometry/ModelPOD.cpp
+END
+TriStrip.h
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/27/trunk/Oolong%20Engine2/Renderer/Geometry/TriStrip.h
+END
+BoneBatch.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/BoneBatch.cpp
+END
+ModelPODWriteH.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/ModelPODWriteH.cpp
+END
+VertexLookup.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/27/trunk/Oolong%20Engine2/Renderer/Geometry/VertexLookup.cpp
+END
+ModelPOD.h
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/ModelPOD.h
+END
+Model3DS.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/107/trunk/Oolong%20Engine2/Renderer/Geometry/Model3DS.cpp
+END
+BoneBatch.h
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/BoneBatch.h
+END
+VertexLookup.h
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/27/trunk/Oolong%20Engine2/Renderer/Geometry/VertexLookup.h
+END
+Vertex.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/113/trunk/Oolong%20Engine2/Renderer/Geometry/Vertex.cpp
+END
