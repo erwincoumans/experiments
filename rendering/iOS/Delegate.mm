@@ -23,6 +23,24 @@
 
 static CShell *shell = NULL;
 
+
+@implementation MyViewController
+- (void)loadView {
+    // Create your EAGL view
+   // MyEAGLView *eaglView = [[MyEAGLView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
+	CGRect	rect = [[UIScreen mainScreen] bounds];
+	
+	_glView = [[EAGLView alloc] initWithFrame:rect pixelFormat:GL_RGB565_OES depthFormat:GL_DEPTH_COMPONENT16_OES preserveBackbuffer:NO];
+	
+    self.view = _glView;
+    [_glView release];
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return YES;
+}
+@end
+
 @implementation AppController
 
 - (void) update
@@ -33,23 +51,29 @@ static CShell *shell = NULL;
     if(!shell->RenderScene())
 		printf("RenderScene error\n");
 	
-	[_glView swapBuffers];
+	_viewController->_glView->swapBuffers();
 }
+
 
 
 - (void) applicationDidFinishLaunching:(UIApplication*)application
 {
-	CGRect	rect = [[UIScreen mainScreen] bounds];
 	
 	// create a full-screen window
 	_window = [[UIWindow alloc] initWithFrame:rect];
 	
+	MyViewController *viewController = [[MyViewController alloc] init];
+    [_window setRootViewController:viewController];
+    [viewController release];
+    [_window makeKeyAndVisible];
+	
 	// create the OpenGL view and add it to the window
 	//_glView = [[EAGLView alloc] initWithFrame:rect];
-	_glView = [[EAGLView alloc] initWithFrame:rect pixelFormat:GL_RGB565_OES depthFormat:GL_DEPTH_COMPONENT16_OES preserveBackbuffer:NO];
+	//_glView = [[EAGLView alloc] initWithFrame:rect pixelFormat:GL_RGB565_OES depthFormat:GL_DEPTH_COMPONENT16_OES preserveBackbuffer:NO];
 	
 	[_window addSubview:_glView];
 
+	
 	// show the window
 	[_window makeKeyAndVisible];
 	

@@ -24,10 +24,10 @@ includedirs {"Include"}
 
 xcodebuildsettings
 {
-"INFOPLIST_FILE = Info.plist",
+"INFOPLIST_FILE = iOS_OpenGL_test-Info.plist",
 'CODE_SIGN_IDENTITY = "iPhone Developer"',
-'OTHER_LDFLAGS = ("-framework",Foundation,"-framework", CoreFoundation,"-framework",UIKit,"-framework",OpenGLES,"-framework",QuartzCore, "-framework",CoreGraphics)',
 "SDKROOT = iphoneos",
+'OTHER_LDFLAGS = ("-framework",Foundation,"-framework", CoreFoundation,"-framework",UIKit,"-framework",GLKit,"-framework",OpenGLES,"-framework",QuartzCore, "-framework",CoreGraphics)',
 'ARCHS = "$(ARCHS_STANDARD_32_BIT)"',
 'GCC_VERSION = "com.apple.compilers.llvm.clang.1_0"',
 'GCC_THUMB_SUPPORT = NO',
@@ -42,20 +42,16 @@ xcodebuildsettings
 language "C++"
 
 files {
-	"icon.png",
+	"**.xib",
 	"**.cpp",
 	"**.h",
 	"**.mm",
 	"**.m"
 }
 
-
-excludes {
-	"Renderer/Resource/StreamingWin32.cpp",
-	"Utility/Profiler/prof*.cpp",
-	"Renderer/Core/GraphicsDevice/GLES20/EAGLView2.m"
-}
-
+configuration "**.xib"
+	buildaction "Embed"
+configuration{}
 
 configuration "**.png"
    buildaction "Embed"
