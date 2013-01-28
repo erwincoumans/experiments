@@ -50,6 +50,17 @@ bool CShell::InitApplication()
 	StartTimer(&DrawCubeTimer);
 	StartTimer(&DrawUITimer);
 
+	const GLubyte* vendor = glGetString(	GL_VENDOR);
+	printf("OpenGL ES vendor: %s\n",vendor);
+
+	const GLubyte* version = glGetString(	GL_VERSION);
+	printf("OpenGL ES version: %s\n",version);
+
+	const GLubyte* renderer = glGetString(	GL_RENDERER);
+	printf("OpenGL ES GL_RENDERER: %s\n",renderer);
+
+
+	
 	return true;
 }
 

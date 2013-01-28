@@ -1,4 +1,5 @@
 
+--                flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
  
   solution "0MySolution"
 
@@ -7,15 +8,28 @@
 		buildoptions { "/MP"  }
 	end 
 	
+	act = ""
+    
+    if _ACTION then
+        act = _ACTION
+    end
+
+
+	newoption 
+	{
+    		trigger     = "ios",
+    		description = "Enable iOS target (requires xcode4)"
+  	}
+	
 	newoption {
-    trigger     = "with-nacl",
-    description = "Enable Native Client build"
-  }
+    		trigger     = "with-nacl",
+    		description = "Enable Native Client build"
+  	}
   
-  newoption {
-    trigger     = "with-pe",
-    description = "Enable Physics Effects"
-  }
+  	newoption {
+    		trigger     = "with-pe",
+    		description = "Enable Physics Effects"
+  	}
   
 	configurations {"Release", "Debug"}
 	configuration "Release"
@@ -27,36 +41,59 @@
 	platforms {"x32", "x64"}
 
 	configuration {"x32"}
-		targetsuffix ("_" .. _ACTION)
+		targetsuffix ("_" .. act)
 	configuration "x64"		
-		targetsuffix ("_" .. _ACTION .. "_64" )
+		targetsuffix ("_" .. act .. "_64" )
 	configuration {"x64", "debug"}
-		targetsuffix ("_" .. _ACTION .. "_x64_debug")
+		targetsuffix ("_" .. act .. "_x64_debug")
 	configuration {"x64", "release"}
-		targetsuffix ("_" .. _ACTION .. "_x64_release" )
+		targetsuffix ("_" .. act .. "_x64_release" )
 	configuration {"x32", "debug"}
-		targetsuffix ("_" .. _ACTION .. "_debug" )
+		targetsuffix ("_" .. act .. "_debug" )
 	
 	configuration{}
 
-if not _OPTIONS["with-nacl"] then
+	postfix=""
+
+	if _ACTION == "xcode4" then
+		if _OPTIONS["ios"] then
+      			postfix = "ios";
+      			xcodebuildsettings
+      			{
+              		'CODE_SIGN_IDENTITY = "iPhone Developer"',
+              		"SDKROOT = iphoneos",
+              		'ARCHS = "armv7"',
+              		'TARGETED_DEVICE_FAMILY = "1,2"',
+              		'VALID_ARCHS = "armv7"',
+      			}      
+      		else
+      			xcodebuildsettings
+      			{
+              		'ARCHS = "$(ARCHS_STANDARD_32_BIT) $(ARCHS_STANDARD_64_BIT)"',
+              		'VALID_ARCHS = "x86_64 i386"',
+      			}
+    		end
+	end
+
+
+
+
+
+	if not _OPTIONS["with-nacl"] then
 		flags { "NoRTTI", "NoExceptions"}
 		defines { "_HAS_EXCEPTIONS=0" }
 		targetdir "../bin"
-	  location("./" .. _ACTION)
+	  	location("./" .. act .. postfix)
 
-else
+	else
 --	targetdir "../bin_html"
-
 --remove some default flags when cross-compiling for Native Client
 --see also http://industriousone.com/topic/how-remove-usrlib64-x86-builds-cross-compiling
-	premake.gcc.platforms.x64.ldflags = string.gsub(premake.gcc.platforms.x64.ldflags, "-L/usr/lib64", "")
-	premake.gcc.platforms.x32.ldflags = string.gsub(premake.gcc.platforms.x32.ldflags, "-L/usr/lib32", "")
-	
-	targetdir "nacl/nginx-1.1.2/html"
-	
-	location("./nacl")
-end
+		premake.gcc.platforms.x64.ldflags = string.gsub(premake.gcc.platforms.x64.ldflags, "-L/usr/lib64", "")
+		premake.gcc.platforms.x32.ldflags = string.gsub(premake.gcc.platforms.x32.ldflags, "-L/usr/lib32", "")
+		targetdir "nacl/nginx-1.1.2/html"
+		location("./nacl")
+	end
 
 	
 
@@ -69,10 +106,16 @@ end
 	
 	language "C++"
 	
+	if _OPTIONS["ios"] then
+		include "../rendering/iOSnew"
+	end
+
 
 	--include "../dynamics/ros"
 	include "../bullet2"	
 	include "../jpeglib"
+
+	 if not _OPTIONS["ios"] then
 
 	
 	--include "../bullet2/Demos/BasicDemo"
@@ -174,3 +217,5 @@ end
 	include "../rendering/OpenGLES2Angle"
 	
 end
+end
+

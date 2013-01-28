@@ -27,6 +27,15 @@ enum
     NUM_ATTRIBUTES
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+	bool setupGraphics(int w, int h);
+	void renderFrame(int w,int h);
+#ifdef __cplusplus
+}
+#endif
+
 GLfloat gCubeVertexData[216] = 
 {
     // Data layout for each line below is:
@@ -125,6 +134,9 @@ GLfloat gCubeVertexData[216] =
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     
+	
+
+	
     [self setupGL];
 }
 
@@ -146,194 +158,71 @@ GLfloat gCubeVertexData[216] =
     // Dispose of any resources that can be recreated.
 }
 
+
 - (void)setupGL
 {
+
+	
     [EAGLContext setCurrentContext:self.context];
     
-    [self loadShaders];
+	const GLubyte* vendor = glGetString(	GL_VENDOR);
+	printf("OpenGL ES vendor: %s\n",vendor);
+	
+	const GLubyte* version = glGetString(	GL_VERSION);
+	printf("OpenGL ES version: %s\n",version);
+	
+	const GLubyte* renderer = glGetString(	GL_RENDERER);
+	printf("OpenGL ES GL_RENDERER: %s\n",renderer);
+	
     
-    self.effect = [[[GLKBaseEffect alloc] init] autorelease];
-    self.effect.light0.enabled = GL_TRUE;
-    self.effect.light0.diffuseColor = GLKVector4Make(1.0f, 0.4f, 0.4f, 1.0f);
-    
-    glEnable(GL_DEPTH_TEST);
-    
-    glGenVertexArraysOES(1, &_vertexArray);
-    glBindVertexArrayOES(_vertexArray);
-    
-    glGenBuffers(1, &_vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(gCubeVertexData), gCubeVertexData, GL_STATIC_DRAW);
-    
-    glEnableVertexAttribArray(GLKVertexAttribPosition);
-    glVertexAttribPointer(GLKVertexAttribPosition, 3, GL_FLOAT, GL_FALSE, 24, BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(GLKVertexAttribNormal);
-    glVertexAttribPointer(GLKVertexAttribNormal, 3, GL_FLOAT, GL_FALSE, 24, BUFFER_OFFSET(12));
-    
-    glBindVertexArrayOES(0);
+	int width = self.view.bounds.size.width;
+	int height = self.view.bounds.size.height;
+	
+	setupGraphics(width,height);
+	
+   	
 }
 
 - (void)tearDownGL
 {
     [EAGLContext setCurrentContext:self.context];
     
-    glDeleteBuffers(1, &_vertexBuffer);
-    glDeleteVertexArraysOES(1, &_vertexArray);
-    
+   
     self.effect = nil;
     
-    if (_program) {
-        glDeleteProgram(_program);
-        _program = 0;
-    }
+  
 }
 
 #pragma mark - GLKView and GLKViewController delegate methods
 
 - (void)update
 {
-    float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
-    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 0.1f, 100.0f);
-    
-    self.effect.transform.projectionMatrix = projectionMatrix;
-    
-    GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -4.0f);
-    baseModelViewMatrix = GLKMatrix4Rotate(baseModelViewMatrix, _rotation, 0.0f, 1.0f, 0.0f);
-    
-    // Compute the model view matrix for the object rendered with GLKit
-    GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -1.5f);
-    modelViewMatrix = GLKMatrix4Rotate(modelViewMatrix, _rotation, 1.0f, 1.0f, 1.0f);
-    modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
-    
-    self.effect.transform.modelviewMatrix = modelViewMatrix;
-    
-    // Compute the model view matrix for the object rendered with ES2
-    modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, 1.5f);
-    modelViewMatrix = GLKMatrix4Rotate(modelViewMatrix, _rotation, 1.0f, 1.0f, 1.0f);
-    modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
-    
-    _normalMatrix = GLKMatrix3InvertAndTranspose(GLKMatrix4GetMatrix3(modelViewMatrix), NULL);
-    
-    _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
-    
-    _rotation += self.timeSinceLastUpdate * 0.5f;
-}
+	}
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
     glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    glBindVertexArrayOES(_vertexArray);
-    
-    // Render the object with GLKit
-    [self.effect prepareToDraw];
-    
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    // Render the object again with ES2
-    glUseProgram(_program);
-    
-    glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
-    glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, _normalMatrix.m);
-    
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+	int width = self.view.bounds.size.width;
+	int height = self.view.bounds.size.height;
+	
+	
+	static int renderme=1;
+	static int frame=1;
+	//if (frame && renderme)
+	{
+		renderFrame(width,height);
+	}
+	frame = 1-frame;
+
 }
 
 #pragma mark -  OpenGL ES 2 shader compilation
 
 - (BOOL)loadShaders
 {
-    GLuint vertShader, fragShader;
-    
-    // Create shader program.
-    _program = glCreateProgram();
-	const char* vertShaderSource =
-	"attribute vec4 position;\n"
-	"attribute vec3 normal;\n"
-	"\n"
-	"varying lowp vec4 colorVarying;\n"
-	"\n"
-	"uniform mat4 modelViewProjectionMatrix;\n"
-	"uniform mat3 normalMatrix;\n"
-	"\n"
-	"void main()\n"
-	"{\n"
-"		vec3 eyeNormal = normalize(normalMatrix * normal);\n"
-"		vec3 lightPosition = vec3(0.0, 0.0, 1.0);\n"
-"		vec4 diffuseColor = vec4(0.4, 0.4, 1.0, 1.0);\n"
-"\n"
-"		float nDotVP = max(0.0, dot(eyeNormal, normalize(lightPosition)));\n"
-"\n"
-"		colorVarying = diffuseColor * nDotVP;\n"
-"\n"
-"		gl_Position = modelViewProjectionMatrix * position;\n"
-"	}\n";
-	
-    const char* fragShaderSource = "	varying lowp vec4 colorVarying;\n"
-"\n"
-" void main()\n"
-"	{\n"
-"		gl_FragColor = colorVarying;\n"
-"	}\n";
-	
-    // Create and compile vertex shader.
-    if (![self compileShader:&vertShader type:GL_VERTEX_SHADER source:vertShaderSource]) {
-        NSLog(@"Failed to compile vertex shader");
-        return NO;
-    }
-    
-    // Create and compile fragment shader.
-    if (![self compileShader:&fragShader type:GL_FRAGMENT_SHADER source:fragShaderSource]) {
-        NSLog(@"Failed to compile fragment shader");
-        return NO;
-    }
-    
-    // Attach vertex shader to program.
-    glAttachShader(_program, vertShader);
-    
-    // Attach fragment shader to program.
-    glAttachShader(_program, fragShader);
-    
-    // Bind attribute locations.
-    // This needs to be done prior to linking.
-    glBindAttribLocation(_program, ATTRIB_VERTEX, "position");
-    glBindAttribLocation(_program, ATTRIB_NORMAL, "normal");
-    
-    // Link program.
-    if (![self linkProgram:_program]) {
-        NSLog(@"Failed to link program: %d", _program);
-        
-        if (vertShader) {
-            glDeleteShader(vertShader);
-            vertShader = 0;
-        }
-        if (fragShader) {
-            glDeleteShader(fragShader);
-            fragShader = 0;
-        }
-        if (_program) {
-            glDeleteProgram(_program);
-            _program = 0;
-        }
-        
-        return NO;
-    }
-    
-    // Get uniform locations.
-    uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = glGetUniformLocation(_program, "modelViewProjectionMatrix");
-    uniforms[UNIFORM_NORMAL_MATRIX] = glGetUniformLocation(_program, "normalMatrix");
-    
-    // Release vertex and fragment shaders.
-    if (vertShader) {
-        glDetachShader(_program, vertShader);
-        glDeleteShader(vertShader);
-    }
-    if (fragShader) {
-        glDetachShader(_program, fragShader);
-        glDeleteShader(fragShader);
-    }
-    
+      
     return YES;
 }
 

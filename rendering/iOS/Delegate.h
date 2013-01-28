@@ -14,19 +14,10 @@
  */
 #import "GraphicsDevice.h"
 
-@interface MyViewController : UIViewController
-{
-	EAGLView*			_glView;
-}
-@end
-
-
 @interface AppController : NSObject
 {
 	UIWindow*			_window;
-	MyViewController*	_viewController;
-	//EAGLView*			_glView;
-	
+	EAGLView*			_glView;
 }
 
 

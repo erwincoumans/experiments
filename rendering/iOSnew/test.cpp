@@ -1,0 +1,513 @@
+
+
+#include <OpenGLES/ES2/gl.h>
+#include "../OpenGLES2Angle/OolongReadBlend.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	bool setupGraphics(int w, int h);
+	void renderFrame(int w,int h);
+#ifdef __cplusplus
+}
+#endif
+#include "../OpenGLES2Angle/PhysicsAnimationBakingDemo.h"
+
+#include "btBulletDynamicsCommon.h"
+#include "../OpenGLES2Angle/btTransformUtil.h"
+
+OolongBulletBlendReader* reader = 0;
+btDiscreteDynamicsWorld* dynWorld = 0;
+btDefaultCollisionConfiguration* collisionConfiguration = 0;
+btCollisionDispatcher* dispatcher = 0;
+btDbvtBroadphase* broadphase = 0;
+btSequentialImpulseConstraintSolver* solver = 0;
+bool simulationPaused = false;
+ATTRIBUTE_ALIGNED16(float projMat[16]);
+
+// Handle to a program object
+GLuint programObject;
+// Attribute locations
+GLint  positionLoc;
+GLint  texCoordLoc;
+// Sampler location
+GLint samplerLoc;
+
+GLint modelMatrix;
+GLint viewMatrix;
+GLint projectionMatrix;
+GLint g_lastError = 0;
+
+// Texture handle
+GLuint textureId;
+
+btVector3 m_cameraPosition(0,0,-2);
+btVector3 m_cameraTargetPosition(0,0,0);
+btVector3 m_cameraUp(0,1,0);//1,0);
+btRigidBody* pickedBody = 0;
+btTypedConstraint* m_pickConstraint = 0;
+int m_glutScreenWidth = 0;
+int m_glutScreenHeight = 0;
+float m_cameraDistance = 0.f;
+
+typedef struct
+{
+	// Handle to a program object
+	GLuint programObject;
+	
+	// Attribute locations
+	GLint  positionLoc;
+	GLint  texCoordLoc;
+	
+	// Sampler location
+	GLint samplerLoc;
+	
+	// Texture handle
+	GLuint textureId;
+	
+} UserData;
+
+UserData gUserData;
+
+void createWorld()
+{
+	collisionConfiguration = new btDefaultCollisionConfiguration();
+	dispatcher = new        btCollisionDispatcher(collisionConfiguration);
+	broadphase = new btDbvtBroadphase();
+	solver = new btSequentialImpulseConstraintSolver;
+	dynWorld = new btDiscreteDynamicsWorld(dispatcher,broadphase,solver,collisionConfiguration);
+	
+	char* blendFile = mydata;
+	int len = sizeof(mydata);
+	
+	reader = new OolongBulletBlendReader(dynWorld);
+	int result = reader->readFile(blendFile,len);
+
+	if (result)
+		reader->convertAllObjects();
+
+}
+
+
+
+
+
+// Simple_Texture2D.c
+//
+//    This is a simple example that draws a quad with a 2D
+//    texture image. The purpose of this example is to demonstrate
+//    the basics of 2D texturing
+//
+#include <stdlib.h>
+//#include "esUtil.h"
+#include <stdio.h>
+
+
+
+
+
+
+static void printGLString(const char *name, GLenum s) {
+    const char *v = (const char *) glGetString(s);
+    printf("GL %s = %s\n", name, v);
+}
+
+static void checkGlError(const char* op) {
+    for (GLint error = glGetError(); error; error
+		 = glGetError()) {
+        printf("after %s() glError (0x%x)\n", op, error);
+    }
+}
+
+
+
+GLuint  esLoadShader ( GLenum type, const char *shaderSrc )
+{
+	GLuint shader;
+	GLint compiled;
+	
+	// Create the shader object
+	shader = glCreateShader ( type );
+	
+	if ( shader == 0 )
+		return 0;
+	
+	// Load the shader source
+	glShaderSource ( shader, 1, &shaderSrc, NULL );
+	
+	// Compile the shader
+	glCompileShader ( shader );
+	
+	// Check the compile status
+	glGetShaderiv ( shader, GL_COMPILE_STATUS, &compiled );
+	
+	if ( !compiled )
+	{
+		GLint infoLen = 0;
+		
+		glGetShaderiv ( shader, GL_INFO_LOG_LENGTH, &infoLen );
+		
+		if ( infoLen > 1 )
+		{
+			char* infoLog = (char*)malloc (sizeof(char) * infoLen );
+			
+			glGetShaderInfoLog ( shader, infoLen, NULL, infoLog );
+			printf ( "Error compiling shader:\n%s\n", infoLog );
+			
+			free ( infoLog );
+		}
+		
+		glDeleteShader ( shader );
+		return 0;
+	}
+	
+	return shader;
+	
+}
+
+
+GLuint  esLoadProgram ( const char *vertShaderSrc, const char *fragShaderSrc )
+{
+	GLuint vertexShader;
+	GLuint fragmentShader;
+	GLuint programObject;
+	GLint linked;
+	
+	// Load the vertex/fragment shaders
+	vertexShader = esLoadShader ( GL_VERTEX_SHADER, vertShaderSrc );
+	if ( vertexShader == 0 )
+		return 0;
+	
+	fragmentShader = esLoadShader ( GL_FRAGMENT_SHADER, fragShaderSrc );
+	if ( fragmentShader == 0 )
+	{
+		glDeleteShader( vertexShader );
+		return 0;
+	}
+	
+	// Create the program object
+	programObject = glCreateProgram ( );
+	
+	if ( programObject == 0 )
+		return 0;
+	
+	glAttachShader ( programObject, vertexShader );
+	glAttachShader ( programObject, fragmentShader );
+	
+	// Link the program
+	glLinkProgram ( programObject );
+	
+	// Check the link status
+	glGetProgramiv ( programObject, GL_LINK_STATUS, &linked );
+	
+	if ( !linked )
+	{
+		GLint infoLen = 0;
+		
+		glGetProgramiv ( programObject, GL_INFO_LOG_LENGTH, &infoLen );
+		
+		if ( infoLen > 1 )
+		{
+			char* infoLog = (char*)malloc (sizeof(char) * infoLen );
+			
+			glGetProgramInfoLog ( programObject, infoLen, NULL, infoLog );
+			printf ( "Error linking program:\n%s\n", infoLog );
+			
+			free ( infoLog );
+		}
+		
+		glDeleteProgram ( programObject );
+		return 0;
+	}
+	
+	// Free up no longer needed shader resources
+	glDeleteShader ( vertexShader );
+	glDeleteShader ( fragmentShader );
+	
+	return programObject;
+}
+
+
+
+
+
+///
+// Create a simple 2x2 texture image with four different colors
+//
+GLuint CreateSimpleTexture2D( )
+{
+	// Texture object handle
+	GLuint textureId;
+	
+	// 2x2 Image, 3 bytes per pixel (R, G, B)
+	GLubyte pixels[4 * 3] =
+	{
+		255,   0,   0, // Red
+        0, 255,   0, // Green
+        0,   0, 255, // Blue
+		255, 255,   0  // Yellow
+	};
+	
+	// Use tightly packed data
+	glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );
+	
+	// Generate a texture object
+	glGenTextures ( 1, &textureId );
+	
+	// Bind the texture object
+	glBindTexture ( GL_TEXTURE_2D, textureId );
+	
+	// Load the texture
+	glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+	
+	// Set the filtering mode
+	glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	
+	return textureId;
+	
+}
+
+
+///
+// Initialize the shader and program object
+//
+int Init ( UserData *userData )
+{
+   
+
+	
+	
+	glViewport ( 0, 0, m_glutScreenWidth,m_glutScreenHeight );
+	
+	glEnable(GL_DEPTH_TEST);
+	
+	printGLString("Version", GL_VERSION);
+	printGLString("Vendor", GL_VENDOR);
+	printGLString("Renderer", GL_RENDERER);
+	printGLString("Extensions", GL_EXTENSIONS);
+	
+	GLbyte vShaderStr[] =
+	"uniform mat4 modelMatrix;\n"
+	"uniform mat4 viewMatrix;\n"
+	"uniform mat4 projectionMatrix;\n"
+	"attribute vec4 a_position;   \n"
+	"attribute vec2 a_texCoord;   \n"
+	"varying vec2 v_texCoord;     \n"
+	"void main()                  \n"
+	"{                            \n"
+	"   gl_Position = (projectionMatrix*viewMatrix*modelMatrix)*a_position; \n"
+	"   v_texCoord = a_texCoord;  \n"
+	"}                            \n";
+	
+	GLbyte fShaderStr[] =
+	"precision mediump float;                            \n"
+	"varying vec2 v_texCoord;                            \n"
+	"uniform sampler2D s_texture;                        \n"
+	"void main()                                         \n"
+	"{                                                   \n"
+	"  gl_FragColor = texture2D( s_texture, v_texCoord );\n"
+	"}                                                   \n";
+	
+	// for wireframe, use white color
+	//	  "  gl_FragColor = vec4(1.0,1.0,1.0,1.0);\n"
+	
+	// Load the shaders and get a linked program object
+#ifdef __native_client__
+	programObject = shader_util::CreateProgramFromVertexAndFragmentShaders((const char*)vShaderStr, (const char*)fShaderStr);
+#else
+	programObject= esLoadProgram ((const char*)vShaderStr, (const char*)fShaderStr );
+#endif
+	
+	// Get the attribute locations
+	positionLoc = glGetAttribLocation ( programObject, "a_position" );
+	texCoordLoc = glGetAttribLocation ( programObject, "a_texCoord" );
+	
+	// Get the sampler location
+	samplerLoc = glGetUniformLocation ( programObject, "s_texture" );
+	
+	modelMatrix = glGetUniformLocation ( programObject, "modelMatrix" );
+	viewMatrix = glGetUniformLocation ( programObject, "viewMatrix" );
+	projectionMatrix = glGetUniformLocation ( programObject, "projectionMatrix" );
+	
+	// Load the texture
+	textureId = CreateSimpleTexture2D ();
+	
+	glClearColor ( 1.2f, 0.2f, 0.2f, 0.2f );
+	
+	createWorld();
+
+
+	return 1;
+}
+
+///
+// Draw a triangle using the shader pair created in Init()
+//
+void Draw ( UserData *userData, int width, int height)
+{
+	m_glutScreenWidth = width;
+	m_glutScreenHeight = height;
+	
+	glClearColor ( 0.6f, 0.6f, 0.6f, 0.f );
+	
+	GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f,  // Position 0
+		0.0f,  0.0f,        // TexCoord 0
+		-0.5f, -0.5f, 0.0f,  // Position 1
+		0.0f,  1.0f,        // TexCoord 1
+		0.5f, -0.5f, 0.0f,  // Position 2
+		1.0f,  1.0f,        // TexCoord 2
+		0.5f,  0.5f, 0.0f,  // Position 3
+		1.0f,  0.0f         // TexCoord 3
+	};
+	GLushort indices[] = { 0, 1, 2, 2,1,0};//0, 2, 3 };
+	
+	
+	// Clear the color buffer
+	glClear ( GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT);
+	
+	// Use the program object
+	glUseProgram ( programObject );
+	
+	// Load the vertex position
+	glVertexAttribPointer ( positionLoc, 3, GL_FLOAT,
+                           GL_FALSE, 5 * sizeof(GLfloat), vVertices );
+	// Load the texture coordinate
+	glVertexAttribPointer ( texCoordLoc, 2, GL_FLOAT,
+                           GL_FALSE, 5 * sizeof(GLfloat), &vVertices[3] );
+	
+	glEnableVertexAttribArray ( positionLoc );
+	glEnableVertexAttribArray ( texCoordLoc );
+	
+	
+	//   // Bind the texture
+	glActiveTexture ( GL_TEXTURE0 );
+	glBindTexture ( GL_TEXTURE_2D, textureId );
+	
+	// Set the sampler texture unit to 0
+	glUniform1i ( samplerLoc, 0 );
+	
+	
+	
+	
+	static float mat2[16];
+	
+#define USE_CAM_FROM_FILE 1
+#ifdef USE_CAM_FROM_FILE
+	if (reader && reader->isBlendFileOk())
+	{
+		//reader->m_cameraTrans.inverse().getOpenGLMatrix(mat2);
+		
+		btVector3 fwd = reader->m_cameraTrans.getBasis().getColumn(2);
+		m_cameraPosition = reader->m_cameraTrans.getOrigin();
+		m_cameraTargetPosition = m_cameraPosition - fwd; //why is this -?
+		m_cameraUp = reader->m_cameraTrans.getBasis().getColumn(1);
+		btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,mat2);
+	} else
+#endif
+	{
+		btCreateLookAt(m_cameraPosition,m_cameraTargetPosition,m_cameraUp,mat2);
+	}
+	
+	glUniformMatrix4fv(viewMatrix,1,GL_FALSE,mat2);
+	
+	
+    float aspect;
+	btVector3 extents;
+	
+	if (m_glutScreenWidth > m_glutScreenHeight)
+	{
+		aspect = m_glutScreenWidth / (float)m_glutScreenHeight;
+		extents.setValue(aspect * 1.0f, 1.0f,0);
+	} else
+	{
+		aspect = m_glutScreenHeight / (float)m_glutScreenWidth;
+		extents.setValue(1.0f, aspect*1.f,0);
+	}
+	
+	float m_frustumZNear=1;
+	float m_frustumZFar=1000;
+	
+	
+	btCreateFrustum(-aspect * m_frustumZNear, aspect * m_frustumZNear, -m_frustumZNear, m_frustumZNear, m_frustumZNear, m_frustumZFar,projMat);
+	
+	
+	
+   	glUniformMatrix4fv(projectionMatrix,1,GL_FALSE,projMat);
+	
+	
+	
+	
+	if (reader && reader->isBlendFileOk())
+	{
+		for (int i=0;i<reader->m_graphicsObjects.size();i++)
+		{
+			reader->m_graphicsObjects[i].render(positionLoc,texCoordLoc,samplerLoc,modelMatrix);
+		}
+		dynWorld->setGravity(btVector3(0,0,-1));//-1,0));
+		
+		if (!simulationPaused)
+		{
+			dynWorld->stepSimulation(0.016f);
+			dynWorld->stepSimulation(0.016f);
+		}
+	} else
+	{
+		btTransform tr;
+		tr.setIdentity();
+		
+		static float mat1[16];
+		tr.getOpenGLMatrix(mat1);
+		glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
+		glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
+		
+		tr.setOrigin(btVector3(0,1,0));
+		
+		tr.getOpenGLMatrix(mat1);
+		glUniformMatrix4fv(modelMatrix,1,GL_FALSE,mat1);
+		glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
+	}
+	
+	g_lastError = glGetError();
+
+}
+
+
+bool setupGraphics(int w, int h) {
+	
+    printGLString("Version", GL_VERSION);
+    printGLString("Vendor", GL_VENDOR);
+    printGLString("Renderer", GL_RENDERER);
+    printGLString("Extensions", GL_EXTENSIONS);
+	
+	m_glutScreenWidth = w;
+	m_glutScreenHeight = h;
+
+	Init(&gUserData);
+
+
+
+}
+
+const GLfloat gTriangleVertices[] =
+{ 0.0f, 0.5f, -0.5f,
+	-0.5f,  0.5f, -0.5f
+};
+
+void renderFrame(int w,int h)
+{
+	Draw(&gUserData,w,h);
+}
+
+void	shutdownGraphics()
+{
+	// Delete texture object
+	glDeleteTextures ( 1, &textureId );
+	
+	// Delete program object
+	glDeleteProgram ( programObject );
+}
+
+
+

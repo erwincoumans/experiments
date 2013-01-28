@@ -1,13 +1,5 @@
-solution "0_Solution"
+--solution "0_Solution"
 --use 0 prefix so that the file comes first in the folder, in case you have many files
-
-
-
- configurations {"Release", "Debug"}
-        configuration "Release"
-                flags { "Optimize", "StaticRuntime", "NoMinimalRebuild", "FloatFast"}
-        configuration "Debug"
-                flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
 
 
 project "MySkeleton"
@@ -19,25 +11,25 @@ kind "WindowedApp"
 
 targetdir "bin"
 
-includedirs {"Include"}
+includedirs {	"Include",
+		"../../bullet2",
+		"../BlenderSerialize",
+             	"../../jpeglib"
+	}
+
+if _OPTIONS["ios"] then
+                        xcodebuildsettings
+                        {
+                        'INFOPLIST_FILE = "../../rendering/iOSnew/iOS_OpenGL_test-Info.plist"',
+                        'OTHER_LDFLAGS = ("-framework",Foundation,"-framework", CoreFoundation,"-framework",GLKit,"-framework",UIKit,"-framework",OpenGLES,"-framework",QuartzCore, "-framework",CoreGraphics)',
+			}
+end
 
 
-xcodebuildsettings
-{
-"INFOPLIST_FILE = iOS_OpenGL_test-Info.plist",
-'CODE_SIGN_IDENTITY = "iPhone Developer"',
-"SDKROOT = iphoneos",
-'OTHER_LDFLAGS = ("-framework",Foundation,"-framework", CoreFoundation,"-framework",UIKit,"-framework",GLKit,"-framework",OpenGLES,"-framework",QuartzCore, "-framework",CoreGraphics)',
-'ARCHS = "$(ARCHS_STANDARD_32_BIT)"',
-'GCC_VERSION = "com.apple.compilers.llvm.clang.1_0"',
-'GCC_THUMB_SUPPORT = NO',
-'TARGETED_DEVICE_FAMILY = "1,2"',
-'STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = dynamic'
+
+links {
+"jpeglib",	"BulletDynamics","BulletCollision", "LinearMath"
 }
-
---links {
---	"BulletDynamics","BulletCollision", "LinearMath"
---}
 
 language "C++"
 
@@ -46,7 +38,18 @@ files {
 	"**.cpp",
 	"**.h",
 	"**.mm",
-	"**.m"
+	"**.m",
+	"../OpenGLES2Angle/OolongReadBlend.cpp",
+	"../OpenGLES2Angle/BulletBlendReaderNew.cpp",
+	"../OpenGLES2Angle/btTransformUtil.cpp",
+	"../BlenderSerialize/bDNA.cpp",
+	"../BlenderSerialize/bBlenderFile.cpp",
+	"../BlenderSerialize/bChunk.cpp",
+	"../BlenderSerialize/bFile.cpp",
+	"../BlenderSerialize/bMain.cpp",
+	"../BlenderSerialize/dna249.cpp",
+	"../BlenderSerialize/dna249-64bit.cpp"
+
 }
 
 configuration "**.xib"
