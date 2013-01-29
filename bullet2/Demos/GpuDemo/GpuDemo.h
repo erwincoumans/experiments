@@ -68,12 +68,12 @@ public:
 			:useOpenCL(false),//true),
 			preferredOpenCLPlatformIndex(-1),
 			preferredOpenCLDeviceIndex(-1),
-			arraySizeX(4),
-			arraySizeY(3 ),
-			arraySizeZ(3),
+			arraySizeX(13),
+			arraySizeY(20 ),
+			arraySizeZ(13),
 			m_useConcaveMesh(false),
 			gapX(4.3),
-			gapY(6.0),
+			gapY(2.0),
 			gapZ(4.3),
 			m_instancingRenderer(0)
 		{
@@ -119,17 +119,32 @@ public:
 	
 };
 
-class GpuDemo1 : public GpuDemo
+class GpuCompoundDemo : public GpuDemo
 {
 public:
 	virtual void setupScene(const ConstructionInfo& ci);
 	virtual const char* getName()
 	{
-		return "GpuDemo1";
+		return "GpuCompoundDemo";
 	}
 	static GpuDemo* CreateFunc()
 	{
-		GpuDemo* demo = new GpuDemo1;
+		GpuDemo* demo = new GpuCompoundDemo;
+		return demo;
+	}
+};
+
+class GpuBoxDemo : public GpuDemo
+{
+public:
+	virtual void setupScene(const ConstructionInfo& ci);
+	virtual const char* getName()
+	{
+		return "GpuBoxDemo";
+	}
+	static GpuDemo* CreateFunc()
+	{
+		GpuDemo* demo = new GpuBoxDemo;
 		return demo;
 	}
 };

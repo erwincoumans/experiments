@@ -50,9 +50,10 @@ btAlignedObjectArray<const char*> demoNames;
 int selectedDemo = 0;
 GpuDemo::CreateFunc* allDemos[]=
 {
+	GpuBoxDemo::CreateFunc,
 	ParticleDemo::CreateFunc,
 	SpheresDemo::CreateFunc,
-	GpuDemo1::CreateFunc,
+	GpuCompoundDemo::CreateFunc,
 	EmptyDemo::CreateFunc,
 };
 
@@ -396,6 +397,7 @@ int main(int argc, char* argv[])
 	
 	gui->registerComboBox(MYCOMBOBOX1,numItems,&demoNames[0]);
 	gui->setComboBoxCallback(MyComboBoxCallback);
+
 
 
 	do

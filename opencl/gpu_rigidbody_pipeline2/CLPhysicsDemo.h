@@ -37,7 +37,8 @@ struct CLPhysicsDemo
 	int m_numDynamicPhysicsInstances;
 	int m_maxShapeBufferCapacityInBytes;
 	int m_maxNumPhysicsInstances;
-	
+	class btGpuNarrowphaseAndSolver* m_narrowphaseAndSolver;
+
 	
 
 

@@ -149,6 +149,8 @@
 
  include "../opencl/gpu_narrowphase_test"
 
+	include "../rendering/OpenGLES2Angle"
+
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
@@ -214,7 +216,6 @@ end
 	include "../rendering/WavefrontObjLoader"
 
 	
-	include "../rendering/OpenGLES2Angle"
 	
 end
 end

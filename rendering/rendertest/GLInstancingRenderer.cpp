@@ -35,6 +35,8 @@ struct btGraphicsInstance
 {
 	GLuint               m_cube_vao;
 	GLuint               m_index_vbo;
+	GLuint				m_texturehandle;
+
 	int m_numIndices;
 	int m_numVertices;
 
@@ -44,7 +46,7 @@ struct btGraphicsInstance
 	int m_vertexArrayOffset;
 	int	m_primitiveType;
 
-	btGraphicsInstance() :m_cube_vao(-1),m_index_vbo(-1),m_numIndices(-1),m_numVertices(-1),m_numGraphicsInstances(0),m_instanceOffset(0),m_vertexArrayOffset(0),m_primitiveType(BT_GL_TRIANGLES)
+	btGraphicsInstance() :m_cube_vao(-1),m_index_vbo(-1),m_numIndices(-1),m_numVertices(-1),m_numGraphicsInstances(0),m_instanceOffset(0),m_vertexArrayOffset(0),m_primitiveType(BT_GL_TRIANGLES),m_texturehandle(0)
 	{
 	}
 
@@ -97,6 +99,8 @@ struct InternalDataRenderer : public GLInstanceRendererInternalData
 	float m_mouseYpos;
 	bool m_mouseInitialized;
 	
+	GLuint				m_defaultTexturehandle;
+
 	InternalDataRenderer() :
 		m_cameraPosition(btVector3(0,0,0)),
 		m_cameraTargetPosition(btVector3(15,2,-24)),
@@ -188,7 +192,7 @@ static GLuint               instancingShader;        // The instancing renderer
 static GLuint               instancingShaderPointSprite;        // The point sprite instancing renderer
 
 
-static GLuint				m_texturehandle;
+
 
 static bool                 done = false;
 static GLint                angle_loc = 0;
@@ -222,7 +226,24 @@ GLInstancingRenderer::GLInstancingRenderer(int maxNumObjectCapacity, int maxShap
 
 GLInstancingRenderer::~GLInstancingRenderer()
 {
+	for (int i=0;i<m_graphicsInstances.size();i++)
+	{
+		if (m_graphicsInstances[i]->m_index_vbo)
+		{
+			glDeleteBuffers(1,&m_graphicsInstances[i]->m_index_vbo);
+		}
+		if (m_graphicsInstances[i]->m_cube_vao)
+		{
+			glDeleteVertexArrays(1,&m_graphicsInstances[i]->m_cube_vao);
+		}
+	}
 	sData2=0;
+
+	if (m_data)
+	{
+		if (m_data->m_vbo)
+			glDeleteBuffers(1,&m_data->m_vbo);
+	}
 	delete m_data;
 }
 
@@ -808,8 +829,8 @@ void GLInstancingRenderer::init()
 					}
 				}
 
-				glGenTextures(1,(GLuint*)&m_texturehandle);
-				glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+				glGenTextures(1,(GLuint*)&m_data->m_defaultTexturehandle);
+				glBindTexture(GL_TEXTURE_2D,m_data->m_defaultTexturehandle);
 				err = glGetError();
 				assert(err==GL_NO_ERROR);
 	#if 0
@@ -851,7 +872,7 @@ void GLInstancingRenderer::init()
 			err = glGetError();
 			assert(err==GL_NO_ERROR);
         
-			glBindTexture(GL_TEXTURE_2D,m_texturehandle);
+			glBindTexture(GL_TEXTURE_2D,m_data->m_defaultTexturehandle);
 			err = glGetError();
 			assert(err==GL_NO_ERROR);
         
@@ -1250,13 +1271,12 @@ void GLInstancingRenderer::RenderScene(void)
 					glDrawElementsInstanced(GL_POINTS, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
 				} else
 				{
-				glUseProgram(instancingShader);
+					glUseProgram(instancingShader);
 					glUniform1f(angle_loc, 0);
 					glUniformMatrix4fv(ProjectionMatrix, 1, false, &projectionMatrix[0]);
 					glUniformMatrix4fv(ModelViewMatrix, 1, false, &modelviewMatrix[0]);
 					glUniform1i(uniform_texture_diffuse, 0);
 					glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)indexOffset, gfxObj->m_numGraphicsInstances);
-					
 				}
 
 				

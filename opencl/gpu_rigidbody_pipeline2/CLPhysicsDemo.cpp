@@ -63,7 +63,6 @@ const char* g_deviceName = 0;
 bool runOpenCLKernels = true;
 
 
-btGpuNarrowphaseAndSolver* narrowphaseAndSolver = 0;
 ConvexHeightField* s_convexHeightField = 0 ;
 
 
@@ -176,20 +175,21 @@ CLPhysicsDemo::CLPhysicsDemo(int maxShapeBufferCapacity, int maxNumObjects)
 
 CLPhysicsDemo::~CLPhysicsDemo()
 {
-
+	delete m_narrowphaseAndSolver;
+	m_narrowphaseAndSolver = 0;
 }
 
 void	CLPhysicsDemo::readbackBodiesToCpu()
 {
-	if (narrowphaseAndSolver)
-		narrowphaseAndSolver->readbackAllBodiesToCpu();
+	if (m_narrowphaseAndSolver)
+		m_narrowphaseAndSolver->readbackAllBodiesToCpu();
 
 }
 	
 void	CLPhysicsDemo::getObjectTransformFromCpu(float* position, float* orientation, int objectIndex)
 {
-	if (narrowphaseAndSolver)
-		narrowphaseAndSolver->getObjectTransformFromCpu(position,orientation,objectIndex);
+	if (m_narrowphaseAndSolver)
+		m_narrowphaseAndSolver->getObjectTransformFromCpu(position,orientation,objectIndex);
 }
 
 
@@ -201,8 +201,8 @@ void CLPhysicsDemo::writeBodiesToGpu()
 
 	writeVelocitiesToGpu();
 	
-	if (narrowphaseAndSolver)
-		narrowphaseAndSolver->writeAllBodiesToGpu();
+	if (m_narrowphaseAndSolver)
+		m_narrowphaseAndSolver->writeAllBodiesToGpu();
 
 	
 }
@@ -210,11 +210,11 @@ void CLPhysicsDemo::writeBodiesToGpu()
 int		CLPhysicsDemo::registerCompoundShape(btAlignedObjectArray<btGpuChildShape>* childShapes)
 {
 	
-	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
-	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	int collidableIndex = m_narrowphaseAndSolver->allocateCollidable();
+	btCollidable& col = m_narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	col.m_shapeType = CollisionShape::SHAPE_COMPOUND_OF_CONVEX_HULLS;
 	
-	col.m_shapeIndex = narrowphaseAndSolver->registerCompoundShape(childShapes);
+	col.m_shapeIndex = m_narrowphaseAndSolver->registerCompoundShape(childShapes);
 	col.m_numChildShapes = childShapes->size();
 	
 	
@@ -226,7 +226,7 @@ int		CLPhysicsDemo::registerCompoundShape(btAlignedObjectArray<btGpuChildShape>*
 	for (int i=0;i<childShapes->size();i++)
 	{
 		int childColIndex = childShapes->at(i).m_shapeIndex;
-		btCollidable& childCol = narrowphaseAndSolver->getCollidableCpu(childColIndex);
+		btCollidable& childCol = m_narrowphaseAndSolver->getCollidableCpu(childColIndex);
 		btAABBHost aabbMinLoc =m_data->m_localShapeAABBCPU->at(childColIndex*2);
 		btAABBHost aabbMaxLoc =m_data->m_localShapeAABBCPU->at(childColIndex*2+1);
 
@@ -280,11 +280,11 @@ int		CLPhysicsDemo::registerConcaveMesh(btAlignedObjectArray<btVector3>* vertice
 {
 	btVector3 scaling(scaling1[0],scaling1[1],scaling1[2]);
 
-	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
-	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	int collidableIndex = m_narrowphaseAndSolver->allocateCollidable();
+	btCollidable& col = m_narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	
 	col.m_shapeType = CollisionShape::SHAPE_CONCAVE_TRIMESH;
-	col.m_shapeIndex = narrowphaseAndSolver->registerConcaveMeshShape(vertices,indices,col,scaling);
+	col.m_shapeIndex = m_narrowphaseAndSolver->registerConcaveMeshShape(vertices,indices,col,scaling);
 
 	
 
@@ -322,9 +322,9 @@ int		CLPhysicsDemo::registerConcaveMesh(btAlignedObjectArray<btVector3>* vertice
 
 int		CLPhysicsDemo::registerConvexPolyhedron(btConvexUtility* utilPtr , bool noHeightField)
 {
-	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+	int collidableIndex = m_narrowphaseAndSolver->allocateCollidable();
 
-	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	btCollidable& col = m_narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	col.m_shapeType = CollisionShape::SHAPE_CONVEX_HULL;
 	col.m_shapeIndex = -1;
 	
@@ -349,7 +349,7 @@ int		CLPhysicsDemo::registerConvexPolyhedron(btConvexUtility* utilPtr , bool noH
 
 
 
-	if (narrowphaseAndSolver)
+	if (m_narrowphaseAndSolver)
 	{
 		btVector3 localCenter(0,0,0);
 		for (int i=0;i<utilPtr->m_vertices.size();i++)
@@ -358,11 +358,11 @@ int		CLPhysicsDemo::registerConvexPolyhedron(btConvexUtility* utilPtr , bool noH
 		utilPtr->m_localCenter = localCenter;
 
 		if (useConvexHeightfield)
-		col.m_shapeIndex = narrowphaseAndSolver->registerConvexHeightfield(s_convexHeightField,col);
+		col.m_shapeIndex = m_narrowphaseAndSolver->registerConvexHeightfield(s_convexHeightField,col);
 		else
 		{
-			col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
-			//col.m_shapeIndex = narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
+			col.m_shapeIndex = m_narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
+			//col.m_shapeIndex = m_narrowphaseAndSolver->registerConvexHullShape(utilPtr,col);
 
 		}
 	}
@@ -411,9 +411,9 @@ int		CLPhysicsDemo::registerConvexPolyhedron(btConvexUtility* utilPtr , bool noH
 
 int		CLPhysicsDemo::registerSphereShape(float radius)
 {
-	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+	int collidableIndex = m_narrowphaseAndSolver->allocateCollidable();
 
-	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	btCollidable& col = m_narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	col.m_shapeType = CollisionShape::SHAPE_SPHERE;
 	col.m_shapeIndex = 0;
 	col.m_radius = radius;
@@ -450,11 +450,11 @@ int		CLPhysicsDemo::registerSphereShape(float radius)
 
 int		CLPhysicsDemo::registerPlaneShape(const btVector3& planeNormal, float planeConstant)
 {
-	int collidableIndex = narrowphaseAndSolver->allocateCollidable();
+	int collidableIndex = m_narrowphaseAndSolver->allocateCollidable();
 
-	btCollidable& col = narrowphaseAndSolver->getCollidableCpu(collidableIndex);
+	btCollidable& col = m_narrowphaseAndSolver->getCollidableCpu(collidableIndex);
 	col.m_shapeType = CollisionShape::SHAPE_PLANE;
-	col.m_shapeIndex = narrowphaseAndSolver->registerFace(planeNormal,planeConstant);
+	col.m_shapeIndex = m_narrowphaseAndSolver->registerFace(planeNormal,planeConstant);
 	col.m_radius = planeConstant;
 	
 	if (col.m_shapeIndex>=0)
@@ -575,10 +575,10 @@ int		CLPhysicsDemo::registerPhysicsInstance(float mass, const float* position, c
 	
 	
 
-	if (narrowphaseAndSolver)
+	if (m_narrowphaseAndSolver)
 	{
-		//bodyIndex = narrowphaseAndSolver->registerRigidBody(collisionShapeIndex,CollisionShape::SHAPE_CONVEX_HEIGHT_FIELD,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
-		bodyIndex = narrowphaseAndSolver->registerRigidBody(collidableIndex,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+		//bodyIndex = m_narrowphaseAndSolver->registerRigidBody(collisionShapeIndex,CollisionShape::SHAPE_CONVEX_HEIGHT_FIELD,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
+		bodyIndex = m_narrowphaseAndSolver->registerRigidBody(collidableIndex,mass,position,orientation,&aabbMin.getX(),&aabbMax.getX(),writeToGpu);
 		
 
 	}
@@ -598,7 +598,7 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 	InitCL(preferredDevice,preferredPlatform,useInterop);
 
 
-	narrowphaseAndSolver = new btGpuNarrowphaseAndSolver(g_cxMainContext,g_device,g_cqCommandQue);
+	m_narrowphaseAndSolver = new btGpuNarrowphaseAndSolver(g_cxMainContext,g_device,g_cqCommandQue);
 
 	
 	//adl::Solver<adl::TYPE_CL>::allocate(g_deviceCL->allocate(
@@ -659,7 +659,7 @@ void CLPhysicsDemo::writeVelocitiesToGpu()
 
 void	CLPhysicsDemo::cleanup()
 {
-	delete narrowphaseAndSolver;
+	delete m_narrowphaseAndSolver;
 
 	delete m_data->m_linVelBuf;
 	delete m_data->m_angVelBuf;
@@ -680,7 +680,7 @@ void	CLPhysicsDemo::cleanup()
 
 void	CLPhysicsDemo::setObjectTransform(const float* position, const float* orientation, int objectIndex)
 {
-	narrowphaseAndSolver->setObjectTransform(position, orientation, objectIndex);
+	m_narrowphaseAndSolver->setObjectTransform(position, orientation, objectIndex);
 }
 
 void	CLPhysicsDemo::setObjectLinearVelocity(const float* linVel, int objectIndex)
@@ -759,7 +759,7 @@ void	CLPhysicsDemo::stepSimulation()
 
 		{
 			BT_PROFILE("setupGpuAabbs");
-			setupGpuAabbsFull(gFpIO,narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getCollidablesGpu() );
+			setupGpuAabbsFull(gFpIO,m_narrowphaseAndSolver->getBodiesGpu(), m_narrowphaseAndSolver->getCollidablesGpu() );
         //    setupGpuAabbsSimple(gFpIO);
 		}
 
@@ -794,28 +794,28 @@ void	CLPhysicsDemo::stepSimulation()
 			{
 				{
 					BT_PROFILE("setupBodies");
-					if (narrowphaseAndSolver)
-						setupBodies(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu(), narrowphaseAndSolver->getBodyInertiasGpu());
+					if (m_narrowphaseAndSolver)
+						setupBodies(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), m_narrowphaseAndSolver->getBodiesGpu(), m_narrowphaseAndSolver->getBodyInertiasGpu());
 				}
 				
 				{
 					BT_PROFILE("computeContacts");
-					if (narrowphaseAndSolver)
-						narrowphaseAndSolver->computeContacts(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap, gFpIO.m_dAABB,gFpIO.m_numObjects);
+					if (m_narrowphaseAndSolver)
+						m_narrowphaseAndSolver->computeContacts(gFpIO.m_dAllOverlappingPairs,gFpIO.m_numOverlap, gFpIO.m_dAABB,gFpIO.m_numObjects);
 				}
 
 				bool useOpenCLSolver = true;
 				if (useOpenCLSolver)
 				{
 					BT_PROFILE("solve Contact Constraints (OpenCL)");
-					if (narrowphaseAndSolver)
-						narrowphaseAndSolver->solveContacts();
+					if (m_narrowphaseAndSolver)
+						m_narrowphaseAndSolver->solveContacts();
 				} else
 				{
 					BT_PROFILE("solve Contact Constraints CPU/serial");
-					if (narrowphaseAndSolver && m_data->m_pgsSolver && narrowphaseAndSolver->getNumContactsGpu())
+					if (m_narrowphaseAndSolver && m_data->m_pgsSolver && m_narrowphaseAndSolver->getNumContactsGpu())
 					{
-						btGpuNarrowphaseAndSolver* np = narrowphaseAndSolver;
+						btGpuNarrowphaseAndSolver* np = m_narrowphaseAndSolver;
 						
 						btAlignedObjectArray<RigidBodyBase::Body> hostBodies;
 						btOpenCLArray<RigidBodyBase::Body> gpuBodies(g_cxMainContext,g_cqCommandQue,0,true);
@@ -847,8 +847,8 @@ void	CLPhysicsDemo::stepSimulation()
 				
 				{
 					BT_PROFILE("copyBodyVelocities");
-					if (narrowphaseAndSolver)
-						copyBodyVelocities(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), narrowphaseAndSolver->getBodiesGpu());
+					if (m_narrowphaseAndSolver)
+						copyBodyVelocities(gFpIO, m_data->m_linVelBuf->getBufferCL(), m_data->m_angVelBuf->getBufferCL(), m_narrowphaseAndSolver->getBodiesGpu());
 
 				}
 			}
@@ -873,7 +873,7 @@ void	CLPhysicsDemo::stepSimulation()
 
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 0, sizeof(int), &offset);
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 1, sizeof(int), &numObjects);
-					cl_mem bodyGpuBuffer = narrowphaseAndSolver->getBodiesGpu();
+					cl_mem bodyGpuBuffer = m_narrowphaseAndSolver->getBodiesGpu();
 					ciErrNum = clSetKernelArg(g_integrateTransformsKernel2, 2, sizeof(cl_mem), (void*)&bodyGpuBuffer );
 	
 					cl_mem lv = m_data->m_linVelBuf->getBufferCL();
@@ -932,5 +932,5 @@ void	CLPhysicsDemo::stepSimulation()
 
 cl_mem	CLPhysicsDemo::getBodiesGpu()
 {
-	return narrowphaseAndSolver->getBodiesGpu();
+	return m_narrowphaseAndSolver->getBodiesGpu();
 }

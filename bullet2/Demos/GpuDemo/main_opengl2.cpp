@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
 
 	{
-		GpuDemo* demo = new GpuDemo1;
+		GpuDemo* demo = new GpuBoxDemo;
 		
 		//demo->myinit();
 
@@ -86,6 +86,7 @@ int main(int argc, char* argv[])
 		btAssert(err==GL_NO_ERROR);
 		
 		GpuDemo::ConstructionInfo ci;
+		ci.useOpenCL = true;
 		demo->initPhysics(ci);
 		err = glGetError();
 		btAssert(err==GL_NO_ERROR);

@@ -16,9 +16,9 @@ static char* particleKernelsString =
 #include "LinearMath/btQuickprof.h"
 
 //1000000 particles
-#define NUM_PARTICLES_X 100
-#define NUM_PARTICLES_Y 100
-#define NUM_PARTICLES_Z 100
+//#define NUM_PARTICLES_X 100
+//#define NUM_PARTICLES_Y 100
+//#define NUM_PARTICLES_Z 100
 
 //512k particles
 //#define NUM_PARTICLES_X 80
@@ -26,9 +26,9 @@ static char* particleKernelsString =
 //#define NUM_PARTICLES_Z 80
 
 //256k particles
-//#define NUM_PARTICLES_X 60
-//#define NUM_PARTICLES_Y 60
-//#define NUM_PARTICLES_Z 60
+#define NUM_PARTICLES_X 60
+#define NUM_PARTICLES_Y 60
+#define NUM_PARTICLES_Z 60
 
 //27k particles
 //#define NUM_PARTICLES_X 30
@@ -168,9 +168,20 @@ void ParticleDemo::setupScene(const ConstructionInfo& ci)
 	m_instancingRenderer = ci.m_instancingRenderer;
 
 	int strideInBytes = 9*sizeof(float);
-	int numVertices = sizeof(point_sphere_vertices)/strideInBytes;
-	int numIndices = sizeof(point_sphere_indices)/sizeof(int);
-	int shapeId = m_instancingRenderer->registerShape(&point_sphere_vertices[0],numVertices,point_sphere_indices,numIndices,BT_GL_POINTS);
+	bool pointSprite = true;
+	int shapeId =-1;
+
+	if (pointSprite)
+	{
+		int numVertices = sizeof(point_sphere_vertices)/strideInBytes;
+		int numIndices = sizeof(point_sphere_indices)/sizeof(int);
+		shapeId = m_instancingRenderer->registerShape(&point_sphere_vertices[0],numVertices,point_sphere_indices,numIndices,BT_GL_POINTS);
+	} else
+	{
+		int numVertices = sizeof(low_sphere_vertices)/strideInBytes;
+		int numIndices = sizeof(low_sphere_indices)/sizeof(int);
+		shapeId = m_instancingRenderer->registerShape(&low_sphere_vertices[0],numVertices,low_sphere_indices,numIndices);
+	}
 
 	float position[4] = {0,0,0,0};
 	float quaternion[4] = {0,0,0,1};
