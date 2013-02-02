@@ -56,7 +56,7 @@ extern bool useConvexHeightfield;
 extern const char* g_deviceName;
 
 #ifdef _WIN32
-bool useInterop = false;
+bool useInterop = true;
 #else
 bool useInterop = false;
 #endif
