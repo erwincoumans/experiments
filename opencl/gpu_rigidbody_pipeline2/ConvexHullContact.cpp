@@ -52,7 +52,7 @@ m_totalContactsOut(m_context, m_queue)
 	if (1)
 	{
 		const char* src = satKernelsCL;
-		cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/sat.cl");
+		cl_program satProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,src,&errNum,"","opencl/gpu_rigidbody_pipeline2/sat.cl");
 		btAssert(errNum==CL_SUCCESS);
 
 		m_findSeparatingAxisKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,src, "findSeparatingAxisKernel",&errNum,satProg );
@@ -67,7 +67,7 @@ m_totalContactsOut(m_context, m_queue)
 	if (1)
 	{
 		const char* srcClip = satClipKernelsCL;
-		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,srcClip,&errNum,"","../../opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
+		cl_program satClipContactsProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,srcClip,&errNum,"","opencl/gpu_rigidbody_pipeline2/satClipHullContacts.cl");
 		btAssert(errNum==CL_SUCCESS);
 
 		m_clipHullHullKernel = btOpenCLUtils::compileCLKernelFromString(m_context, m_device,srcClip, "clipHullHullKernel",&errNum,satClipContactsProg);

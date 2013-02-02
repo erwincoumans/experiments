@@ -46,7 +46,7 @@ void btGpuDynamicsWorld::exitOpenCL()
 int		btGpuDynamicsWorld::stepSimulation( btScalar timeStep,int maxSubSteps, btScalar fixedTimeStep)
 {
 #ifndef BT_NO_PROFILE
-	CProfileManager::Reset();
+//	CProfileManager::Reset();
 #endif //BT_NO_PROFILE
 
 	BT_PROFILE("stepSimulation");
@@ -86,7 +86,7 @@ int		btGpuDynamicsWorld::stepSimulation( btScalar timeStep,int maxSubSteps, btSc
 
 
 #ifndef BT_NO_PROFILE
-	CProfileManager::Increment_Frame_Counter();
+	//CProfileManager::Increment_Frame_Counter();
 #endif //BT_NO_PROFILE
 
 

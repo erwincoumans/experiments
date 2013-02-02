@@ -17,7 +17,7 @@ subject to the following restrictions:
 #ifdef RELEASE_ME
 #define COMPUTE_AABB_KERNEL_PATH "computeAabbKernelOCL.cl"
 #else
-#define COMPUTE_AABB_KERNEL_PATH "../../opencl/broadphase_benchmark/computeAabbKernelOCL.cl"
+#define COMPUTE_AABB_KERNEL_PATH "opencl/broadphase_benchmark/computeAabbKernelOCL.cl"
 #endif
 
 

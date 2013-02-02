@@ -28,9 +28,9 @@ m_gpuSmallSortedAabbs(ctx,q)
     
 	cl_int errNum=0;
 
-	cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapSrc,&errNum,"","../../opencl/broadphase_benchmark/sap.cl");
+	cl_program sapProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapSrc,&errNum,"","opencl/broadphase_benchmark/sap.cl");
 	btAssert(errNum==CL_SUCCESS);
-	cl_program sapFastProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapFastSrc,&errNum,"","../../opencl/broadphase_benchmark/sapFast.cl");
+	cl_program sapFastProg = btOpenCLUtils::compileCLProgramFromString(m_context,m_device,sapFastSrc,&errNum,"","opencl/broadphase_benchmark/sapFast.cl");
 	btAssert(errNum==CL_SUCCESS);
 
 	

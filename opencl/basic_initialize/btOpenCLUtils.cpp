@@ -280,7 +280,6 @@ cl_context btOpenCLUtils_createContextFromType(cl_device_type deviceType, cl_int
 					cl_platform_id tmpPlatform = platforms[0];
 					platforms[0] = platforms[i];
 					platforms[i] = tmpPlatform;
-					break;
 				}
 			}
 		}
