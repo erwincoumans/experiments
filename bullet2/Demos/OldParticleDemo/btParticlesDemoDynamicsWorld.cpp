@@ -272,11 +272,6 @@ void btParticlesDynamicsWorld::grabSimulationData()
 	m_simParams.m_particleRad = m_particleRad;
 	m_simParams.m_globalDamping = 1.0f;
 	m_simParams.m_boundaryDamping = -0.5f;
-
-//	m_simParams.m_collisionDamping = 0.02f;
-//	m_simParams.m_spring = 0.5f;
-//	m_simParams.m_shear = 0.1f;
-//	m_simParams.m_attraction = 0.0f;
 	m_simParams.m_collisionDamping = 0.025f;//0.02f;
 	m_simParams.m_spring = 0.5f;
 	m_simParams.m_shear = 0.1f;

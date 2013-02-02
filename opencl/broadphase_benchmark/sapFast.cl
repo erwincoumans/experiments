@@ -57,7 +57,7 @@ __kernel void   computePairsKernel( __global const btAabbCL* aabbs, volatile __g
 	__local int breakRequest[1];
 	__local btAabbCL localAabbs[128];// = aabbs[i];
 	
-	int2 myPairs[128];
+	int2 myPairs[64];
 	
 	btAabbCL myAabb;
 	

@@ -39,6 +39,7 @@ extern bool useConvexHeightfield;
 #include "../broadphase_benchmark/btGridBroadphaseCl.h"
 //#else
 #include "btGpuSapBroadphase.h"
+
 //#endif //USE_GRID_BROADPHASE
 
 
