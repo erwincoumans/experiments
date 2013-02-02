@@ -56,9 +56,9 @@ extern bool useConvexHeightfield;
 extern const char* g_deviceName;
 
 #ifdef _WIN32
-bool useInterop = true;
+int useInterop = 1;//1;
 #else
-bool useInterop = false;
+int useInterop = 0;
 #endif
 
 #ifdef _WIN32
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 			{
 				printf("unknown", buf);
 			}
-			sprintf(fileName,"%s_%s_%s_date_%d-%d-%d_time_%d-%d-%d.csv",g_deviceName,buf,"gpu_rigidbody_pipeline2",time.wDay,time.wMonth,time.wYear,time.wHour,time.wMinute,time.wSecond);
+			sprintf(fileName,"%s_%s_%s_time_%d-%d-%d_date_%d-%d-%d.csv",g_deviceName,buf,"gpu_rigidbody_pipeline2",time.wHour,time.wMinute,time.wSecond,time.wDay,time.wMonth,time.wYear);
 			
 			printf("Open file %s\n", fileName);
 #else
@@ -220,8 +220,8 @@ int main(int argc, char* argv[])
 #endif //_WIN32
 
 		f=fopen(fileName,"w");
-		if (f)
-			fprintf(f,"%s (%dx%dx%d=%d),\n",  g_deviceName,NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z, NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z);
+		//if (f)
+		//	fprintf(f,"%s (%dx%dx%d=%d),\n",  g_deviceName,NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z, NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z);
 	}
 
 
@@ -467,7 +467,7 @@ void	DumpSimulationTime(FILE* f)
 	if (headersOnce)
 	{
 		headersOnce = false;
-		fprintf(f,"root,");
+		fprintf(f,"total (%dx%dx%d interop=%d),",NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z,useInterop);
 
 			for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
 		{
