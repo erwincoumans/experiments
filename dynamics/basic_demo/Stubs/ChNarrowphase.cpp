@@ -15,7 +15,7 @@ subject to the following restrictions:
 
 
 //#define PATH "..\\..\\dynamics\\basic_demo\\Stubs\\ChNarrowphaseKernels"
-#define NARROWPHASE_KERNEL_PATH "..\\../dynamics/basic_demo/Stubs/ChNarrowphaseKernels.cl"
+#define NARROWPHASE_KERNEL_PATH "dynamics/basic_demo/Stubs/ChNarrowphaseKernels.cl"
 #define KERNEL0 "SupportCullingKernel"
 #define KERNEL1 "NarrowphaseKernel"
 

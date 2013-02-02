@@ -22,7 +22,7 @@ subject to the following restrictions:
 #define SOLVER_CONTACT_KERNEL_PATH "dynamics/basic_demo/Stubs/solveContact.cl"
 #define SOLVER_FRICTION_KERNEL_PATH "dynamics/basic_demo/Stubs/solveFriction.cl"
 
-#define BATCHING_PATH "../../dynamics/basic_demo/Stubs/batchingKernels.cl"
+#define BATCHING_PATH "dynamics/basic_demo/Stubs/batchingKernels.cl"
 
 
 #include "solverSetup.h"

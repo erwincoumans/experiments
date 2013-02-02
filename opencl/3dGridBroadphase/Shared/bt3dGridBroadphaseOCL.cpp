@@ -26,7 +26,7 @@ subject to the following restrictions:
 
 #define ADD_BLOCKING_CL_FINISH_FOR_BENCHMARK
 
-#define GRID_OCL_PATH "..\\..\\opencl\\3dGridBroadphase\\Shared\\bt3dGridBroadphaseOCL.cl"
+#define GRID_OCL_PATH "opencl/3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.cl"
 
 
 #define MSTRINGIFY(A) #A

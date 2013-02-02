@@ -51,7 +51,7 @@ extern bool useConvexHeightfield;
 static char* interopKernelString = 
 #include "../broadphase_benchmark/integrateKernel.cl"
 
-#define INTEROPKERNEL_SRC_PATH "../../opencl/broadphase_benchmark/integrateKernel.cl"
+#define INTEROPKERNEL_SRC_PATH "opencl/broadphase_benchmark/integrateKernel.cl"
 	
 cl_kernel g_integrateTransformsKernel;
 cl_kernel g_integrateTransformsKernel2;
@@ -660,6 +660,7 @@ void CLPhysicsDemo::writeVelocitiesToGpu()
 void	CLPhysicsDemo::cleanup()
 {
 	delete m_narrowphaseAndSolver;
+	m_narrowphaseAndSolver = 0;
 
 	delete m_data->m_linVelBuf;
 	delete m_data->m_angVelBuf;

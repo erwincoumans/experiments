@@ -23,7 +23,9 @@ subject to the following restrictions:
 #include "GLInstanceRendererInternalData.h"
 
 #ifdef _WIN32
+
 #include "Win32OpenGLWindow.h"
+#include <Windows.h> // for time/date
 #else
 #include "../rendertest/MacOpenGLWindow.h"
 #endif
@@ -46,14 +48,15 @@ extern cl_device_id		g_device;
 bool printStats  = true;
 bool pauseSimulation = false;
 bool shootObject = false;
+bool benchmark = false;
 
 extern int numPairsOut;
 extern int numPairsTotal;
 extern bool useConvexHeightfield;
-
+extern const char* g_deviceName;
 
 #ifdef _WIN32
-bool useInterop = false;//true;
+bool useInterop = false;
 #else
 bool useInterop = false;
 #endif
@@ -71,7 +74,7 @@ char* hostPtr=0;
 cl_bool blocking=  CL_TRUE;
 
 
-
+void DumpSimulationTime(FILE* f);
 void GL2CL(CLPhysicsDemo& demo,GLInstancingRenderer& render);
 void CL2GL(CLPhysicsDemo& demo);
 extern btFindPairsIO gFpIO;
@@ -85,10 +88,10 @@ extern float X_GAP;
 extern float Y_GAP;
 extern float Z_GAP;
 
-char* fileName="../../bin/1000 stack.bullet";
+char* bulletFileName="../../bin/1000 stack.bullet";
 void Usage()
 {
-	printf("\nprogram.exe [--pause_simulation=<0 or 1>] [--load_bulletfile=test.bullet] [--enable_interop=<0 or 1>] [--enable_gpusap=<0 or 1>] [--enable_convexheightfield=<0 or 1>] [--enable_static=<0 or 1>] [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
+	printf("\nprogram.exe [--pause_simulation=<0 or 1>] [--cl_platform=<int>] [--load_bulletfile=test.bullet] [--enable_interop=<0 or 1>] [--enable_gpusap=<0 or 1>] [--enable_convexheightfield=<0 or 1>] [--enable_static=<0 or 1>] [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>]\n"); 
 };
 
 int main(int argc, char* argv[])
@@ -126,13 +129,23 @@ int main(int argc, char* argv[])
 	args.GetCmdLineArgument("enable_static", keepStaticObjects);
 	printf("enable_static=%d\n",keepStaticObjects);	
 
+	int preferred_platform = -1;
+	int preferred_device = -1;
+
+	args.GetCmdLineArgument("cl_device", preferred_device);
+	args.GetCmdLineArgument("cl_platform", preferred_platform);
+
+	
 	
 	char* tmpfile = 0;
 	args.GetCmdLineArgument("load_bulletfile", tmpfile );
 	if (tmpfile)
-		fileName = tmpfile;
+		bulletFileName = tmpfile;
 
-	printf("load_bulletfile=%s\n",fileName);
+	printf("load_bulletfile=%s\n",bulletFileName);
+
+	benchmark=args.CheckCmdLineFlag("benchmark");
+	
 
 	
 	printf("\n");
@@ -160,7 +173,7 @@ int main(int argc, char* argv[])
 	CLPhysicsDemo demo(render.getMaxShapeCapacity(), MAX_CONVEX_BODIES_CL);
 	
 	
-	demo.init(-1,-1,useInterop);
+	demo.init(preferred_device,preferred_platform,useInterop);
 	
 
 	render.InitShaders();
@@ -173,12 +186,43 @@ int main(int argc, char* argv[])
 #endif
 	}
 
-	createScene(render, demo, useConvexHeightfield,fileName);
+	createScene(render, demo, useConvexHeightfield,bulletFileName);
 		
 
 	printf("numPhysicsInstances= %d\n", demo.m_numPhysicsInstances);
 	printf("numDynamicPhysicsInstances= %d\n", demo.m_numDynamicPhysicsInstances);
 	
+	FILE* f = 0;
+	
+	if (benchmark)
+	{
+		char fileName[1024];
+		
+#ifdef _WIN32
+			SYSTEMTIME time;
+			GetLocalTime(&time);
+			char buf[1024];
+			DWORD dwCompNameLen = 1024;
+			if (0 != GetComputerName(buf, &dwCompNameLen)) 
+			{
+				printf("%s", buf);
+			} else	
+			{
+				printf("unknown", buf);
+			}
+			sprintf(fileName,"%s_%s_%s_date_%d-%d-%d_time_%d-%d-%d.csv",g_deviceName,buf,"gpu_rigidbody_pipeline2",time.wDay,time.wMonth,time.wYear,time.wHour,time.wMinute,time.wSecond);
+			
+			printf("Open file %s\n", fileName);
+#else
+		char fileName[1024];
+		sprintf(fileName,"%s_%s_%d_%d_%d.txt",g_deviceName,"gpu_rigidbody_pipeline2",NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z);
+		printf("Open file %s\n", fileName);
+#endif //_WIN32
+
+		f=fopen(fileName,"w");
+		if (f)
+			fprintf(f,"%s (%dx%dx%d=%d),\n",  g_deviceName,NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z, NUM_OBJECTS_X*NUM_OBJECTS_Y*NUM_OBJECTS_Z);
+	}
 
 
 	render.writeTransforms();
@@ -252,14 +296,28 @@ int main(int argc, char* argv[])
 
 		
 
+		if (benchmark && f)
+		{
+			static int count=0;
+			
+			if (count>2 && count<102)
+			{
+				DumpSimulationTime(f);
+			}
+			if (count>=102)
+				window->setRequestExit();
+			count++;
+		}
+
 		
 		
 		 if (printStats && !pauseSimulation)
 		 {
-			static int count = 2;
+			static int count = 10;
 			count--;
-			if (count>0)
+			if (count<=0)
 			{
+				count = 100;
 
 				CProfileManager::dumpAll();
 				printf("total broadphase pairs= %d\n", numPairsTotal);
@@ -383,5 +441,66 @@ void CL2GL(CLPhysicsDemo& demo)
 	}
 
 	oclCHECKERROR(ciErrNum, CL_SUCCESS);
+
+}
+
+
+void	DumpSimulationTime(FILE* f)
+{
+	CProfileIterator* profileIterator = CProfileManager::Get_Iterator();
+
+	profileIterator->First();
+	if (profileIterator->Is_Done())
+		return;
+
+	float accumulated_time=0,parent_time = profileIterator->Is_Root() ? CProfileManager::Get_Time_Since_Reset() : profileIterator->Get_Current_Parent_Total_Time();
+	int i;
+	int frames_since_reset = CProfileManager::Get_Frame_Count_Since_Reset();
+	
+	//fprintf(f,"%.3f,",	parent_time );
+	float totalTime = 0.f;
+
+	
+	
+	static bool headersOnce = true;
+	
+	if (headersOnce)
+	{
+		headersOnce = false;
+		fprintf(f,"root,");
+
+			for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
+		{
+			float current_total_time = profileIterator->Get_Current_Total_Time();
+			accumulated_time += current_total_time;
+			float fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
+			const char* name = profileIterator->Get_Current_Name();
+			fprintf(f,"%s,",name);
+		}
+		fprintf(f,"\n");
+	}
+	
+	
+	fprintf(f,"%.3f,",parent_time);
+	profileIterator->First();
+	for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
+	{
+		float current_total_time = profileIterator->Get_Current_Total_Time();
+		accumulated_time += current_total_time;
+		float fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
+		const char* name = profileIterator->Get_Current_Name();
+		//if (!strcmp(name,"stepSimulation"))
+		{
+			fprintf(f,"%.3f,",current_total_time);
+		}
+		totalTime += current_total_time;
+		//recurse into children
+	}
+
+	fprintf(f,"\n");
+	
+	
+	CProfileManager::Release_Iterator(profileIterator);
+
 
 }
