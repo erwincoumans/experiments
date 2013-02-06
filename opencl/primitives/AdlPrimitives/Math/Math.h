@@ -23,7 +23,7 @@ subject to the following restrictions:
 #include <xmmintrin.h>
 
 
-#include <Adl/Adl.h>
+//#include <Adl/Adl.h>
 
 #include <algorithm>
 #define pxSort std::sort
@@ -153,8 +153,8 @@ T min2(const T& a, const T& b)
 }
 
 
-#include <AdlPrimitives/Math/Float4.inl>
-#include <AdlPrimitives/Math/Float2.inl>
+#include "Float4.inl"
+#include "Float2.inl"
 
 
 template<typename T>

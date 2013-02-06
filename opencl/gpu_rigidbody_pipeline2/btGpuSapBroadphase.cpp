@@ -331,6 +331,8 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 					launcher.launch2D( numLargeAabbs, numSmallAabbs,4,64);
                 
 					numPairs = pairCount.at(0);
+					if (numPairs >maxPairs)
+						numPairs =maxPairs;
 					
 				}
 			}
@@ -373,7 +375,8 @@ void  btGpuSapBroadphase::calculateOverlappingPairs(bool forceHost)
 				clFinish(m_queue);
                 
                 numPairs = pairCount.at(0);
-                
+                if (numPairs>maxPairs)
+					numPairs = maxPairs;
 			}
 			
 #else

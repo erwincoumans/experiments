@@ -13,7 +13,8 @@ subject to the following restrictions:
 */
 //Originally written by Takahiro Harada
 
-
+#include <assert.h>
+#define ADLASSERT assert
 //#define CHECK_ALIGNMENT(a) ADLASSERT((u32(&(a)) & 0xf) == 0);
 #define CHECK_ALIGNMENT(a) a;
 

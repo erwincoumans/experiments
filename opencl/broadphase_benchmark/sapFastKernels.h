@@ -59,7 +59,7 @@ static const char* sapFastCL= \
 "	__local int breakRequest[1];\n"
 "	__local btAabbCL localAabbs[128];// = aabbs[i];\n"
 "	\n"
-"	int2 myPairs[128];\n"
+"	int2 myPairs[64];\n"
 "	\n"
 "	btAabbCL myAabb;\n"
 "	\n"
