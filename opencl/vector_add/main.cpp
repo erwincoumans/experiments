@@ -6,7 +6,7 @@
 ///Apart from this include file, all other code should compile and work on OpenCL compliant implementation
 
 
-//#define LOAD_FROM_FILE
+#define LOAD_FROM_FILE
 
 #ifdef __APPLE__
 	#include <OpenCL/OpenCL.h>
@@ -23,6 +23,16 @@
 size_t wgSize;
 
 #include "VectorAddKernels.h"
+
+#ifdef CL_PLATFORM_INTEL
+	const char* preferredPlatform = "Intel(R) Corporation";
+#elif defined CL_PLATFORM_AMD
+	const char* preferredPlatform = "Advanced Micro Devices, Inc.";
+#elif defined CL_PLATFORM_NVIDIA
+	const char* preferredPlatform = "NVIDIA Corporation";
+#else
+	const char* preferredPlatform = "Unknown";
+#endif
 
 
 
@@ -91,7 +101,7 @@ void printDevInfo(cl_device_id device)
     // CL_DEVICE_MAX_WORK_GROUP_SIZE
     
     clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(workitem_size), &workitem_size, NULL);
-    printf(  " CL_DEVICE_MAX_WORK_ITEM_SIZES:\t%zu / %zu / %zu \n", workitem_size[0], workitem_size[1], workitem_size[2]);
+    printf(  " CL_DEVICE_MAX_WORK_ITEM_SIZES:\t%u / %u / %u \n", workitem_size[0], workitem_size[1], workitem_size[2]);
     
 }
 
@@ -160,8 +170,9 @@ int main(int argc, char **argv)
                                        NULL);
 
             platform = platforms[i];
-            if (!strcmp(pbuf, "Advanced Micro Devices, Inc.")) 
+			if (!strcmp(pbuf, preferredPlatform))
             {
+				printf("Found platform %s\n", preferredPlatform);
                 break;
             }
         }
@@ -211,13 +222,37 @@ int main(int argc, char **argv)
 
 	
 	// Read the OpenCL kernel in from source file
-	const char* cSourceFile = "VectorAddKernels.cl";
+	const char* cSourceFile = "opencl/vector_add/VectorAddKernels.cl";
 	
-    printf("loadProgSource (%s)...\n", cSourceFile); 
+    
     const char* cPathAndName = cSourceFile;
 #ifdef LOAD_FROM_FILE
 	size_t szKernelLength;
-    const char* cSourceCL = loadProgSource(cPathAndName, "", &szKernelLength);
+
+	const char* cSourceCL =0;
+	char relativeFileName[1024];
+
+	{
+		const char* prefix[]={"../","../../","../../../","../../../../"};
+		int numPrefixes = sizeof(prefix)/sizeof(char*);
+
+		for (int i=0;!cSourceCL && i<numPrefixes;i++)
+		{
+			
+			sprintf(relativeFileName,"%s%s",prefix[i],cSourceFile);
+			cSourceCL = loadProgSource(relativeFileName, "", &szKernelLength);
+			if (cSourceCL)
+			{
+				printf("Loaded program source: %s\n", relativeFileName); 
+			}
+		}
+	}
+
+	if (!cSourceCL)
+	{
+		printf("Couldn't find file %s, exiting\n",cSourceFile);
+		exit(0);
+	}
 #else
 	const char* cSourceCL = vectorAddCL;
 	size_t szKernelLength = strlen(cSourceCL);
@@ -236,10 +271,14 @@ int main(int argc, char **argv)
 	
     // Build the program with 'mad' Optimization option
 #ifdef MAC
-	char* flags = "-cl-mad-enable -DMAC -DGUID_ARG";
+	char* flags = "-cl-mad-enable -DMAC ";
 #else
-	const char* flags = "-DGUID_ARG=";
-#endif
+	char flags[1024]={0};
+#ifdef CL_PLATFORM_INTEL
+	sprintf(flags,"-g -s \"%s\"","C:/develop/experiments/opencl/vector_add/VectorAddKernels.cl");
+#endif//CL_PLATFORM_INTEL
+
+#endif//MAC
     ciErr1 = clBuildProgram(cpProgram, 0, NULL, flags, NULL, NULL);
     printf("clBuildProgram...\n"); 
     if (ciErr1 != CL_SUCCESS)
@@ -346,10 +385,10 @@ int main(int argc, char **argv)
 	
 	if (iErrorCount)
 	{
-		printf("MiniCL validation FAILED\n");
+		printf("Validation FAILED\n");
 	} else
 	{
-		printf("MiniCL validation SUCCESSFULL\n");
+		printf("Validation SUCCESSFULL\n");
 	}
     // Free host memory, close log and return success
 	for (i = 0; i < 3; i++)

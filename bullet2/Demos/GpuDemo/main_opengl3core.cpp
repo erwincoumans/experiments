@@ -1,6 +1,10 @@
 
 #include "GpuDemo.h"
 
+#ifdef _WIN32
+#include <Windows.h> //for GetLocalTime/GetSystemTime
+#endif
+
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
 #else
@@ -50,8 +54,9 @@ btAlignedObjectArray<const char*> demoNames;
 int selectedDemo = 0;
 GpuDemo::CreateFunc* allDemos[]=
 {
-	ParticleDemo::CreateFunc,
+
 	GpuBoxDemo::CreateFunc,
+		ParticleDemo::CreateFunc,
 	SpheresDemo::CreateFunc,
 	GpuCompoundDemo::CreateFunc,
 	EmptyDemo::CreateFunc,
@@ -277,23 +282,43 @@ void	DumpSimulationTime(FILE* f)
 	float totalTime = 0.f;
 
 	
-	int numChildren = 0;
 	
+	static bool headersOnce = true;
+	
+	if (headersOnce)
+	{
+		headersOnce = false;
+		fprintf(f,"root,");
+
+			for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
+		{
+			float current_total_time = profileIterator->Get_Current_Total_Time();
+			accumulated_time += current_total_time;
+			float fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
+			const char* name = profileIterator->Get_Current_Name();
+			fprintf(f,"%s,",name);
+		}
+		fprintf(f,"\n");
+	}
+	
+	
+	fprintf(f,"%.3f,",parent_time);
+	profileIterator->First();
 	for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
 	{
-		numChildren++;
 		float current_total_time = profileIterator->Get_Current_Total_Time();
 		accumulated_time += current_total_time;
 		float fraction = parent_time > SIMD_EPSILON ? (current_total_time / parent_time) * 100 : 0.f;
-		if (!strcmp(profileIterator->Get_Current_Name(),"stepSimulation"))
+		const char* name = profileIterator->Get_Current_Name();
+		//if (!strcmp(name,"stepSimulation"))
 		{
-			fprintf(f,"%.3f,\n",current_total_time);
+			fprintf(f,"%.3f,",current_total_time);
 		}
 		totalTime += current_total_time;
 		//recurse into children
 	}
 
-	
+	fprintf(f,"\n");
 	
 	
 	CProfileManager::Release_Iterator(profileIterator);
@@ -496,14 +521,35 @@ int main(int argc, char* argv[])
 		FILE* f = 0;
 		if (benchmark)
 		{
+			gPause = false;
 			char fileName[1024];
-			sprintf(fileName,"%s_%d_%d_%d.txt",g_deviceName,ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ);
-			printf("Open file %s\n", fileName);
 
+#ifdef _WIN32
+			SYSTEMTIME time;
+			GetLocalTime(&time);
+			char buf[1024];
+			DWORD dwCompNameLen = 1024;
+			if (0 != GetComputerName(buf, &dwCompNameLen)) 
+			{
+				printf("%s", buf);
+			} else	
+			{
+				printf("unknown", buf);
+			}
+			sprintf(fileName,"%s_%s_%s_%d_%d_%d_date_%d-%d-%d_time_%d-%d-%d.csv",g_deviceName,buf,demoNames[selectedDemo],ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ,time.wDay,time.wMonth,time.wYear,time.wHour,time.wMinute,time.wSecond);
+			
+			printf("Open file %s\n", fileName);
+#else
+			sprintf(fileName,"%s_%d_%d_%d.csv",g_deviceName,ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ);
+			printf("Open file %s\n", fileName);
+#endif
+			
+
+			//GetSystemTime(&time2);
 
 			f=fopen(fileName,"w");
-			if (f)
-				fprintf(f,"%s (%dx%dx%d=%d),\n",  g_deviceName,ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ,ci.arraySizeX*ci.arraySizeY*ci.arraySizeZ);
+			//if (f)
+			//	fprintf(f,"%s (%dx%dx%d=%d),\n",  g_deviceName,ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ,ci.arraySizeX*ci.arraySizeY*ci.arraySizeZ);
 		}
 
 		printf("-----------------------------------------------------\n");

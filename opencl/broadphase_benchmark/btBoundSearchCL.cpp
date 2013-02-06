@@ -13,7 +13,7 @@ subject to the following restrictions:
 */
 //Originally written by Takahiro Harada
 
-#define BOUNDSEARCH_PATH "../../opencl/primitives/AdlPrimitives/Search/BoundSearchKernels.cl"
+#define BOUNDSEARCH_PATH "opencl/primitives/AdlPrimitives/Search/BoundSearchKernels.cl"
 #define KERNEL0 "SearchSortDataLowerKernel"
 #define KERNEL1 "SearchSortDataUpperKernel"
 #define KERNEL2 "SubtractKernel"

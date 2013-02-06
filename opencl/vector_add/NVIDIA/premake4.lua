@@ -3,7 +3,7 @@
 	
 	if (hasCL) then
 
-		project "OpenCL_intialize_NVIDIA"
+		project "OpenCL_VectorAdd_NVIDIA"
 
 		initOpenCL_NVIDIA()
 	
@@ -12,12 +12,10 @@
 		kind "ConsoleApp"
 		targetdir "../../../bin"
 
---		includedirs {"..","../../../../include/gpu_research"}
-		
 		files {
 			"../main.cpp",
-			"../btOpenCLUtils.cpp",
-			"../btOpenCLUtils.h"
+			"../../basic_initialize/btOpenCLUtils.cpp",
+			"../../basic_initialize/btOpenCLUtils.h"
 		}
 		
 	end

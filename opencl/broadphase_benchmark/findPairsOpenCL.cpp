@@ -20,7 +20,7 @@ subject to the following restrictions:
 #define MSTRINGIFY(A) #A
 #include "broadphaseKernel.h"
 
-#define GRID_BROADPHASE_PATH "..\\..\\opencl\\broadphase_benchmark\\broadphaseKernel.cl"
+#define GRID_BROADPHASE_PATH "opencl/broadphase_benchmark/broadphaseKernel.cl"
 
 
 

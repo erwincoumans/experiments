@@ -151,6 +151,7 @@
 
 	include "../rendering/OpenGLES2Angle"
 
+include "../opencl/vector_add"
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
@@ -160,7 +161,7 @@
 	
 	
 	include "../opencl/compiler"
-	include "../opencl/vector_add"
+	
 	include "../opencl/opengl_interop"
 	include "../opencl/global_atomics"
 --	include "../opencl/integration"
