@@ -3,7 +3,7 @@
 #define BT_LAUNCHER_CL_H
 
 #include "btBufferInfoCL.h"
-#include "LinearMath/btMinMax.h"
+#include "../../bullet2/LinearMath/btMinMax.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
 #include <stdio.h>
 
