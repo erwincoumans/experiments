@@ -115,6 +115,8 @@
 	include "../bullet2"	
 	include "../jpeglib"
 
+
+
 	 if not _OPTIONS["ios"] then
 
 	
@@ -147,11 +149,19 @@
 
 	 include "../opencl/compiler"
 
- include "../opencl/gpu_narrowphase_test"
+	include "../opencl/primitives/AdlTest"
+
+	include "../opencl/gpu_narrowphase_test"
 
 	include "../rendering/OpenGLES2Angle"
 
-include "../opencl/vector_add"
+	include "../opencl/vector_add"
+
+	include "../opencl/benchmark/sort"
+
+	include "../opencl/3dGridBroadphase"
+	include "../opencl/broadphase_benchmark"
+	
 		if false then
 --	if true then
 --if not _OPTIONS["with-nacl"] then
@@ -166,12 +176,11 @@ include "../opencl/vector_add"
 	include "../opencl/global_atomics"
 --	include "../opencl/integration"
 
-	include "../opencl/benchmark/sort"
+	
 --	include "../opencl/primitives/benchmark"
 	include "../rendering/GLSL_Instancing"
 
-	include "../opencl/3dGridBroadphase"
-	include "../opencl/broadphase_benchmark"
+	
 --	include "../opencl/gpu_rigidbody_pipeline"
 	
 	include "../opencl/tests"

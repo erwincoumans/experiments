@@ -75,6 +75,16 @@ void btFillCL::execute(btOpenCLArray<unsigned int>& src, const unsigned int& val
 	}
 }
 
+void btFillCL::executeHost(btAlignedObjectArray<btInt2> &src, const btInt2 &value, int n, int offset)
+{
+	for (int i=0;i<n;i++)
+	{
+		src[i+offset]=value;
+	}
+}
+
+
+
 void btFillCL::execute(btOpenCLArray<btInt2> &src, const btInt2 &value, int n, int offset)
 {
 	btAssert( n>0 );

@@ -24,8 +24,20 @@
 		
 		files {
 			"../main.cpp",
-			"../RadixSortBenchmark.h",
-			"../UnitTests.h"
+			"../../../basic_initialize/btOpenCLInclude.h",
+			"../../../basic_initialize/btOpenCLUtils.cpp",
+			"../../../basic_initialize/btOpenCLUtils.h",
+			"../../../broadphase_benchmark/btFillCL.cpp",
+			"../../../broadphase_benchmark/btFillCL.h",
+			"../../../broadphase_benchmark/btBoundSearchCL.cpp",
+			"../../../broadphase_benchmark/btBoundSearchCL.h",
+			"../../../broadphase_benchmark/btPrefixScanCL.cpp",
+			"../../../broadphase_benchmark/btPrefixScanCL.h",
+			"../../../broadphase_benchmark/btRadixSort32CL.cpp",
+			"../../../broadphase_benchmark/btRadixSort32CL.h",
+			"../../../../bullet2/LinearMath/btAlignedAllocator.cpp",
+			"../../../../bullet2/LinearMath/btAlignedAllocator.h",
+			"../../../../bullet2/LinearMath/btAlignedObjectArray.h",
 		}
 		
 	end

@@ -2,7 +2,7 @@
 #define BT_FILL_CL_H
 
 #include "btOpenCLArray.h"
-#include "LinearMath/btScalar.h"
+#include "../../bullet2/LinearMath/btScalar.h"
 
 ATTRIBUTE_ALIGNED16(struct) btUnsignedInt4
 {
@@ -118,6 +118,8 @@ public:
 		void execute(btOpenCLArray<int>& src, const int& value, int n, int offset = 0);
 
 		void execute(btOpenCLArray<btInt2>& src, const btInt2& value, int n, int offset = 0);
+
+		void executeHost(btAlignedObjectArray<btInt2> &src, const btInt2 &value, int n, int offset);
 
 	//	void execute(btOpenCLArray<btInt4>& src, const btInt4& value, int n, int offset = 0);
 

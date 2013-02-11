@@ -96,3 +96,31 @@ void btPrefixScanCL::execute(btOpenCLArray<unsigned int>& src, btOpenCLArray<uns
 	}
 
 }
+
+
+void btPrefixScanCL::executeHost(btAlignedObjectArray<unsigned int>& src, btAlignedObjectArray<unsigned int>& dst, int n, unsigned int* sum)
+{
+	unsigned int s = 0;
+	//if( data->m_option == EXCLUSIVE )
+	{
+		for(int i=0; i<n; i++)
+		{
+			dst[i] = s;
+			s += src[i];
+		}
+	}
+	/*else
+	{
+		for(int i=0; i<n; i++)
+		{
+			s += hSrc[i];
+			hDst[i] = s;
+		}
+	}
+	*/
+
+	if( sum )
+	{
+		*sum = dst[n-1];
+	}
+}
