@@ -22,7 +22,7 @@ subject to the following restrictions:
 #include "../../../opencl/broadphase_benchmark/btLauncherCL.h"
 #include "../../../opencl/basic_initialize/btOpenCLUtils.h"
 
-#include "ChNarrowphase.h"
+#include "ChNarrowPhase.h"
 
 #include "ChNarrowphaseKernels.h"
 

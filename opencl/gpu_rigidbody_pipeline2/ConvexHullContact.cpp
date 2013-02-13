@@ -21,7 +21,7 @@ subject to the following restrictions:
 //#define BT_DEBUG_SAT_FACE
 
 #include "ConvexHullContact.h"
-
+#include <string.h>//memcpy
 #include "ConvexPolyhedronCL.h"
 
 typedef btAlignedObjectArray<btVector3> btVertexArray;

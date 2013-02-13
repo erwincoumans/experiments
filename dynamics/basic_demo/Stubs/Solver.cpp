@@ -263,7 +263,7 @@ void Solver::reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Bod
 }
 
 	static
-	__forceinline
+	inline
 	float calcRelVel(const float4& l0, const float4& l1, const float4& a0, const float4& a1, 
 					 const float4& linVel0, const float4& angVel0, const float4& linVel1, const float4& angVel1)
 	{
@@ -272,7 +272,7 @@ void Solver::reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Bod
 
 
 	static
-	__forceinline
+	inline
 	void setLinearAndAngular(const float4& n, const float4& r0, const float4& r1,
 							 float4& linear, float4& angular0, float4& angular1)
 	{

@@ -9,7 +9,7 @@
 #include "../gpu_rigidbody_pipeline2/ConvexPolyhedronCL.h"
 #include "../broadphase_benchmark/btOpenCLArray.h"
 #include "../gpu_rigidbody_pipeline/btCollidable.h"
-#include "../../dynamics/basic_demo/Stubs/ChNarrowphase.h"
+#include "../../dynamics/basic_demo/Stubs/ChNarrowPhase.h"
 
 
 struct btYetAnotherAabb

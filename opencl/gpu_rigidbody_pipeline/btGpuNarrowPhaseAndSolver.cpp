@@ -19,14 +19,14 @@
 bool useConvexHeightfield = false;
 bool enableExperimentalCpuConcaveCollision = false;
 
-#include "btGpuNarrowphaseAndSolver.h"
+#include "btGpuNarrowPhaseAndSolver.h"
 #include "../rendering/WavefrontObjLoader/objLoader.h"
 
 
 //#include "CustomConvexShape.h"
 //#include "CustomConvexPairCollision.h"
 #include "LinearMath/btQuickprof.h"
-
+#include <string.h>
 #include "../broadphase_benchmark/btLauncherCL.h"
 #include "../broadphase_benchmark/btRadixSort32CL.h"
 #include "LinearMath/btAabbUtil2.h"

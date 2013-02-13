@@ -36,7 +36,7 @@ extern bool useConvexHeightfield;
 
 //#define USE_GRID_BROADPHASE
 //#ifdef USE_GRID_BROADPHASE
-#include "../broadphase_benchmark/btGridBroadphaseCl.h"
+#include "../broadphase_benchmark/btGridBroadphaseCL.h"
 //#else
 #include "btGpuSapBroadphase.h"
 
@@ -119,8 +119,8 @@ void InitCL(int preferredDeviceIndex, int preferredPlatformIndex, bool useIntero
 	glDC = wglGetCurrentDC();
 #else //!_WIN32
 #ifndef __APPLE__
-    GLXContext glCtx = glXGetCurrentContext();
-    glDC = wglGetCurrentDC();//??
+    glCtx = 0;//GLXContext glCtx = glXGetCurrentContext();
+    glDC = 0;//wglGetCurrentDC();//??
 #endif
 #endif //!_WIN32
 
