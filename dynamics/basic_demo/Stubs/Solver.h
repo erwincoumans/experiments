@@ -131,11 +131,11 @@ class Solver : public SolverBase
 
 		virtual ~Solver();
 		
-		void reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+	/*	void reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 		const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf, 
 			btOpenCLArray<Contact4>* contactsIn, btOpenCLArray<Constraint4>* contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
-
+			*/
 		
 		void solveContactConstraint( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, const btOpenCLArray<RigidBodyBase::Inertia>* inertiaBuf, 
 			btOpenCLArray<Constraint4>* constraint, void* additionalData, int n ,int maxNumBatches);
@@ -149,10 +149,10 @@ class Solver : public SolverBase
 			btOpenCLArray<Contact4>* contactsIn, btOpenCLArray<Constraint4>* contactCOut, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
 
-		void sortContacts( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+	/*	void sortContacts( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 			btOpenCLArray<Contact4>* contactsIn, void* additionalData, 
 			int nContacts, const ConstraintCfg& cfg );
-
+			*/
 		void batchContacts( btOpenCLArray<Contact4>* contacts, int nContacts, btOpenCLArray<u32>* n, btOpenCLArray<u32>* offsets, int staticIdx );
 
 };

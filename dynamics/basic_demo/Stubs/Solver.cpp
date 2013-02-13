@@ -187,7 +187,7 @@ Solver::~Solver()
  
 
 
-void Solver::reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
+/*void Solver::reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 	const btOpenCLArray<RigidBodyBase::Inertia>* shapeBuf,
 	btOpenCLArray<Contact4>* contactsIn, btOpenCLArray<Constraint4>* contactCOut, void* additionalData, 
 	int nContacts, const Solver::ConstraintCfg& cfg )
@@ -261,6 +261,7 @@ void Solver::reorderConvertToConstraints( const btOpenCLArray<RigidBodyBase::Bod
 	}
 	
 }
+*/
 
 	static
 	inline
@@ -759,7 +760,7 @@ void Solver::convertToConstraints( const btOpenCLArray<RigidBodyBase::Body>* bod
 	contactCOut->resize(nContacts);
 }
 
-
+/*
 void Solver::sortContacts(  const btOpenCLArray<RigidBodyBase::Body>* bodyBuf, 
 			btOpenCLArray<Contact4>* contactsIn, void* additionalData, 
 			int nContacts, const Solver::ConstraintCfg& cfg )
@@ -836,7 +837,7 @@ void Solver::sortContacts(  const btOpenCLArray<RigidBodyBase::Body>* bodyBuf,
 	
 }
 
-
+*/
 
 void Solver::batchContacts(  btOpenCLArray<Contact4>* contacts, int nContacts, btOpenCLArray<u32>* nNative, btOpenCLArray<u32>* offsetsNative, int staticIdx )
 {
