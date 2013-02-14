@@ -16,7 +16,7 @@
 #include <assert.h>
 
 // Fedora patch: memset()
-using std::memset;
+//using std::memset;
 
 //  ---------------------------------------------------------------------------
 

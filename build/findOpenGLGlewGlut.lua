@@ -6,7 +6,7 @@
 		configuration {"MacOSX"}
  			links { "OpenGL.framework"} 
 		configuration {"not Windows", "not MacOSX"}
-			links {"GL","GLU"}
+			links {"GL"}
 		configuration{}
 	end
 
@@ -25,23 +25,25 @@
 	
 		configuration {"MacOSX"}
  			links { "Glut.framework" } 
-	
-		configuration {"not Windows", "not MacOSX"}
-			links {"glut"}
+		configuration {"Linux"}
+			links {"glut","GLU"}
 		configuration{}
 	end
 
 	function initGlew()
 		configuration {}
-		configuration {"Windows"}
+		if os.is("Windows") then
+			configuration {"Windows"}
 			defines { "GLEW_STATIC"}
 			includedirs {
 					projectRootDir .. "rendering/GlutGlewWindows"
 			}
 			libdirs {	projectRootDir .. "rendering/GlutGlewWindows"}
-			if os.is("Windows") then
-				files { projectRootDir .. "rendering/GlutGlewWindows/glew.c"}
-			end
+			files { projectRootDir .. "rendering/GlutGlewWindows/glew.c"}
+		end
+		if os.is("Linux") then
+			links{"GLEW"}
+		end
 		configuration{}
 	end
 

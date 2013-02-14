@@ -27,7 +27,7 @@ subject to the following restrictions:
 #include <GL/glew.h>
 #include <stdio.h>
 
-#include "btGlutInclude.h"
+#include "../../rendering/GlutGlewWindows/btGlutInclude.h"
 #include "../opengl_interop/btStopwatch.h"
 #include "btRadixSort32CL.h"
 #include "sapKernels.h"
@@ -71,7 +71,7 @@ static float angle(0);
 #include "../3dGridBroadphase/Shared/bt3dGridBroadphaseOCL.h"
 #include "btFillCL.h"//for btInt2
 
-#include "btGridBroadphaseCl.h"
+#include "btGridBroadphaseCL.h"
 #include "btLauncherCL.h"
 
 struct btAabb2Host
@@ -693,10 +693,10 @@ void InitCL()
 
 #ifdef _WIN32
 	glCtx = wglGetCurrentContext();
-#else //!_WIN32
-	GLXContext glCtx = glXGetCurrentContext();
-#endif //!_WIN32
 	glDC = wglGetCurrentDC();
+#else //!_WIN32
+	//glCtx = glXGetCurrentContext();
+#endif //!_WIN32
 
 	int ciErrNum = 0;
 	cl_device_type deviceType = CL_DEVICE_TYPE_GPU;

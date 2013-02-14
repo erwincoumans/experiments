@@ -4,8 +4,8 @@ Copyright (c) 2011 Advanced Micro Devices, Inc.  http://bulletphysics.org
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it freely,
 subject to the following restrictions:
 
 1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
@@ -18,7 +18,7 @@ subject to the following restrictions:
 #include "btOpenCLUtils.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
+#include "../../opencl/gpu_rigidbody_pipeline/CommandLineArgs.h"
 
 cl_context			g_cxMainContext;
 cl_command_queue	g_cqCommandQue;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
 	///Easier method to initialize OpenCL using createContextFromType for a GPU
 	deviceType = CL_DEVICE_TYPE_GPU;
-	
+
 	void* glCtx=0;
 	void* glDC = 0;
 	if (verbose)
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 
 			errNum = clCreateKernelsInProgram (prog,
 								num_kernels,
-							  kernelArray, 
+							  kernelArray,
 							&num_kernels_ret);
 			if (errNum==CL_SUCCESS)
 			{
@@ -135,6 +135,6 @@ int main(int argc, char* argv[])
 	clReleaseCommandQueue(g_cqCommandQue);
 
 	clReleaseContext(g_cxMainContext);
-		
+
 	return 0;
 }

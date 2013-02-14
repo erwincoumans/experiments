@@ -3,9 +3,11 @@
 
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
-#else
+#elif defined (_WIN32)
 #include "../rendering/rendertest/Win32OpenGLWindow.h"
 #include "../rendering/rendertest/GLPrimitiveRenderer.h"
+#elif defined __linux
+#include "../rendering/rendertest/X11OpenGLWindow.h"
 #endif
 #include "../../DemosCommon/OpenGL2Renderer.h"
 #include "btGpuDynamicsWorld.h"
@@ -37,11 +39,7 @@ int main(int argc, char* argv[])
 	
 
 
-#ifdef __APPLE__
-	window = new MacOpenGLWindow();
-#else
-	window = new Win32OpenGLWindow();
-#endif
+	window = new btgDefaultOpenGLWindow();
 	btgWindowConstructionInfo wci(g_OpenGLWidth,g_OpenGLHeight);
 
 	wci.m_openglVersion = 2;

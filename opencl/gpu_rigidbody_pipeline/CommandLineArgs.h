@@ -7,6 +7,7 @@
 #include <map>
 #include <algorithm>
 #include <string>
+#include <cstring>
 #include <sstream>
 class CommandLineArgs
 {
@@ -81,7 +82,7 @@ void CommandLineArgs::GetCmdLineArgument<char*>(const char* arg_name, char* &val
 
 		string s = itr->second;
 		val = (char*) malloc(sizeof(char) * (s.length() + 1));
-		strcpy(val, s.c_str());
+		std::strcpy(val, s.c_str());
 
 	} else {
     	val = NULL;

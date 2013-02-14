@@ -1,5 +1,5 @@
 
-#include "GwenUserInterface.h"
+#include "gwenUserInterface.h"
 #include "../../../rendering/rendertest/GwenOpenGL3CoreRenderer.h"
 #include "../../../rendering/rendertest/GLPrimitiveRenderer.h"
 #include "Gwen/Platform.h"

@@ -14,7 +14,7 @@ static char* particleKernelsString =
 #include "../../rendering/rendertest/GLInstanceRendererInternalData.h"
 #include "../../opencl/broadphase_benchmark/btLauncherCL.h"
 #include "../../opencl/primitives/AdlPrimitives/Math/Math.h"
-#include "../../opencl/broadphase_benchmark/btGridBroadphaseCl.h"
+#include "../../opencl/broadphase_benchmark/btGridBroadphaseCL.h"
 #include "../../opencl/gpu_rigidbody_pipeline2/btGpuSapBroadphase.h"
 
 

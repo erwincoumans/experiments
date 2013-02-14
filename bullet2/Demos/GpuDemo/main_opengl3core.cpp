@@ -7,20 +7,22 @@
 
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
-#else
+#elif defined _WIN32
 #include "../rendering/rendertest/Win32OpenGLWindow.h"
+#elif defined __linux
+#include "../rendering/rendertest/X11OpenGLWindow.h"
 #endif
 
 #include "../rendering/rendertest/GLPrimitiveRenderer.h"
 #include "../rendering/rendertest/GLInstancingRenderer.h"
 #include "../../DemosCommon/OpenGL3CoreRenderer.h"
-#include "LinearMath/btQuickProf.h"
+#include "LinearMath/btQuickprof.h"
 #include "btGpuDynamicsWorld.h"
 #include <assert.h>
 #include <string.h>
 #include "../rendering/OpenGLTrueTypeFont/fontstash.h"
 #include "../rendering/OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
-#include "GwenUserInterface.h"
+#include "gwenUserInterface.h"
 #include "ParticleDemo.h"
 
 int g_OpenGLWidth=1024;
@@ -78,8 +80,8 @@ void	MyComboBoxCallback(int comboId, const char* item)
 			}
 		}
 	}
-	
-	
+
+
 }
 void	MyButtonCallback(int buttonId, int state)
 {
@@ -162,7 +164,7 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
 	stash = sth_create(512,512,renderCallbacks);//256,256);//,1024);//512,512);
     err = glGetError();
     assert(err==GL_NO_ERROR);
-    
+
 	if (!stash)
 	{
 		fprintf(stderr, "Could not create stash.\n");
@@ -177,16 +179,16 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
 	};
 
 	int numPaths=sizeof(fontPaths)/sizeof(char*);
-	
+
 	// Load the first truetype font from memory (just because we can).
-    
+
 	FILE* fp = 0;
 	const char* fontPath ="./";
 	char fullFontFileName[1024];
 
 	for (int i=0;i<numPaths;i++)
 	{
-		
+
 		fontPath = fontPaths[i];
 		//sprintf(fullFontFileName,"%s%s",fontPath,"OpenSans.ttf");//"DroidSerif-Regular.ttf");
 		sprintf(fullFontFileName,"%s%s",fontPath,"DroidSerif-Regular.ttf");//OpenSans.ttf");//"DroidSerif-Regular.ttf");
@@ -197,7 +199,7 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
 
     err = glGetError();
     assert(err==GL_NO_ERROR);
-    
+
     assert(fp);
     if (fp)
     {
@@ -240,7 +242,7 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
     }
     err = glGetError();
     assert(err==GL_NO_ERROR);
-    
+
      sprintf(fullFontFileName,"%s%s",fontPath,"DroidSansJapanese.ttf");
     if (!(droidJapanese = sth_add_font(stash,fullFontFileName)))
 	{
@@ -262,7 +264,7 @@ sth_stash* initFont(GLPrimitiveRenderer* primRender)
 
 void Usage()
 {
-	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--disable_opencl] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>] [--use_concave_mesh]\n"); 
+	printf("\nprogram.exe [--cl_device=<int>] [--benchmark] [--disable_opencl] [--cl_platform=<int>]  [--x_dim=<int>] [--y_dim=<num>] [--z_dim=<int>] [--x_gap=<float>] [--y_gap=<float>] [--z_gap=<float>] [--use_concave_mesh]\n");
 };
 
 
@@ -277,14 +279,14 @@ void	DumpSimulationTime(FILE* f)
 	float accumulated_time=0,parent_time = profileIterator->Is_Root() ? CProfileManager::Get_Time_Since_Reset() : profileIterator->Get_Current_Parent_Total_Time();
 	int i;
 	int frames_since_reset = CProfileManager::Get_Frame_Count_Since_Reset();
-	
+
 	//fprintf(f,"%.3f,",	parent_time );
 	float totalTime = 0.f;
 
-	
-	
+
+
 	static bool headersOnce = true;
-	
+
 	if (headersOnce)
 	{
 		headersOnce = false;
@@ -300,8 +302,8 @@ void	DumpSimulationTime(FILE* f)
 		}
 		fprintf(f,"\n");
 	}
-	
-	
+
+
 	fprintf(f,"%.3f,",parent_time);
 	profileIterator->First();
 	for (i = 0; !profileIterator->Is_Done(); i++,profileIterator->Next())
@@ -319,8 +321,8 @@ void	DumpSimulationTime(FILE* f)
 	}
 
 	fprintf(f,"\n");
-	
-	
+
+
 	CProfileManager::Release_Iterator(profileIterator);
 
 
@@ -346,7 +348,7 @@ int main(int argc, char* argv[])
 	{
 		enableExperimentalCpuConcaveCollision = true;
 	}
-	
+
 	args.GetCmdLineArgument("cl_device", ci.preferredOpenCLDeviceIndex);
 	args.GetCmdLineArgument("cl_platform", ci.preferredOpenCLPlatformIndex);
 	args.GetCmdLineArgument("x_dim", ci.arraySizeX);
@@ -355,28 +357,25 @@ int main(int argc, char* argv[])
 	args.GetCmdLineArgument("x_gap", ci.gapX);
 	args.GetCmdLineArgument("y_gap", ci.gapY);
 	args.GetCmdLineArgument("z_gap", ci.gapZ);
-	
-		
+
+
 	printf("Demo settings:\n");
 	printf("x_dim=%d, y_dim=%d, z_dim=%d\n",ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ);
 	printf("x_gap=%f, y_gap=%f, z_gap=%f\n",ci.gapX,ci.gapY,ci.gapZ);
-	
+
 	printf("Preferred cl_device index %d\n", ci.preferredOpenCLDeviceIndex);
 	printf("Preferred cl_platform index%d\n", ci.preferredOpenCLPlatformIndex);
 	printf("-----------------------------------------------------\n");
-	
+
 	#ifndef BT_NO_PROFILE
 	CProfileManager::Reset();
 #endif //BT_NO_PROFILE
 
 
-	#ifdef __APPLE__
-	window = new MacOpenGLWindow();
-#else
-	window = new Win32OpenGLWindow();
-#endif
+	window = new btgDefaultOpenGLWindow();
+
 	btgWindowConstructionInfo wci(g_OpenGLWidth,g_OpenGLHeight);
-	
+
 	window->createWindow(wci);
 	window->setResizeCallback(MyResizeCallback);
 	window->setMouseMoveCallback(MyMouseMoveCallback);
@@ -390,27 +389,27 @@ int main(int argc, char* argv[])
 #ifdef _WIN32
 	glewInit();
 #endif
-	
+
 		gui = new GwenUserInterface();
-	
+
 
 	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
-	
+
 	stash = initFont(&prim);
 
-	
+
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
-	
+
 	gui->setToggleButtonCallback(MyButtonCallback);
 
 	gui->registerToggleButton(MYPAUSE,"Pause");
 	gui->registerToggleButton(MYPROFILE,"Profile");
 	gui->registerToggleButton(MYRESET,"Reset");
-	
-	
-	
 
-	
+
+
+
+
 	int numItems = sizeof(allDemos)/sizeof(GpuDemo::CreateFunc*);
 	demoNames.clear();
 	for (int i=0;i<numItems;i++)
@@ -419,7 +418,7 @@ int main(int argc, char* argv[])
 		demoNames.push_back(demo->getName());
 		delete demo;
 	}
-	
+
 	gui->registerComboBox(MYCOMBOBOX1,numItems,&demoNames[0]);
 	gui->setComboBoxCallback(MyComboBoxCallback);
 
@@ -435,19 +434,19 @@ int main(int argc, char* argv[])
 
 	static bool once=true;
 
-	
+
 
 
 	glClearColor(1,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
-	
+
 	{
 		window->startRendering();
 		glFinish();
 
-		
-	
-		
+
+
+
 		float color[4] = {1,1,1,1};
 		prim.drawRect(0,0,200,200,color);
 		float retinaScale = 1;
@@ -458,7 +457,7 @@ int main(int argc, char* argv[])
             if (1)
             {
                 BT_PROFILE("font sth_draw_text");
-                
+
 				glEnable(GL_BLEND);
 				GLint err = glGetError();
 				assert(err==GL_NO_ERROR);
@@ -470,7 +469,7 @@ int main(int argc, char* argv[])
 				glDisable(GL_DEPTH_TEST);
 				err = glGetError();
 				assert(err==GL_NO_ERROR);
-        
+
 
 				glDisable(GL_CULL_FACE);
 
@@ -480,7 +479,7 @@ int main(int argc, char* argv[])
                 if (retinaScale!=1.f)
                     sth_draw_text(stash, droidRegular,20.f*retinaScale, x, y+20, "Retina font rendering!@#$", &dx,g_OpenGLWidth,g_OpenGLHeight,0,retinaScale);
                 sth_flush_draw(stash);
-                
+
                 sth_end_draw(stash);
             }
 
@@ -491,33 +490,33 @@ int main(int argc, char* argv[])
 	once=false;
 
 	OpenGL3CoreRenderer render;
-	
+
 	glClearColor(0,1,0,1);
 	glClear(GL_COLOR_BUFFER_BIT);
-	
+
 	window->endRendering();
 
 	glFinish();
 
-	
-	
+
+
 	window->setWheelCallback(btDefaultWheelCallback);
 
 
-	
-	
+
+
 	{
 		GpuDemo* demo = allDemos[selectedDemo]();
 //		demo->myinit();
 		bool useGpu = false;
-		
-		
+
+
 		ci.m_instancingRenderer = render.getInstancingRenderer();
 		render.init();
 
 		demo->initPhysics(ci);
 		printf("-----------------------------------------------------\n");
-		
+
 		FILE* f = 0;
 		if (benchmark)
 		{
@@ -529,21 +528,21 @@ int main(int argc, char* argv[])
 			GetLocalTime(&time);
 			char buf[1024];
 			DWORD dwCompNameLen = 1024;
-			if (0 != GetComputerName(buf, &dwCompNameLen)) 
+			if (0 != GetComputerName(buf, &dwCompNameLen))
 			{
 				printf("%s", buf);
-			} else	
+			} else
 			{
 				printf("unknown", buf);
 			}
 			sprintf(fileName,"%s_%s_%s_%d_%d_%d_date_%d-%d-%d_time_%d-%d-%d.csv",g_deviceName,buf,demoNames[selectedDemo],ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ,time.wDay,time.wMonth,time.wYear,time.wHour,time.wMinute,time.wSecond);
-			
+
 			printf("Open file %s\n", fileName);
 #else
 			sprintf(fileName,"%s_%d_%d_%d.csv",g_deviceName,ci.arraySizeX,ci.arraySizeY,ci.arraySizeZ);
 			printf("Open file %s\n", fileName);
 #endif
-			
+
 
 			//GetSystemTime(&time2);
 
@@ -557,18 +556,18 @@ int main(int argc, char* argv[])
 		{
 			CProfileManager::Reset();
 			CProfileManager::Increment_Frame_Counter();
-			
+
 			render.reshape(g_OpenGLWidth,g_OpenGLHeight);
 
 			window->startRendering();
-			
-			
+
+
 
 			glClearColor(0.6,0.6,0.6,1);
 			glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 
-			
+
 			if (!gPause)
 			{
 				BT_PROFILE("simulate");
@@ -577,14 +576,14 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				
+
 			}
 
 			{
 				BT_PROFILE("renderScene");
 				demo->renderScene();
 			}
-			
+
 
 			if (demo->getDynamicsWorld() && demo->getDynamicsWorld()->getNumCollisionObjects())
 			{
@@ -615,7 +614,7 @@ int main(int argc, char* argv[])
 		if (f)
 		{
 			static int count=0;
-			
+
 			if (count>2 && count<102)
 			{
 				DumpSimulationTime(f);
@@ -625,10 +624,10 @@ int main(int argc, char* argv[])
 			count++;
 		}
 
-			
+
 
 		} while (!window->requestedExit() && !gReset);
-			
+
 
 		demo->exitPhysics();
 		delete demo;
@@ -636,8 +635,8 @@ int main(int argc, char* argv[])
 			fclose(f);
 	}
 
-	
-	
+
+
 	} while (gReset);
 
 

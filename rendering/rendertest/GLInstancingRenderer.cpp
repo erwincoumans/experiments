@@ -13,6 +13,8 @@ subject to the following restrictions:
 */
 //Originally written by Erwin Coumans
 
+
+
 #include "OpenGLInclude.h"
 #include "GLInstancingRenderer.h"
 
@@ -25,6 +27,7 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btMatrix3x3.h"
 #include "LoadShader.h"
+
 
 
 //#include "../../opencl/gpu_rigidbody_pipeline/btGpuNarrowphaseAndSolver.h"//for m_maxNumObjectCapacity

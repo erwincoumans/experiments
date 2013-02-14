@@ -29,16 +29,23 @@ subject to the following restrictions:
 
 #include <GL/glew.h>
 
-
 #ifdef _WINDOWS
 #include <windows.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #else
 #include <GL/gl.h>
-
+#include <GL/glu.h>
 #endif //_WINDOWS
 #endif //APPLE
+
+
+
+///on Linux only glDrawElementsInstancedARB is defined?!?
+#ifdef __linux
+#define glDrawElementsInstanced glDrawElementsInstancedARB
+
+#endif //__linux
 
 #endif //__OPENGL_INCLUDE_H
 

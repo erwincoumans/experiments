@@ -27,10 +27,6 @@
 		
 		files {
 			"../main.cpp",
-			"../../rendertest/Win32OpenGLWindow.cpp",
-			"../../rendertest/Win32OpenGLWindow.h",
-			"../../rendertest/Win32Window.cpp",
-			"../../rendertest/Win32Window.h",
 			"../../rendertest/LoadShader.cpp",
 			"../../rendertest/LoadShader.h",
 			"../../../bullet2/LinearMath/btAlignedAllocator.cpp",
@@ -43,5 +39,20 @@
       "../stb_image_write.h",
       "../stb_truetype.h",
 			}
+
+		if os.is("Windows") then
+			files{
+				"../../rendertest/Win32OpenGLWindow.cpp",
+                        	"../../rendertest/Win32OpenGLWindow.h",
+                        	"../../rendertest/Win32Window.cpp",
+                       		"../../rendertest/Win32Window.h",
+			}
+		end
+		if os.is("Linux") then 
+			files{
+				"../../rendertest/X11OpenGLWindow.h",
+				"../../rendertest/X11OpenGLWindow.cpp"
+			}
+		end
 		
 	end

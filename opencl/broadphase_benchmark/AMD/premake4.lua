@@ -1,3 +1,4 @@
+if os.is("Windows") then
 	
 	hasCL = findOpenCL_AMD()
 	
@@ -53,3 +54,4 @@
 		}
 		
 	end
+end

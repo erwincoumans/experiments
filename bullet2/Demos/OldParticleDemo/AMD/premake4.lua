@@ -52,6 +52,6 @@ if (hasCL) then
 			"../GLDebugFont.cpp",
 			"../GlutDemoApplication.cpp",
 			"../GlutStuff.cpp",
-			"../btOpenCLUtils.cpp"										
+			"../btOpenCLUtils.cpp"	,
 	}
 end

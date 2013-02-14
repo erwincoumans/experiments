@@ -18,12 +18,14 @@ subject to the following restrictions:
 #ifndef __APPLE__
 #include <GL/glew.h>
 #endif
-
+#include <string.h>//memset
 
 #ifdef __APPLE__
-#include "MacOpenGLWindow.h"
-#else
-#include "Win32OpenGLWindow.h"
+	#include "MacOpenGLWindow.h"
+#elif defined (_WIN32)
+	#include "Win32OpenGLWindow.h"
+#elif defined (__linux)
+	#include "X11OpenGLWindow.h"
 #endif
 
 #include "fontstash.h"
@@ -33,7 +35,7 @@ subject to the following restrictions:
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
 
-#include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
+#include "../../opencl/gpu_rigidbody_pipeline/CommandLineArgs.h"
 #include "../rendertest/LoadShader.h"
 
 bool printStats = false;
@@ -322,11 +324,9 @@ int main(int argc, char* argv[])
 	int width = 700;
 	int height= 512;
 	printf("\n");
-#ifdef __APPLE__
-	MacOpenGLWindow* window = new MacOpenGLWindow();
-#else
-	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-#endif
+	
+	
+	btgDefaultOpenGLWindow* window = new btgDefaultOpenGLWindow();
 	window->createWindow(btgWindowConstructionInfo(width,height));
 	window->setWindowTitle("font test");
 	

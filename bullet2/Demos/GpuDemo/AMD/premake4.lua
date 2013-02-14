@@ -1,4 +1,3 @@
-
 hasCL = findOpenCL_AMD()
 	
 if (hasCL) then
@@ -99,10 +98,6 @@ if (hasCL) then
 
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.cpp",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.h",
-			"../../../../rendering/rendertest/Win32Window.cpp",
-			"../../../../rendering/rendertest/Win32Window.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
 			"../../../../rendering/rendertest/TwFonts.cpp",
@@ -113,6 +108,22 @@ if (hasCL) then
 			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",
 											
 	}
+
+	if os.is("Windows") then
+	files {
+ 		"../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
+                "../../../../rendering/rendertest/Win32OpenGLWindow.h",
+                "../../../../rendering/rendertest/Win32Window.cpp",
+                "../../../../rendering/rendertest/Win32Window.h",
+	}
+	end
+	if os.is("Linux") then
+	files{
+		"../../../../rendering/rendertest/X11OpenGLWindow.cpp",
+		"../../../../rendering/rendertest/X11OpenGLWindow.h",
+
+	}	
+	end
 
 	project "bullet2_gpu_demo_opengl3core_AMD"
 
@@ -152,8 +163,8 @@ if (hasCL) then
 			"../btCpuDynamicsWorld.h",
 			"../btGpuIntegrateTransforms.cpp",
 			"../btGpuIntegrateTransforms.h",
-			"../GwenUserInterface.cpp",
-			"../GwenUserInterface.h",
+			"../gwenUserInterface.cpp",
+			"../gwenUserInterface.h",
 			"../ParticleDemo.cpp",
 			"../ParticleDemo.h",
 			
@@ -217,10 +228,6 @@ if (hasCL) then
 			"../../../../rendering/rendertest/GLInstancingRenderer.h",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.cpp",
 			"../../../../rendering/rendertest/GLPrimitiveRenderer.h",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
-			"../../../../rendering/rendertest/Win32OpenGLWindow.h",
-			"../../../../rendering/rendertest/Win32Window.cpp",
-			"../../../../rendering/rendertest/Win32Window.h",
 			"../../../../rendering/rendertest/LoadShader.cpp",
 			"../../../../rendering/rendertest/LoadShader.h",
 			"../../../../rendering/rendertest/TwFonts.cpp",
@@ -230,4 +237,21 @@ if (hasCL) then
 			"../../../../rendering/OpenGLTrueTypeFont/fontstash.cpp",
 			"../../../../rendering/OpenGLTrueTypeFont/fontstash.h",									
 	}
+ 	
+	if os.is("Windows") then
+        files {
+                "../../../../rendering/rendertest/Win32OpenGLWindow.cpp",
+                "../../../../rendering/rendertest/Win32OpenGLWindow.h",
+                "../../../../rendering/rendertest/Win32Window.cpp",
+                "../../../../rendering/rendertest/Win32Window.h",
+        }
+        end
+        if os.is("Linux") then
+        files{
+                "../../../../rendering/rendertest/X11OpenGLWindow.cpp",
+                "../../../../rendering/rendertest/X11OpenGLWindow.h",
+
+        }
+        end
+
 end

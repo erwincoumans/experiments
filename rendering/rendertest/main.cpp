@@ -24,20 +24,22 @@ subject to the following restrictions:
 
 #ifdef __APPLE__
 #include "MacOpenGLWindow.h"
-#else
+#elif _WIN32
 #include "Win32OpenGLWindow.h"
+#elif __linux
+#include "X11OpenGLWindow.h"
 #endif
 
 #include "GLPrimitiveRenderer.h"
 
 
-#include "RenderScene.h"
+#include "renderscene.h"
 
 
 #include "LinearMath/btQuickprof.h"
 #include "LinearMath/btQuaternion.h"
 
-#include "../../opencl/gpu_rigidbody_pipeline/CommandlineArgs.h"
+#include "../../opencl/gpu_rigidbody_pipeline/CommandLineArgs.h"
 
 #include "../OpenGLTrueTypeFont/fontstash.h"
 #include "../OpenGLTrueTypeFont/opengl_fontstashcallbacks.h"
@@ -263,11 +265,7 @@ int main(int argc, char* argv[])
 
 	
 	printf("\n");
-#ifdef __APPLE__
-	MacOpenGLWindow* window = new MacOpenGLWindow();
-#else
-	Win32OpenGLWindow* window = new Win32OpenGLWindow();
-#endif
+	btgDefaultOpenGLWindow* window = new btgDefaultOpenGLWindow();
 	btgWindowConstructionInfo wci;
 	wci.m_width = g_OpenGLWidth;
 	wci.m_height = g_OpenGLHeight;

@@ -1,10 +1,10 @@
 /*
-Copyright (c) 2012 Advanced Micro Devices, Inc.  
+Copyright (c) 2012 Advanced Micro Devices, Inc.
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it freely,
 subject to the following restrictions:
 
 1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
@@ -186,7 +186,7 @@ void operator/=(float4& a, const float4& b)
 __inline
 void operator/=(float4& a, float b)
 {
-	ADLASSERT((u32(&a) & 0xf) == 0);
+//	ADLASSERT((u32(&a) & 0xf) == 0);
 
 	a.s[0]/=b;
 	a.s[1]/=b;
@@ -298,9 +298,9 @@ void operator-=(float4& a, float b)
 __inline
 float4 cross3(const float4& a, const float4& b)
 {
-	return make_float4(a.s[1]*b.s[2]-a.s[2]*b.s[1], 
-		a.s[2]*b.s[0]-a.s[0]*b.s[2], 
-		a.s[0]*b.s[1]-a.s[1]*b.s[0], 
+	return make_float4(a.s[1]*b.s[2]-a.s[2]*b.s[1],
+		a.s[2]*b.s[0]-a.s[0]*b.s[2],
+		a.s[0]*b.s[1]-a.s[1]*b.s[0],
 		0);
 }
 

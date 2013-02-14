@@ -151,7 +151,7 @@
 
 	include "../opencl/primitives/AdlTest"
 
-	include "../opencl/gpu_narrowphase_test"
+--	include "../opencl/gpu_narrowphase_test"
 
 	include "../rendering/OpenGLES2Angle"
 

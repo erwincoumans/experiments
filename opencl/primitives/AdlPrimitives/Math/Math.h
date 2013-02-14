@@ -1,10 +1,10 @@
 /*
-Copyright (c) 2012 Advanced Micro Devices, Inc.  
+Copyright (c) 2012 Advanced Micro Devices, Inc.
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the authors be held liable for any damages arising from the use of this software.
-Permission is granted to anyone to use this software for any purpose, 
-including commercial applications, and to alter it and redistribute it freely, 
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it freely,
 subject to the following restrictions:
 
 1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
@@ -22,6 +22,7 @@ subject to the following restrictions:
 #include <float.h>
 #include <xmmintrin.h>
 
+#include "LinearMath/btScalar.h" //cross-platform mem alignment
 
 //#include <Adl/Adl.h>
 
@@ -32,13 +33,6 @@ subject to the following restrictions:
 #define NEXTMULTIPLEOF(num, alignment) (((num)/(alignment) + (((num)%(alignment)==0)?0:1))*(alignment))
 
 
-#define _MEM_CLASSALIGN16 __declspec(align(16))
-#define _MEM_ALIGNED_ALLOCATOR16 	void* operator new(size_t size) { return _aligned_malloc( size, 16 ); } \
-	void operator delete(void *p) { _aligned_free( p ); } \
-	void* operator new[](size_t size) { return _aligned_malloc( size, 16 ); } \
-	void operator delete[](void *p) { _aligned_free( p ); } \
-	void* operator new(size_t size, void* p) { return p; } \
-	void operator delete(void *p, void* pp) {} 
 
 namespace adl
 {
@@ -56,10 +50,10 @@ typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
 
-_MEM_CLASSALIGN16
-struct float4
+ATTRIBUTE_ALIGNED16(struct) float4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
+
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	union
 	{
 		struct
@@ -74,10 +68,10 @@ struct float4
 	};
 };
 
-_MEM_CLASSALIGN16
-struct int4
+ATTRIBUTE_ALIGNED16(struct) int4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
+
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	union
 	{
 		struct
@@ -91,10 +85,10 @@ struct int4
 	};
 };
 
-_MEM_CLASSALIGN16
-struct uint4
+ATTRIBUTE_ALIGNED16(struct) uint4
 {
-	_MEM_ALIGNED_ALLOCATOR16;
+
+	BT_DECLARE_ALIGNED_ALLOCATOR();
 	union
 	{
 		struct

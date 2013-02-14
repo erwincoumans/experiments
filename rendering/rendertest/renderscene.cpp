@@ -12,7 +12,7 @@ bool keepStaticObjects = false;
 
 #include "../../rendering/rendertest/OpenGLInclude.h"
 
-#include "RenderScene.h"
+#include "renderscene.h"
 
 #include "../../rendering/rendertest/GLInstancingRenderer.h"
 //#include "LinearMath/btQuickprof.h"

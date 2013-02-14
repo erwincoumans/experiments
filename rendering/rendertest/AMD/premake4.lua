@@ -1,11 +1,11 @@
 	
-	hasCL = findOpenCL_NVIDIA()
+	hasCL = findOpenCL_AMD()
 	
 	if (hasCL) then
 
-		project "OpenGL_rendertest_NVIDIA"
+		project "OpenGL_rendertest_AMD"
 
-		initOpenCL_NVIDIA()
+		initOpenCL_AMD()
 	
 		language "C++"
 				
@@ -32,10 +32,6 @@
 			"../renderscene.h",
 			"../GLInstancingRenderer.cpp",
 			"../GLInstancingRenderer.h",
-			"../Win32OpenGLWindow.cpp",
-			"../Win32OpenGLWindow.h",	
-			"../Win32Window.cpp",
-			"../Win32Window.h",
 			"../GLPrimitiveRenderer.h",
 			"../GLPrimitiveRenderer.cpp",
 			"../LoadShader.cpp",

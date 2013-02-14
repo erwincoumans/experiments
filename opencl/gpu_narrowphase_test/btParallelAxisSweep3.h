@@ -25,7 +25,7 @@
 #include "BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
 #include "BulletCollision/BroadphaseCollision/btOverlappingPairCallback.h"
 #include "BulletCollision/BroadphaseCollision/btDbvtBroadphase.h"
-#include "LinearMath/btQuickProf.h"
+#include "LinearMath/btQuickprof.h"
 //#define DEBUG_BROADPHASE 1
 #define USE_OVERLAP_TEST_ON_REMOVES 1
 static bool gVerbose = false;
