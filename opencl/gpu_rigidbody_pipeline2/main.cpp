@@ -214,7 +214,6 @@ int main(int argc, char* argv[])
 			
 			printf("Open file %s\n", fileName);
 #else
-		char fileName[1024];
 		sprintf(fileName,"%s_%s_%d_%d_%d.txt",g_deviceName,"gpu_rigidbody_pipeline2",NUM_OBJECTS_X,NUM_OBJECTS_Y,NUM_OBJECTS_Z);
 		printf("Open file %s\n", fileName);
 #endif //_WIN32

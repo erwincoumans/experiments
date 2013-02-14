@@ -13,9 +13,15 @@ subject to the following restrictions:
 */
 //Originally written by Erwin Coumans
 
+
 bool useSapGpuBroadphase = true;
 extern bool useConvexHeightfield;
+//#define USE_PGS_SOLVER
+
+#ifdef USE_PGS_SOLVER
 #include "btPgsJacobiSolver.h"
+#endif //USE_PGS_SOLVER
+
 #include "../../rendering/rendertest/OpenGLInclude.h"
 #ifdef _WIN32
 #include "windows.h"
@@ -95,9 +101,10 @@ struct InternalData
 	btAlignedObjectArray<btVector3>	m_linVelHost;
 	btAlignedObjectArray<btVector3>	m_angVelHost;
 	btAlignedObjectArray<float> m_bodyTimesHost;
-
+#ifdef USE_PGS_SOLVER
 	btPgsJacobiSolver*	m_pgsSolver;
-
+#endif //USE_PGS_SOLVER
+	
 	InternalData():m_linVelBuf(0),m_angVelBuf(0),m_bodyTimes(0),m_BroadphaseSap(0),m_BroadphaseGrid(0)
 	{
 		
@@ -630,9 +637,9 @@ void	CLPhysicsDemo::init(int preferredDevice, int preferredPlatform, bool useInt
 			g_cxMainContext ,g_device,g_cqCommandQue);
 	}		//g_cxMainContext ,g_device,g_cqCommandQue);
 	
-
+#ifdef USE_PGS_SOLVER
 	m_data->m_pgsSolver = new btPgsJacobiSolver();
-	
+#endif //USE_PGS_SOLVER
 
 	cl_program prog = btOpenCLUtils::compileCLProgramFromString(g_cxMainContext,g_device,interopKernelString,0,"",INTEROPKERNEL_SRC_PATH);
 	g_integrateTransformsKernel = btOpenCLUtils::compileCLKernelFromString(g_cxMainContext, g_device,interopKernelString, "integrateTransformsKernel" ,0,prog);
@@ -671,8 +678,10 @@ void	CLPhysicsDemo::cleanup()
 
 	delete m_data->m_BroadphaseSap;
 	delete m_data->m_BroadphaseGrid;
+#ifdef USE_PGS_SOLVER
 	delete m_data->m_pgsSolver;
-
+#endif //USE_PGS_SOLVER
+	
 	m_data=0;
 
 	delete s_convexHeightField;
@@ -814,6 +823,7 @@ void	CLPhysicsDemo::stepSimulation()
 						m_narrowphaseAndSolver->solveContacts();
 				} else
 				{
+#ifdef USE_PGS_SOLVER
 					BT_PROFILE("solve Contact Constraints CPU/serial");
 					if (m_narrowphaseAndSolver && m_data->m_pgsSolver && m_narrowphaseAndSolver->getNumContactsGpu())
 					{
@@ -843,7 +853,7 @@ void	CLPhysicsDemo::stepSimulation()
 
 
 					}
-					
+#endif //USE_PGS_SOLVER
 					
 				}
 				

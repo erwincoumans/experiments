@@ -185,13 +185,13 @@ float4 getRandom(const float4& minV, const float4& maxV)
 }
 
 
-
+/*
 template<typename T>
 T* addByteOffset(void* baseAddr, u32 offset)
 {
 	return (T*)(((u32)baseAddr)+offset);
 }
-
+*/
 
 struct Pair32
 {
