@@ -172,8 +172,8 @@ void    X11OpenGLWindow::startRendering()
 
     XGetWindowAttributes(m_data->m_dpy, m_data->m_win, &m_data->m_gwa);
     glViewport(0, 0, m_data->m_gwa.width, m_data->m_gwa.height);
-
-	XNextEvent(m_data->m_dpy, &m_data->m_xev);
+/*
+//	XNextEvent(m_data->m_dpy, &m_data->m_xev);
 
     if(m_data->m_xev.type == Expose) {
 //        XGetWindowAttributes(m_data->m_dpy, m_data->m_win, &m_data->m_gwa);
@@ -185,7 +185,7 @@ void    X11OpenGLWindow::startRendering()
 	    printf("key");
 //        exit(0);
     }
-
+*/
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);	//clear buffers
 
     //glCullFace(GL_BACK);

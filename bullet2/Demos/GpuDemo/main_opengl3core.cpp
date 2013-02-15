@@ -37,7 +37,7 @@ static void MyResizeCallback( float width, float height)
 
 btgWindowInterface* window=0;
 GwenUserInterface* gui  = 0;
-bool gPause = true;
+bool gPause = false;
 bool gReset = false;
 
 enum
@@ -331,6 +331,8 @@ extern const char* g_deviceName;
 
 int main(int argc, char* argv[])
 {
+    printf("main start");
+
 	CommandLineArgs args(argc,argv);
 	GpuDemo::ConstructionInfo ci;
 
@@ -386,11 +388,13 @@ int main(int argc, char* argv[])
 	printf("-----------------------------------------------------\n");
 
 
-#ifdef _WIN32
+#ifndef __APPLE__
 	glewInit();
 #endif
 
-		gui = new GwenUserInterface();
+	gui = new GwenUserInterface();
+
+    printf("started GwenUserInterface");
 
 
 	GLPrimitiveRenderer prim(g_OpenGLWidth,g_OpenGLHeight);
@@ -400,11 +404,15 @@ int main(int argc, char* argv[])
 
 	gui->init(g_OpenGLWidth,g_OpenGLHeight,stash,window->getRetinaScale());
 
+    printf("init fonts");
+
+
 	gui->setToggleButtonCallback(MyButtonCallback);
 
 	gui->registerToggleButton(MYPAUSE,"Pause");
 	gui->registerToggleButton(MYPROFILE,"Profile");
 	gui->registerToggleButton(MYRESET,"Reset");
+
 
 
 
