@@ -12,10 +12,14 @@ class X11OpenGLWindow : public btgWindowInterface
         bool m_OpenGLInitialized;
 
 protected:
-                
+
         void enableOpenGL();
-                
+
         void disableOpenGL();
+
+        void pumpMessage();
+
+        int getAsciiCodeFromVirtualKeycode(int orgCode);
 
 public:
 
@@ -24,7 +28,7 @@ public:
         virtual ~X11OpenGLWindow();
 
         virtual void    createWindow(const btgWindowConstructionInfo& ci);
-        
+
         virtual void    closeWindow();
 
         virtual void    startRendering();
