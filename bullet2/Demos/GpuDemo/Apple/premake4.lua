@@ -15,6 +15,7 @@ if (hasCL) then
 
 		includedirs {
               "..",
+	      "../../../../rendering/rendertest",
               "../../../../bullet2",
               "../../../../rendering/Gwen"
     }
@@ -140,6 +141,7 @@ if (hasCL) then
 
 		includedirs {
               "..",
+	      "../../../../rendering/rendertest",
               "../../../../bullet2",
               "../../../../rendering/Gwen"
     }

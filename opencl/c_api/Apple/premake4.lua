@@ -12,7 +12,7 @@
 
 		includedirs {projectRootDir .. "bullet2"}
 		
-		links {"bullet2"}
+		links {"BulletCollision","LinearMath"}
 
 		language "C"
 		files {
