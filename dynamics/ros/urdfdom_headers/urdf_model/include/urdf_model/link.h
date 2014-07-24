@@ -49,6 +49,7 @@
 
 #include "joint.h"
 #include "color.h"
+#include "pose.h"
 
 namespace urdf{
 
@@ -65,7 +66,7 @@ public:
 class Sphere : public Geometry
 {
 public:
-  Sphere() { this->clear(); };
+  Sphere() { this->clear(); type = SPHERE; };
   double radius;
 
   void clear()
@@ -77,7 +78,7 @@ public:
 class Box : public Geometry
 {
 public:
-  Box() { this->clear(); };
+  Box() { this->clear(); type = BOX; }
   Vector3 dim;
 
   void clear()
@@ -89,7 +90,7 @@ public:
 class Cylinder : public Geometry
 {
 public:
-  Cylinder() { this->clear(); };
+  Cylinder() { this->clear(); type = CYLINDER; };
   double length;
   double radius;
 
@@ -103,7 +104,7 @@ public:
 class Mesh : public Geometry
 {
 public:
-  Mesh() { this->clear(); };
+  Mesh() { this->clear(); type = MESH; };
   std::string filename;
   Vector3 scale;
 
@@ -165,9 +166,10 @@ public:
     material_name.clear();
     material.reset(0);
     geometry.reset(0);
-    this->group_name.clear();
+    name.clear();
   };
-  std::string group_name;
+
+  std::string name;
 };
 
 class Collision
@@ -181,9 +183,11 @@ public:
   {
     origin.clear();
     geometry.reset(0);
-    this->group_name.clear();
+    name.clear();
   };
-  std::string group_name;
+
+  std::string name;
+
 };
 
 
@@ -203,11 +207,11 @@ public:
   /// collision element
   boost::shared_ptr<Collision> collision;
 
-  /// a collection of visual elements, keyed by a string tag called "group"
-  std::map<std::string, boost::shared_ptr<std::vector<boost::shared_ptr<Visual> > > > visual_groups;
+  /// if more than one collision element is specified, all collision elements are placed in this array (the collision member points to the first element of the array)
+  std::vector<boost::shared_ptr<Collision> > collision_array;
 
-  /// a collection of collision elements, keyed by a string tag called "group"
-  std::map<std::string, boost::shared_ptr<std::vector<boost::shared_ptr<Collision> > > > collision_groups;
+  /// if more than one visual element is specified, all visual elements are placed in this array (the visual member points to the first element of the array)
+  std::vector<boost::shared_ptr<Visual> > visual_array;
 
   /// Parent Joint element
   ///   explicitly stating "parent" because we want directional-ness for tree structure
@@ -217,11 +221,8 @@ public:
   std::vector<boost::shared_ptr<Joint> > child_joints;
   std::vector<boost::shared_ptr<Link> > child_links;
 
-  boost::shared_ptr<Link> getParent() const
-  {
-//	  return parent_link_.lock();
-	  return parent_link_;
-  };
+  const Link* getParent() const
+  {return parent_link_;}
 
   void setParent(const boost::shared_ptr<Link> &parent)
   {
@@ -237,30 +238,10 @@ public:
     this->parent_joint.reset(0);
     this->child_joints.clear();
     this->child_links.clear();
-    this->collision_groups.clear();
+    this->collision_array.clear();
+    this->visual_array.clear();
   };
 
-  boost::shared_ptr<std::vector<boost::shared_ptr<Visual > > > getVisuals(const std::string& group_name) const
-  {
-    if (this->visual_groups.find(group_name) != this->visual_groups.end())
-      return this->visual_groups.at(group_name);
-    return boost::shared_ptr<std::vector<boost::shared_ptr<Visual > > >();
-  }
-
-  boost::shared_ptr<std::vector<boost::shared_ptr<Collision > > > getCollisions(const std::string& group_name) const
-  {
-    if (this->collision_groups.find(group_name) != this->collision_groups.end())
-      return this->collision_groups.at(group_name);
-    return boost::shared_ptr<std::vector<boost::shared_ptr<Collision > > >();
-  }
-  
-  /*
-  void setParentJoint(boost::shared_ptr<Joint> child);
-  void addChild(boost::shared_ptr<Link> child);
-  void addChildJoint(boost::shared_ptr<Joint> child);
-
-
-  */
 private:
 //  boost::weak_ptr<Link> parent_link_;
 	const Link* parent_link_;

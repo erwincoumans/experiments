@@ -42,6 +42,9 @@
 			"boost_replacement/lexical_cast.h",
 			"boost_replacement/shared_ptr.h",
 			"boost_replacement/printf_console.cpp",
-			"boost_replacement/printf_console.h"
+			"boost_replacement/printf_console.h",
+			"boost_replacement/string_split.cpp",
+			"boost_replacement/string_split.h",
+			
 
 		}

@@ -96,7 +96,7 @@ char **str_split(const char *input, const char *sep)
     size_t nitems = 0;
     char **array = NULL;
     const char *start = input;
-    char *next = strstr(start, sep);
+    const char *next = strstr(start, sep);
     size_t seplen = strlen(sep);
     const char *item;
     size_t itemlen;

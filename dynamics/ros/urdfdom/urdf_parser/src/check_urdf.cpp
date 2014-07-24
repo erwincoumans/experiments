@@ -40,10 +40,6 @@
 
 using namespace urdf;
 
-
-
-
-
 void printTree(boost::shared_ptr<const Link> link,int level = 0)
 {
   level+=2;
@@ -52,16 +48,14 @@ void printTree(boost::shared_ptr<const Link> link,int level = 0)
   {
     if (*child)
     {
-      for(int j=0;j<level;j++)
-		  std::cout << "  "; //indent
+      for(int j=0;j<level;j++) std::cout << "  "; //indent
       std::cout << "child(" << (count++)+1 << "):  " << (*child)->name  << std::endl;
       // first grandchild
       printTree(*child,level);
     }
     else
     {
-      for(int j=0;j<level;j++)
-		  std::cout << " "; //indent
+      for(int j=0;j<level;j++) std::cout << " "; //indent
       std::cout << "root link: " << link->name << " has a null child!" << *child << std::endl;
     }
   }

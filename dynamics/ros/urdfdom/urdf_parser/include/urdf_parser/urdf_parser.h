@@ -41,7 +41,13 @@
 #include <map>
 #include <tinyxml.h>
 //#include <boost/function.hpp>
+
+#ifndef M_PI
+#define M_PI 3.1415925438
+#endif //M_PI
+
 #include <urdf_model/model.h>
+
 
 
 namespace urdf{

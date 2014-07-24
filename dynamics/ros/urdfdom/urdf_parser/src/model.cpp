@@ -44,9 +44,10 @@
 
 namespace urdf{
 
-bool parseMaterial(Material &material, TiXmlElement *config);
+bool parseMaterial(Material &material, TiXmlElement *config, bool only_name_is_ok);
 bool parseLink(Link &link, TiXmlElement *config);
 bool parseJoint(Joint &joint, TiXmlElement *config);
+
 
 boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
 {
@@ -55,6 +56,13 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
 
   TiXmlDocument xml_doc;
   xml_doc.Parse(xml_string.c_str());
+  if (xml_doc.Error())
+  {
+    logError(xml_doc.ErrorDesc());
+    xml_doc.ClearError();
+    model.reset(0);
+    return model;
+  }
 
   TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
   if (!robot_xml)
@@ -81,11 +89,10 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
     material.reset(new Material);
 
     try {
-      parseMaterial(*material, material_xml);
+      parseMaterial(*material, material_xml, false); // material needs to be fully defined here
       if (model->getMaterial(material->name))
       {
-		  assert(0);
-//        logError("material '%s' is not unique.", material->name.c_str());
+        logError("material '%s' is not unique.", material->name.c_str());
         material.reset(0);
         model.reset(0);
         return model;
@@ -93,7 +100,7 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
       else
       {
         model->materials_.insert(make_pair(material->name,material));
-        logDebug("successfully added a new material '%s'", material->name.c_str());
+        logDebug("urdfdom: successfully added a new material '%s'", material->name.c_str());
       }
     }
     catch (ParseError &e) {
@@ -121,21 +128,21 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
       else
       {
         // set link visual material
-        logDebug("setting link '%s' material", link->name.c_str());
+        logDebug("urdfdom: setting link '%s' material", link->name.c_str());
         if (link->visual)
         {
           if (!link->visual->material_name.empty())
           {
             if (model->getMaterial(link->visual->material_name))
             {
-              logDebug("setting link '%s' material to '%s'", link->name.c_str(),link->visual->material_name.c_str());
+              logDebug("urdfdom: setting link '%s' material to '%s'", link->name.c_str(),link->visual->material_name.c_str());
               link->visual->material = model->getMaterial( link->visual->material_name.c_str() );
             }
             else
             {
               if (link->visual->material)
               {
-                logDebug("link '%s' material '%s' defined in Visual.", link->name.c_str(),link->visual->material_name.c_str());
+                logDebug("urdfdom: link '%s' material '%s' defined in Visual.", link->name.c_str(),link->visual->material_name.c_str());
                 model->materials_.insert(make_pair(link->visual->material->name,link->visual->material));
               }
               else
@@ -149,7 +156,7 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
         }
 
         model->links_.insert(make_pair(link->name,link));
-        logDebug("successfully added a new link '%s'", link->name.c_str());
+        logDebug("urdfdom: successfully added a new link '%s'", link->name.c_str());
       }
     }
     catch (ParseError &e) {
@@ -181,7 +188,7 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
       else
       {
         model->joints_.insert(make_pair(joint->name,joint));
-        logDebug("successfully added a new joint '%s'", joint->name.c_str());
+        logDebug("urdfdom: successfully added a new joint '%s'", joint->name.c_str());
       }
     }
     else
@@ -203,8 +210,7 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
   {
     model->initTree(parent_link_tree);
   }
-	ParseError e(",,,,");
-  catch(&e)
+  catch(ParseError &e)
   {
     logError("Failed to build tree: %s", e.what());
     model.reset(0);
@@ -225,6 +231,8 @@ boost::shared_ptr<ModelInterface>  parseURDF(const std::string &xml_string)
   
   return model;
 }
+
+
 
 }
 

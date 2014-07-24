@@ -41,6 +41,10 @@
 #include <sstream>
 #include <vector>
 #include <math.h>
+#ifndef M_PI
+#define M_PI 3.141592538
+#endif //M_PI
+
 #ifdef URDF_USE_BOOST
 	#include <boost/algorithm/string.hpp>
 	#include <boost/lexical_cast.hpp>
@@ -68,8 +72,7 @@ public:
   { 
     this->clear();
     std::vector<std::string> pieces;
-	  std::vector<double> xyz;
-
+    std::vector<double> xyz;
     boost::split( pieces, vector_str, boost::is_any_of(" "));
     for (unsigned int i = 0; i < pieces.size(); ++i){
       if (pieces[i] != ""){

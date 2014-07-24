@@ -32,11 +32,37 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-#ifndef URDF_MODEL_STATE_TWIST_
-#define URDF_MODEL_STATE_TWIST_
+/* Author: John Hsu */
 
-#warning "Please Use #include <urdf_model/twist.h>"
+#ifndef URDF_TWIST_H
+#define URDF_TWIST_H
 
-#include <urdf_model/twist.h>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <math.h>
+#include <urdf_model/pose.h>
+
+namespace urdf{
+
+
+class Twist
+{
+public:
+  Twist() { this->clear(); };
+
+  Vector3  linear;
+  // Angular velocity represented by Euler angles
+  Vector3  angular;
+
+  void clear()
+  {
+    this->linear.clear();
+    this->angular.clear();
+  };
+};
+
+}
 
 #endif
+

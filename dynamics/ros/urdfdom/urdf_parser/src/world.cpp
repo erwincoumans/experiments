@@ -32,11 +32,40 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-#ifndef URDF_MODEL_STATE_TWIST_
-#define URDF_MODEL_STATE_TWIST_
+/* Author: Wim Meeussen */
 
-#warning "Please Use #include <urdf_model/twist.h>"
 
-#include <urdf_model/twist.h>
+#include <urdf_world/world.h>
+#include <urdf_model/model.h>
+#include <urdf_parser/urdf_parser.h>
+#include <fstream>
+#include <sstream>
+#include <boost/lexical_cast.hpp>
+#include <algorithm>
+#include <tinyxml.h>
+#include <console_bridge/console.h>
 
-#endif
+namespace urdf{
+
+bool parseWorld(World &world, TiXmlElement* config)
+{
+
+  // to be implemented
+
+  return true;
+}
+
+bool exportWorld(World &world, TiXmlElement* xml)
+{
+  TiXmlElement * world_xml = new TiXmlElement("world");
+  world_xml->SetAttribute("name", world.name);
+
+  // to be implemented
+  // exportModels(*world.models, world_xml);
+
+  xml->LinkEndChild(world_xml);
+
+  return true;
+}
+
+}

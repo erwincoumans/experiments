@@ -50,10 +50,11 @@
 #endif
 
 #include <tinyxml.h>
+#include <urdf_parser/urdf_parser.h>
 
 namespace urdf{
 
-	bool parsePose(Pose &pose, TiXmlElement* xml);
+bool parsePose(Pose &pose, TiXmlElement* xml);
 
 bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
 {
@@ -62,7 +63,7 @@ bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
   // Get joint damping
   const char* damping_str = config->Attribute("damping");
   if (damping_str == NULL){
-    logDebug("joint dynamics: no damping, defaults to 0");
+    logDebug("urdfdom.joint_dynamics: no damping, defaults to 0");
     jd.damping = 0;
   }
   else
@@ -71,9 +72,7 @@ bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
     {
       jd.damping = boost::lexical_cast<double>(damping_str);
     }
-	
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("damping value (%s) is not a float: %s",damping_str, e.what());
       return false;
@@ -83,7 +82,7 @@ bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
   // Get joint friction
   const char* friction_str = config->Attribute("friction");
   if (friction_str == NULL){
-    logDebug("joint dynamics: no friction, defaults to 0");
+    logDebug("urdfdom.joint_dynamics: no friction, defaults to 0");
     jd.friction = 0;
   }
   else
@@ -92,8 +91,7 @@ bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
     {
       jd.friction = boost::lexical_cast<double>(friction_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("friction value (%s) is not a float: %s",friction_str, e.what());
       return false;
@@ -105,9 +103,8 @@ bool parseJointDynamics(JointDynamics &jd, TiXmlElement* config)
     logError("joint dynamics element specified with no damping and no friction");
     return false;
   }
-  else
-  {
-    logDebug("joint dynamics: damping %f and friction %f", jd.damping, jd.friction);
+  else{
+    logDebug("urdfdom.joint_dynamics: damping %f and friction %f", jd.damping, jd.friction);
     return true;
   }
 }
@@ -119,7 +116,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
   // Get lower joint limit
   const char* lower_str = config->Attribute("lower");
   if (lower_str == NULL){
-    logDebug("joint limit: no lower, defaults to 0");
+    logDebug("urdfdom.joint_limit: no lower, defaults to 0");
     jl.lower = 0;
   }
   else
@@ -128,8 +125,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
     {
       jl.lower = boost::lexical_cast<double>(lower_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("lower value (%s) is not a float: %s", lower_str, e.what());
       return false;
@@ -139,7 +135,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
   // Get upper joint limit
   const char* upper_str = config->Attribute("upper");
   if (upper_str == NULL){
-    logDebug("joint limit: no upper, , defaults to 0");
+    logDebug("urdfdom.joint_limit: no upper, , defaults to 0");
     jl.upper = 0;
   }
   else
@@ -148,9 +144,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
     {
       jl.upper = boost::lexical_cast<double>(upper_str);
     }
-	  
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("upper value (%s) is not a float: %s",upper_str, e.what());
       return false;
@@ -169,9 +163,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
     {
       jl.effort = boost::lexical_cast<double>(effort_str);
     }
-	  
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("effort value (%s) is not a float: %s",effort_str, e.what());
       return false;
@@ -190,9 +182,7 @@ bool parseJointLimits(JointLimits &jl, TiXmlElement* config)
     {
       jl.velocity = boost::lexical_cast<double>(velocity_str);
     }
-	  
-	boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("velocity value (%s) is not a float: %s",velocity_str, e.what());
       return false;
@@ -210,7 +200,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
   const char* soft_lower_limit_str = config->Attribute("soft_lower_limit");
   if (soft_lower_limit_str == NULL)
   {
-    logDebug("joint safety: no soft_lower_limit, using default value");
+    logDebug("urdfdom.joint_safety: no soft_lower_limit, using default value");
     js.soft_lower_limit = 0;
   }
   else
@@ -219,8 +209,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
     {
       js.soft_lower_limit = boost::lexical_cast<double>(soft_lower_limit_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("soft_lower_limit value (%s) is not a float: %s",soft_lower_limit_str, e.what());
       return false;
@@ -231,7 +220,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
   const char* soft_upper_limit_str = config->Attribute("soft_upper_limit");
   if (soft_upper_limit_str == NULL)
   {
-    logDebug("joint safety: no soft_upper_limit, using default value");
+    logDebug("urdfdom.joint_safety: no soft_upper_limit, using default value");
     js.soft_upper_limit = 0;
   }
   else
@@ -240,8 +229,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
     {
       js.soft_upper_limit = boost::lexical_cast<double>(soft_upper_limit_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("soft_upper_limit value (%s) is not a float: %s",soft_upper_limit_str, e.what());
       return false;
@@ -252,7 +240,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
   const char* k_position_str = config->Attribute("k_position");
   if (k_position_str == NULL)
   {
-    logDebug("joint safety: no k_position, using default value");
+    logDebug("urdfdom.joint_safety: no k_position, using default value");
     js.k_position = 0;
   }
   else
@@ -261,8 +249,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
     {
       js.k_position = boost::lexical_cast<double>(k_position_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("k_position value (%s) is not a float: %s",k_position_str, e.what());
       return false;
@@ -281,8 +268,7 @@ bool parseJointSafety(JointSafety &js, TiXmlElement* config)
     {
       js.k_velocity = boost::lexical_cast<double>(k_velocity_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("k_velocity value (%s) is not a float: %s",k_velocity_str, e.what());
       return false;
@@ -300,7 +286,7 @@ bool parseJointCalibration(JointCalibration &jc, TiXmlElement* config)
   const char* rising_position_str = config->Attribute("rising");
   if (rising_position_str == NULL)
   {
-    logDebug("joint calibration: no rising, using default value");
+    logDebug("urdfdom.joint_calibration: no rising, using default value");
     jc.rising.reset(0);
   }
   else
@@ -309,8 +295,7 @@ bool parseJointCalibration(JointCalibration &jc, TiXmlElement* config)
     {
       jc.rising.reset(new double(boost::lexical_cast<double>(rising_position_str)));
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("risingvalue (%s) is not a float: %s",rising_position_str, e.what());
       return false;
@@ -321,7 +306,7 @@ bool parseJointCalibration(JointCalibration &jc, TiXmlElement* config)
   const char* falling_position_str = config->Attribute("falling");
   if (falling_position_str == NULL)
   {
-    logDebug("joint calibration: no falling, using default value");
+    logDebug("urdfdom.joint_calibration: no falling, using default value");
     jc.falling.reset(0);
   }
   else
@@ -330,8 +315,7 @@ bool parseJointCalibration(JointCalibration &jc, TiXmlElement* config)
     {
       jc.falling.reset(new double(boost::lexical_cast<double>(falling_position_str)));
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("fallingvalue (%s) is not a float: %s",falling_position_str, e.what());
       return false;
@@ -361,7 +345,7 @@ bool parseJointMimic(JointMimic &jm, TiXmlElement* config)
 
   if (multiplier_str == NULL)
   {
-    logDebug("joint mimic: no multiplier, using default value of 1");
+    logDebug("urdfdom.joint_mimic: no multiplier, using default value of 1");
     jm.multiplier = 1;    
   }
   else
@@ -370,9 +354,7 @@ bool parseJointMimic(JointMimic &jm, TiXmlElement* config)
     {
       jm.multiplier = boost::lexical_cast<double>(multiplier_str);
     }
-	  
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("multiplier value (%s) is not a float: %s",multiplier_str, e.what());
       return false;
@@ -384,7 +366,7 @@ bool parseJointMimic(JointMimic &jm, TiXmlElement* config)
   const char* offset_str = config->Attribute("offset");
   if (offset_str == NULL)
   {
-    logDebug("joint mimic: no offset, using default value of 0");
+    logDebug("urdfdom.joint_mimic: no offset, using default value of 0");
     jm.offset = 0;
   }
   else
@@ -393,8 +375,7 @@ bool parseJointMimic(JointMimic &jm, TiXmlElement* config)
     {
       jm.offset = boost::lexical_cast<double>(offset_str);
     }
-	  boost::bad_lexical_cast e;
-    catch (&e)
+    catch (boost::bad_lexical_cast &e)
     {
       logError("offset value (%s) is not a float: %s",offset_str, e.what());
       return false;
@@ -421,7 +402,7 @@ bool parseJoint(Joint &joint, TiXmlElement* config)
   TiXmlElement *origin_xml = config->FirstChildElement("origin");
   if (!origin_xml)
   {
-    logDebug("Joint [%s] missing origin tag under parent describing transform from Parent Link to Joint Frame, (using Identity transform).", joint.name.c_str());
+    logDebug("urdfdom: Joint [%s] missing origin tag under parent describing transform from Parent Link to Joint Frame, (using Identity transform).", joint.name.c_str());
     joint.parent_to_joint_origin_transform.clear();
   }
   else
@@ -497,7 +478,7 @@ bool parseJoint(Joint &joint, TiXmlElement* config)
     // axis
     TiXmlElement *axis_xml = config->FirstChildElement("axis");
     if (!axis_xml){
-      logDebug("no axis elemement for Joint link [%s], defaulting to (1,0,0) axis", joint.name.c_str());
+      logDebug("urdfdom: no axis elemement for Joint link [%s], defaulting to (1,0,0) axis", joint.name.c_str());
       joint.axis = Vector3(1.0, 0.0, 0.0);
     }
     else{
@@ -505,8 +486,7 @@ bool parseJoint(Joint &joint, TiXmlElement* config)
         try {
           joint.axis.init(axis_xml->Attribute("xyz"));
         }
-		  ParseError e("...");
-        catch (&e) {
+        catch (ParseError &e) {
           joint.axis.clear();
           logError("Malformed axis element for joint [%s]: %s", joint.name.c_str(), e.what());
           return false;
@@ -592,6 +572,7 @@ bool parseJoint(Joint &joint, TiXmlElement* config)
 
   return true;
 }
+
 
 
 

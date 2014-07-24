@@ -44,7 +44,7 @@
 #include <boost/weak_ptr.hpp>
 
 #include "urdf_model/pose.h"
-#include <urdf_model_state/twist.h>
+#include <urdf_model/twist.h>
 
 
 namespace urdf{

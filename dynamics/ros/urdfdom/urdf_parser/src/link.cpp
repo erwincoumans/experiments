@@ -35,6 +35,7 @@
 /* Author: Wim Meeussen */
 
 
+#include <urdf_parser/urdf_parser.h>
 #include <urdf_model/link.h>
 #include <fstream>
 #include <sstream>
@@ -52,11 +53,13 @@
 #include "printf_console.h"
 #endif
 
+
+
 namespace urdf{
 
 bool parsePose(Pose &pose, TiXmlElement* xml);
 
-bool parseMaterial(Material &material, TiXmlElement *config)
+bool parseMaterial(Material &material, TiXmlElement *config, bool only_name_is_ok)
 {
   bool has_rgb = false;
   bool has_filename = false;
@@ -92,8 +95,7 @@ bool parseMaterial(Material &material, TiXmlElement *config)
         material.color.init(c->Attribute("rgba"));
         has_rgb = true;
       }
-		ParseError e("...");
-      catch (&e) {
+      catch (ParseError &e) {  
         material.color.clear();
         logError(std::string("Material [" + material.name + "] has malformed color rgba values: " + e.what()).c_str());
       }
@@ -101,8 +103,11 @@ bool parseMaterial(Material &material, TiXmlElement *config)
   }
 
   if (!has_rgb && !has_filename) {
-    if (!has_rgb) logError(std::string("Material ["+material.name+"] color has no rgba").c_str());
-    if (!has_filename) logError(std::string("Material ["+material.name+"] not defined in file").c_str());
+    if (!only_name_is_ok) // no need for an error if only name is ok
+    {
+      if (!has_rgb) logError(std::string("Material ["+material.name+"] color has no rgba").c_str());
+      if (!has_filename) logError(std::string("Material ["+material.name+"] not defined in file").c_str());
+    }
     return false;
   }
   return true;
@@ -124,8 +129,7 @@ bool parseSphere(Sphere &s, TiXmlElement *c)
   {
     s.radius = boost::lexical_cast<double>(c->Attribute("radius"));
   }
-	boost::bad_lexical_cast e;
-  catch (&e)
+  catch (boost::bad_lexical_cast &e)
   {
     std::stringstream stm;
     stm << "radius [" << c->Attribute("radius") << "] is not a valid float: " << e.what();
@@ -150,9 +154,7 @@ bool parseBox(Box &b, TiXmlElement *c)
   {
     b.dim.init(c->Attribute("size"));
   }
-	
-	ParseError e(",,,");
-  catch (&e)
+  catch (ParseError &e)
   {
     b.dim.clear();
     logError(e.what());
@@ -216,10 +218,7 @@ bool parseMesh(Mesh &m, TiXmlElement *c)
     try {
       m.scale.init(c->Attribute("scale"));
     }
-	  
-	  ParseError e(",,,");
-	  
-    catch (&e) {
+    catch (ParseError &e) {
       m.scale.clear();
       logError("Mesh scale was specified, but could not be parsed: %s", e.what());
       return false;
@@ -374,6 +373,10 @@ bool parseVisual(Visual &vis, TiXmlElement *config)
   if (!vis.geometry)
     return false;
 
+  const char *name_char = config->Attribute("name");
+  if (name_char)
+    vis.name = name_char;
+
   // Material
   TiXmlElement *mat = config->FirstChildElement("material");
   if (mat) {
@@ -386,20 +389,12 @@ bool parseVisual(Visual &vis, TiXmlElement *config)
     
     // try to parse material element in place
     vis.material.reset(new Material());
-    if (!parseMaterial(*vis.material, mat))
+    if (!parseMaterial(*vis.material, mat, true))
     {
-      vis.material.reset(0);
-      return false;
+      logDebug("urdfdom: material has only name, actual material definition may be in the model");
     }
   }
   
-  // Group Tag (optional)
-  // collision blocks without a group tag are designated to the "default" group
-  const char *group_name_char = config->Attribute("group");
-  if (!group_name_char)
-    vis.group_name = std::string("default");
-  else
-    vis.group_name = std::string(group_name_char);
   return true;
 }
 
@@ -420,13 +415,10 @@ bool parseCollision(Collision &col, TiXmlElement* config)
   if (!col.geometry)
     return false;
 
-  // Group Tag (optional)
-  // collision blocks without a group tag are designated to the "default" group
-  const char *group_name_char = config->Attribute("group");
-  if (!group_name_char)
-    col.group_name = std::string("default");
-  else
-    col.group_name = std::string(group_name_char);
+  const char *name_char = config->Attribute("name");
+  if (name_char)
+    col.name = name_char;
+
   return true;
 }
 
@@ -463,19 +455,7 @@ bool parseLink(Link &link, TiXmlElement* config)
     vis.reset(new Visual());
     if (parseVisual(*vis, vis_xml))
     {
-      boost::shared_ptr<std::vector<boost::shared_ptr<Visual > > > viss = link.getVisuals(vis->group_name);
-      if (!viss)
-      {
-        // group does not exist, create one and add to map
-        viss.reset(new std::vector<boost::shared_ptr<Visual > >);
-        // new group name, create vector, add vector to map and add Visual to the vector
-        link.visual_groups.insert(make_pair(vis->group_name,viss));
-        logDebug("successfully added a new visual group name '%s'",vis->group_name.c_str());
-      }
-      
-      // group exists, add Visual to the vector in the map
-      viss->push_back(vis);
-      logDebug("successfully added a new visual under group name '%s'",vis->group_name.c_str());
+      link.visual_array.push_back(vis);
     }
     else
     {
@@ -486,27 +466,10 @@ bool parseLink(Link &link, TiXmlElement* config)
   }
 
   // Visual (optional)
-  // Assign one single default visual pointer from the visual_groups map
-  link.visual.reset(0);
-  boost::shared_ptr<std::vector<boost::shared_ptr<Visual > > > default_visual = link.getVisuals("default");
-  if (!default_visual)
-  {
-    //("No 'default' visual group for Link '%s'", this->name.c_str());
-  }
-  else if (default_visual->empty())
-  {
-    //("'default' visual group is empty for Link '%s'", this->name.c_str());
-  }
-  else
-  {
-    if (default_visual->size() > 1)
-    {
-      //("'default' visual group has %d visuals for Link '%s', taking the first one as default",(int)default_visual->size(), this->name.c_str());
-    }
-    link.visual = (*default_visual->begin());
-  }
-
-
+  // Assign the first visual to the .visual ptr, if it exists
+  if (!link.visual_array.empty())
+    link.visual = link.visual_array[0];
+  
   // Multiple Collisions (optional)
   for (TiXmlElement* col_xml = config->FirstChildElement("collision"); col_xml; col_xml = col_xml->NextSiblingElement("collision"))
   {
@@ -514,20 +477,7 @@ bool parseLink(Link &link, TiXmlElement* config)
     col.reset(new Collision());
     if (parseCollision(*col, col_xml))
     {      
-      boost::shared_ptr<std::vector<boost::shared_ptr<Collision > > > cols = link.getCollisions(col->group_name);  
-      
-      if (!cols)
-      {
-        // group does not exist, create one and add to map
-        cols.reset(new std::vector<boost::shared_ptr<Collision > >);
-        // new group name, create vector, add vector to map and add Collision to the vector
-        link.collision_groups.insert(make_pair(col->group_name,cols));
-        logDebug("successfully added a new collision group name '%s'",col->group_name.c_str());
-      }
-
-      // group exists, add Collision to the vector in the map
-      cols->push_back(col);
-      logDebug("successfully added a new collision under group name '%s'",col->group_name.c_str());
+      link.collision_array.push_back(col);
     }
     else
     {
@@ -537,28 +487,12 @@ bool parseLink(Link &link, TiXmlElement* config)
     }
   }
   
-  // Collision (optional)
-  // Assign one single default collision pointer from the collision_groups map
-  link.collision.reset(0);
-  boost::shared_ptr<std::vector<boost::shared_ptr<Collision > > > default_collision = link.getCollisions("default");
+  // Collision (optional)  
+  // Assign the first collision to the .collision ptr, if it exists
+  if (!link.collision_array.empty())
+    link.collision = link.collision_array[0];
+  return true;
 
-  if (!default_collision)
-  {
-    logDebug("No 'default' collision group for Link '%s'", link.name.c_str());
-  }
-  else if (default_collision->empty())
-  {
-    logDebug("'default' collision group is empty for Link '%s'", link.name.c_str());
-  }
-  else
-  {
-    if (default_collision->size() > 1)
-    {
-      logWarn("'default' collision group has %d collisions for Link '%s', taking the first one as default",(int)default_collision->size(), link.name.c_str());
-    }
-    link.collision = (*default_collision->begin());
-  }
-	return true;
 }
 
 }
